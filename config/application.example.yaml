@@ -1,0 +1,12 @@
+ktor:
+  application:
+    modules:
+      - net.barrage.llmao.ApplicationKt.module
+  deployment:
+    port: 42069
+
+db:
+  url: "jdbc:postgresql://localhost:5454/kappi"
+  user: "postgres"
+  password: "postgres"
+  driver: "org.postgresql.Driver"
