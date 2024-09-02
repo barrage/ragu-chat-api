@@ -9,14 +9,14 @@ import kotlinx.serialization.encoding.Encoder
 import java.time.ZonedDateTime
 
 object KZonedDateTimeSerializer : KSerializer<ZonedDateTime> {
-  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("ZonedDateTime", PrimitiveKind.STRING)
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("ZonedDateTime", PrimitiveKind.STRING)
 
-  override fun serialize(encoder: Encoder, value: ZonedDateTime) {
-    encoder.encodeString(value.toString())
-  }
+    override fun serialize(encoder: Encoder, value: ZonedDateTime) {
+        encoder.encodeString(value.toString())
+    }
 
-  override fun deserialize(decoder: Decoder): ZonedDateTime {
-    val string = decoder.decodeString()
-    return ZonedDateTime.parse(string)
-  }
+    override fun deserialize(decoder: Decoder): ZonedDateTime {
+        val string = decoder.decodeString()
+        return ZonedDateTime.parse(string)
+    }
 }

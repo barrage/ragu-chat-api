@@ -1,19 +1,17 @@
 package net.barrage.llmao
 
-import net.barrage.llmao.plugins.*
 import io.ktor.server.application.*
-import net.barrage.llmao.tables.Agents
-import org.jooq.DSLContext
-import org.jooq.SQLDialect
-import org.jooq.impl.DSL
-import org.postgresql.ds.PGSimpleDataSource
+import net.barrage.llmao.plugins.Database
+import net.barrage.llmao.plugins.configureRequestValidation
+import net.barrage.llmao.plugins.configureRouting
+import net.barrage.llmao.plugins.configureSerialization
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }
 
 fun Application.module() {
-    Database.init(environment)
+    Database.init(environment.config)
     configureSerialization()
     configureRouting()
     configureRequestValidation()
