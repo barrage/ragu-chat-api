@@ -1,6 +1,4 @@
 import nu.studer.gradle.jooq.JooqEdition
-import org.gradle.initialization.Environment
-import org.jooq.codegen.GenerationTool.main
 
 val ktorVersion = "2.3.12"
 val kotlinVersion = "2.0.20"
@@ -59,11 +57,12 @@ dependencies {
 }
 
 flyway {
-    url=project.properties["db.url"] as String
-    user=project.properties["db.user"] as String
-    password=project.properties["db.password"] as String
+    url = project.properties["db.url"] as String
+    user = project.properties["db.user"] as String
+    password = project.properties["db.password"] as String
     baselineOnMigrate = true
     locations = arrayOf("filesystem:src/main/resources/db/migration")
+    driver = project.properties["db.driver"] as String
 }
 
 jooq {
@@ -96,6 +95,9 @@ jooq {
                         directory = "build/generated-src/jooq"
                     }
                     strategy.name = "org.jooq.codegen.DefaultGeneratorStrategy"
+                    database.apply {
+                        excludes = "flyway_schema_history"
+                    }
                 }
             }
         }

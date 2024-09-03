@@ -6,6 +6,7 @@ import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.controllers.agentsRoutes
+import net.barrage.llmao.controllers.userRoutes
 
 fun Application.configureRouting() {
     install(Resources)
@@ -15,5 +16,6 @@ fun Application.configureRouting() {
         }
 
         agentsRoutes()
+        userRoutes()
     }
 }
