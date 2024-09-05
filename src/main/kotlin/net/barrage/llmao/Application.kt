@@ -1,10 +1,7 @@
 package net.barrage.llmao
 
 import io.ktor.server.application.*
-import net.barrage.llmao.plugins.Database
-import net.barrage.llmao.plugins.configureRequestValidation
-import net.barrage.llmao.plugins.configureRouting
-import net.barrage.llmao.plugins.configureSerialization
+import net.barrage.llmao.plugins.*
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
@@ -15,4 +12,5 @@ fun Application.module() {
     configureSerialization()
     configureRouting()
     configureRequestValidation()
+    configureErrorHandling()
 }

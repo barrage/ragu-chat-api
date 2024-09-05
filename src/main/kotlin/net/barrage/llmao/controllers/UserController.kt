@@ -9,19 +9,16 @@ import io.ktor.server.resources.post
 import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
 import net.barrage.llmao.dtos.users.*
-import net.barrage.llmao.serializers.KUUIDSerializer
+import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.UserService
-import java.util.*
 
 @Resource("users")
 class UserController {
     @Resource("{id}")
     class User(
-        val parent: UserController = UserController(),
-        @Serializable(with = KUUIDSerializer::class)
-        val id: UUID
+        val parent: UserController,
+        val id: KUUID
     ) {
         @Resource("password")
         class Password(val parent: User)

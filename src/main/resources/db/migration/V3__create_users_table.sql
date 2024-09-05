@@ -9,8 +9,8 @@ CREATE TABLE users (
     last_name VARCHAR(255) NOT NULL,
     role VARCHAR(255) NOT NULL,
     default_agent_id INT NULL,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    active BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (default_agent_id) REFERENCES agents(id)
 );

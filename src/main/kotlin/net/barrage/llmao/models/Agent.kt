@@ -1,9 +1,8 @@
 package net.barrage.llmao.models
 
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.serializers.KOffsetDateTimeSerializer
+import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.tables.records.AgentsRecord
-import java.time.OffsetDateTime
 
 @Serializable
 class Agent(
@@ -11,10 +10,8 @@ class Agent(
     val name: String,
     val context: String,
     val active: Boolean,
-    @Serializable(with = KOffsetDateTimeSerializer::class)
-    val createdAt: OffsetDateTime,
-    @Serializable(with = KOffsetDateTimeSerializer::class)
-    val updatedAt: OffsetDateTime,
+    val createdAt: KOffsetDateTime,
+    val updatedAt: KOffsetDateTime,
 )
 
 fun AgentsRecord.toAgent() = Agent(
