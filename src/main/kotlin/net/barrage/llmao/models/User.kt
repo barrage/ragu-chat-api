@@ -29,7 +29,7 @@ fun UsersRecord.toUser() = User(
     lastName = this.lastName!!,
     role = this.role!!,
     defaultAgentId = this.defaultAgentId!!,
+    active = this.active!!,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
-    active = this.active!!,
 )
