@@ -13,4 +13,5 @@ fun Application.module() {
     configureRouting()
     configureRequestValidation()
     configureErrorHandling()
+    configureCors()
 }

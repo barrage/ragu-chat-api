@@ -10,3 +10,9 @@ db:
   user: "postgres"
   password: "postgres"
   driver: "org.postgresql.Driver"
+
+cors:
+  origins: "http://localhost:3000 http://localhost:3001"
+  methods: "GET HEAD PUT PATCH POST DELETE"
+  headers: "*"
+  maxAge: 3600
