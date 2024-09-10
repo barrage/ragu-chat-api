@@ -59,6 +59,10 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
 
+    // AI
+    implementation("com.aallam.openai:openai-client:3.8.2")
+    implementation("io.ktor:ktor-client-okhttp")
+
     // Tests
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")

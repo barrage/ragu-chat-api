@@ -2,6 +2,7 @@ package net.barrage.llmao.dtos.users
 
 import io.ktor.server.plugins.requestvalidation.*
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.enums.Roles
 
 @Serializable
 class NewUserDTO(
@@ -10,7 +11,7 @@ class NewUserDTO(
     val password: String,
     val firstName: String,
     val lastName: String,
-    val role: String,
+    val role: Roles,
     val defaultAgentId: Int,
 ) {
     fun validate(): ValidationResult {
@@ -20,7 +21,6 @@ class NewUserDTO(
             validatePassword(password),
             validateFirstName(firstName),
             validateLastName(lastName),
-            validateRole(role),
             validateDefaultAgentId(defaultAgentId)
         )
 

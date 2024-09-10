@@ -4,6 +4,7 @@ import net.barrage.llmao.dtos.users.NewUserDTO
 import net.barrage.llmao.dtos.users.UpdateUserDTO
 import net.barrage.llmao.dtos.users.UserDto
 import net.barrage.llmao.dtos.users.toUserDto
+import net.barrage.llmao.enums.Roles
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
@@ -36,7 +37,7 @@ class UserRepository {
             .set(USERS.PASSWORD, user.password)
             .set(USERS.FIRST_NAME, user.firstName)
             .set(USERS.LAST_NAME, user.lastName)
-            .set(USERS.ROLE, user.role)
+            .set(USERS.ROLE, user.role.name)
             .set(USERS.DEFAULT_AGENT_ID, user.defaultAgentId)
             .returning()
             .fetchOne(UsersRecord::toUserDto)!!
@@ -64,9 +65,9 @@ class UserRepository {
             .fetchOne(UsersRecord::toUserDto)!!
     }
 
-    fun updateRole(id: UUID, role: String): UserDto {
+    fun updateRole(id: UUID, role: Roles): UserDto {
         return dslContext.update(USERS)
-            .set(USERS.ROLE, role)
+            .set(USERS.ROLE, role.name)
             .set(USERS.UPDATED_AT, OffsetDateTime.now())
             .where(USERS.ID.eq(id))
             .returning()

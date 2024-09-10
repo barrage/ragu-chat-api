@@ -1,6 +1,5 @@
 package net.barrage.llmao.dtos.chats
 
-import io.ktor.server.plugins.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.dtos.llmconfigs.LLMConfigDTO
 import net.barrage.llmao.dtos.llmconfigs.toLLMConfigDTO

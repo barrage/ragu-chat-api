@@ -41,13 +41,6 @@ fun validateLastName(lastName: String): String? {
     }
 }
 
-fun validateRole(role: String): String? {
-    return when {
-        Roles.fromText(role) == null -> "Role must be either 'admin' or 'user'"
-        else -> null
-    }
-}
-
 fun validateDefaultAgentId(defaultAgentId: Int): String? {
     return when {
         AgentRepository().get(defaultAgentId) == null -> "defaultAgentId must be a valid agent ID"
