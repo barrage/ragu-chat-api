@@ -4,9 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 open class Error(
-    private val type: String,
-    private val cause: String,
-    private val description: String? = null
+    val type: String,
+    val cause: String,
+    val description: String? = null
 )
 
 fun internalError(): Error {

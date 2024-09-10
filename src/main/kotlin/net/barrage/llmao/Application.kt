@@ -10,6 +10,7 @@ fun main(args: Array<String>) {
 fun Application.module() {
     Database.init(environment.config)
     configureSerialization()
+    configureOpenApi()
     configureRouting()
     configureRequestValidation()
     configureErrorHandling()

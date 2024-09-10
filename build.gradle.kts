@@ -58,6 +58,7 @@ dependencies {
     implementation("io.ktor:ktor-server-config-yaml:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
+    implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
 
     // AI
     implementation("com.aallam.openai:openai-client:3.8.2")
@@ -104,6 +105,7 @@ jooq {
                     database.apply {
                         name = "org.jooq.meta.postgres.PostgresDatabase"
                         inputSchema = "public"
+                        excludes = "flyway_schema_history"
                     }
                     generate.apply {
                         isDeprecated = false
@@ -116,9 +118,6 @@ jooq {
                         directory = "build/generated-src/jooq"
                     }
                     strategy.name = "org.jooq.codegen.DefaultGeneratorStrategy"
-                    database.apply {
-                        excludes = "flyway_schema_history"
-                    }
                 }
             }
         }

@@ -1,6 +1,7 @@
 package net.barrage.llmao.dtos.llmconfigs
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.enums.Languages
 import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.LlmConfigsRecord
@@ -12,7 +13,7 @@ data class LLMConfigDTO(
     val model: String,
     val streaming: Boolean,
     val temperature: Double,
-    val language: String,
+    val language: Languages,
     val createdAt: KOffsetDateTime,
     val updatedAt: KOffsetDateTime,
 )
@@ -23,7 +24,11 @@ fun LlmConfigsRecord.toLLMConfigDTO() = LLMConfigDTO(
     model = this.model!!,
     streaming = this.streaming!!,
     temperature = this.temperature!!,
-    language = this.language!!,
+    language = if (this.language.isNullOrBlank()) {
+        Languages.CRO
+    } else {
+        Languages.valueOf(this.language!!)
+    },
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!
 )

@@ -5,8 +5,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class Languages {
-    @SerialName("eng")
-    ENG,
     @SerialName("cro")
-    CRO;
+    CRO,
+
+    @SerialName("eng")
+    ENG;
 }
