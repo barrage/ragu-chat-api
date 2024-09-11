@@ -20,6 +20,10 @@ class ChatService {
         }
     }
 
+    fun get(id: KUUID): ChatDTO {
+        return chatRepository.get(id)
+    }
+
     fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
         return if (userId != null) {
             chatRepository.getMessagesForUser(id, userId)

@@ -45,7 +45,7 @@ class AzureAI(
         val chatRequest = ChatCompletionRequest(
             model = ModelId(this.deployment!!.azureModel),
             messages = messages.map { it.toOpenAiChatMessage() },
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
         )
 
         return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
@@ -55,7 +55,7 @@ class AzureAI(
         val chatRequest = ChatCompletionRequest(
             model = ModelId(this.deployment!!.azureModel),
             messages = messages.map { it.toOpenAiChatMessage() },
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
             streamOptions = StreamOptions(true),
         )
 
@@ -69,7 +69,7 @@ class AzureAI(
                         it.id,
                         it.created,
                         it.choices[0].delta?.content,
-                        it.choices[0].finishReason?.value,
+                        it.choices[0].finishReason
                     )
                 )
             }
@@ -79,7 +79,7 @@ class AzureAI(
         val chatRequest = ChatCompletionRequest(
             model = ModelId(this.deployment!!.azureModel),
             messages = listOf(OpenAIChatMessage.User(proompt)),
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
         )
 
         val response = this.client!!.chatCompletion(chatRequest)
@@ -91,7 +91,7 @@ class AzureAI(
             model = ModelId(this.deployment!!.azureModel),
             messages = listOf(OpenAIChatMessage.User(proompt)),
             maxTokens = maxTokens,
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
         )
 
         return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!

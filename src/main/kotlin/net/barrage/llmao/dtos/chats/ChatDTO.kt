@@ -5,6 +5,8 @@ import net.barrage.llmao.dtos.llmconfigs.LLMConfigDTO
 import net.barrage.llmao.dtos.llmconfigs.toLLMConfigDTO
 import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.dtos.messages.toMessageDTO
+import net.barrage.llmao.llm.conversation.LLMConfigChat
+import net.barrage.llmao.llm.conversation.LLMConversationConfig
 import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.references.CHATS

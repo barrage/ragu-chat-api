@@ -1,5 +1,6 @@
 package net.barrage.llmao.llm.conversation
 
+import com.aallam.openai.api.core.FinishReason
 import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.enums.Languages
@@ -18,7 +19,7 @@ interface ConversationLlm {
 }
 
 data class LLMConversationConfig(
-    val temperature: Double,
+    val chat: LLMConfigChat,
     val model: LLMModels,
     val language: Languages,
 )
@@ -27,5 +28,10 @@ data class TokenChunk(
     val id: String,
     val created: Int,
     val content: String? = null,
-    val stopReason: String? = null
+    val stopReason: FinishReason? = null
+)
+
+data class LLMConfigChat(
+    val stream: Boolean,
+    val temperature: Double,
 )

@@ -24,7 +24,7 @@ class OpenAI(
         val chatRequest = ChatCompletionRequest(
             model = ModelId(this.cfg.model.model),
             messages = messages.map { it.toOpenAiChatMessage() },
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
         )
 
         return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
@@ -34,7 +34,7 @@ class OpenAI(
         val chatRequest = ChatCompletionRequest(
             model = ModelId(this.cfg.model.model),
             messages = messages.map { it.toOpenAiChatMessage() },
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
             streamOptions = StreamOptions(true),
         )
 
@@ -48,7 +48,7 @@ class OpenAI(
                         it.id,
                         it.created,
                         it.choices[0].delta?.content,
-                        it.choices[0].finishReason?.value
+                        it.choices[0].finishReason
                     )
                 )
             }
@@ -58,7 +58,7 @@ class OpenAI(
         val chatRequest = ChatCompletionRequest(
             model = ModelId("text-davinci-003"),
             messages = listOf(OpenAiChatMessage.User(proompt)),
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
         )
 
         val response = this.client!!.chatCompletion(chatRequest)
@@ -70,7 +70,7 @@ class OpenAI(
             model = ModelId(this.cfg.model.model),
             messages = listOf(OpenAiChatMessage.User(proompt)),
             maxTokens = maxTokens,
-            temperature = this.cfg.temperature,
+            temperature = this.cfg.chat.temperature,
         )
 
         return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!

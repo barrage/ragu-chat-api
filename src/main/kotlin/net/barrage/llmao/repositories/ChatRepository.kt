@@ -29,6 +29,19 @@ class ChatRepository {
             .map { toChatDTO(it.value) }
     }
 
+    fun get(id: KUUID): ChatDTO {
+        return dslContext
+            .select()
+            .from(CHATS)
+            .leftJoin(LLM_CONFIGS).on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
+            .leftJoin(MESSAGES).on(CHATS.ID.eq(MESSAGES.CHAT_ID))
+            .where(CHATS.ID.eq(id))
+            .fetch()
+            .groupBy { it[CHATS.ID] }
+            .map { toChatDTO(it.value) }
+            .first()
+    }
+
     fun getAllForUser(id: KUUID): List<ChatDTO> {
         return dslContext
             .select()
