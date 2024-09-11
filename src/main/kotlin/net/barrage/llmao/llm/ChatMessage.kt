@@ -5,7 +5,7 @@ import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 
 data class ChatMessage(
     val role: String,
-    val message: String,
+    val content: String,
 
     /**
      * If this message is a response to a user message, the ID of the message being responded to.
@@ -14,9 +14,9 @@ data class ChatMessage(
 ) {
     fun toOpenAiChatMessage(): OpenAIChatMessage {
         return when (this.role) {
-            "user" -> OpenAIChatMessage.User(this.message)
-            "assistant" -> OpenAIChatMessage.Assistant(this.message)
-            "system" -> OpenAIChatMessage.System(this.message)
+            "user" -> OpenAIChatMessage.User(this.content)
+            "assistant" -> OpenAIChatMessage.Assistant(this.content)
+            "system" -> OpenAIChatMessage.System(this.content)
             else -> throw InternalError("Unknown role")
         }
     }
