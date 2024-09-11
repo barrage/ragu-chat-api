@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 enum class Roles {
     @SerialName("admin")
     ADMIN,
+
     @SerialName("user")
     USER;
 }
