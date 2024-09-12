@@ -26,3 +26,7 @@ azure:
   embeddingsKey: "YOUR_EMBEDDINGS_KEY"
   LLMEndpoint: "YOUR_LLM_ENDPOINT"
   LLMKey: "YOUR_LLM_KEY"
+
+  weaviate:
+    host: "localhost:8080"
+    scheme: "http"

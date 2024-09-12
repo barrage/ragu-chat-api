@@ -73,6 +73,9 @@ dependencies {
 
     // Database communication
     jooqGenerator("org.postgresql:postgresql:$postgresVersion")
+
+    // Weaviate client
+    implementation("io.weaviate:client:4.8.2")
 }
 
 flyway {
