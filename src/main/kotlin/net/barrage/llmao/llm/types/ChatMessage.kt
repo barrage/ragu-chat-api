@@ -1,4 +1,4 @@
-package net.barrage.llmao.llm
+package net.barrage.llmao.llm.types
 
 import net.barrage.llmao.serializers.KUUID
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
@@ -21,3 +21,9 @@ data class ChatMessage(
         }
     }
 }
+
+fun userChatMessage(proompt: String) = ChatMessage("user", proompt)
+
+fun assistantChatMessage(response: String) = ChatMessage("assistant", response)
+
+fun systemChatMessage(response: String) = ChatMessage("system", response)

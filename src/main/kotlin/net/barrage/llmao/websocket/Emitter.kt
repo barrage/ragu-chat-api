@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.error.Error
-import net.barrage.llmao.llm.conversation.TokenChunk
+import net.barrage.llmao.llm.types.TokenChunk
 import net.barrage.llmao.serializers.KUUID
 
 class Emitter(
@@ -35,7 +35,7 @@ class Emitter(
 class FinishEvent(
     val chatId: KUUID,
     val messageId: KUUID,
-    val content: String,
+    var content: String?,
     val finishReason: FinishReason
 ) {
     override fun toString(): String {

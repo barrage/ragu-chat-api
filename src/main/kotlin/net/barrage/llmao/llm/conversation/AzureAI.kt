@@ -10,7 +10,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.enums.LLMModels
-import net.barrage.llmao.llm.ChatMessage
+import net.barrage.llmao.llm.types.ChatMessage
+import net.barrage.llmao.llm.types.LLMConversationConfig
+import net.barrage.llmao.llm.types.TokenChunk
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 
 class AzureAI(
@@ -86,7 +88,7 @@ class AzureAI(
         return response.choices[0].message.content!!
     }
 
-    override suspend fun summarizeConversation(proompt: String, maxTokens: Int): String {
+    override suspend fun summarizeConversation(proompt: String, maxTokens: Int?): String {
         val chatRequest = ChatCompletionRequest(
             model = ModelId(this.deployment!!.azureModel),
             messages = listOf(OpenAIChatMessage.User(proompt)),

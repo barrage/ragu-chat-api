@@ -5,8 +5,6 @@ import net.barrage.llmao.dtos.llmconfigs.LLMConfigDTO
 import net.barrage.llmao.dtos.llmconfigs.toLLMConfigDTO
 import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.dtos.messages.toMessageDTO
-import net.barrage.llmao.llm.conversation.LLMConfigChat
-import net.barrage.llmao.llm.conversation.LLMConversationConfig
 import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.references.CHATS
@@ -19,7 +17,7 @@ data class ChatDTO(
     val id: KUUID,
     val userId: KUUID,
     val agentId: Int,
-    val title: String,
+    val title: String?,
     val createdAt: KOffsetDateTime,
     val updatedAt: KOffsetDateTime,
     val llmConfig: LLMConfigDTO,
@@ -35,7 +33,7 @@ fun toChatDTO(chatData: List<Record>): ChatDTO {
         id = chat.id!!,
         userId = chat.userId!!,
         agentId = chat.agentId!!,
-        title = chat.title!!,
+        title = chat.title,
         createdAt = chat.createdAt!!,
         updatedAt = chat.updatedAt!!,
         llmConfig = llmConfig,

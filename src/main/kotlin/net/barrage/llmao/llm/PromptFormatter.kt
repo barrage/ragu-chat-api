@@ -1,26 +1,23 @@
 package net.barrage.llmao.llm
 
 import net.barrage.llmao.enums.Languages
+import net.barrage.llmao.llm.types.ChatMessage
+import net.barrage.llmao.llm.types.systemChatMessage
+import net.barrage.llmao.llm.types.userChatMessage
 
 class PromptFormatter(
     val context: String,
     val language: Languages
 ) {
     fun systemMessage(): ChatMessage {
-        return ChatMessage(
-            "system",
-            this.context,
-        )
+        return systemChatMessage(this.context)
     }
 
     fun userMessage(prompt: String, documentation: String): ChatMessage {
-        return ChatMessage(
-            "user",
-            this.proompt(prompt, documentation),
-        )
+        return userChatMessage(this.proompt(prompt, documentation))
     }
 
-    fun proompt(proompt: String, documentation: String): String {
+    private fun proompt(proompt: String, documentation: String): String {
         val promptLanguage = this.createLanguagePrompt(this.language.language)
         return this.createPrompt(proompt, documentation, promptLanguage)
     }

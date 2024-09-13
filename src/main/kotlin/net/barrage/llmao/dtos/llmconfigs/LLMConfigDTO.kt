@@ -3,8 +3,8 @@ package net.barrage.llmao.dtos.llmconfigs
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.enums.Languages
-import net.barrage.llmao.llm.conversation.LLMConfigChat
-import net.barrage.llmao.llm.conversation.LLMConversationConfig
+import net.barrage.llmao.llm.types.LLMConfigChat
+import net.barrage.llmao.llm.types.LLMConversationConfig
 import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.LlmConfigsRecord

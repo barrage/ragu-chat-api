@@ -1,13 +1,21 @@
 package net.barrage.llmao.services
 
+import com.aallam.openai.api.core.FinishReason
 import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
+import net.barrage.llmao.dtos.messages.MessageDTO
+import net.barrage.llmao.llm.types.ChatConfig
+import net.barrage.llmao.llm.types.ChatMessage
+import net.barrage.llmao.llm.types.LLMConversationConfig
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.repositories.ChatRepository
 import net.barrage.llmao.serializers.KUUID
+import net.barrage.llmao.tables.records.ChatsRecord
+import net.barrage.llmao.tables.records.FailedMessagesRecord
+import net.barrage.llmao.tables.records.LlmConfigsRecord
 
 class ChatService {
     private val chatRepository = ChatRepository()
@@ -54,5 +62,49 @@ class ChatService {
         }
 
         return chatRepository.evaluateMessage(messageId, evaluation) ?: throw NotFoundException("Message not found")
+    }
+
+    fun insertWithConfig(chatConfig: ChatConfig, llmConfig: LLMConversationConfig): ChatDTO {
+        val chat = ChatsRecord().apply {
+            id = chatConfig.id
+            userId = chatConfig.userId
+            agentId = chatConfig.agentId
+            title = chatConfig.title
+        }
+
+        val config = LlmConfigsRecord().apply {
+            model = llmConfig.model.name
+            language = llmConfig.language.name
+            temperature = llmConfig.chat.temperature
+            streaming = llmConfig.chat.stream
+        }
+
+        return chatRepository.insertWithConfig(chat, config)
+    }
+
+    fun delete(id: KUUID): Unit {
+        if (!chatRepository.delete(id)) throw NotFoundException("Chat not found")
+    }
+
+    fun insertFailedMessage(
+        finishReason: FinishReason,
+        chatId: KUUID,
+        userId: KUUID,
+        returning: Boolean,
+        content: String
+    ): FailedMessagesRecord? {
+        return chatRepository.insertFailedMessage(finishReason, chatId, userId, returning, content)
+    }
+
+    fun insertUserMessage(id: KUUID, userId: KUUID, proompt: String): MessageDTO {
+        return chatRepository.insertUserMessage(id, userId, proompt)
+    }
+
+    fun insertAssistantMessage(id: KUUID, agentId: Int, response: String, messageId: KUUID): MessageDTO {
+        return chatRepository.insertAssistantMessage(id, agentId, response, messageId)
+    }
+
+    fun insertSystemMessage(id: KUUID, message: String): MessageDTO {
+        return chatRepository.insertSystemMessage(id, message)
     }
 }

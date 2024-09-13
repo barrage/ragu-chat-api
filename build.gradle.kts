@@ -67,6 +67,7 @@ dependencies {
     // AI
     implementation("com.aallam.openai:openai-client:3.8.2")
     implementation("io.ktor:ktor-client-okhttp")
+    implementation("com.knuddels:jtokkit:1.1.0")
 
     // Tests
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
