@@ -2,16 +2,14 @@ package net.barrage.llmao.dtos.users
 
 import io.ktor.server.plugins.requestvalidation.*
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.enums.Roles
 
 @Serializable
-class NewUserDTO(
+class AdminUpdateUserDTO(
     val email: String,
-    val firstName: String,
-    val lastName: String,
-    val role: Roles,
-    val defaultAgentId: Int,
-) {
+    override val firstName: String,
+    override val lastName: String,
+    override val defaultAgentId: Int,
+) : UpdateUser {
     fun validate(): ValidationResult {
         val rules = listOf(
             validateEmail(email),

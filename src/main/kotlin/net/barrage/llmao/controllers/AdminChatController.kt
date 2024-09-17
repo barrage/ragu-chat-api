@@ -10,7 +10,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
 import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
@@ -18,15 +17,13 @@ import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
-import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.ChatService
-import net.barrage.llmao.services.SessionService
 
-@Resource("chats")
-class ChatController {
+@Resource("admin/chats")
+class AdminChatController{
     @Resource("{id}")
-    class Chat(val parent: ChatController, val id: KUUID) {
+    class Chat(val parent: AdminChatController, val id: KUUID) {
         @Resource("messages")
         class Messages(val parent: Chat) {
             @Resource("{messageId}")
@@ -38,12 +35,12 @@ class ChatController {
     }
 }
 
-fun Route.chatsRoutes() {
+fun Route.adminChatsRoutes() {
     val chatService = ChatService()
 
-    authenticate("auth-session") {
-        get<ChatController>({
-            tags("chats")
+    authenticate("auth-session-admin") {
+        get<AdminChatController>({
+            tags("admin/chats")
             description = "Retrieve list of all chats"
             request { }
             response {
@@ -59,15 +56,13 @@ fun Route.chatsRoutes() {
                 }
             }
         }) {
-            val userSession = call.sessions.get<UserSession>()
-            val serverSession = SessionService().get(userSession!!.id)
-            val chats: List<ChatDTO> = chatService.getAll(serverSession!!.userId)
+            val chats: List<ChatDTO> = chatService.getAll()
             call.respond(HttpStatusCode.OK, chats)
             return@get
         }
 
-        get<ChatController.Chat.Messages>({
-            tags("chats")
+        get<AdminChatController.Chat.Messages>({
+            tags("admin/chats")
             description = "Retrieve chat messages"
             request {
                 pathParameter<String>("id") {
@@ -87,15 +82,13 @@ fun Route.chatsRoutes() {
                 }
             }
         }) {
-            val userSession = call.sessions.get<UserSession>()
-            val serverSession = SessionService().get(userSession!!.id)
-            val messages: List<Message> = chatService.getMessages(it.parent.id, serverSession!!.userId)
+            val messages: List<Message> = chatService.getMessages(it.parent.id)
             call.respond(HttpStatusCode.OK, messages)
             return@get
         }
 
-        put<ChatController.Chat.Title>({
-            tags("chats")
+        put<AdminChatController.Chat.Title>({
+            tags("admin/chats")
             description = "Update chat title"
             request {
                 pathParameter<String>("id") {
@@ -114,16 +107,14 @@ fun Route.chatsRoutes() {
                 }
             }
         }) {
-            val userSession = call.sessions.get<UserSession>()
-            val serverSession = SessionService().get(userSession!!.id)
             val input: UpdateChatTitleDTO = call.receive()
-            val chat: Chat = chatService.updateTitle(it.parent.id, input, serverSession!!.userId)
+            val chat: Chat = chatService.updateTitle(it.parent.id, input)
             call.respond(HttpStatusCode.OK, chat)
             return@put
         }
 
-        patch<ChatController.Chat.Messages.Message>({
-            tags("chats")
+        patch<AdminChatController.Chat.Messages.Message>({
+            tags("admin/chats")
             description = "Evaluate chat message"
             request {
                 pathParameter<String>("id") {
@@ -145,12 +136,10 @@ fun Route.chatsRoutes() {
                 }
             }
         }) {
-            val userSession = call.sessions.get<UserSession>()
-            val serverSession = SessionService().get(userSession!!.id)
             val input: EvaluateMessageDTO = call.receive()
             val chatId = it.parent.parent.id
             val messageId = it.messageId
-            val message = chatService.evaluateMessage(chatId, messageId, input, serverSession!!.userId)
+            val message = chatService.evaluateMessage(chatId, messageId, input)
             call.respond(HttpStatusCode.OK, message)
             return@patch
         }

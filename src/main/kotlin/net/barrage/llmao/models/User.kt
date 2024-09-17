@@ -8,9 +8,7 @@ import net.barrage.llmao.tables.records.UsersRecord
 @Serializable
 class User(
     val id: KUUID,
-    val username: String,
     val email: String,
-    val password: String,
     val firstName: String,
     val lastName: String,
     val active: Boolean,
@@ -22,9 +20,7 @@ class User(
 
 fun UsersRecord.toUser() = User(
     id = this.id!!,
-    username = this.username!!,
     email = this.email!!,
-    password = this.password!!,
     firstName = this.firstName!!,
     lastName = this.lastName!!,
     role = this.role!!,

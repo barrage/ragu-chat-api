@@ -42,13 +42,6 @@ class AgentRepository {
             .fetchOne(AgentsRecord::toAgent)
     }
 
-    fun delete(id: Int): Boolean {
-        return dslContext
-            .delete(AGENTS)
-            .where(AGENTS.ID.eq(id))
-            .execute() == 1
-    }
-
     fun activate(id: Int): Agent? {
         return dslContext
             .update(AGENTS)

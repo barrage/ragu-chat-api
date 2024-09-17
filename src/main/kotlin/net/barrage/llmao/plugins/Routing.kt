@@ -1,15 +1,12 @@
 package net.barrage.llmao.plugins
 
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
-
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.controllers.agentsRoutes
-import net.barrage.llmao.controllers.chatsRoutes
-import net.barrage.llmao.controllers.userRoutes
+import net.barrage.llmao.controllers.*
 
 fun Application.configureRouting() {
     install(Resources)
@@ -27,8 +24,11 @@ fun Application.configureRouting() {
         }
 
         openApiRoutes()
+        adminAgentsRoutes()
         agentsRoutes()
+        adminUserRoutes()
         userRoutes()
+        adminChatsRoutes()
         chatsRoutes()
     }
 }

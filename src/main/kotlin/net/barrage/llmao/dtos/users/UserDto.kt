@@ -8,7 +8,6 @@ import net.barrage.llmao.tables.records.UsersRecord
 @Serializable
 class UserDto(
     val id: KUUID,
-    val username: String,
     val email: String,
     val firstName: String,
     val lastName: String,
@@ -21,7 +20,6 @@ class UserDto(
 
 fun UsersRecord.toUserDto() = UserDto(
     id = this.id!!,
-    username = this.username!!,
     email = this.email!!,
     firstName = this.firstName!!,
     lastName = this.lastName!!,

@@ -1,18 +1,16 @@
 package net.barrage.llmao.dtos.users
 
 import io.ktor.server.plugins.requestvalidation.*
+import kotlinx.serialization.Serializable
 
+@Serializable
 class UpdateUserDTO(
-    val username: String,
-    val email: String,
-    val firstName: String,
-    val lastName: String,
-    val defaultAgentId: Int,
-) {
+    override val firstName: String,
+    override val lastName: String,
+    override val defaultAgentId: Int,
+) : UpdateUser {
     fun validate(): ValidationResult {
         val rules = listOf(
-            validateUsername(username),
-            validateEmail(email),
             validateFirstName(firstName),
             validateLastName(lastName),
             validateDefaultAgentId(defaultAgentId)

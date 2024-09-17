@@ -12,20 +12,42 @@ import net.barrage.llmao.serializers.KUUID
 class ChatService {
     private val chatRepository = ChatRepository()
 
-    fun getAll(): List<ChatDTO> {
-        return chatRepository.getAll()
+    fun getAll(userId: KUUID? = null): List<ChatDTO> {
+        return if (userId != null) {
+            chatRepository.getAllForUser(userId)
+        } else {
+            chatRepository.getAll()
+        }
     }
 
-    fun getMessages(id: KUUID): List<Message> {
-        return chatRepository.getMessages(id)
+    fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
+        return if (userId != null) {
+            chatRepository.getMessagesForUser(id, userId)
+        } else {
+            chatRepository.getMessages(id)
+        }
     }
 
-    fun updateTitle(id: KUUID, updated: UpdateChatTitleDTO): Chat {
-        return chatRepository.updateTitle(id, updated) ?: throw NotFoundException("Chat not found")
+    fun updateTitle(id: KUUID, updated: UpdateChatTitleDTO, userId: KUUID? = null): Chat {
+        return if (userId != null) {
+            chatRepository.updateTitleForUser(id, updated, userId) ?: throw NotFoundException("Chat not found")
+        } else {
+            chatRepository.updateTitle(id, updated) ?: throw NotFoundException("Chat not found")
+        }
     }
 
-    fun evaluateMessage(chatId: KUUID, messageId: KUUID, evaluation: EvaluateMessageDTO): Message {
-        chatRepository.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
+    fun evaluateMessage(
+        chatId: KUUID,
+        messageId: KUUID,
+        evaluation: EvaluateMessageDTO,
+        userId: KUUID? = null
+    ): Message {
+        if (userId != null) {
+            chatRepository.getMessageForUser(chatId, messageId, userId)
+                ?: throw NotFoundException("Message not found")
+        } else {
+            chatRepository.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
+        }
 
         return chatRepository.evaluateMessage(messageId, evaluation) ?: throw NotFoundException("Message not found")
     }

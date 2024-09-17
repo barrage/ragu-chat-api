@@ -1,9 +1,6 @@
 package net.barrage.llmao.repositories
 
-import net.barrage.llmao.dtos.users.NewUserDTO
-import net.barrage.llmao.dtos.users.UpdateUserDTO
-import net.barrage.llmao.dtos.users.UserDto
-import net.barrage.llmao.dtos.users.toUserDto
+import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.enums.Roles
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.UsersRecord
@@ -23,18 +20,15 @@ class UserRepository {
             .fetchOne(UsersRecord::toUserDto)
     }
 
-    fun getWithIdAndPassword(id: UUID, password: String): UserDto? {
+    fun getByEmail(email: String): UserDto? {
         return dslContext.selectFrom(USERS)
-            .where(USERS.ID.eq(id))
-            .and(USERS.PASSWORD.eq(password))
+            .where(USERS.EMAIL.eq(email))
             .fetchOne(UsersRecord::toUserDto)
     }
 
     fun create(user: NewUserDTO): UserDto {
         return dslContext.insertInto(USERS)
-            .set(USERS.USERNAME, user.username)
             .set(USERS.EMAIL, user.email)
-            .set(USERS.PASSWORD, user.password)
             .set(USERS.FIRST_NAME, user.firstName)
             .set(USERS.LAST_NAME, user.lastName)
             .set(USERS.ROLE, user.role.name)
@@ -43,23 +37,18 @@ class UserRepository {
             .fetchOne(UsersRecord::toUserDto)!!
     }
 
-    fun update(id: UUID, update: UpdateUserDTO): UserDto {
-        return dslContext.update(USERS)
-            .set(USERS.USERNAME, update.username)
-            .set(USERS.EMAIL, update.email)
+    fun update(id: UUID, update: UpdateUser): UserDto {
+        val updateQuery = dslContext.update(USERS)
             .set(USERS.FIRST_NAME, update.firstName)
             .set(USERS.LAST_NAME, update.lastName)
             .set(USERS.DEFAULT_AGENT_ID, update.defaultAgentId)
             .set(USERS.UPDATED_AT, OffsetDateTime.now())
-            .where(USERS.ID.eq(id))
-            .returning()
-            .fetchOne(UsersRecord::toUserDto)!!
-    }
 
-    fun updatePassword(id: UUID, password: String): UserDto {
-        return dslContext.update(USERS)
-            .set(USERS.PASSWORD, password)
-            .set(USERS.UPDATED_AT, OffsetDateTime.now())
+        if (update is AdminUpdateUserDTO) {
+            updateQuery.set(USERS.EMAIL, update.email)
+        }
+
+        return updateQuery
             .where(USERS.ID.eq(id))
             .returning()
             .fetchOne(UsersRecord::toUserDto)!!
@@ -96,5 +85,14 @@ class UserRepository {
         return dslContext.deleteFrom(USERS)
             .where(USERS.ID.eq(id))
             .execute() == 1
+    }
+
+    fun setDefaultAgent(id: Int, userId: UUID): UserDto {
+        return dslContext.update(USERS)
+            .set(USERS.DEFAULT_AGENT_ID, id)
+            .set(USERS.UPDATED_AT, OffsetDateTime.now())
+            .where(USERS.ID.eq(userId))
+            .returning()
+            .fetchOne(UsersRecord::toUserDto)!!
     }
 }

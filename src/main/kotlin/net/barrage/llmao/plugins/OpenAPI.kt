@@ -28,7 +28,7 @@ fun Route.openApiRoutes() {
     route("openapi.json") {
         openApiSpec()
     }
-    route("swagger-ui/index.html") {
+    route("swagger-ui") {
         swaggerUI("/openapi.json")
     }
 }

@@ -7,7 +7,7 @@ val logbackVersion = "1.4.14"
 val postgresVersion = "42.7.4"
 val h2Version = "2.1.214"
 val exposedVersion = "0.52.0"
-val jooqVersion = "3.18.4"
+val jooqVersion = "3.19.11"
 
 plugins {
     kotlin("jvm") version "2.0.20"
@@ -48,7 +48,10 @@ buildscript {
 }
 
 dependencies {
+    implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-client-apache-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-resources-jvm:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")

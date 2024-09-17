@@ -29,10 +29,31 @@ class ChatRepository {
             .map { toChatDTO(it.value) }
     }
 
+    fun getAllForUser(id: KUUID): List<ChatDTO> {
+        return dslContext
+            .select()
+            .from(CHATS)
+            .leftJoin(LLM_CONFIGS).on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
+            .leftJoin(MESSAGES).on(CHATS.ID.eq(MESSAGES.CHAT_ID))
+            .where(CHATS.USER_ID.eq(id))
+            .fetch()
+            .groupBy { it[CHATS.ID] }
+            .map { toChatDTO(it.value) }
+    }
+
     fun getMessages(id: KUUID): List<Message> {
         return dslContext.select()
             .from(MESSAGES)
             .where(MESSAGES.CHAT_ID.eq(id))
+            .fetchInto(MessagesRecord::class.java)
+            .map { it.toMessage() }
+    }
+
+    fun getMessagesForUser(id: KUUID, userId: KUUID): List<Message> {
+        return dslContext.select()
+            .from(MESSAGES)
+            .join(CHATS).on(MESSAGES.CHAT_ID.eq(CHATS.ID))
+            .where(MESSAGES.CHAT_ID.eq(id).and(CHATS.USER_ID.eq(userId)))
             .fetchInto(MessagesRecord::class.java)
             .map { it.toMessage() }
     }
@@ -46,6 +67,19 @@ class ChatRepository {
                 )
             )
             .fetchOne(MessagesRecord::toMessage)
+    }
+
+    fun getMessageForUser(chatId: KUUID, messageId: KUUID, userId: KUUID): Message? {
+        return dslContext
+            .select()
+            .from(MESSAGES)
+            .join(CHATS).on(MESSAGES.CHAT_ID.eq(CHATS.ID))
+            .where(
+                MESSAGES.ID.eq(messageId)
+                    .and(MESSAGES.CHAT_ID.eq(chatId))
+                    .and(CHATS.USER_ID.eq(userId))
+            )
+            .fetchOne { it.into(MessagesRecord::class.java).toMessage() }
     }
 
     fun evaluateMessage(id: KUUID, evaluation: EvaluateMessageDTO): Message? {
@@ -64,6 +98,16 @@ class ChatRepository {
             .set(CHATS.TITLE, updated.title)
             .set(CHATS.UPDATED_AT, OffsetDateTime.now())
             .where(CHATS.ID.eq(id))
+            .returning()
+            .fetchOne(ChatsRecord::toChat)
+    }
+
+    fun updateTitleForUser(id: KUUID, updated: UpdateChatTitleDTO, userId: KUUID): Chat? {
+        return dslContext
+            .update(CHATS)
+            .set(CHATS.TITLE, updated.title)
+            .set(CHATS.UPDATED_AT, OffsetDateTime.now())
+            .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
             .returning()
             .fetchOne(ChatsRecord::toChat)
     }

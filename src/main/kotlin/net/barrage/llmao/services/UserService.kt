@@ -3,6 +3,7 @@ package net.barrage.llmao.services
 import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.repositories.UserRepository
+import net.barrage.llmao.serializers.KUUID
 import java.util.*
 
 class UserService {
@@ -12,15 +13,42 @@ class UserService {
         return usersRepository.getAll()
     }
 
-    fun get(id: UUID): UserDto {
+    fun get(id: KUUID): UserDto {
         return usersRepository.get(id) ?: throw NotFoundException("User not found")
     }
 
+    fun getByEmail(email: String): UserDto {
+        return usersRepository.getByEmail(email) ?: throw NotFoundException("User not found")
+    }
+
     fun create(user: NewUserDTO): UserDto {
+        val existingUser = usersRepository.getByEmail(user.email)
+
+        if (existingUser != null) {
+            throw BadRequestException("User with email ${user.email} already exists")
+        }
+
         return usersRepository.create(user)
     }
 
-    fun update(id: UUID, update: UpdateUserDTO): UserDto {
+    fun createDev(user: NewDevUserDTO): UserDto {
+        val existingUser = usersRepository.getByEmail(user.email)
+
+        if (existingUser != null) {
+            throw BadRequestException("User with email ${user.email} already exists")
+        }
+
+        val newUser = NewUserDTO(
+            email = user.email,
+            firstName = user.firstName,
+            lastName = user.lastName,
+            role = user.role,
+            defaultAgentId = 1
+        )
+        return usersRepository.create(newUser)
+    }
+
+    fun update(id: KUUID, update: UpdateUser): UserDto {
         val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
         if (!user.active) {
@@ -28,17 +56,6 @@ class UserService {
         }
 
         return usersRepository.update(id, update)
-    }
-
-    fun updatePassword(id: UUID, update: UpdateUserPasswordDTO): UserDto {
-        val user: UserDto =
-            usersRepository.getWithIdAndPassword(id, update.password) ?: throw NotFoundException("User not found")
-
-        if (!user.active) {
-            throw BadRequestException("User is deactivated")
-        }
-
-        return usersRepository.updatePassword(id, update.newPassword)
     }
 
     fun updateRole(id: UUID, update: UpdateUserRoleDTO): UserDto {
@@ -70,7 +87,7 @@ class UserService {
     }
 
     fun delete(id: UUID) {
-        if (usersRepository.delete(id)) {
+        if (!usersRepository.delete(id)) {
             throw NotFoundException("User not found")
         }
     }

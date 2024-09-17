@@ -4,6 +4,7 @@ ktor:
       - net.barrage.llmao.ApplicationKt.module
   deployment:
     port: 42069
+  environment: "development"
 
 db:
   url: "jdbc:postgresql://localhost:5454/kappi"
@@ -27,6 +28,18 @@ azure:
   LLMEndpoint: "YOUR_LLM_ENDPOINT"
   LLMKey: "YOUR_LLM_KEY"
 
-  weaviate:
-    host: "localhost:8080"
-    scheme: "http"
+weaviate:
+  host: "localhost:8080"
+  scheme: "http"
+
+oauth:
+  google:
+    urlProvider: "http://localhost:42069/auth/callback"
+    clientId: "client_id"
+    clientSecret: "client_secret"
+
+session:
+  cookieName: "kappi"
+  httpOnly: false
+  secure: false
+  domain: "localhost" # ".barrage.corp" for guja
