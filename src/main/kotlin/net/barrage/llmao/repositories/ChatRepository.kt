@@ -6,9 +6,7 @@ import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.chats.toChatDTO
 import net.barrage.llmao.dtos.llmconfigs.toLLMConfigDTO
-import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
-import net.barrage.llmao.dtos.messages.MessageDTO
-import net.barrage.llmao.dtos.messages.toMessageDTO
+import net.barrage.llmao.dtos.messages.*
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.toChat
@@ -144,10 +142,6 @@ class ChatRepository {
                 .returning()
                 .fetchOne()!!
 
-            llmConfigsRecord.apply {
-                chatId = insertedChat!!.id!!
-            }
-
             insertedLLMConfig = config.dsl()
                 .insertInto(LLM_CONFIGS)
                 .set(llmConfigsRecord)
@@ -177,14 +171,14 @@ class ChatRepository {
         userId: KUUID,
         returning: Boolean,
         content: String
-    ): FailedMessagesRecord? {
+    ): FailedMessageDto? {
         return dslContext.insertInto(FAILED_MESSAGES).set(FAILED_MESSAGES.FAIL_REASON, failReason.value)
             .set(FAILED_MESSAGES.CHAT_ID, chatId)
             .set(FAILED_MESSAGES.USER_ID, userId)
             .set(FAILED_MESSAGES.CONTENT, content)
             .let {
                 if (returning) {
-                    it.returning().fetchOne() ?: throw NotFoundException("Failed to insert failed message")
+                    it.returning().fetchOne(FailedMessagesRecord::toFailedMessageDto) ?: throw NotFoundException("Failed to insert failed message")
                 } else {
                     it.execute().let {
                         null
@@ -199,7 +193,8 @@ class ChatRepository {
             .set(MESSAGES.SENDER, userId.toString())
             .set(MESSAGES.SENDER_TYPE, "user")
             .set(MESSAGES.CONTENT, proompt)
-            .returning().fetchOne(MessagesRecord::toMessageDTO) ?: throw NotFoundException("Failed to insert user message")
+            .returning().fetchOne(MessagesRecord::toMessageDTO)
+            ?: throw NotFoundException("Failed to insert user message")
     }
 
     fun insertAssistantMessage(id: KUUID, agentId: Int, response: String, messageId: KUUID): MessageDTO {
@@ -209,7 +204,8 @@ class ChatRepository {
             .set(MESSAGES.SENDER_TYPE, "assistant")
             .set(MESSAGES.CONTENT, response)
             .set(MESSAGES.RESPONSE_TO, messageId)
-            .returning().fetchOne(MessagesRecord::toMessageDTO) ?: throw NotFoundException("Failed to insert assistant message")
+            .returning().fetchOne(MessagesRecord::toMessageDTO)
+            ?: throw NotFoundException("Failed to insert assistant message")
     }
 
     fun insertSystemMessage(id: KUUID, message: String): MessageDTO {
@@ -217,6 +213,20 @@ class ChatRepository {
             .set(MESSAGES.CHAT_ID, id)
             .set(MESSAGES.SENDER_TYPE, "system")
             .set(MESSAGES.CONTENT, message)
-            .returning().fetchOne(MessagesRecord::toMessageDTO) ?: throw NotFoundException("Failed to insert system message")
+            .returning().fetchOne(MessagesRecord::toMessageDTO)
+            ?: throw NotFoundException("Failed to insert system message")
+    }
+
+    fun getUserChat(id: KUUID, userId: KUUID): ChatDTO {
+        return dslContext
+            .select()
+            .from(CHATS)
+            .leftJoin(LLM_CONFIGS).on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
+            .leftJoin(MESSAGES).on(CHATS.ID.eq(MESSAGES.CHAT_ID))
+            .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
+            .fetch()
+            .groupBy { it[CHATS.ID] }
+            .map { toChatDTO(it.value) }
+            .first()
     }
 }

@@ -1,9 +1,14 @@
 package net.barrage.llmao.llm.factories
 
+import io.ktor.server.config.*
+import io.ktor.server.plugins.*
+import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.llm.Chat
 import net.barrage.llmao.llm.PromptFormatter
-import net.barrage.llmao.llm.conversation.*
+import net.barrage.llmao.llm.conversation.AzureAI
+import net.barrage.llmao.llm.conversation.ConversationLlm
+import net.barrage.llmao.llm.conversation.OpenAI
 import net.barrage.llmao.llm.types.*
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.serializers.KUUID
@@ -29,14 +34,16 @@ abstract class ChatFactory {
                 temperature = 0.1,
             ),
             model = model,
-            language = config.languages,
+            language = config.language,
         )
+
+        println(model)
 
         val llm = getConversationLlm(llmConfig)
 
         val infra = ChatInfra(
             llm,
-            PromptFormatter(agent.context, config.languages),
+            PromptFormatter(agent.context, config.language),
             emitter,
         )
 
@@ -51,10 +58,16 @@ abstract class ChatFactory {
         userId: KUUID,
         emitter: Emitter
     ): Chat {
-        val chat = chatService.get(id)
+        val chat: ChatDTO
+        try {
+            chat = chatService.getUserChat(id, userId)
+        } catch (e: NoSuchElementException) {
+            throw NotFoundException("Chat not found")
+        }
+
         val agent = agentService.get(chat.agentId)
 
-        val llmConfig = chat.llmConfig.toLLMConversationConfig();
+        val llmConfig = chat.llmConfig.toLLMConversationConfig()
 
         val llm = getConversationLlm(llmConfig)
 
@@ -79,7 +92,7 @@ abstract class ChatFactory {
                 chat.userId,
                 chat.agentId,
                 chat.title,
-                languages = chat.llmConfig.language,
+                language = chat.llmConfig.language,
                 messageReceived = true,
             ),
             infra,
@@ -87,7 +100,7 @@ abstract class ChatFactory {
         )
     }
 
-    abstract fun getConversationLlm(config: LLMConversationConfig): ConversationLlm;
+    abstract fun getConversationLlm(config: LLMConversationConfig): ConversationLlm
 }
 
 class AzureChatFactory(
@@ -110,5 +123,20 @@ class OpenAIChatFactory(
 ) : ChatFactory() {
     override fun getConversationLlm(config: LLMConversationConfig): ConversationLlm {
         return OpenAI(apiKey, config)
+    }
+}
+
+
+fun chatFactory(config: ApplicationConfig): ChatFactory {
+    return if (config.property("llm.provider").getString() == "azure") {
+        AzureChatFactory(
+            config.property("llm.azure.LLMKey").getString(),
+            config.property("llm.azure.LLMEndpoint").getString(),
+            config.property("llm.azure.apiVersion").getString(),
+        )
+    } else {
+        OpenAIChatFactory(
+            config.property("llm.openai.authorization").getString(),
+        )
     }
 }

@@ -1,10 +1,108 @@
 package net.barrage.llmao.websocket
 
+import io.ktor.server.plugins.*
+import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.internalError
 import net.barrage.llmao.llm.Chat
+import net.barrage.llmao.llm.factories.ChatFactory
+import net.barrage.llmao.llm.types.ChatConfig
 import net.barrage.llmao.serializers.KUUID
+import net.barrage.llmao.services.ChatService
 
-val chats = mutableMapOf<KUUID, Chat>()
 
-class MessageHandler(message: WSMessage) {
-    // handle chat message
+class MessageHandler(private val chatFactory: ChatFactory) {
+    private val chatService = ChatService()
+    private val chats = mutableMapOf<KUUID, Chat>()
+
+    suspend fun handleMessage(emitter: Emitter, message: C2SMessage) {
+        try {
+            when (message) {
+                is C2SChatMessage -> this.handleChatMessage(emitter, message.userId, message.payload)
+                is C2SServerMessageOpenChat -> this.openChat(emitter, message.userId, message.payload.body)
+                is C2SServerMessageCloseChat -> this.closeChat(emitter, message.userId)
+                is C2SServerMessageDeleteChat -> this.deleteChat(emitter, message.userId, message.payload.body)
+                is C2SServerMessageStopStream -> this.stopStream(emitter, message.userId)
+                is C2SServerMessageUpdateTitle -> this.updateTitle(message.userId, message.payload.body)
+            }
+        } catch (e: Exception) {
+            when (e) {
+                is NoSuchElementException -> emitter.emitError(apiError("Not Found", e.message))
+                is NotFoundException -> emitter.emitError(apiError("Not Found", e.message))
+                is IllegalArgumentException -> emitter.emitError(apiError("Bad Request", e.message))
+                is BadRequestException -> emitter.emitError(apiError("Bad Request", e.message))
+                else -> emitter.emitError(internalError())
+            }
+        }
+    }
+
+    private suspend fun handleChatMessage(emitter: Emitter, userId: KUUID, message: String) {
+        val chat = chats[userId] ?: throw NotFoundException("Chat not found")
+        if (!chat.streamActive) chat.stream(message)
+        else emitter.emitError(apiError("Bad Request", "Stream already active"))
+    }
+
+    private suspend fun closeChat(
+        emitter: Emitter,
+        userId: KUUID
+    ) {
+        this.chats[userId]?.closeStream()
+        this.chats.remove(userId)
+        emitter.emitSystemMessage(S2CChatClosedMessage())
+    }
+
+    fun removeUserChat(userId: KUUID) {
+        this.chats.remove(userId)
+    }
+
+    private suspend fun deleteChat(emitter: Emitter, userId: KUUID, message: C2SMessagePayloadDeleteChatBody) {
+        chatService.delete(message.chatId)
+        this.chats.remove(userId)
+        emitter.emitSystemMessage(S2CChatDeletedMessage(ChatDeleted(message.chatId)))
+    }
+
+    private suspend fun openChat(emitter: Emitter, userId: KUUID, message: C2SMessagePayloadOpenChatBody) {
+        var chatId: KUUID? = message.chatId
+        val llm = message.llm
+        val language = message.language
+        val agentId = message.agentId
+
+        if (llm == null && chatId == null) {
+            emitter.emitError(apiError("Bad Request", "`llm` parameter missing"))
+        }
+
+        if (agentId == null && chatId == null) {
+            emitter.emitError(apiError("Bad Request", "`agentId` parameter missing"))
+            return
+        }
+
+        val chat: Chat = if (chatId == null) {
+            chatId = KUUID.randomUUID()
+            val chatConfig = ChatConfig(
+                id = chatId,
+                userId = userId,
+                agentId = agentId!!,
+                language = language!!,
+            )
+
+            chatFactory.new(llm!!, chatConfig, emitter)
+        } else {
+            chatFactory.fromExisting(chatId, userId, emitter)
+        }
+
+        this.chats[userId] = chat
+        emitter.emitSystemMessage(S2CChatOpenMessage(ChatOpen(chatId!!, chat.config)))
+    }
+
+    private suspend fun stopStream(emitter: Emitter, userId: KUUID) {
+        val chat = this.chats[userId]
+        if (chat != null) {
+            chat.closeStream()
+            emitter.emitTerminator()
+        }
+    }
+
+    private suspend fun updateTitle(userId: KUUID, message: C2SMessagePayloadUpdateTitleBody) {
+        val chat = this.chats[userId] ?: throw NotFoundException("Chat not found")
+        chat.updateTitle(message.title)
+    }
 }

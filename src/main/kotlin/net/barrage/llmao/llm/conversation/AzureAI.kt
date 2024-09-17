@@ -2,6 +2,7 @@ package net.barrage.llmao.llm.conversation
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.StreamOptions
+import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
@@ -24,7 +25,7 @@ class AzureAI(
     private var client: OpenAI? = null
     private var deployment: LLMModels? = null
 
-    fun init() {
+    init {
         this.deployment = this.cfg.model
         if (this.deployment == null) {
             this.deployment = LLMModels.GPT4
@@ -66,6 +67,10 @@ class AzureAI(
                 it.choices.isNotEmpty()
             }
             .map {
+                if (it.choices[0].finishReason == FinishReason.ContentFilter) {
+                    throw Exception("Content filter triggered")
+                }
+
                 listOf(
                     TokenChunk(
                         it.id,

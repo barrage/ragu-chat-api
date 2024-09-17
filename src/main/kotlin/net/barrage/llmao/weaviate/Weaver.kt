@@ -110,7 +110,10 @@ class Weaver(config: WeaviateConfig) {
         var query = client.graphQL().get()
             .withFields(*fields.toTypedArray())
             .withClassName(options.collection)
-            .withNearVector(NearVectorArgument.builder().vector(embeddings.map { it.toFloat() }.toTypedArray()).distance(options.distanceFilter?.toFloat()).build())
+            .withNearVector(
+                NearVectorArgument.builder().vector(embeddings.map { it.toFloat() }.toTypedArray())
+                    .distance(options.distanceFilter?.toFloat()).build()
+            )
             .withLimit(options.nResults)
 
 
@@ -146,6 +149,7 @@ class Weaver(config: WeaviateConfig) {
                     null
                 }
             }
+
             else -> emptyList()
         }
 

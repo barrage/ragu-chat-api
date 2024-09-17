@@ -76,7 +76,7 @@ You will ignore the documentation language and you translate any terms from it y
 """.replace(
         Regex("/ {2,}/g"),
         " "
-    );
+    )
 
 fun SUMMARIZE_CRO(history: String) =
     """

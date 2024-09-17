@@ -5,16 +5,15 @@ import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
+import net.barrage.llmao.dtos.messages.FailedMessageDto
 import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.llm.types.ChatConfig
-import net.barrage.llmao.llm.types.ChatMessage
 import net.barrage.llmao.llm.types.LLMConversationConfig
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.repositories.ChatRepository
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.ChatsRecord
-import net.barrage.llmao.tables.records.FailedMessagesRecord
 import net.barrage.llmao.tables.records.LlmConfigsRecord
 
 class ChatService {
@@ -30,6 +29,10 @@ class ChatService {
 
     fun get(id: KUUID): ChatDTO {
         return chatRepository.get(id)
+    }
+
+    fun getUserChat(id: KUUID, userId: KUUID) : ChatDTO {
+        return chatRepository.getUserChat(id, userId)
     }
 
     fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
@@ -73,6 +76,7 @@ class ChatService {
         }
 
         val config = LlmConfigsRecord().apply {
+            chatId = chatConfig.id
             model = llmConfig.model.name
             language = llmConfig.language.name
             temperature = llmConfig.chat.temperature
@@ -82,17 +86,13 @@ class ChatService {
         return chatRepository.insertWithConfig(chat, config)
     }
 
-    fun delete(id: KUUID): Unit {
-        if (!chatRepository.delete(id)) throw NotFoundException("Chat not found")
-    }
-
     fun insertFailedMessage(
         finishReason: FinishReason,
         chatId: KUUID,
         userId: KUUID,
         returning: Boolean,
         content: String
-    ): FailedMessagesRecord? {
+    ): FailedMessageDto? {
         return chatRepository.insertFailedMessage(finishReason, chatId, userId, returning, content)
     }
 

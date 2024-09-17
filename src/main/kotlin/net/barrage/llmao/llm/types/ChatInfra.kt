@@ -7,5 +7,5 @@ import net.barrage.llmao.websocket.Emitter
 class ChatInfra(
     val llm: ConversationLlm,
     val formatter: PromptFormatter,
-    val emitter: Emitter?,
+    val emitter: Emitter? = null,
 )

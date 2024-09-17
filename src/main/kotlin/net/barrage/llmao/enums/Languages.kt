@@ -9,5 +9,5 @@ enum class Languages(val language: String) {
     CRO("Croatian"),
 
     @SerialName("eng")
-    ENG("English"),;
+    ENG("English"), ;
 }

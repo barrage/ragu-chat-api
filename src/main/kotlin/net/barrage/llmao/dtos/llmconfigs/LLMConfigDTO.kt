@@ -20,7 +20,7 @@ data class LLMConfigDTO(
     val createdAt: KOffsetDateTime,
     val updatedAt: KOffsetDateTime,
 ) {
-    fun toLLMConversationConfig() : LLMConversationConfig {
+    fun toLLMConversationConfig(): LLMConversationConfig {
         return LLMConversationConfig(
             chat = LLMConfigChat(
                 stream = this.streaming,

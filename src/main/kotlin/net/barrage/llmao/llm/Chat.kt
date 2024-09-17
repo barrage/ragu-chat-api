@@ -9,55 +9,43 @@ import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.llm.types.*
 import net.barrage.llmao.services.ChatService
+import net.barrage.llmao.weaviate.loadWeaviate
+import net.barrage.llmao.websocket.ChatTitleUpdated
 import net.barrage.llmao.websocket.FinishEvent
-import net.barrage.llmao.websocket.TitleEvent
+import net.barrage.llmao.websocket.S2CTitleUpdatedMessage
 
 class Chat(
     val config: ChatConfig,
     val infra: ChatInfra,
-    var history: MutableList<ChatMessage> = mutableListOf(),
+    private var history: MutableList<ChatMessage> = mutableListOf(),
 ) {
     private val chatService = ChatService()
     var streamActive: Boolean = false
 
-    fun persist() {
-        val llmConfig = this.infra.llm.config()
-        val model = llmConfig.model
-        val language = llmConfig.language
-        val temperature = llmConfig.chat.temperature
-        val stream = llmConfig.chat.stream
-
-        val id = this.config.id
-        val userId = this.config.userId
-        val agentId = this.config.agentId
-
-        val chat = chatService.insertWithConfig(config, infra.llm.config())
+    private fun persist() {
+        chatService.insertWithConfig(config, infra.llm.config())
     }
 
-    fun delete() {
-        return chatService.delete(config.id)
-    }
-
-    suspend fun generateTitle(proompt: String) {
-        val titlePrompt = infra.formatter.title(proompt);
+    private suspend fun generateTitle(proompt: String) {
+        val titlePrompt = infra.formatter.title(proompt)
         val title = infra.llm.generateChatTitle(titlePrompt).trim()
 
-        chatService.updateTitle(this.config.id, UpdateChatTitleDTO(title))
+        chatService.updateTitle(this.config.id!!, UpdateChatTitleDTO(title))
 
-        this.infra.emitter?.emitForwardTitle(TitleEvent(this.config.id, title))
+        this.infra.emitter?.emitSystemMessage(S2CTitleUpdatedMessage(ChatTitleUpdated(this.config.id, title)))
     }
 
     suspend fun updateTitle(title: String) {
         this.config.title = title
-        chatService.updateTitle(this.config.id, UpdateChatTitleDTO(title))
+        chatService.updateTitle(this.config.id!!, UpdateChatTitleDTO(title))
 
-        this.infra.emitter?.emitForwardTitle(TitleEvent(this.config.id, title))
+        this.infra.emitter?.emitSystemMessage(S2CTitleUpdatedMessage(ChatTitleUpdated(this.config.id, title)))
     }
 
     suspend fun stream(proompt: String) {
         this.streamActive = true
 
-        var stream: Flow<List<TokenChunk>>? = null;
+        val stream: Flow<List<TokenChunk>>?
         if (this.config.messageReceived != true) {
             this.persist()
             this.config.messageReceived = true
@@ -72,12 +60,19 @@ class Chat(
         } catch (
             e: Exception
         ) {
-            e.printStackTrace()
+            if (e.message == "Content filter triggered") {
+                val response = contentFilterErrorMessage()
+                val failedMessage = this.chatService.insertFailedMessage(FinishReason.ContentFilter, this.config.id!!, this.config.userId, true, proompt)
+                this.infra.emitter!!.emitFinishResponse(FinishEvent(this.config.id, failedMessage!!.id, response, FinishReason.ContentFilter))
+            }
+            else {
+                e.printStackTrace()
+            }
             this.streamActive = false
             return
         }
 
-        stream.collect() { tokens ->
+        stream.collect { tokens ->
             if (!this.streamActive) {
                 println("Canceling stream for ${this.config.id}")
 
@@ -113,7 +108,7 @@ class Chat(
 
 
     private fun contentFilterErrorMessage(): String {
-        val language = this.infra.llm.config().language.language;
+        val language = this.infra.llm.config().language.language
 
         return if (language == "cro") "Ispričavam se, ali trenutno ne mogu pružiti odgovor. Molim vas da preformulirate svoj zahtjev ili postavite drugo pitanje."
         else "I apologize, but I'm unable to provide a response at this time. Please try rephrasing your request or ask something else."
@@ -147,7 +142,7 @@ class Chat(
 
         this.addToHistory(messages)
 
-        val userMessage = chatService.insertUserMessage(this.config.id, this.config.userId, proompt)
+        val userMessage = chatService.insertUserMessage(this.config.id!!, this.config.userId, proompt)
         val assistantMessage =
             chatService.insertAssistantMessage(this.config.id, this.config.agentId, response, userMessage.id)
 
@@ -173,7 +168,6 @@ class Chat(
     }
 
     private fun formatProompt(proompt: String): ChatMessage {
-        // TODO: Add embeddings with weavite
         val context = "No given context"
 
         return this.infra.formatter.userMessage(proompt, context)
@@ -193,7 +187,8 @@ class Chat(
         this.history.addAll(messages)
 
         if ((this.config.summarizeAfterTokens != null && this.countHistoryTokens() > this.config.summarizeAfterTokens)
-            || (this.config.maxHistory != null && this.history.size > this.config.maxHistory)) {
+            || (this.config.maxHistory != null && this.history.size > this.config.maxHistory)
+        ) {
             val conversation = this.history.joinToString("\n") {
                 val s = when (it.role) {
                     "user" -> "User"
@@ -209,7 +204,7 @@ class Chat(
             val summary = this.infra.llm.summarizeConversation(summaryPrompt)
 
             try {
-                chatService.insertSystemMessage(this.config.id, summary.trim())
+                chatService.insertSystemMessage(this.config.id!!, summary.trim())
             } catch (e: Exception) {
                 println("Error while inserting system message: ${e.message}")
             }

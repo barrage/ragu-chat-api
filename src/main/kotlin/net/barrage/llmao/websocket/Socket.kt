@@ -10,17 +10,13 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.error.internalError
+import net.barrage.llmao.llm.factories.chatFactory
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.UserService
-import java.time.Duration
 import java.util.*
-
-private val userService = UserService()
 
 fun Application.configureWebsockets() {
     install(WebSockets) {
-        pingPeriod = Duration.ofSeconds(15)
-        timeout = Duration.ofSeconds(15)
         maxFrameSize = Long.MAX_VALUE
         masking = false
         contentConverter = KotlinxWebsocketSerializationConverter(
@@ -30,12 +26,15 @@ fun Application.configureWebsockets() {
                 encodeDefaults = true
             }
         )
+
     }
 
-
+    val chatFactory = chatFactory(environment.config)
+    val messageHandler = MessageHandler(chatFactory)
 
     routing {
         webSocket {
+            val userService = UserService()
             var userId: KUUID? = null
             try {
                 val queryUser: String? = call.parameters["userId"]
@@ -50,21 +49,18 @@ fun Application.configureWebsockets() {
                     throw IllegalArgumentException("Invalid user ID")
                 }
 
-                println("User ID: $userId")
-
-                val user = userService.get(userId)
-
-                send("Hello, ${user.username}!")
+                userService.get(userId)
 
                 for (frame in incoming) {
                     when (frame) {
                         is Frame.Text -> {
-                            val message: WSMessage
+                            val message: C2SMessage
 
                             try {
                                 message = Json.decodeFromString(frame.readText())
                             } catch (e: Throwable) {
-                                send(apiError("Invalid message format", "Message format malformed").toString())
+                                e.printStackTrace()
+                                send(apiError("Unprocessable Entity", "Message format malformed").toString())
                                 continue
                             }
 
@@ -73,7 +69,7 @@ fun Application.configureWebsockets() {
                                 continue
                             }
 
-                            MessageHandler(message)
+                            messageHandler.handleMessage(Emitter(this), message)
                         }
 
                         else -> {
@@ -94,9 +90,9 @@ fun Application.configureWebsockets() {
                 e.printStackTrace()
                 send(internalError().toString())
                 close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, "Internal server error"))
+            } finally {
+                userId?.let { messageHandler.removeUserChat(it) }
             }
-
-            if (userId != null) chats.remove(userId)
         }
     }
 }

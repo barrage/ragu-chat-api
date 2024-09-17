@@ -18,15 +18,16 @@ cors:
   headers: "*"
   maxAge: 3600
 
-openAi:
-  authorization: "Bearer YOUR_API_KEY"
-
-azure:
-  apiVersion: "2023-05-15"
-  embeddingsEndpoint: "YOUR_EMBEDDINGS_ENDPOINT"
-  embeddingsKey: "YOUR_EMBEDDINGS_KEY"
-  LLMEndpoint: "YOUR_LLM_ENDPOINT"
-  LLMKey: "YOUR_LLM_KEY"
+llm:
+  provider: "azure"
+  openAi:
+    authorization: "Bearer YOUR_API_KEY"
+  azure:
+    apiVersion: "2023-05-15"
+    embeddingsEndpoint: "YOUR_EMBEDDINGS_ENDPOINT"
+    embeddingsKey: "YOUR_EMBEDDINGS_KEY"
+    LLMEndpoint: "YOUR_LLM_ENDPOINT"
+    LLMKey: "YOUR_LLM_KEY"
 
 weaviate:
   host: "localhost:8080"
