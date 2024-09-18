@@ -11,13 +11,13 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
     Database.init(environment.config)
-    loadWeaviate(environment.config)
+    val weavite = loadWeaviate(environment.config)
     configureSerialization()
     configureSecurity()
     configureSession()
     extendSession()
     configureOpenApi()
-    configureWebsockets()
+    configureWebsockets(weavite)
     configureRouting()
     configureRequestValidation()
     configureErrorHandling()

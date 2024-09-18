@@ -178,7 +178,8 @@ class ChatRepository {
             .set(FAILED_MESSAGES.CONTENT, content)
             .let {
                 if (returning) {
-                    it.returning().fetchOne(FailedMessagesRecord::toFailedMessageDto) ?: throw NotFoundException("Failed to insert failed message")
+                    it.returning().fetchOne(FailedMessagesRecord::toFailedMessageDto)
+                        ?: throw NotFoundException("Failed to insert failed message")
                 } else {
                     it.execute().let {
                         null

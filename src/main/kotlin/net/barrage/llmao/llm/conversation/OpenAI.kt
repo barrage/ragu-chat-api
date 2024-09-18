@@ -6,7 +6,6 @@ import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.llm.types.ChatMessage
 import net.barrage.llmao.llm.types.LLMConversationConfig
@@ -42,11 +41,8 @@ class OpenAI(
         )
 
         return this.client!!.chatCompletions(chatRequest)
-            .filter {
-                it.choices.isNotEmpty()
-            }
             .map {
-                if (it.choices[0].finishReason == FinishReason.ContentFilter) {
+                if (it.choices.firstOrNull()?.finishReason == FinishReason.ContentFilter) {
                     throw Exception("Content filter triggered")
                 }
 
@@ -54,8 +50,8 @@ class OpenAI(
                     TokenChunk(
                         it.id,
                         it.created,
-                        it.choices[0].delta?.content,
-                        it.choices[0].finishReason
+                        it.choices.firstOrNull()?.delta?.content ?: " ",
+                        it.choices.firstOrNull()?.finishReason
                     )
                 )
             }

@@ -31,7 +31,7 @@ class ChatService {
         return chatRepository.get(id)
     }
 
-    fun getUserChat(id: KUUID, userId: KUUID) : ChatDTO {
+    fun getUserChat(id: KUUID, userId: KUUID): ChatDTO {
         return chatRepository.getUserChat(id, userId)
     }
 

@@ -5,7 +5,7 @@ import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 
-class FailedMessageDto (
+class FailedMessageDto(
     val id: KUUID,
     val failReason: FinishReason,
     val userId: KUUID,

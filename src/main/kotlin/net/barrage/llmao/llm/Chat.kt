@@ -1,15 +1,11 @@
 package net.barrage.llmao.llm
 
 import com.aallam.openai.api.core.FinishReason
-import com.knuddels.jtokkit.Encodings
-import com.knuddels.jtokkit.api.Encoding
-import com.knuddels.jtokkit.api.ModelType
 import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
-import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.llm.types.*
+import net.barrage.llmao.models.DocumentChunk
 import net.barrage.llmao.services.ChatService
-import net.barrage.llmao.weaviate.loadWeaviate
 import net.barrage.llmao.websocket.ChatTitleUpdated
 import net.barrage.llmao.websocket.FinishEvent
 import net.barrage.llmao.websocket.S2CTitleUpdatedMessage
@@ -20,6 +16,7 @@ class Chat(
     private var history: MutableList<ChatMessage> = mutableListOf(),
 ) {
     private val chatService = ChatService()
+    private var lastRelevantDoc: String? = null
     var streamActive: Boolean = false
 
     private fun persist() {
@@ -62,10 +59,22 @@ class Chat(
         ) {
             if (e.message == "Content filter triggered") {
                 val response = contentFilterErrorMessage()
-                val failedMessage = this.chatService.insertFailedMessage(FinishReason.ContentFilter, this.config.id!!, this.config.userId, true, proompt)
-                this.infra.emitter!!.emitFinishResponse(FinishEvent(this.config.id, failedMessage!!.id, response, FinishReason.ContentFilter))
-            }
-            else {
+                val failedMessage = this.chatService.insertFailedMessage(
+                    FinishReason.ContentFilter,
+                    this.config.id!!,
+                    this.config.userId,
+                    true,
+                    proompt
+                )
+                this.infra.emitter!!.emitFinishResponse(
+                    FinishEvent(
+                        this.config.id,
+                        failedMessage!!.id,
+                        response,
+                        FinishReason.ContentFilter
+                    )
+                )
+            } else {
                 e.printStackTrace()
             }
             this.streamActive = false
@@ -80,6 +89,8 @@ class Chat(
                     val response = buf.joinToString("")
                     this.processResponse(proompt, response)
                 }
+
+                return@collect
             }
 
             for (chunk in tokens) {
@@ -168,19 +179,21 @@ class Chat(
     }
 
     private fun formatProompt(proompt: String): ChatMessage {
-        val context = "No given context"
+        val embedded = this.infra.encoder.encode(proompt).boxed()
+        val relatedChunks = this.infra.vectorDb.query(embedded, this.infra.vectorOptions)
+        val docContext = relatedChunks.map(DocumentChunk::content).toMutableList()
 
+        if (!this.lastRelevantDoc.isNullOrBlank()) {
+            docContext.add(this.lastRelevantDoc!!)
+        }
+
+        val context = docContext.joinToString("\n")
         return this.infra.formatter.userMessage(proompt, context)
     }
 
     private fun countHistoryTokens(): Int {
-        val registry = Encodings.newDefaultEncodingRegistry()
-        val enc: Encoding = when (this.infra.llm.config().model) {
-            LLMModels.GPT4 -> registry.getEncodingForModel(ModelType.GPT_4)
-            LLMModels.GPT35TURBO -> registry.getEncodingForModel(ModelType.GPT_3_5_TURBO)
-        }
         val history = this.history.joinToString("") { it.content }
-        return enc.encode(history).size()
+        return this.infra.encoder.encode(history).size()
     }
 
     private suspend fun addToHistory(messages: List<ChatMessage>) {

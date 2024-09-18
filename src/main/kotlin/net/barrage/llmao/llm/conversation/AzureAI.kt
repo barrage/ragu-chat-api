@@ -8,7 +8,6 @@ import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.llm.types.ChatMessage
@@ -63,11 +62,8 @@ class AzureAI(
         )
 
         return this.client!!.chatCompletions(chatRequest)
-            .filter {
-                it.choices.isNotEmpty()
-            }
             .map {
-                if (it.choices[0].finishReason == FinishReason.ContentFilter) {
+                if (it.choices.firstOrNull()?.finishReason == FinishReason.ContentFilter) {
                     throw Exception("Content filter triggered")
                 }
 
@@ -75,8 +71,8 @@ class AzureAI(
                     TokenChunk(
                         it.id,
                         it.created,
-                        it.choices[0].delta?.content,
-                        it.choices[0].finishReason
+                        it.choices.firstOrNull()?.delta?.content ?: " ",
+                        it.choices.firstOrNull()?.finishReason
                     )
                 )
             }

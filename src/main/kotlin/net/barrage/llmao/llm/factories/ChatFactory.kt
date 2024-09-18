@@ -1,5 +1,8 @@
 package net.barrage.llmao.llm.factories
 
+import com.knuddels.jtokkit.Encodings
+import com.knuddels.jtokkit.api.Encoding
+import com.knuddels.jtokkit.api.ModelType
 import io.ktor.server.config.*
 import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.chats.ChatDTO
@@ -11,14 +14,20 @@ import net.barrage.llmao.llm.conversation.ConversationLlm
 import net.barrage.llmao.llm.conversation.OpenAI
 import net.barrage.llmao.llm.types.*
 import net.barrage.llmao.models.Agent
+import net.barrage.llmao.models.DOCUMENTATION
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
 import net.barrage.llmao.services.ChatService
+import net.barrage.llmao.weaviate.Weaver
 import net.barrage.llmao.websocket.Emitter
 
-abstract class ChatFactory {
+abstract class ChatFactory(
+    open val vectorDb: Weaver
+) {
     private val agentService = AgentService()
     private val chatService = ChatService()
+
+    private val vectorOptions = DOCUMENTATION
 
     fun new(
         model: LLMModels,
@@ -45,6 +54,9 @@ abstract class ChatFactory {
             llm,
             PromptFormatter(agent.context, config.language),
             emitter,
+            vectorDb,
+            vectorOptions,
+            getEncoder(model),
         )
 
         return Chat(
@@ -75,6 +87,9 @@ abstract class ChatFactory {
             llm,
             PromptFormatter(agent.context, chat.llmConfig.language),
             emitter,
+            vectorDb,
+            vectorOptions,
+            getEncoder(llmConfig.model),
         )
 
         // TODO: Implement message history
@@ -106,8 +121,9 @@ abstract class ChatFactory {
 class AzureChatFactory(
     private val apiKey: String,
     private val endpoint: String,
-    private val apiVersion: String
-) : ChatFactory() {
+    private val apiVersion: String,
+    override val vectorDb: Weaver,
+) : ChatFactory(vectorDb) {
     override fun getConversationLlm(config: LLMConversationConfig): ConversationLlm {
         return AzureAI(
             apiKey,
@@ -119,24 +135,34 @@ class AzureChatFactory(
 }
 
 class OpenAIChatFactory(
-    private val apiKey: String
-) : ChatFactory() {
+    private val apiKey: String,
+    override val vectorDb: Weaver
+) : ChatFactory(vectorDb) {
     override fun getConversationLlm(config: LLMConversationConfig): ConversationLlm {
         return OpenAI(apiKey, config)
     }
 }
 
-
-fun chatFactory(config: ApplicationConfig): ChatFactory {
+fun chatFactory(config: ApplicationConfig, vectorDb: Weaver): ChatFactory {
     return if (config.property("llm.provider").getString() == "azure") {
         AzureChatFactory(
             config.property("llm.azure.LLMKey").getString(),
             config.property("llm.azure.LLMEndpoint").getString(),
             config.property("llm.azure.apiVersion").getString(),
+            vectorDb
         )
     } else {
         OpenAIChatFactory(
             config.property("llm.openai.authorization").getString(),
+            vectorDb
         )
+    }
+}
+
+fun getEncoder(llmModel: LLMModels): Encoding {
+    val registry = Encodings.newDefaultEncodingRegistry()
+    return when (llmModel) {
+        LLMModels.GPT4 -> registry.getEncodingForModel(ModelType.GPT_4)
+        LLMModels.GPT35TURBO -> registry.getEncodingForModel(ModelType.GPT_3_5_TURBO)
     }
 }

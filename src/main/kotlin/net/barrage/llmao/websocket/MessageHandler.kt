@@ -30,13 +30,16 @@ class MessageHandler(private val chatFactory: ChatFactory) {
                 is NotFoundException -> emitter.emitError(apiError("Not Found", e.message))
                 is IllegalArgumentException -> emitter.emitError(apiError("Bad Request", e.message))
                 is BadRequestException -> emitter.emitError(apiError("Bad Request", e.message))
-                else -> emitter.emitError(internalError())
+                else -> {
+                    e.printStackTrace()
+                    emitter.emitError(internalError())
+                }
             }
         }
     }
 
     private suspend fun handleChatMessage(emitter: Emitter, userId: KUUID, message: String) {
-        val chat = chats[userId] ?: throw NotFoundException("Chat not found")
+        val chat = chats[userId] ?: return emitter.emitError(apiError("Bad Request", "Have you opened a chat?"))
         if (!chat.streamActive) chat.stream(message)
         else emitter.emitError(apiError("Bad Request", "Stream already active"))
     }

@@ -13,9 +13,10 @@ import net.barrage.llmao.error.internalError
 import net.barrage.llmao.llm.factories.chatFactory
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.UserService
+import net.barrage.llmao.weaviate.Weaver
 import java.util.*
 
-fun Application.configureWebsockets() {
+fun Application.configureWebsockets(weavite: Weaver) {
     install(WebSockets) {
         maxFrameSize = Long.MAX_VALUE
         masking = false
@@ -29,7 +30,7 @@ fun Application.configureWebsockets() {
 
     }
 
-    val chatFactory = chatFactory(environment.config)
+    val chatFactory = chatFactory(environment.config, weavite)
     val messageHandler = MessageHandler(chatFactory)
 
     routing {
