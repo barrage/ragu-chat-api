@@ -11,9 +11,7 @@ import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
-import net.barrage.llmao.dtos.users.NewDevUserDTO
-import net.barrage.llmao.dtos.users.UpdateUserDTO
-import net.barrage.llmao.dtos.users.UserDto
+import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.services.SessionService
 import net.barrage.llmao.services.UserService
@@ -37,7 +35,8 @@ fun Route.userRoutes() {
             val userSession = call.sessions.get<UserSession>()
             val userId = SessionService().get(userSession!!.id)?.userId!!
             val user: UserDto = userService.get(userId)
-            call.respond(HttpStatusCode.OK, user)
+            val currentUser: CurrentUserDto = toCurrentUserDto(user, userSession.id)
+            call.respond(HttpStatusCode.OK, currentUser)
             return@get
         }
 
