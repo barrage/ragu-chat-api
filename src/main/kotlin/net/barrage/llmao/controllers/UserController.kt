@@ -17,7 +17,7 @@ import net.barrage.llmao.services.SessionService
 import net.barrage.llmao.services.UserService
 
 @Resource("users")
-class UserController {}
+class UserController
 
 fun Route.userRoutes() {
     val userService = UserService()

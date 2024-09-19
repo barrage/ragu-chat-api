@@ -32,6 +32,12 @@ llm:
 weaviate:
   host: "localhost:8080"
   scheme: "http"
+  documentation:
+    collection:
+    fields:
+    nResults:
+#    where:
+#    distanceFilter:
 
 oauth:
   google:

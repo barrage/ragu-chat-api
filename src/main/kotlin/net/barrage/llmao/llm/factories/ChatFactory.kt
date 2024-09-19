@@ -4,7 +4,6 @@ import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.Encoding
 import com.knuddels.jtokkit.api.ModelType
 import io.ktor.server.config.*
-import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.llm.Chat
@@ -14,11 +13,11 @@ import net.barrage.llmao.llm.conversation.ConversationLlm
 import net.barrage.llmao.llm.conversation.OpenAI
 import net.barrage.llmao.llm.types.*
 import net.barrage.llmao.models.Agent
-import net.barrage.llmao.models.DOCUMENTATION
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
 import net.barrage.llmao.services.ChatService
 import net.barrage.llmao.weaviate.Weaver
+import net.barrage.llmao.weaviate.collections.Documentation
 import net.barrage.llmao.websocket.Emitter
 
 abstract class ChatFactory(
@@ -27,7 +26,7 @@ abstract class ChatFactory(
     private val agentService = AgentService()
     private val chatService = ChatService()
 
-    private val vectorOptions = DOCUMENTATION
+    private val vectorOptions = Documentation.vectorQueryOptions
 
     fun new(
         model: LLMModels,
@@ -70,12 +69,7 @@ abstract class ChatFactory(
         userId: KUUID,
         emitter: Emitter
     ): Chat {
-        val chat: ChatDTO
-        try {
-            chat = chatService.getUserChat(id, userId)
-        } catch (e: NoSuchElementException) {
-            throw NotFoundException("Chat not found")
-        }
+        val chat: ChatDTO = chatService.getUserChat(id, userId)
 
         val agent = agentService.get(chat.agentId)
 

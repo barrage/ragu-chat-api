@@ -1,14 +1,14 @@
 package net.barrage.llmao.llm
 
 import com.aallam.openai.api.core.FinishReason
+import com.aallam.openai.api.exception.InvalidRequestException
 import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
+import net.barrage.llmao.error.internalError
 import net.barrage.llmao.llm.types.*
 import net.barrage.llmao.models.DocumentChunk
 import net.barrage.llmao.services.ChatService
-import net.barrage.llmao.websocket.ChatTitleUpdated
 import net.barrage.llmao.websocket.FinishEvent
-import net.barrage.llmao.websocket.S2CTitleUpdatedMessage
 
 class Chat(
     val config: ChatConfig,
@@ -28,21 +28,15 @@ class Chat(
         val title = infra.llm.generateChatTitle(titlePrompt).trim()
 
         chatService.updateTitle(this.config.id!!, UpdateChatTitleDTO(title))
-
-        this.infra.emitter?.emitSystemMessage(S2CTitleUpdatedMessage(ChatTitleUpdated(this.config.id, title)))
-    }
-
-    suspend fun updateTitle(title: String) {
-        this.config.title = title
-        chatService.updateTitle(this.config.id!!, UpdateChatTitleDTO(title))
-
-        this.infra.emitter?.emitSystemMessage(S2CTitleUpdatedMessage(ChatTitleUpdated(this.config.id, title)))
+        if (this.infra.emitter != null) {
+            this.infra.emitter.emitTitle(this.config.id, title)
+        }
     }
 
     suspend fun stream(proompt: String) {
         this.streamActive = true
 
-        val stream: Flow<List<TokenChunk>>?
+
         if (this.config.messageReceived != true) {
             this.persist()
             this.config.messageReceived = true
@@ -52,68 +46,66 @@ class Chat(
 
         val buf: MutableList<String> = mutableListOf()
 
+        val stream: Flow<List<TokenChunk>>?
+        stream = infra.llm.completionStream(query)
+
         try {
-            stream = infra.llm.completionStream(query)
-        } catch (
-            e: Exception
-        ) {
-            if (e.message == "Content filter triggered") {
-                val response = contentFilterErrorMessage()
-                val failedMessage = this.chatService.insertFailedMessage(
-                    FinishReason.ContentFilter,
-                    this.config.id!!,
-                    this.config.userId,
-                    true,
-                    proompt
-                )
-                this.infra.emitter!!.emitFinishResponse(
-                    FinishEvent(
-                        this.config.id,
-                        failedMessage!!.id,
-                        response,
-                        FinishReason.ContentFilter
-                    )
-                )
-            } else {
-                e.printStackTrace()
+            stream.collect { tokens ->
+                if (!this.streamActive) {
+                    println("Canceling stream for ${this.config.id}")
+
+                    if (buf.isNotEmpty()) {
+                        val response = buf.joinToString("")
+                        this.processResponse(proompt, response)
+                    }
+
+                    return@collect
+                }
+
+                for (chunk in tokens) {
+                    if (chunk.content.isNullOrBlank() && chunk.stopReason != FinishReason.Stop) {
+                        continue
+                    }
+
+                    if (!chunk.content.isNullOrBlank()) {
+                        this.infra.emitter!!.emitChunk(chunk)
+                        buf.add(chunk.content)
+                    }
+
+                    if (chunk.stopReason == FinishReason.Stop) {
+                        break
+                    }
+                }
+            }.let {
+                val response = buf.joinToString("")
+                this.streamActive = false
+
+                println("Chat ${this.config.id} got response: $response")
+
+                this.processResponse(proompt, response)
             }
+        } catch (e: InvalidRequestException) {
             this.streamActive = false
-            return
-        }
-
-        stream.collect { tokens ->
-            if (!this.streamActive) {
-                println("Canceling stream for ${this.config.id}")
-
-                if (buf.isNotEmpty()) {
-                    val response = buf.joinToString("")
-                    this.processResponse(proompt, response)
-                }
-
-                return@collect
-            }
-
-            for (chunk in tokens) {
-                if (chunk.content.isNullOrBlank() && chunk.stopReason != FinishReason.Stop) {
-                    continue
-                }
-
-                if (!chunk.content.isNullOrBlank()) {
-                    this.infra.emitter!!.emitChunk(chunk)
-                    buf.add(chunk.content)
-                }
-
-                if (chunk.stopReason == FinishReason.Stop) {
-                    break
-                }
-            }
-        }.let {
-            val response = buf.joinToString("")
+            val response = contentFilterErrorMessage()
+            val failedMessage = this.chatService.insertFailedMessage(
+                FinishReason.ContentFilter,
+                this.config.id!!,
+                this.config.userId,
+                true,
+                proompt
+            )
+            this.infra.emitter!!.emitFinishResponse(
+                FinishEvent(
+                    this.config.id,
+                    failedMessage!!.id,
+                    response,
+                    FinishReason.ContentFilter
+                )
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
             this.streamActive = false
-
-            println("Chat ${this.config.id} got response: $response")
-
-            this.processResponse(proompt, response)
+            this.infra.emitter!!.emitError(internalError())
         }
     }
 
@@ -165,6 +157,9 @@ class Chat(
             }
 
             this.infra.emitter.emitFinishResponse(emitPayload)
+            if (this.config.title.isNullOrBlank()) {
+                this.generateTitle(proompt)
+            }
         }
 
         return assistantChatMessage(response)
@@ -216,11 +211,7 @@ class Chat(
 
             val summary = this.infra.llm.summarizeConversation(summaryPrompt)
 
-            try {
-                chatService.insertSystemMessage(this.config.id!!, summary.trim())
-            } catch (e: Exception) {
-                println("Error while inserting system message: ${e.message}")
-            }
+            chatService.insertSystemMessage(this.config.id!!, summary.trim())
 
             this.history = mutableListOf(systemChatMessage(summary.trim()))
         } else if (this.config.maxHistory != null) {

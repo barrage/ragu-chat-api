@@ -194,8 +194,7 @@ class ChatRepository {
             .set(MESSAGES.SENDER, userId.toString())
             .set(MESSAGES.SENDER_TYPE, "user")
             .set(MESSAGES.CONTENT, proompt)
-            .returning().fetchOne(MessagesRecord::toMessageDTO)
-            ?: throw NotFoundException("Failed to insert user message")
+            .returning().fetchOne(MessagesRecord::toMessageDTO)!!
     }
 
     fun insertAssistantMessage(id: KUUID, agentId: Int, response: String, messageId: KUUID): MessageDTO {
@@ -205,8 +204,7 @@ class ChatRepository {
             .set(MESSAGES.SENDER_TYPE, "assistant")
             .set(MESSAGES.CONTENT, response)
             .set(MESSAGES.RESPONSE_TO, messageId)
-            .returning().fetchOne(MessagesRecord::toMessageDTO)
-            ?: throw NotFoundException("Failed to insert assistant message")
+            .returning().fetchOne(MessagesRecord::toMessageDTO)!!
     }
 
     fun insertSystemMessage(id: KUUID, message: String): MessageDTO {
@@ -214,8 +212,7 @@ class ChatRepository {
             .set(MESSAGES.CHAT_ID, id)
             .set(MESSAGES.SENDER_TYPE, "system")
             .set(MESSAGES.CONTENT, message)
-            .returning().fetchOne(MessagesRecord::toMessageDTO)
-            ?: throw NotFoundException("Failed to insert system message")
+            .returning().fetchOne(MessagesRecord::toMessageDTO)!!
     }
 
     fun getUserChat(id: KUUID, userId: KUUID): ChatDTO {
@@ -229,5 +226,17 @@ class ChatRepository {
             .groupBy { it[CHATS.ID] }
             .map { toChatDTO(it.value) }
             .first()
+    }
+
+    fun delete(id: KUUID): Int {
+        return dslContext.deleteFrom(CHATS)
+            .where(CHATS.ID.eq(id))
+            .execute()
+    }
+
+    fun deleteChatUser(id: KUUID, userId: KUUID): Int {
+        return dslContext.deleteFrom(CHATS)
+            .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
+            .execute()
     }
 }

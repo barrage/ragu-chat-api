@@ -7,11 +7,3 @@ data class VectorQueryOptions(
     val where: Any? = null,
     val distanceFilter: Double? = null
 )
-
-val DOCUMENTATION = VectorQueryOptions(
-    collection = "EdTechDocumentation",
-    fields = "content parentDocumentId fileName fileType title section page",
-    nResults = 5,
-    where = null,
-    distanceFilter = null
-)

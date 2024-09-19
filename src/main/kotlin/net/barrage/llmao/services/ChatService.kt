@@ -28,11 +28,19 @@ class ChatService {
     }
 
     fun get(id: KUUID): ChatDTO {
-        return chatRepository.get(id)
+        try {
+            return chatRepository.get(id)
+        } catch (e: NoSuchElementException) {
+            throw NotFoundException("Chat not found")
+        }
     }
 
     fun getUserChat(id: KUUID, userId: KUUID): ChatDTO {
-        return chatRepository.getUserChat(id, userId)
+        try {
+            return chatRepository.getUserChat(id, userId)
+        } catch (e: NoSuchElementException) {
+            throw NotFoundException("Chat not found")
+        }
     }
 
     fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
@@ -106,5 +114,13 @@ class ChatService {
 
     fun insertSystemMessage(id: KUUID, message: String): MessageDTO {
         return chatRepository.insertSystemMessage(id, message)
+    }
+
+    fun delete(id: KUUID) {
+        if (chatRepository.delete(id) == 0) throw NotFoundException("Chat not found")
+    }
+
+    fun deleteChatUser(id: KUUID, userId: KUUID) {
+        if (chatRepository.deleteChatUser(id, userId) == 0) throw NotFoundException("Chat not found")
     }
 }

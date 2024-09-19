@@ -1,5 +1,6 @@
 package net.barrage.llmao.controllers
 
+import io.github.smiley4.ktorswaggerui.dsl.routing.resources.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.patch
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
@@ -64,6 +65,14 @@ fun Route.chatsRoutes() {
             val chats: List<ChatDTO> = chatService.getAll(serverSession!!.userId)
             call.respond(HttpStatusCode.OK, chats)
             return@get
+        }
+
+        delete<ChatController.Chat>({}) {
+            val userSession = call.sessions.get<UserSession>()
+            val serverSession = SessionService().get(userSession!!.id)
+            chatService.deleteChatUser(it.id, serverSession!!.userId)
+            call.respond(HttpStatusCode.NoContent)
+            return@delete
         }
 
         get<ChatController.Chat.Messages>({

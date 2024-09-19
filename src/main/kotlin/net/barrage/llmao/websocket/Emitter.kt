@@ -1,33 +1,37 @@
 package net.barrage.llmao.websocket
 
-import io.ktor.server.websocket.*
-import io.ktor.websocket.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.llm.types.TokenChunk
+import net.barrage.llmao.serializers.KUUID
 
 const val TERMINATOR = "##STOP##"
 
 class Emitter(
-    private val session: WebSocketServerSession
+    private val messageResponseFlow: MutableSharedFlow<String>
 ) {
     suspend fun emitChunk(chunk: TokenChunk) {
-        session.send(Frame.Text(chunk.content ?: ""))
+        messageResponseFlow.emit(chunk.content ?: "")
     }
 
     suspend fun emitTerminator() {
-        session.send(Frame.Text(TERMINATOR))
+        messageResponseFlow.emit(TERMINATOR)
     }
 
     suspend fun emitFinishResponse(event: FinishEvent) {
-        session.send(Frame.Text(TERMINATOR))
-        session.send(Frame.Text(S2CFinishEvent(event).toString()))
+        messageResponseFlow.emit(TERMINATOR)
+        messageResponseFlow.emit(S2CFinishEvent(event).toString())
     }
 
     suspend fun emitError(error: Error) {
-        session.send(error.toString())
+        messageResponseFlow.emit(error.toString())
     }
 
     suspend fun emitSystemMessage(message: S2CMessage) {
-        session.send(Frame.Text(message.toString()))
+        messageResponseFlow.emit(message.toString())
+    }
+
+    suspend fun emitTitle(chatId: KUUID, title: String) {
+        messageResponseFlow.emit(S2CTitle(TitleBody(chatId, title)).toString())
     }
 }

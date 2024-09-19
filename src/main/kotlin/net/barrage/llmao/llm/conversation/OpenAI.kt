@@ -2,7 +2,6 @@ package net.barrage.llmao.llm.conversation
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.StreamOptions
-import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import kotlinx.coroutines.flow.Flow
@@ -42,10 +41,6 @@ class OpenAI(
 
         return this.client!!.chatCompletions(chatRequest)
             .map {
-                if (it.choices.firstOrNull()?.finishReason == FinishReason.ContentFilter) {
-                    throw Exception("Content filter triggered")
-                }
-
                 listOf(
                     TokenChunk(
                         it.id,

@@ -20,11 +20,19 @@ class MessageHandler(private val chatFactory: ChatFactory) {
                 is C2SChatMessage -> this.handleChatMessage(emitter, message.userId, message.payload)
                 is C2SServerMessageOpenChat -> this.openChat(emitter, message.userId, message.payload.body)
                 is C2SServerMessageCloseChat -> this.closeChat(emitter, message.userId)
-                is C2SServerMessageDeleteChat -> this.deleteChat(emitter, message.userId, message.payload.body)
                 is C2SServerMessageStopStream -> this.stopStream(emitter, message.userId)
-                is C2SServerMessageUpdateTitle -> this.updateTitle(message.userId, message.payload.body)
             }
         } catch (e: Exception) {
+            if (chats[message.userId] != null) {
+                try {
+                    chatService.getUserChat(chats[message.userId]!!.config.id!!, message.userId)
+                } catch (cse: NotFoundException) {
+                    emitter.emitError(apiError("Not Found", "Chat not found or deleted"))
+                    this.removeUserChat(message.userId)
+                    return
+                }
+            }
+
             when (e) {
                 is NoSuchElementException -> emitter.emitError(apiError("Not Found", e.message))
                 is NotFoundException -> emitter.emitError(apiError("Not Found", e.message))
@@ -40,8 +48,14 @@ class MessageHandler(private val chatFactory: ChatFactory) {
 
     private suspend fun handleChatMessage(emitter: Emitter, userId: KUUID, message: String) {
         val chat = chats[userId] ?: return emitter.emitError(apiError("Bad Request", "Have you opened a chat?"))
-        if (!chat.streamActive) chat.stream(message)
-        else emitter.emitError(apiError("Bad Request", "Stream already active"))
+
+        if (chat.config.messageReceived == true) {
+            chatService.getUserChat(chat.config.id!!, userId)
+        }
+
+        if (!chat.streamActive) {
+            chat.stream(message)
+        } else emitter.emitError(apiError("Bad Request", "Stream already active"))
     }
 
     private suspend fun closeChat(
@@ -55,12 +69,6 @@ class MessageHandler(private val chatFactory: ChatFactory) {
 
     fun removeUserChat(userId: KUUID) {
         this.chats.remove(userId)
-    }
-
-    private suspend fun deleteChat(emitter: Emitter, userId: KUUID, message: C2SMessagePayloadDeleteChatBody) {
-        chatService.delete(message.chatId)
-        this.chats.remove(userId)
-        emitter.emitSystemMessage(S2CChatDeletedMessage(ChatDeleted(message.chatId)))
     }
 
     private suspend fun openChat(emitter: Emitter, userId: KUUID, message: C2SMessagePayloadOpenChatBody) {
@@ -102,10 +110,5 @@ class MessageHandler(private val chatFactory: ChatFactory) {
             chat.closeStream()
             emitter.emitTerminator()
         }
-    }
-
-    private suspend fun updateTitle(userId: KUUID, message: C2SMessagePayloadUpdateTitleBody) {
-        val chat = this.chats[userId] ?: throw NotFoundException("Chat not found")
-        chat.updateTitle(message.title)
     }
 }

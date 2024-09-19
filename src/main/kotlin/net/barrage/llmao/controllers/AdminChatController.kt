@@ -21,7 +21,7 @@ import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.ChatService
 
 @Resource("admin/chats")
-class AdminChatController{
+class AdminChatController {
     @Resource("{id}")
     class Chat(val parent: AdminChatController, val id: KUUID) {
         @Resource("messages")

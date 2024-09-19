@@ -31,18 +31,8 @@ class C2SMessageSerializer : KSerializer<C2SMessage> {
                 when (header) {
                     "open_chat" -> jsonDecoder.json.decodeFromJsonElement(C2SServerMessageOpenChat.serializer(), base)
                     "close_chat" -> jsonDecoder.json.decodeFromJsonElement(C2SServerMessageCloseChat.serializer(), base)
-                    "delete_chat" -> jsonDecoder.json.decodeFromJsonElement(
-                        C2SServerMessageDeleteChat.serializer(),
-                        base
-                    )
-
                     "stop_stream" -> jsonDecoder.json.decodeFromJsonElement(
                         C2SServerMessageStopStream.serializer(),
-                        base
-                    )
-
-                    "update_title" -> jsonDecoder.json.decodeFromJsonElement(
-                        C2SServerMessageUpdateTitle.serializer(),
                         base
                     )
 
@@ -59,9 +49,7 @@ class C2SMessageSerializer : KSerializer<C2SMessage> {
             is C2SChatMessage -> C2SChatMessage.serializer().serialize(encoder, value)
             is C2SServerMessageOpenChat -> C2SServerMessageOpenChat.serializer().serialize(encoder, value)
             is C2SServerMessageCloseChat -> C2SServerMessageCloseChat.serializer().serialize(encoder, value)
-            is C2SServerMessageDeleteChat -> C2SServerMessageDeleteChat.serializer().serialize(encoder, value)
             is C2SServerMessageStopStream -> C2SServerMessageStopStream.serializer().serialize(encoder, value)
-            is C2SServerMessageUpdateTitle -> C2SServerMessageUpdateTitle.serializer().serialize(encoder, value)
         }
     }
 }
