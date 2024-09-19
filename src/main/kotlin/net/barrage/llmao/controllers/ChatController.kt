@@ -19,6 +19,7 @@ import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
+import net.barrage.llmao.models.UserContext
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.ChatService
@@ -60,9 +61,8 @@ fun Route.chatsRoutes() {
           }
       }
     }) {
-      val userSession = call.sessions.get<UserSession>()
-      val serverSession = SessionService().get(userSession!!.id)
-      val chats: List<ChatDTO> = chatService.getAll(serverSession!!.userId)
+      val user = UserContext.currentUser
+      val chats: List<ChatDTO> = chatService.getAll(user?.id)
       call.respond(HttpStatusCode.OK, chats)
       return@get
     }
@@ -96,9 +96,8 @@ fun Route.chatsRoutes() {
           }
       }
     }) {
-      val userSession = call.sessions.get<UserSession>()
-      val serverSession = SessionService().get(userSession!!.id)
-      val messages: List<Message> = chatService.getMessages(it.parent.id, serverSession!!.userId)
+      val user = UserContext.currentUser
+      val messages: List<Message> = chatService.getMessages(it.parent.id, user?.id)
       call.respond(HttpStatusCode.OK, messages)
       return@get
     }
@@ -123,10 +122,9 @@ fun Route.chatsRoutes() {
           }
       }
     }) {
-      val userSession = call.sessions.get<UserSession>()
-      val serverSession = SessionService().get(userSession!!.id)
+      val user = UserContext.currentUser
       val input: UpdateChatTitleDTO = call.receive()
-      val chat: Chat = chatService.updateTitle(it.parent.id, input, serverSession!!.userId)
+      val chat: Chat = chatService.updateTitle(it.parent.id, input, user?.id)
       call.respond(HttpStatusCode.OK, chat)
       return@put
     }
@@ -152,12 +150,11 @@ fun Route.chatsRoutes() {
           }
       }
     }) {
-      val userSession = call.sessions.get<UserSession>()
-      val serverSession = SessionService().get(userSession!!.id)
+      val user = UserContext.currentUser
       val input: EvaluateMessageDTO = call.receive()
       val chatId = it.parent.parent.id
       val messageId = it.messageId
-      val message = chatService.evaluateMessage(chatId, messageId, input, serverSession!!.userId)
+      val message = chatService.evaluateMessage(chatId, messageId, input, user?.id)
       call.respond(HttpStatusCode.OK, message)
       return@patch
     }

@@ -8,11 +8,9 @@ import io.ktor.server.resources.*
 import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
 import net.barrage.llmao.models.Agent
-import net.barrage.llmao.models.UserSession
+import net.barrage.llmao.models.UserContext
 import net.barrage.llmao.services.AgentService
-import net.barrage.llmao.services.SessionService
 
 @Resource("agents")
 class AgentController {
@@ -37,9 +35,8 @@ fun Route.agentsRoutes() {
 
     put<AgentController.Agent> {
       val agentId: Int = it.id
-      val userSession = call.sessions.get<UserSession>()
-      val userId = SessionService().get(userSession!!.id)?.userId!!
-      val user = agentService.setDefault(agentId, userId)
+      val currentUser = UserContext.currentUser
+      val user = agentService.setDefault(agentId, currentUser!!.id)
       call.respond(HttpStatusCode.OK, user)
       return@put
     }

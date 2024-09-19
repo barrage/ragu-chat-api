@@ -14,6 +14,7 @@ import io.ktor.server.sessions.*
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import net.barrage.llmao.dtos.users.*
+import net.barrage.llmao.models.UserContext
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.SessionService
@@ -29,27 +30,25 @@ fun Route.userRoutes() {
 
   authenticate("auth-session") {
     get<UserController> {
-      val userSession = call.sessions.get<UserSession>()
-      val userId = SessionService().get(userSession!!.id)?.userId!!
-      val user: UserDto = userService.get(userId)
+      val currentUser = UserContext.currentUser
+      val user: UserDto = userService.get(currentUser!!.id)
       call.respond(HttpStatusCode.OK, user)
       return@get
     }
 
     get("/auth/current") {
-      val userSession = call.sessions.get<UserSession>()
-      val userId = SessionService().get(userSession!!.id)?.userId!!
-      val user: UserDto = userService.get(userId)
-      val currentUser: CurrentUserDto = toCurrentUserDto(user, userSession.id)
+      val loggedInUser = UserContext.currentUser
+      val sessionId = UserContext.sessionId!!
+      val user: UserDto = userService.get(loggedInUser!!.id)
+      val currentUser: CurrentUserDto = toCurrentUserDto(user, sessionId)
       call.respond(HttpStatusCode.OK, currentUser)
       return@get
     }
 
     put<UserController> {
-      val userSession = call.sessions.get<UserSession>()
-      val userId = SessionService().get(userSession!!.id)?.userId!!
+      val currentUser = UserContext.currentUser
       val updateUser: UpdateUserDTO = call.receive<UpdateUserDTO>()
-      val user: UserDto = userService.update(userId, updateUser)
+      val user: UserDto = userService.update(currentUser!!.id, updateUser)
       call.respond(HttpStatusCode.OK, user)
       return@put
     }

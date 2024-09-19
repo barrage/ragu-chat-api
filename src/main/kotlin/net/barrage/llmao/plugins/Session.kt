@@ -7,6 +7,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import net.barrage.llmao.enums.Roles
+import net.barrage.llmao.models.UserContext
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.services.SessionService
 import net.barrage.llmao.services.UserService
@@ -50,6 +51,8 @@ fun Application.configureSession() {
           return@validate null
         }
 
+        UserContext.currentUser = user
+        UserContext.sessionId = session.id
         return@validate session
       }
 
@@ -74,6 +77,8 @@ fun Application.configureSession() {
           return@validate null
         }
 
+        UserContext.currentUser = user
+        UserContext.sessionId = session.id
         return@validate session
       }
       challenge { call.respond(HttpStatusCode.Unauthorized, "Unauthorized access") }
