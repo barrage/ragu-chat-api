@@ -13,11 +13,20 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.models.UserSession
+import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.SessionService
 import net.barrage.llmao.services.UserService
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Resource("users")
-class UserController
+class UserController {
+    @Resource("{id}")
+    class User(
+        val parent: UserController,
+        val id: KUUID
+    )
+}
 
 fun Route.userRoutes() {
     val userService = UserService()
@@ -55,6 +64,19 @@ fun Route.userRoutes() {
             val newUser: NewDevUserDTO = call.receive<NewDevUserDTO>()
             val user: UserDto = userService.createDev(newUser)
             call.respond(HttpStatusCode.OK, user)
+            return@post
+        }
+    }
+
+    if (application.environment.config.property("ktor.environment").getString() == "development") {
+        post<UserController.User> {
+            val sessionId = KUUID.randomUUID()
+            call.sessions.set(UserSession(sessionId))
+            SessionService().store(sessionId, it.id)
+
+            val rawString = "app=%23n&id=%23s${sessionId}&source=%23n"
+            val encodedString = URLEncoder.encode(rawString, StandardCharsets.UTF_8.toString())
+            call.respond(HttpStatusCode.OK, encodedString)
             return@post
         }
     }
