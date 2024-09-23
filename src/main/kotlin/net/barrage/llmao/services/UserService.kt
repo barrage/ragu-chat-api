@@ -9,8 +9,13 @@ import net.barrage.llmao.serializers.KUUID
 class UserService {
   private val usersRepository = UserRepository()
 
-  fun getAll(): List<UserDto> {
-    return usersRepository.getAll()
+  fun getAll(page: Int, size: Int, sortBy: String, sortOrder: String): UserResponse {
+    val offset = (page - 1) * size
+
+    val users = usersRepository.getAll(offset, size, sortBy, sortOrder)
+    val count = usersRepository.countAll()
+
+    return UserResponse(users, count)
   }
 
   fun get(id: KUUID): UserDto {

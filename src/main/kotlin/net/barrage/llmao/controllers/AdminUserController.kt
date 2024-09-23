@@ -10,15 +10,18 @@ import io.ktor.server.resources.post
 import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.dtos.users.AdminUpdateUserDTO
-import net.barrage.llmao.dtos.users.NewUserDTO
-import net.barrage.llmao.dtos.users.UpdateUserRoleDTO
-import net.barrage.llmao.dtos.users.UserDto
+import net.barrage.llmao.dtos.PaginationInfo
+import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.UserService
 
 @Resource("admin/users")
-class AdminUserController {
+class AdminUserController(
+  val page: Int? = 1,
+  val size: Int? = 10,
+  val sortBy: String? = "lastName",
+  val sortOrder: String? = "asc",
+) {
   @Resource("{id}")
   class User(val parent: AdminUserController, val id: KUUID) {
     @Resource("role") class Role(val parent: User)
@@ -34,8 +37,15 @@ fun Route.adminUserRoutes() {
 
   authenticate("auth-session-admin") {
     get<AdminUserController> {
-      val users: List<UserDto> = userService.getAll()
-      call.respond(HttpStatusCode.OK, users)
+      val page = it.page ?: 1
+      val size = it.size ?: 10
+      val sortBy = it.sortBy ?: "lastName"
+      val sortOrder = it.sortOrder ?: "asc"
+
+      val users: UserResponse = userService.getAll(page, size, sortBy, sortOrder)
+      val response =
+        toPaginatedUserDTO(users.users, PaginationInfo(users.count, page, size, sortBy, sortOrder))
+      call.respond(HttpStatusCode.OK, response)
       return@get
     }
 

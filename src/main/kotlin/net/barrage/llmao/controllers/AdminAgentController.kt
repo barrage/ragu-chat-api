@@ -10,13 +10,22 @@ import io.ktor.server.resources.post
 import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.dtos.PaginationInfo
+import net.barrage.llmao.dtos.agents.AgentResponse
 import net.barrage.llmao.dtos.agents.NewAgentDTO
 import net.barrage.llmao.dtos.agents.UpdateAgentDTO
+import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.services.AgentService
 
 @Resource("admin/agents")
-class AdminAgentController {
+class AdminAgentController(
+  val page: Int? = 1,
+  val size: Int? = 10,
+  val sortBy: String? = "name",
+  val sortOrder: String? = "asc",
+  val showDeactivated: Boolean? = true,
+) {
   @Resource("{id}")
   class Agent(val parent: AdminAgentController, val id: Int) {
     @Resource("activate") class Activate(val parent: Agent)
@@ -30,8 +39,20 @@ fun Route.adminAgentsRoutes() {
 
   authenticate("auth-session-admin") {
     get<AdminAgentController> {
-      val agents: List<Agent> = agentService.getAll()
-      call.respond(HttpStatusCode.OK, agents)
+      val page = it.page ?: 1
+      val size = it.size ?: 10
+      val sortBy = it.sortBy ?: "name"
+      val sortOrder = it.sortOrder ?: "asc"
+      val showDeactivated = it.showDeactivated ?: true
+
+      val agents: AgentResponse =
+        agentService.getAll(page, size, sortBy, sortOrder, showDeactivated)
+      val response =
+        toPaginatedAgentDTO(
+          agents.agents,
+          PaginationInfo(agents.count, page, size, sortBy, sortOrder),
+        )
+      call.respond(HttpStatusCode.OK, response)
       return@get
     }
 

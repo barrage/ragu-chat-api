@@ -3,6 +3,7 @@ package net.barrage.llmao.services
 import com.aallam.openai.api.core.FinishReason
 import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.chats.ChatDTO
+import net.barrage.llmao.dtos.chats.ChatResponse
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
 import net.barrage.llmao.dtos.messages.FailedMessageDto
@@ -19,12 +20,19 @@ import net.barrage.llmao.tables.records.LlmConfigsRecord
 class ChatService {
   private val chatRepository = ChatRepository()
 
-  fun getAll(userId: KUUID? = null): List<ChatDTO> {
-    return if (userId != null) {
-      chatRepository.getAllForUser(userId)
-    } else {
-      chatRepository.getAll()
-    }
+  fun getAll(
+    page: Int,
+    size: Int,
+    sortBy: String,
+    sortOrder: String,
+    userId: KUUID? = null,
+  ): ChatResponse {
+    val offset = (page - 1) * size
+
+    val chats = chatRepository.getAll(offset, size, sortBy, sortOrder, userId)
+    val count = chatRepository.countAll(userId)
+
+    return ChatResponse(chats, count)
   }
 
   fun get(id: KUUID): ChatDTO {

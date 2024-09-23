@@ -41,12 +41,17 @@ weaviate:
 
 oauth:
   google:
-    urlProvider: "http://localhost:42069/auth/callback"
-    clientId: "client_id"
-    clientSecret: "client_secret"
+    tokenEndpoint: "https://oauth2.googleapis.com/token"
+    accountEndpoint: "https://openidconnect.googleapis.com/v1/userinfo"
+    clientId: "clientId"
+    clientSecret: "clientSecret"
 
 session:
   cookieName: "kappi"
   httpOnly: false
   secure: false
   domain: "localhost" # ".barrage.corp" for guja
+
+infobip:
+  api_key: "apiKey"
+  endpoint: "endpoint.infobip.com"

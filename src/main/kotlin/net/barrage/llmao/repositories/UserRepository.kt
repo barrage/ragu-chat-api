@@ -9,8 +9,35 @@ import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
 
 class UserRepository {
-  fun getAll(): List<UserDto> {
-    return dslContext.selectFrom(USERS).fetch(UsersRecord::toUserDto)
+  fun getAll(offset: Int, size: Int, sortBy: String, sortOrder: String): List<UserDto> {
+    val sortField =
+      when (sortBy) {
+        "email" -> USERS.EMAIL
+        "firstName" -> USERS.FIRST_NAME
+        "lastName" -> USERS.LAST_NAME
+        "role" -> USERS.ROLE
+        "createdAt" -> USERS.CREATED_AT
+        "updatedAt" -> USERS.UPDATED_AT
+        else -> USERS.LAST_NAME
+      }
+
+    val orderField =
+      if (sortOrder.equals("desc", ignoreCase = true)) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return dslContext
+      .selectFrom(USERS)
+      .orderBy(orderField)
+      .limit(size)
+      .offset(offset)
+      .fetch(UsersRecord::toUserDto)
+  }
+
+  fun countAll(): Int {
+    return dslContext.selectCount().from(USERS).fetchOne(0, Int::class.java)!!
   }
 
   fun get(id: UUID): UserDto? {

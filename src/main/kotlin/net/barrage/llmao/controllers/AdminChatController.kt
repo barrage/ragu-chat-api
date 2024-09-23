@@ -10,8 +10,11 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.dtos.PaginationInfo
 import net.barrage.llmao.dtos.chats.ChatDTO
+import net.barrage.llmao.dtos.chats.ChatResponse
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
+import net.barrage.llmao.dtos.chats.toPaginatedChatDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
 import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.error.Error
@@ -21,7 +24,12 @@ import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.ChatService
 
 @Resource("admin/chats")
-class AdminChatController {
+class AdminChatController(
+  val page: Int? = 1,
+  val size: Int? = 10,
+  val sortBy: String? = "createdAt",
+  val sortOrder: String? = "asc",
+) {
   @Resource("{id}")
   class Chat(val parent: AdminChatController, val id: KUUID) {
     @Resource("messages")
@@ -56,8 +64,18 @@ fun Route.adminChatsRoutes() {
           }
       }
     }) {
-      val chats: List<ChatDTO> = chatService.getAll()
-      call.respond(HttpStatusCode.OK, chats)
+      val page = it.page ?: 1
+      val size = it.size ?: 10
+      val sortBy = it.sortBy ?: "createdAt"
+      val sortOrder = it.sortOrder ?: "asc"
+
+      val chatResponse: ChatResponse = chatService.getAll(page, size, sortBy, sortOrder, null)
+      val response =
+        toPaginatedChatDTO(
+          chatResponse.chats,
+          PaginationInfo(chatResponse.count, page, size, sortBy, sortOrder),
+        )
+      call.respond(HttpStatusCode.OK, response)
       return@get
     }
 

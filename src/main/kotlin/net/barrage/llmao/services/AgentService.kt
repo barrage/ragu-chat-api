@@ -1,6 +1,7 @@
 package net.barrage.llmao.services
 
 import io.ktor.server.plugins.*
+import net.barrage.llmao.dtos.agents.AgentResponse
 import net.barrage.llmao.dtos.agents.NewAgentDTO
 import net.barrage.llmao.dtos.agents.UpdateAgentDTO
 import net.barrage.llmao.dtos.users.UserDto
@@ -12,8 +13,19 @@ import net.barrage.llmao.serializers.KUUID
 class AgentService {
   private val agentRepository = AgentRepository()
 
-  fun getAll(): List<Agent> {
-    return agentRepository.getAll()
+  fun getAll(
+    page: Int,
+    size: Int,
+    sortBy: String,
+    sortOrder: String,
+    showDeactivated: Boolean,
+  ): AgentResponse {
+    val offset = (page - 1) * size
+
+    val agents = agentRepository.getAll(offset, size, sortBy, sortOrder, showDeactivated)
+    val count = agentRepository.countAll(showDeactivated)
+
+    return AgentResponse(agents, count)
   }
 
   fun get(id: Int): Agent {

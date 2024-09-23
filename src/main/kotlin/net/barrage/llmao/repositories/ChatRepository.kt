@@ -18,23 +18,62 @@ import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 import net.barrage.llmao.tables.records.LlmConfigsRecord
 import net.barrage.llmao.tables.records.MessagesRecord
-import net.barrage.llmao.tables.references.CHATS
-import net.barrage.llmao.tables.references.FAILED_MESSAGES
-import net.barrage.llmao.tables.references.LLM_CONFIGS
-import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.*
 
 class ChatRepository {
-  fun getAll(): List<ChatDTO> {
-    return dslContext
-      .select()
-      .from(CHATS)
-      .leftJoin(LLM_CONFIGS)
-      .on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
-      .leftJoin(MESSAGES)
-      .on(CHATS.ID.eq(MESSAGES.CHAT_ID))
+  fun getAll(
+    offset: Int,
+    size: Int,
+    sortBy: String,
+    sortOrder: String,
+    userId: KUUID? = null,
+  ): List<ChatDTO> {
+    val sortField =
+      when (sortBy) {
+        "createdAt" -> CHATS.CREATED_AT
+        "updatedAt" -> CHATS.UPDATED_AT
+        "agentId" -> CHATS.AGENT_ID
+        "model" -> LLM_CONFIGS.MODEL
+        else -> CHATS.CREATED_AT
+      }
+
+    val orderField =
+      if (sortOrder.equals("desc", ignoreCase = true)) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    val selectQuery =
+      dslContext
+        .select()
+        .from(CHATS)
+        .leftJoin(LLM_CONFIGS)
+        .on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
+        .leftJoin(MESSAGES)
+        .on(CHATS.ID.eq(MESSAGES.CHAT_ID))
+
+    if (userId != null) {
+      selectQuery.where(CHATS.USER_ID.eq(userId))
+    }
+
+    return selectQuery
+      .orderBy(orderField)
+      .limit(size)
+      .offset(offset)
       .fetch()
       .groupBy { it[CHATS.ID] }
       .map { toChatDTO(it.value) }
+  }
+
+  fun countAll(userId: KUUID? = null): Int {
+    val selectQuery = dslContext.selectCount().from(CHATS)
+
+    if (userId != null) {
+      selectQuery.where(CHATS.USER_ID.eq(userId))
+    }
+
+    return selectQuery.fetchOne(0, Int::class.java)!!
   }
 
   fun get(id: KUUID): ChatDTO {

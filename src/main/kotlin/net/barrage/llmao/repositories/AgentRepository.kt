@@ -10,8 +10,42 @@ import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
 
 class AgentRepository {
-  fun getAll(): List<Agent> {
-    return dslContext.selectFrom(AGENTS).fetch(AgentsRecord::toAgent)
+  fun getAll(
+    offset: Int,
+    size: Int,
+    sortBy: String,
+    sortOrder: String,
+    showDeactivated: Boolean,
+  ): List<Agent> {
+    val sortField =
+      when (sortBy) {
+        "name" -> AGENTS.NAME
+        "createdAt" -> AGENTS.CREATED_AT
+        else -> AGENTS.CREATED_AT
+      }
+
+    val orderField =
+      if (sortOrder.equals("desc", ignoreCase = true)) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return dslContext
+      .selectFrom(AGENTS)
+      .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else null)
+      .orderBy(orderField)
+      .limit(size)
+      .offset(offset)
+      .fetch(AgentsRecord::toAgent)
+  }
+
+  fun countAll(showDeactivated: Boolean): Int {
+    return dslContext
+      .selectCount()
+      .from(AGENTS)
+      .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else null)
+      .fetchOne(0, Int::class.java)!!
   }
 
   fun get(id: Int): Agent? {

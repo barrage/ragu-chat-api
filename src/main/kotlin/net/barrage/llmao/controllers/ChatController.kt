@@ -12,8 +12,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
-import net.barrage.llmao.dtos.chats.ChatDTO
-import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
+import net.barrage.llmao.dtos.PaginationInfo
+import net.barrage.llmao.dtos.chats.*
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
 import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.error.Error
@@ -26,7 +26,12 @@ import net.barrage.llmao.services.ChatService
 import net.barrage.llmao.services.SessionService
 
 @Resource("chats")
-class ChatController {
+class ChatController(
+  val page: Int? = 1,
+  val size: Int? = 10,
+  val sortBy: String? = "createdAt",
+  val sortOrder: String? = "asc",
+) {
   @Resource("{id}")
   class Chat(val parent: ChatController, val id: KUUID) {
     @Resource("messages")
@@ -50,7 +55,7 @@ fun Route.chatsRoutes() {
         HttpStatusCode.OK to
           {
             description = "List of all chats retrieved successfully"
-            body<List<ChatDTO>> {
+            body<PaginatedChatDTO> {
               description = "A list of ChatDTO objects representing all the chats"
             }
           }
@@ -61,9 +66,19 @@ fun Route.chatsRoutes() {
           }
       }
     }) {
+      val page = it.page ?: 1
+      val size = it.size ?: 10
+      val sortBy = it.sortBy ?: "createdAt"
+      val sortOrder = it.sortOrder ?: "asc"
+
       val user = UserContext.currentUser
-      val chats: List<ChatDTO> = chatService.getAll(user?.id)
-      call.respond(HttpStatusCode.OK, chats)
+      val chatResponse: ChatResponse = chatService.getAll(page, size, sortBy, sortOrder, user?.id)
+      val response =
+        toPaginatedChatDTO(
+          chatResponse.chats,
+          PaginationInfo(chatResponse.count, page, size, sortBy, sortOrder),
+        )
+      call.respond(HttpStatusCode.OK, response)
       return@get
     }
 

@@ -8,12 +8,20 @@ import io.ktor.server.resources.*
 import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.dtos.PaginationInfo
+import net.barrage.llmao.dtos.agents.AgentResponse
+import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.models.UserContext
 import net.barrage.llmao.services.AgentService
 
 @Resource("agents")
-class AgentController {
+class AgentController(
+  val page: Int? = 1,
+  val size: Int? = 10,
+  val sortBy: String? = "name",
+  val sortOrder: String? = "asc",
+) {
   @Resource("{id}") class Agent(val parent: AgentController, val id: Int)
 }
 
@@ -22,8 +30,19 @@ fun Route.agentsRoutes() {
 
   authenticate("auth-session") {
     get<AgentController> {
-      val agents: List<Agent> = agentService.getAll()
-      call.respond(HttpStatusCode.OK, agents)
+      val page = it.page ?: 1
+
+      val size = it.size ?: 10
+      val sortBy = it.sortBy ?: "name"
+      val sortOrder = it.sortOrder ?: "asc"
+
+      val agents: AgentResponse = agentService.getAll(page, size, sortBy, sortOrder, false)
+      val response =
+        toPaginatedAgentDTO(
+          agents.agents,
+          PaginationInfo(agents.count, page, size, sortBy, sortOrder),
+        )
+      call.respond(HttpStatusCode.OK, response)
       return@get
     }
 
