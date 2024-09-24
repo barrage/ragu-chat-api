@@ -5,11 +5,11 @@ import net.barrage.llmao.dtos.PaginationInfo
 
 @Serializable
 data class PaginatedUserDTO (
-    val users: List<UserDto>,
+    val users: List<UserDTO>,
     val pageInfo: PaginationInfo
 )
 
-fun toPaginatedUserDTO(users: List<UserDto>, pageInfo: PaginationInfo): PaginatedUserDTO {
+fun toPaginatedUserDTO(users: List<UserDTO>, pageInfo: PaginationInfo): PaginatedUserDTO {
     return PaginatedUserDTO(
         users = users,
         pageInfo = pageInfo

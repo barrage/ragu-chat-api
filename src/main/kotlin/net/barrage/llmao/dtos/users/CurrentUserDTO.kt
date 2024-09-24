@@ -5,7 +5,7 @@ import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.serializers.KUUID
 
 @Serializable
-class CurrentUserDto(
+class CurrentUserDTO(
   val id: KUUID,
   val email: String,
   val firstName: String,
@@ -18,8 +18,8 @@ class CurrentUserDto(
   val updatedAt: KOffsetDateTime,
 )
 
-fun toCurrentUserDto(user: UserDto, sessionId: KUUID): CurrentUserDto {
-  return CurrentUserDto(
+fun toCurrentUserDTO(user: UserDTO, sessionId: KUUID): CurrentUserDTO {
+  return CurrentUserDTO(
     id = user.id,
     email = user.email,
     firstName = user.firstName,

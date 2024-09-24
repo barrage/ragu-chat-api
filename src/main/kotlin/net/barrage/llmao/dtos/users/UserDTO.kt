@@ -6,7 +6,7 @@ import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.UsersRecord
 
 @Serializable
-class UserDto(
+class UserDTO(
   val id: KUUID,
   val email: String,
   val firstName: String,
@@ -18,8 +18,8 @@ class UserDto(
   val updatedAt: KOffsetDateTime,
 )
 
-fun UsersRecord.toUserDto() =
-  UserDto(
+fun UsersRecord.toUser() =
+  UserDTO(
     id = this.id!!,
     email = this.email!!,
     firstName = this.firstName!!,

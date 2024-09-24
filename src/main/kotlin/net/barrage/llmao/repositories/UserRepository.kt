@@ -1,15 +1,15 @@
 package net.barrage.llmao.repositories
 
-import java.time.OffsetDateTime
-import java.util.*
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.enums.Roles
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
+import java.time.OffsetDateTime
+import java.util.*
 
 class UserRepository {
-  fun getAll(offset: Int, size: Int, sortBy: String, sortOrder: String): List<UserDto> {
+  fun getAll(offset: Int, size: Int, sortBy: String, sortOrder: String): List<UserDTO> {
     val sortField =
       when (sortBy) {
         "email" -> USERS.EMAIL
@@ -33,25 +33,22 @@ class UserRepository {
       .orderBy(orderField)
       .limit(size)
       .offset(offset)
-      .fetch(UsersRecord::toUserDto)
+      .fetch(UsersRecord::toUser)
   }
 
   fun countAll(): Int {
     return dslContext.selectCount().from(USERS).fetchOne(0, Int::class.java)!!
   }
 
-  fun get(id: UUID): UserDto? {
-    return dslContext.selectFrom(USERS).where(USERS.ID.eq(id)).fetchOne(UsersRecord::toUserDto)
+  fun get(id: UUID): UserDTO? {
+    return dslContext.selectFrom(USERS).where(USERS.ID.eq(id)).fetchOne(UsersRecord::toUser)
   }
 
-  fun getByEmail(email: String): UserDto? {
-    return dslContext
-      .selectFrom(USERS)
-      .where(USERS.EMAIL.eq(email))
-      .fetchOne(UsersRecord::toUserDto)
+  fun getByEmail(email: String): UserDTO? {
+    return dslContext.selectFrom(USERS).where(USERS.EMAIL.eq(email)).fetchOne(UsersRecord::toUser)
   }
 
-  fun create(user: NewUserDTO): UserDto {
+  fun create(user: NewUserDTO): UserDTO {
     return dslContext
       .insertInto(USERS)
       .set(USERS.EMAIL, user.email)
@@ -60,10 +57,10 @@ class UserRepository {
       .set(USERS.ROLE, user.role.name)
       .set(USERS.DEFAULT_AGENT_ID, user.defaultAgentId)
       .returning()
-      .fetchOne(UsersRecord::toUserDto)!!
+      .fetchOne(UsersRecord::toUser)!!
   }
 
-  fun update(id: UUID, update: UpdateUser): UserDto {
+  fun update(id: UUID, update: UpdateUser): UserDTO {
     val updateQuery =
       dslContext
         .update(USERS)
@@ -76,50 +73,50 @@ class UserRepository {
       updateQuery.set(USERS.EMAIL, update.email)
     }
 
-    return updateQuery.where(USERS.ID.eq(id)).returning().fetchOne(UsersRecord::toUserDto)!!
+    return updateQuery.where(USERS.ID.eq(id)).returning().fetchOne(UsersRecord::toUser)!!
   }
 
-  fun updateRole(id: UUID, role: Roles): UserDto {
+  fun updateRole(id: UUID, role: Roles): UserDTO {
     return dslContext
       .update(USERS)
       .set(USERS.ROLE, role.name)
       .set(USERS.UPDATED_AT, OffsetDateTime.now())
       .where(USERS.ID.eq(id))
       .returning()
-      .fetchOne(UsersRecord::toUserDto)!!
+      .fetchOne(UsersRecord::toUser)!!
   }
 
-  fun activate(id: UUID): UserDto {
+  fun activate(id: UUID): UserDTO {
     return dslContext
       .update(USERS)
       .set(USERS.ACTIVE, true)
       .set(USERS.UPDATED_AT, OffsetDateTime.now())
       .where(USERS.ID.eq(id))
       .returning()
-      .fetchOne(UsersRecord::toUserDto)!!
+      .fetchOne(UsersRecord::toUser)!!
   }
 
-  fun deactivate(id: UUID): UserDto {
+  fun deactivate(id: UUID): UserDTO {
     return dslContext
       .update(USERS)
       .set(USERS.ACTIVE, false)
       .set(USERS.UPDATED_AT, OffsetDateTime.now())
       .where(USERS.ID.eq(id))
       .returning()
-      .fetchOne(UsersRecord::toUserDto)!!
+      .fetchOne(UsersRecord::toUser)!!
   }
 
   fun delete(id: UUID): Boolean {
     return dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).execute() == 1
   }
 
-  fun setDefaultAgent(id: Int, userId: UUID): UserDto {
+  fun setDefaultAgent(id: Int, userId: UUID): UserDTO {
     return dslContext
       .update(USERS)
       .set(USERS.DEFAULT_AGENT_ID, id)
       .set(USERS.UPDATED_AT, OffsetDateTime.now())
       .where(USERS.ID.eq(userId))
       .returning()
-      .fetchOne(UsersRecord::toUserDto)!!
+      .fetchOne(UsersRecord::toUser)!!
   }
 }

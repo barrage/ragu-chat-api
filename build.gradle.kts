@@ -60,7 +60,6 @@ dependencies {
   implementation("org.postgresql:postgresql:$postgresVersion")
   implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
   implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
-
   implementation("com.auth0:java-jwt:4.4.0")
 
   // AI

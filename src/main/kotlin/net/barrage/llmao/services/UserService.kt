@@ -1,10 +1,10 @@
 package net.barrage.llmao.services
 
 import io.ktor.server.plugins.*
-import java.util.*
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.repositories.UserRepository
 import net.barrage.llmao.serializers.KUUID
+import java.util.*
 
 class UserService {
   private val usersRepository = UserRepository()
@@ -18,15 +18,15 @@ class UserService {
     return UserResponse(users, count)
   }
 
-  fun get(id: KUUID): UserDto {
+  fun get(id: KUUID): UserDTO {
     return usersRepository.get(id) ?: throw NotFoundException("User not found")
   }
 
-  fun getByEmail(email: String): UserDto {
+  fun getByEmail(email: String): UserDTO {
     return usersRepository.getByEmail(email) ?: throw NotFoundException("User not found")
   }
 
-  fun create(user: NewUserDTO): UserDto {
+  fun create(user: NewUserDTO): UserDTO {
     val existingUser = usersRepository.getByEmail(user.email)
 
     if (existingUser != null) {
@@ -36,7 +36,7 @@ class UserService {
     return usersRepository.create(user)
   }
 
-  fun createDev(user: NewDevUserDTO): UserDto {
+  fun createDev(user: NewDevUserDTO): UserDTO {
     val existingUser = usersRepository.getByEmail(user.email)
 
     if (existingUser != null) {
@@ -54,8 +54,8 @@ class UserService {
     return usersRepository.create(newUser)
   }
 
-  fun update(id: KUUID, update: UpdateUser): UserDto {
-    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  fun update(id: KUUID, update: UpdateUser): UserDTO {
+    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (!user.active) {
       throw BadRequestException("User is deactivated")
@@ -64,8 +64,8 @@ class UserService {
     return usersRepository.update(id, update)
   }
 
-  fun updateRole(id: UUID, update: UpdateUserRoleDTO): UserDto {
-    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  fun updateRole(id: UUID, update: UpdateUserRoleDTO): UserDTO {
+    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (!user.active) {
       throw BadRequestException("User is deactivated")
@@ -74,8 +74,8 @@ class UserService {
     return usersRepository.updateRole(id, update.role)
   }
 
-  fun activate(id: UUID): UserDto {
-    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  fun activate(id: UUID): UserDTO {
+    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (user.active) {
       throw BadRequestException("User is already active")
@@ -83,8 +83,8 @@ class UserService {
     return usersRepository.activate(id)
   }
 
-  fun deactivate(id: UUID): UserDto {
-    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  fun deactivate(id: UUID): UserDTO {
+    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (!user.active) {
       throw BadRequestException("User is already deactivated")
