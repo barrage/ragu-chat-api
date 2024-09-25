@@ -27,8 +27,6 @@ class AdminUserController(
 ) {
   @Resource("{id}")
   class User(val parent: AdminUserController, val id: KUUID) {
-    @Resource("role") class Role(val parent: User)
-
     @Resource("activate") class Activate(val parent: User)
 
     @Resource("deactivate") class Deactivate(val parent: User)
@@ -37,6 +35,15 @@ class AdminUserController(
 
 fun Route.adminUserRoutes() {
   val userService = UserService()
+
+  // Unprotected routes for that sweet development efficiency
+  if (application.environment.config.property("ktor.environment").getString() == "development") {
+    post("/dev/users") {
+      val newUser = call.receive<CreateUser>()
+      val user = userService.create(newUser)
+      call.respond(user)
+    }
+  }
 
   authenticate("auth-session-admin") {
     get<AdminUserController>(adminGetAllUsers()) {
@@ -55,46 +62,33 @@ fun Route.adminUserRoutes() {
     get<AdminUserController.User>(adminGetUser()) {
       val user: UserDTO = userService.get(it.id)
       call.respond(HttpStatusCode.OK, user)
-      return@get
     }
 
-    post<AdminUserController>(createUser()) {
-      val newUser: NewUserDTO = call.receive<NewUserDTO>()
-      val user: UserDTO = userService.create(newUser)
+    post<AdminUserController> {
+      val newUser: CreateUser = call.receive<CreateUser>()
+      val user: User = userService.create(newUser)
       call.respond(HttpStatusCode.Created, user)
-      return@post
     }
 
-    put<AdminUserController.User>(adminUpdateUser()) {
-      val updateUser: AdminUpdateUserDTO = call.receive<AdminUpdateUserDTO>()
-      val user: UserDTO = userService.update(it.id, updateUser)
+    put<AdminUserController.User> {
+      val updateUser = call.receive<UpdateUserAdmin>()
+      val user: User = userService.updateAdmin(it.id, updateUser)
       call.respond(HttpStatusCode.OK, user)
-      return@put
     }
 
-    put<AdminUserController.User.Role>(updateRole()) {
-      val updateRole: UpdateUserRoleDTO = call.receive<UpdateUserRoleDTO>()
-      val user: UserDTO = userService.updateRole(it.parent.id, updateRole)
-      call.respond(HttpStatusCode.OK, user)
-      return@put
+    put<AdminUserController.User.Activate> {
+      userService.setActiveStatus(it.parent.id, true)
+      call.respond(HttpStatusCode.OK)
     }
 
-    put<AdminUserController.User.Activate>(activateUser()) {
-      val user: UserDTO = userService.activate(it.parent.id)
-      call.respond(HttpStatusCode.OK, user)
-      return@put
-    }
-
-    put<AdminUserController.User.Deactivate>(deactivateUser()) {
-      val user: UserDTO = userService.deactivate(it.parent.id)
-      call.respond(HttpStatusCode.OK, user)
-      return@put
+    put<AdminUserController.User.Deactivate> {
+      userService.setActiveStatus(it.parent.id, false)
+      call.respond(HttpStatusCode.OK)
     }
 
     delete<AdminUserController.User>(deleteUser()) {
       userService.delete(it.id)
       call.respond(HttpStatusCode.NoContent)
-      return@delete
     }
   }
 }

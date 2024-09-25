@@ -7,6 +7,7 @@ import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.dtos.PaginationInfo
@@ -53,14 +54,6 @@ fun Route.agentsRoutes() {
       val agent: Agent = agentService.get(it.id)
       call.respond(HttpStatusCode.OK, agent)
       return@get
-    }
-
-    put<AgentController.Agent>(defaultAgent()) {
-      val agentId: Int = it.id
-      val currentUser = UserContext.currentUser
-      val user: UserDTO = agentService.setDefault(agentId, currentUser!!.id)
-      call.respond(HttpStatusCode.OK, user)
-      return@put
     }
   }
 }

@@ -9,11 +9,11 @@ import net.barrage.llmao.tables.records.UsersRecord
 class User(
   val id: KUUID,
   val email: String,
-  val firstName: String,
-  val lastName: String,
+  val fullName: String,
+  val firstName: String?,
+  val lastName: String?,
   val active: Boolean,
   val role: String,
-  val defaultAgentId: Int,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
@@ -22,10 +22,10 @@ fun UsersRecord.toUser() =
   User(
     id = this.id!!,
     email = this.email!!,
-    firstName = this.firstName!!,
-    lastName = this.lastName!!,
+    fullName = this.fullName!!,
+    firstName = this.firstName,
+    lastName = this.lastName,
     role = this.role!!,
-    defaultAgentId = this.defaultAgentId!!,
     active = this.active!!,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,

@@ -2,6 +2,8 @@ package net.barrage.llmao.services
 
 import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.users.*
+import net.barrage.llmao.error.apiError
+import net.barrage.llmao.models.User
 import net.barrage.llmao.repositories.UserRepository
 import net.barrage.llmao.serializers.KUUID
 import java.util.*
@@ -30,66 +32,41 @@ class UserService {
     val existingUser = usersRepository.getByEmail(user.email)
 
     if (existingUser != null) {
-      throw BadRequestException("User with email ${user.email} already exists")
+      throw apiError("Entity already exists", "User with email '${user.email}'")
     }
 
     return usersRepository.create(user)
   }
 
-  fun createDev(user: NewDevUserDTO): UserDTO {
-    val existingUser = usersRepository.getByEmail(user.email)
-
-    if (existingUser != null) {
-      throw BadRequestException("User with email ${user.email} already exists")
-    }
-
-    val newUser =
-      NewUserDTO(
-        email = user.email,
-        firstName = user.firstName,
-        lastName = user.lastName,
-        role = user.role,
-        defaultAgentId = 1,
-      )
-    return usersRepository.create(newUser)
-  }
-
-  fun update(id: KUUID, update: UpdateUser): UserDTO {
-    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  fun updateUser(id: KUUID, update: UpdateUser): User {
+    val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (!user.active) {
-      throw BadRequestException("User is deactivated")
+      throw apiError("Entity not found", "User with id '$id'")
     }
 
-    return usersRepository.update(id, update)
+    return usersRepository.updateNames(id, update)
   }
 
-  fun updateRole(id: UUID, update: UpdateUserRoleDTO): UserDTO {
-    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  // TODO: Separate this out into an administration service.
+  fun updateAdmin(id: KUUID, update: UpdateUserAdmin): User {
+    val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (!user.active) {
-      throw BadRequestException("User is deactivated")
+      throw apiError("Entity not found", "User with id '$id'")
     }
 
-    return usersRepository.updateRole(id, update.role)
+    return usersRepository.updateFull(id, update)
   }
 
-  fun activate(id: UUID): UserDTO {
-    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  fun setActiveStatus(id: UUID, active: Boolean): Int {
+    val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
-    if (user.active) {
+    if (user.active == active) {
       throw BadRequestException("User is already active")
     }
-    return usersRepository.activate(id)
-  }
 
-  fun deactivate(id: UUID): UserDTO {
-    val user: UserDTO = usersRepository.get(id) ?: throw NotFoundException("User not found")
-
-    if (!user.active) {
-      throw BadRequestException("User is already deactivated")
-    }
-    return usersRepository.deactivate(id)
+    return usersRepository.setActiveStatus(id, active)
   }
 
   fun delete(id: UUID) {

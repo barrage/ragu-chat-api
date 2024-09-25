@@ -6,9 +6,9 @@ import io.ktor.server.application.ApplicationCallPipeline.ApplicationPhase.Plugi
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
-import net.barrage.llmao.enums.Roles
-import net.barrage.llmao.models.UserContext
+import net.barrage.llmao.enums.Role
 import net.barrage.llmao.models.UserSession
+import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.SessionService
 import net.barrage.llmao.services.UserService
 
@@ -67,13 +67,13 @@ fun Application.configureSession() {
 
         val serverSession = SessionService().get(session.id)
 
-        if (serverSession == null || serverSession.isValid()) {
+        if (serverSession == null || !serverSession.isValid()) {
           return@validate null
         }
 
         val user = UserService().get(serverSession.userId)
 
-        if (!user.active || user.role != Roles.ADMIN.name) {
+        if (!user.active || user.role != Role.ADMIN.name) {
           return@validate null
         }
 
@@ -100,4 +100,12 @@ fun Application.extendSession() {
       }
     }
   }
+}
+
+/**
+ * Extension that quickly extracts the session ID from the cookies. Use only in contexts where you
+ * are certain the session exists, e.g. after session check middleware.
+ */
+fun ApplicationCall.sessionId(): KUUID {
+  return sessions.get<UserSession>()!!.id
 }

@@ -9,6 +9,7 @@ import io.ktor.server.sessions.*
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.dtos.auth.LoginPayload
 import net.barrage.llmao.models.UserSession
+import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.SessionService
 
 fun Route.authRoutes(service: AuthenticationService) {
@@ -20,6 +21,18 @@ fun Route.authRoutes(service: AuthenticationService) {
     call.sessions.set(UserSession(session.sessionId))
 
     call.respond(HttpStatusCode.OK)
+  }
+
+  if (application.environment.config.property("ktor.environment").getString() == "development") {
+    post("/dev/auth/login/{id}") {
+      val sessionId = KUUID.randomUUID()
+      val userId = KUUID.fromString(call.parameters["id"])
+      SessionService().store(sessionId, userId)
+
+      call.sessions.set(UserSession(sessionId))
+
+      call.respond("$sessionId")
+    }
   }
 
   post("/auth/logout") {
