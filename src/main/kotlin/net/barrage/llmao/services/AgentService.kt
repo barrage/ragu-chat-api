@@ -4,11 +4,8 @@ import io.ktor.server.plugins.*
 import net.barrage.llmao.dtos.agents.AgentResponse
 import net.barrage.llmao.dtos.agents.NewAgentDTO
 import net.barrage.llmao.dtos.agents.UpdateAgentDTO
-import net.barrage.llmao.dtos.users.UserDTO
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.repositories.AgentRepository
-import net.barrage.llmao.repositories.UserRepository
-import net.barrage.llmao.serializers.KUUID
 
 class AgentService {
   private val agentRepository = AgentRepository()
@@ -46,9 +43,5 @@ class AgentService {
 
   fun deactivate(id: Int): Agent {
     return agentRepository.deactivate(id) ?: throw NotFoundException("Agent not found")
-  }
-
-  fun setDefault(id: Int, userId: KUUID): UserDTO {
-    return UserRepository().setDefaultAgent(id, userId)
   }
 }

@@ -52,71 +52,51 @@ class UserRepository {
     return dslContext
       .insertInto(USERS)
       .set(USERS.EMAIL, user.email)
+      .set(USERS.FULL_NAME, user.fullName)
       .set(USERS.FIRST_NAME, user.firstName)
       .set(USERS.LAST_NAME, user.lastName)
       .set(USERS.ROLE, user.role.name)
-      .set(USERS.DEFAULT_AGENT_ID, user.defaultAgentId)
       .returning()
       .fetchOne(UsersRecord::toUser)!!
   }
 
-  fun update(id: UUID, update: UpdateUser): UserDTO {
-    val updateQuery =
+  fun updateNames(id: UUID, update: UpdateUser): User {
+    var updateQuery =
       dslContext
         .update(USERS)
-        .set(USERS.FIRST_NAME, update.firstName)
-        .set(USERS.LAST_NAME, update.lastName)
-        .set(USERS.DEFAULT_AGENT_ID, update.defaultAgentId)
-        .set(USERS.UPDATED_AT, OffsetDateTime.now())
+        .set(USERS.FULL_NAME, DSL.coalesce(DSL.`val`(update.fullName), USERS.FULL_NAME))
+        .set(USERS.FIRST_NAME, DSL.coalesce(DSL.`val`(update.firstName), USERS.FIRST_NAME))
+        .set(USERS.LAST_NAME, DSL.coalesce(DSL.`val`(update.lastName), USERS.LAST_NAME))
 
-    if (update is AdminUpdateUserDTO) {
-      updateQuery.set(USERS.EMAIL, update.email)
+    return updateQuery.where(USERS.ID.eq(id)).returning().fetchOne(UsersRecord::toUser)!!
+  }
+
+  fun updateFull(id: UUID, update: UpdateUserAdmin): User {
+    var updateQuery =
+      dslContext
+        .update(USERS)
+        .set(USERS.FULL_NAME, DSL.coalesce(DSL.`val`(update.fullName), USERS.FULL_NAME))
+        .set(USERS.FIRST_NAME, DSL.coalesce(DSL.`val`(update.firstName), USERS.FIRST_NAME))
+        .set(USERS.LAST_NAME, DSL.coalesce(DSL.`val`(update.lastName), USERS.LAST_NAME))
+        .set(USERS.EMAIL, DSL.coalesce(DSL.`val`(update.email), USERS.EMAIL))
+
+    update.role?.let {
+      updateQuery = updateQuery.set(USERS.ROLE, DSL.coalesce(DSL.`val`(it.name), USERS.ROLE))
     }
 
     return updateQuery.where(USERS.ID.eq(id)).returning().fetchOne(UsersRecord::toUser)!!
   }
 
-  fun updateRole(id: UUID, role: Roles): UserDTO {
+  fun setActiveStatus(id: UUID, status: Boolean): Int {
     return dslContext
       .update(USERS)
-      .set(USERS.ROLE, role.name)
-      .set(USERS.UPDATED_AT, OffsetDateTime.now())
+      .set(USERS.ACTIVE, status)
       .where(USERS.ID.eq(id))
       .returning()
-      .fetchOne(UsersRecord::toUser)!!
-  }
-
-  fun activate(id: UUID): UserDTO {
-    return dslContext
-      .update(USERS)
-      .set(USERS.ACTIVE, true)
-      .set(USERS.UPDATED_AT, OffsetDateTime.now())
-      .where(USERS.ID.eq(id))
-      .returning()
-      .fetchOne(UsersRecord::toUser)!!
-  }
-
-  fun deactivate(id: UUID): UserDTO {
-    return dslContext
-      .update(USERS)
-      .set(USERS.ACTIVE, false)
-      .set(USERS.UPDATED_AT, OffsetDateTime.now())
-      .where(USERS.ID.eq(id))
-      .returning()
-      .fetchOne(UsersRecord::toUser)!!
+      .execute()
   }
 
   fun delete(id: UUID): Boolean {
     return dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).execute() == 1
-  }
-
-  fun setDefaultAgent(id: Int, userId: UUID): UserDTO {
-    return dslContext
-      .update(USERS)
-      .set(USERS.DEFAULT_AGENT_ID, id)
-      .set(USERS.UPDATED_AT, OffsetDateTime.now())
-      .where(USERS.ID.eq(userId))
-      .returning()
-      .fetchOne(UsersRecord::toUser)!!
   }
 }

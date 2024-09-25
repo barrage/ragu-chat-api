@@ -5,10 +5,9 @@ import io.ktor.server.plugins.requestvalidation.*
 import net.barrage.llmao.dtos.agents.NewAgentDTO
 import net.barrage.llmao.dtos.agents.UpdateAgentDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
-import net.barrage.llmao.dtos.users.AdminUpdateUserDTO
-import net.barrage.llmao.dtos.users.NewDevUserDTO
-import net.barrage.llmao.dtos.users.NewUserDTO
-import net.barrage.llmao.dtos.users.UpdateUserDTO
+import net.barrage.llmao.dtos.users.CreateUser
+import net.barrage.llmao.dtos.users.UpdateUser
+import net.barrage.llmao.dtos.users.UpdateUserAdmin
 
 fun Application.configureRequestValidation() {
   install(RequestValidation) {
@@ -19,10 +18,9 @@ fun Application.configureRequestValidation() {
     validate<UpdateAgentDTO>(UpdateAgentDTO::validate)
 
     // User DTOs validations
-    validate<NewUserDTO>(NewUserDTO::validate)
-    validate<UpdateUserDTO>(UpdateUserDTO::validate)
-    validate<NewDevUserDTO>(NewDevUserDTO::validate)
-    validate<AdminUpdateUserDTO>(AdminUpdateUserDTO::validate)
+    validate<CreateUser>(CreateUser::validate)
+    validate<UpdateUser>(UpdateUser::validate)
+    validate<UpdateUserAdmin>(UpdateUserAdmin::validate)
 
     // Chat DTOs validations
     validate<UpdateChatTitleDTO>(UpdateChatTitleDTO::validate)
