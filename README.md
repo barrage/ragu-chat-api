@@ -29,3 +29,24 @@ openid
 
 The postman collection contains examples of the URLs used for the initial
 OAuth flow start.
+
+### Setup
+
+For this project you will need to have Docker installed on your machine. To set up the project
+run `sh setup.sh` in the root directory. This will set up the project hooks, docker containers,
+and initial application and gradle properties that you will need to configure additionally.
+Hooks will be set up to run formating and linting checks on `git push` commands, failing to
+execute them if application isn't formated correctly.
+
+If you work in IntelliJ IDEA, you can use the following steps to additionally set up the project:
+
+- If you don't have the `ktfmt` plugin installed, install it, and go to `Settings -> Editor -> ktfmt Settings`,
+  enabling it, and set it to `Code style: Google (internal)`, this will force Google code styling on code reformat.
+- Go to `Settings -> Editor -> Code Style -> Kotlin` and set the following:
+    - Set the `Tab Size` to 2
+    - Set the `Indent` to 2
+    - Set the `Continuation Indent` to 2
+- Setup automatic formating and linting on saving by going to `Settings -> Tools -> Actions on Save`
+  and turning on `Reformat Code` and `Optimize Imports` on any save action.
+
+This will ensure that your code is always formatted correctly, and has optimized imports.

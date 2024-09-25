@@ -11,20 +11,20 @@ import net.barrage.llmao.dtos.users.NewUserDTO
 import net.barrage.llmao.dtos.users.UpdateUserDTO
 
 fun Application.configureRequestValidation() {
-    install(RequestValidation) {
-        // Register the validation functions for each DTO
+  install(RequestValidation) {
+    // Register the validation functions for each DTO
 
-        // Agent DTOs validations
-        validate<NewAgentDTO>(NewAgentDTO::validate)
-        validate<UpdateAgentDTO>(UpdateAgentDTO::validate)
+    // Agent DTOs validations
+    validate<NewAgentDTO>(NewAgentDTO::validate)
+    validate<UpdateAgentDTO>(UpdateAgentDTO::validate)
 
-        // User DTOs validations
-        validate<NewUserDTO>(NewUserDTO::validate)
-        validate<UpdateUserDTO>(UpdateUserDTO::validate)
-        validate<NewDevUserDTO>(NewDevUserDTO::validate)
-        validate<AdminUpdateUserDTO>(AdminUpdateUserDTO::validate)
+    // User DTOs validations
+    validate<NewUserDTO>(NewUserDTO::validate)
+    validate<UpdateUserDTO>(UpdateUserDTO::validate)
+    validate<NewDevUserDTO>(NewDevUserDTO::validate)
+    validate<AdminUpdateUserDTO>(AdminUpdateUserDTO::validate)
 
-        // Chat DTOs validations
-        validate<UpdateChatTitleDTO>(UpdateChatTitleDTO::validate)
-    }
+    // Chat DTOs validations
+    validate<UpdateChatTitleDTO>(UpdateChatTitleDTO::validate)
+  }
 }

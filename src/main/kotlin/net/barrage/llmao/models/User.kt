@@ -7,18 +7,19 @@ import net.barrage.llmao.tables.records.UsersRecord
 
 @Serializable
 class User(
-    val id: KUUID,
-    val email: String,
-    val firstName: String,
-    val lastName: String,
-    val active: Boolean,
-    val role: String,
-    val defaultAgentId: Int,
-    val createdAt: KOffsetDateTime,
-    val updatedAt: KOffsetDateTime,
+  val id: KUUID,
+  val email: String,
+  val firstName: String,
+  val lastName: String,
+  val active: Boolean,
+  val role: String,
+  val defaultAgentId: Int,
+  val createdAt: KOffsetDateTime,
+  val updatedAt: KOffsetDateTime,
 )
 
-fun UsersRecord.toUser() = User(
+fun UsersRecord.toUser() =
+  User(
     id = this.id!!,
     email = this.email!!,
     firstName = this.firstName!!,
@@ -28,4 +29,4 @@ fun UsersRecord.toUser() = User(
     active = this.active!!,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
-)
+  )

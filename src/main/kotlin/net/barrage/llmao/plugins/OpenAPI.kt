@@ -7,28 +7,24 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 
 fun Application.configureOpenApi() {
-    install(SwaggerUI) {
-        info {
-            title = "LLMAO API"
-            version = "latest"
-            description = "LLMAO API for development purposes."
-        }
-        server {
-            url = "http://localhost:42069"
-            description = "Local Server"
-        }
-        server {
-            url = "http://guja:42069" // TODO: change to actual url
-            description = "Development Server"
-        }
+  install(SwaggerUI) {
+    info {
+      title = "LLMAO API"
+      version = "latest"
+      description = "LLMAO API for development purposes."
     }
+    server {
+      url = "http://localhost:42069"
+      description = "Local Server"
+    }
+    server {
+      url = "http://guja:42069" // TODO: change to actual url
+      description = "Development Server"
+    }
+  }
 }
 
 fun Route.openApiRoutes() {
-    route("openapi.json") {
-        openApiSpec()
-    }
-    route("swagger-ui") {
-        swaggerUI("/openapi.json")
-    }
+  route("openapi.json") { openApiSpec() }
+  route("swagger-ui") { swaggerUI("/openapi.json") }
 }

@@ -1,94 +1,95 @@
 package net.barrage.llmao.services
 
 import io.ktor.server.plugins.*
+import java.util.*
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.repositories.UserRepository
 import net.barrage.llmao.serializers.KUUID
-import java.util.*
 
 class UserService {
-    private val usersRepository = UserRepository()
+  private val usersRepository = UserRepository()
 
-    fun getAll(): List<UserDto> {
-        return usersRepository.getAll()
+  fun getAll(): List<UserDto> {
+    return usersRepository.getAll()
+  }
+
+  fun get(id: KUUID): UserDto {
+    return usersRepository.get(id) ?: throw NotFoundException("User not found")
+  }
+
+  fun getByEmail(email: String): UserDto {
+    return usersRepository.getByEmail(email) ?: throw NotFoundException("User not found")
+  }
+
+  fun create(user: NewUserDTO): UserDto {
+    val existingUser = usersRepository.getByEmail(user.email)
+
+    if (existingUser != null) {
+      throw BadRequestException("User with email ${user.email} already exists")
     }
 
-    fun get(id: KUUID): UserDto {
-        return usersRepository.get(id) ?: throw NotFoundException("User not found")
+    return usersRepository.create(user)
+  }
+
+  fun createDev(user: NewDevUserDTO): UserDto {
+    val existingUser = usersRepository.getByEmail(user.email)
+
+    if (existingUser != null) {
+      throw BadRequestException("User with email ${user.email} already exists")
     }
 
-    fun getByEmail(email: String): UserDto {
-        return usersRepository.getByEmail(email) ?: throw NotFoundException("User not found")
+    val newUser =
+      NewUserDTO(
+        email = user.email,
+        firstName = user.firstName,
+        lastName = user.lastName,
+        role = user.role,
+        defaultAgentId = 1,
+      )
+    return usersRepository.create(newUser)
+  }
+
+  fun update(id: KUUID, update: UpdateUser): UserDto {
+    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
+
+    if (!user.active) {
+      throw BadRequestException("User is deactivated")
     }
 
-    fun create(user: NewUserDTO): UserDto {
-        val existingUser = usersRepository.getByEmail(user.email)
+    return usersRepository.update(id, update)
+  }
 
-        if (existingUser != null) {
-            throw BadRequestException("User with email ${user.email} already exists")
-        }
+  fun updateRole(id: UUID, update: UpdateUserRoleDTO): UserDto {
+    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
-        return usersRepository.create(user)
+    if (!user.active) {
+      throw BadRequestException("User is deactivated")
     }
 
-    fun createDev(user: NewDevUserDTO): UserDto {
-        val existingUser = usersRepository.getByEmail(user.email)
+    return usersRepository.updateRole(id, update.role)
+  }
 
-        if (existingUser != null) {
-            throw BadRequestException("User with email ${user.email} already exists")
-        }
+  fun activate(id: UUID): UserDto {
+    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
-        val newUser = NewUserDTO(
-            email = user.email,
-            firstName = user.firstName,
-            lastName = user.lastName,
-            role = user.role,
-            defaultAgentId = 1
-        )
-        return usersRepository.create(newUser)
+    if (user.active) {
+      throw BadRequestException("User is already active")
     }
+    return usersRepository.activate(id)
+  }
 
-    fun update(id: KUUID, update: UpdateUser): UserDto {
-        val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  fun deactivate(id: UUID): UserDto {
+    val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
-        if (!user.active) {
-            throw BadRequestException("User is deactivated")
-        }
-
-        return usersRepository.update(id, update)
+    if (!user.active) {
+      throw BadRequestException("User is already deactivated")
     }
+    return usersRepository.deactivate(id)
+  }
 
-    fun updateRole(id: UUID, update: UpdateUserRoleDTO): UserDto {
-        val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
-
-        if (!user.active) {
-            throw BadRequestException("User is deactivated")
-        }
-
-        return usersRepository.updateRole(id, update.role)
+  fun delete(id: UUID) {
+    if (!usersRepository.delete(id)) {
+      throw NotFoundException("User not found")
     }
-
-    fun activate(id: UUID): UserDto {
-        val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
-
-        if (user.active) {
-            throw BadRequestException("User is already active")
-        }
-        return usersRepository.activate(id)
-    }
-
-    fun deactivate(id: UUID): UserDto {
-        val user: UserDto = usersRepository.get(id) ?: throw NotFoundException("User not found")
-
-        if (!user.active) {
-            throw BadRequestException("User is already deactivated")
-        }
-        return usersRepository.deactivate(id)
-    }
-
-    fun delete(id: UUID) {
-        if (!usersRepository.delete(id)) {
-            throw NotFoundException("User not found")
-        }
-    }
+  }
 }

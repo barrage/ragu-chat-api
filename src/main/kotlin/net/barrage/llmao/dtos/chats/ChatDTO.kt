@@ -14,29 +14,30 @@ import org.jooq.Record
 
 @Serializable
 data class ChatDTO(
-    val id: KUUID,
-    val userId: KUUID,
-    val agentId: Int,
-    val title: String?,
-    val createdAt: KOffsetDateTime,
-    val updatedAt: KOffsetDateTime,
-    val llmConfig: LLMConfigDTO,
-    val messages: List<MessageDTO>
+  val id: KUUID,
+  val userId: KUUID,
+  val agentId: Int,
+  val title: String?,
+  val createdAt: KOffsetDateTime,
+  val updatedAt: KOffsetDateTime,
+  val llmConfig: LLMConfigDTO,
+  val messages: List<MessageDTO>,
 )
 
 fun toChatDTO(chatData: List<Record>): ChatDTO {
-    val llmConfig = chatData.first().into(LLM_CONFIGS).toLLMConfigDTO()
-    val messages = chatData.filter { it[MESSAGES.ID] != null }.map { it.into(MESSAGES).toMessageDTO() }
-    val chat = chatData.first().into(CHATS)
+  val llmConfig = chatData.first().into(LLM_CONFIGS).toLLMConfigDTO()
+  val messages =
+    chatData.filter { it[MESSAGES.ID] != null }.map { it.into(MESSAGES).toMessageDTO() }
+  val chat = chatData.first().into(CHATS)
 
-    return ChatDTO(
-        id = chat.id!!,
-        userId = chat.userId!!,
-        agentId = chat.agentId!!,
-        title = chat.title,
-        createdAt = chat.createdAt!!,
-        updatedAt = chat.updatedAt!!,
-        llmConfig = llmConfig,
-        messages = messages
-    )
+  return ChatDTO(
+    id = chat.id!!,
+    userId = chat.userId!!,
+    agentId = chat.agentId!!,
+    title = chat.title,
+    createdAt = chat.createdAt!!,
+    updatedAt = chat.updatedAt!!,
+    llmConfig = llmConfig,
+    messages = messages,
+  )
 }

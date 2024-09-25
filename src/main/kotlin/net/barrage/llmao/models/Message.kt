@@ -7,18 +7,19 @@ import net.barrage.llmao.tables.records.MessagesRecord
 
 @Serializable
 class Message(
-    val id: KUUID,
-    val sender: String,
-    val senderType: String,
-    val content: String,
-    val chatId: KUUID,
-    val responseTo: KUUID? = null,
-    val evaluation: Boolean? = null,
-    val createdAt: KOffsetDateTime,
-    val updatedAt: KOffsetDateTime,
+  val id: KUUID,
+  val sender: String,
+  val senderType: String,
+  val content: String,
+  val chatId: KUUID,
+  val responseTo: KUUID? = null,
+  val evaluation: Boolean? = null,
+  val createdAt: KOffsetDateTime,
+  val updatedAt: KOffsetDateTime,
 )
 
-fun MessagesRecord.toMessage() = Message(
+fun MessagesRecord.toMessage() =
+  Message(
     id = this.id!!,
     sender = this.sender!!,
     senderType = this.senderType!!,
@@ -27,5 +28,5 @@ fun MessagesRecord.toMessage() = Message(
     responseTo = this.responseTo,
     evaluation = this.evaluation,
     createdAt = this.createdAt!!,
-    updatedAt = this.updatedAt!!
-)
+    updatedAt = this.updatedAt!!,
+  )

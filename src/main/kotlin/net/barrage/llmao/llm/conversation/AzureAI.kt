@@ -1,6 +1,7 @@
 package net.barrage.llmao.llm.conversation
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
+import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
@@ -12,90 +13,94 @@ import net.barrage.llmao.enums.LLMModels
 import net.barrage.llmao.llm.types.ChatMessage
 import net.barrage.llmao.llm.types.LLMConversationConfig
 import net.barrage.llmao.llm.types.TokenChunk
-import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 
 class AzureAI(
-    private val apiKey: String,
-    private val endpoint: String,
-    private val apiVersion: String,
-    private val cfg: LLMConversationConfig,
+  private val apiKey: String,
+  private val endpoint: String,
+  private val apiVersion: String,
+  private val cfg: LLMConversationConfig,
 ) : ConversationLlm {
-    private var client: OpenAI? = null
-    private var deployment: LLMModels? = null
+  private var client: OpenAI? = null
+  private var deployment: LLMModels? = null
 
-    init {
-        this.deployment = this.cfg.model
-        if (this.deployment == null) {
-            this.deployment = LLMModels.GPT4
-        }
+  init {
+    this.deployment = this.cfg.model
+    if (this.deployment == null) {
+      this.deployment = LLMModels.GPT4
+    }
 
-        this.client = OpenAI(
-            OpenAIConfig(
-                host = OpenAIHost.azure(
-                    resourceName = this.endpoint,
-                    deploymentId = this.deployment!!.azureModel,
-                    apiVersion = this.apiVersion
-                ),
-                headers = mapOf("api-key" to this.apiKey),
-                token = this.apiKey
-            )
+    this.client =
+      OpenAI(
+        OpenAIConfig(
+          host =
+            OpenAIHost.azure(
+              resourceName = this.endpoint,
+              deploymentId = this.deployment!!.azureModel,
+              apiVersion = this.apiVersion,
+            ),
+          headers = mapOf("api-key" to this.apiKey),
+          token = this.apiKey,
         )
-    }
+      )
+  }
 
-    override suspend fun chatCompletion(messages: List<ChatMessage>): String {
-        val chatRequest = ChatCompletionRequest(
-            model = ModelId(this.deployment!!.azureModel),
-            messages = messages.map { it.toOpenAiChatMessage() },
-            temperature = this.cfg.chat.temperature,
+  override suspend fun chatCompletion(messages: List<ChatMessage>): String {
+    val chatRequest =
+      ChatCompletionRequest(
+        model = ModelId(this.deployment!!.azureModel),
+        messages = messages.map { it.toOpenAiChatMessage() },
+        temperature = this.cfg.chat.temperature,
+      )
+
+    return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
+  }
+
+  override suspend fun completionStream(messages: List<ChatMessage>): Flow<List<TokenChunk>> {
+    val chatRequest =
+      ChatCompletionRequest(
+        model = ModelId(this.deployment!!.azureModel),
+        messages = messages.map { it.toOpenAiChatMessage() },
+        temperature = this.cfg.chat.temperature,
+        streamOptions = StreamOptions(true),
+      )
+
+    return this.client!!.chatCompletions(chatRequest).map {
+      listOf(
+        TokenChunk(
+          it.id,
+          it.created,
+          it.choices.firstOrNull()?.delta?.content ?: " ",
+          it.choices.firstOrNull()?.finishReason,
         )
-
-        return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
+      )
     }
+  }
 
-    override suspend fun completionStream(messages: List<ChatMessage>): Flow<List<TokenChunk>> {
-        val chatRequest = ChatCompletionRequest(
-            model = ModelId(this.deployment!!.azureModel),
-            messages = messages.map { it.toOpenAiChatMessage() },
-            temperature = this.cfg.chat.temperature,
-            streamOptions = StreamOptions(true),
-        )
+  override suspend fun generateChatTitle(proompt: String): String {
+    val chatRequest =
+      ChatCompletionRequest(
+        model = ModelId(this.deployment!!.azureModel),
+        messages = listOf(OpenAIChatMessage.User(proompt)),
+        temperature = this.cfg.chat.temperature,
+      )
 
-        return this.client!!.chatCompletions(chatRequest)
-            .map {
-                listOf(
-                    TokenChunk(
-                        it.id,
-                        it.created,
-                        it.choices.firstOrNull()?.delta?.content ?: " ",
-                        it.choices.firstOrNull()?.finishReason
-                    )
-                )
-            }
-    }
+    val response = this.client!!.chatCompletion(chatRequest)
+    return response.choices[0].message.content!!
+  }
 
-    override suspend fun generateChatTitle(proompt: String): String {
-        val chatRequest = ChatCompletionRequest(
-            model = ModelId(this.deployment!!.azureModel),
-            messages = listOf(OpenAIChatMessage.User(proompt)),
-            temperature = this.cfg.chat.temperature,
-        )
+  override suspend fun summarizeConversation(proompt: String, maxTokens: Int?): String {
+    val chatRequest =
+      ChatCompletionRequest(
+        model = ModelId(this.deployment!!.azureModel),
+        messages = listOf(OpenAIChatMessage.User(proompt)),
+        maxTokens = maxTokens,
+        temperature = this.cfg.chat.temperature,
+      )
 
-        val response = this.client!!.chatCompletion(chatRequest)
-        return response.choices[0].message.content!!
-    }
+    return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
+  }
 
-    override suspend fun summarizeConversation(proompt: String, maxTokens: Int?): String {
-        val chatRequest = ChatCompletionRequest(
-            model = ModelId(this.deployment!!.azureModel),
-            messages = listOf(OpenAIChatMessage.User(proompt)),
-            maxTokens = maxTokens,
-            temperature = this.cfg.chat.temperature,
-        )
-
-        return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
-    }
-
-    override fun config(): LLMConversationConfig {
-        return this.cfg
-    }
+  override fun config(): LLMConversationConfig {
+    return this.cfg
+  }
 }

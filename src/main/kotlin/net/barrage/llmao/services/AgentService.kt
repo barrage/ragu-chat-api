@@ -10,33 +10,33 @@ import net.barrage.llmao.repositories.UserRepository
 import net.barrage.llmao.serializers.KUUID
 
 class AgentService {
-    private val agentRepository = AgentRepository()
+  private val agentRepository = AgentRepository()
 
-    fun getAll(): List<Agent> {
-        return agentRepository.getAll()
-    }
+  fun getAll(): List<Agent> {
+    return agentRepository.getAll()
+  }
 
-    fun get(id: Int): Agent {
-        return agentRepository.get(id) ?: throw NotFoundException("Agent not found")
-    }
+  fun get(id: Int): Agent {
+    return agentRepository.get(id) ?: throw NotFoundException("Agent not found")
+  }
 
-    fun create(newAgent: NewAgentDTO): Agent {
-        return agentRepository.create(newAgent) ?: throw IllegalStateException("Something went wrong")
-    }
+  fun create(newAgent: NewAgentDTO): Agent {
+    return agentRepository.create(newAgent) ?: throw IllegalStateException("Something went wrong")
+  }
 
-    fun update(id: Int, updated: UpdateAgentDTO): Agent {
-        return agentRepository.update(id, updated) ?: throw NotFoundException("Agent not found")
-    }
+  fun update(id: Int, updated: UpdateAgentDTO): Agent {
+    return agentRepository.update(id, updated) ?: throw NotFoundException("Agent not found")
+  }
 
-    fun activate(id: Int): Agent {
-        return agentRepository.activate(id) ?: throw NotFoundException("Agent not found")
-    }
+  fun activate(id: Int): Agent {
+    return agentRepository.activate(id) ?: throw NotFoundException("Agent not found")
+  }
 
-    fun deactivate(id: Int): Agent {
-        return agentRepository.deactivate(id) ?: throw NotFoundException("Agent not found")
-    }
+  fun deactivate(id: Int): Agent {
+    return agentRepository.deactivate(id) ?: throw NotFoundException("Agent not found")
+  }
 
-    fun setDefault(id: Int, userId: KUUID): UserDto {
-        return UserRepository().setDefaultAgent(id, userId)
-    }
+  fun setDefault(id: Int, userId: KUUID): UserDto {
+    return UserRepository().setDefaultAgent(id, userId)
+  }
 }

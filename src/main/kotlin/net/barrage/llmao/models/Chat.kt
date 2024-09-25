@@ -7,19 +7,20 @@ import net.barrage.llmao.tables.records.ChatsRecord
 
 @Serializable
 class Chat(
-    val id: KUUID,
-    val userId: KUUID,
-    val agentId: Int,
-    val title: String?,
-    val createdAt: KOffsetDateTime,
-    val updatedAt: KOffsetDateTime,
+  val id: KUUID,
+  val userId: KUUID,
+  val agentId: Int,
+  val title: String?,
+  val createdAt: KOffsetDateTime,
+  val updatedAt: KOffsetDateTime,
 )
 
-fun ChatsRecord.toChat() = Chat(
+fun ChatsRecord.toChat() =
+  Chat(
     id = this.id!!,
     userId = this.userId!!,
     agentId = this.agentId!!,
     title = this.title,
     createdAt = this.createdAt!!,
-    updatedAt = this.updatedAt!!
-)
+    updatedAt = this.updatedAt!!,
+  )

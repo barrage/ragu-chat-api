@@ -8,10 +8,10 @@ import net.barrage.llmao.weaviate.Weaver
 import net.barrage.llmao.websocket.Emitter
 
 class ChatInfra(
-    val llm: ConversationLlm,
-    val formatter: PromptFormatter,
-    val emitter: Emitter? = null,
-    val vectorDb: Weaver,
-    val vectorOptions: VectorQueryOptions,
-    val encoder: Encoding
+  val llm: ConversationLlm,
+  val formatter: PromptFormatter,
+  val emitter: Emitter? = null,
+  val vectorDb: Weaver,
+  val vectorOptions: VectorQueryOptions,
+  val encoder: Encoding,
 )

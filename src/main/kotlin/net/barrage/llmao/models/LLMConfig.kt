@@ -8,17 +8,18 @@ import net.barrage.llmao.tables.records.LlmConfigsRecord
 
 @Serializable
 class LLMConfig(
-    val id: KUUID,
-    val chatId: KUUID,
-    val model: LLMModels,
-    val streaming: Boolean,
-    val temperature: Double,
-    val language: String,
-    val createdAt: KOffsetDateTime,
-    val updatedAt: KOffsetDateTime,
+  val id: KUUID,
+  val chatId: KUUID,
+  val model: LLMModels,
+  val streaming: Boolean,
+  val temperature: Double,
+  val language: String,
+  val createdAt: KOffsetDateTime,
+  val updatedAt: KOffsetDateTime,
 )
 
-fun LlmConfigsRecord.toLLMConfig() = LLMConfig(
+fun LlmConfigsRecord.toLLMConfig() =
+  LLMConfig(
     id = this.id!!,
     chatId = this.chatId!!,
     model = LLMModels.valueOf(this.model!!),
@@ -26,5 +27,5 @@ fun LlmConfigsRecord.toLLMConfig() = LLMConfig(
     temperature = this.temperature!!,
     language = this.language!!,
     createdAt = this.createdAt!!,
-    updatedAt = this.updatedAt!!
-)
+    updatedAt = this.updatedAt!!,
+  )
