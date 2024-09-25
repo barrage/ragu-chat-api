@@ -22,126 +22,124 @@ import net.barrage.llmao.services.ChatService
 
 @Resource("admin/chats")
 class AdminChatController {
-    @Resource("{id}")
-    class Chat(val parent: AdminChatController, val id: KUUID) {
-        @Resource("messages")
-        class Messages(val parent: Chat) {
-            @Resource("{messageId}")
-            class Message(val parent: Messages, val messageId: KUUID)
-        }
-
-        @Resource("title")
-        class Title(val parent: Chat)
+  @Resource("{id}")
+  class Chat(val parent: AdminChatController, val id: KUUID) {
+    @Resource("messages")
+    class Messages(val parent: Chat) {
+      @Resource("{messageId}") class Message(val parent: Messages, val messageId: KUUID)
     }
+
+    @Resource("title") class Title(val parent: Chat)
+  }
 }
 
 fun Route.adminChatsRoutes() {
-    val chatService = ChatService()
+  val chatService = ChatService()
 
-    authenticate("auth-session-admin") {
-        get<AdminChatController>({
-            tags("admin/chats")
-            description = "Retrieve list of all chats"
-            request { }
-            response {
-                HttpStatusCode.OK to {
-                    description = "List of all chats retrieved successfully"
-                    body<List<ChatDTO>> {
-                        description = "A list of ChatDTO objects representing all the chats"
-                    }
-                }
-                HttpStatusCode.InternalServerError to {
-                    description = "Internal server error occurred while retrieving chats"
-                    body<List<Error>> {}
-                }
+  authenticate("auth-session-admin") {
+    get<AdminChatController>({
+      tags("admin/chats")
+      description = "Retrieve list of all chats"
+      request {}
+      response {
+        HttpStatusCode.OK to
+          {
+            description = "List of all chats retrieved successfully"
+            body<List<ChatDTO>> {
+              description = "A list of ChatDTO objects representing all the chats"
             }
-        }) {
-            val chats: List<ChatDTO> = chatService.getAll()
-            call.respond(HttpStatusCode.OK, chats)
-            return@get
-        }
-
-        get<AdminChatController.Chat.Messages>({
-            tags("admin/chats")
-            description = "Retrieve chat messages"
-            request {
-                pathParameter<String>("id") {
-                    description = "The ID of the chat to retrieve messages from"
-                }
-            }
-            response {
-                HttpStatusCode.OK to {
-                    description = "List of all chat messages retrieved successfully"
-                    body<List<MessageDTO>> {
-                        description = "A list of MessageDTO objects representing all the chats"
-                    }
-                }
-                HttpStatusCode.InternalServerError to {
-                    description = "Internal server error occurred while retrieving chats"
-                    body<List<Error>> {}
-                }
-            }
-        }) {
-            val messages: List<Message> = chatService.getMessages(it.parent.id)
-            call.respond(HttpStatusCode.OK, messages)
-            return@get
-        }
-
-        put<AdminChatController.Chat.Title>({
-            tags("admin/chats")
-            description = "Update chat title"
-            request {
-                pathParameter<String>("id") {
-                    description = "The ID of the chat"
-                }
-                body<UpdateChatTitleDTO>()
-            }
-            response {
-                HttpStatusCode.OK to {
-                    description = "Updated chat retrieved successfully"
-                    body<Chat> {}
-                }
-                HttpStatusCode.InternalServerError to {
-                    description = "Internal server error occurred while retrieving chats"
-                    body<List<Error>> {}
-                }
-            }
-        }) {
-            val input: UpdateChatTitleDTO = call.receive()
-            val chat: Chat = chatService.updateTitle(it.parent.id, input)
-            call.respond(HttpStatusCode.OK, chat)
-            return@put
-        }
-
-        patch<AdminChatController.Chat.Messages.Message>({
-            tags("admin/chats")
-            description = "Evaluate chat message"
-            request {
-                pathParameter<String>("id") {
-                    description = "The ID of the chat"
-                }
-                pathParameter<String>("messageId") {
-                    description = "The ID of the message"
-                }
-                body<EvaluateMessageDTO>()
-            }
-            response {
-                HttpStatusCode.OK to {
-                    description = "Updated message retrieved successfully"
-                    body<MessageDTO> {}
-                }
-                HttpStatusCode.InternalServerError to {
-                    description = "Internal server error occurred while retrieving chats"
-                    body<List<Error>> {}
-                }
-            }
-        }) {
-            val input: EvaluateMessageDTO = call.receive()
-            val chatId = it.parent.parent.id
-            val messageId = it.messageId
-            val message = chatService.evaluateMessage(chatId, messageId, input)
-            call.respond(HttpStatusCode.OK, message)
-            return@patch
-        }
+          }
+        HttpStatusCode.InternalServerError to
+          {
+            description = "Internal server error occurred while retrieving chats"
+            body<List<Error>> {}
+          }
+      }
+    }) {
+      val chats: List<ChatDTO> = chatService.getAll()
+      call.respond(HttpStatusCode.OK, chats)
+      return@get
     }
+
+    get<AdminChatController.Chat.Messages>({
+      tags("admin/chats")
+      description = "Retrieve chat messages"
+      request {
+        pathParameter<String>("id") { description = "The ID of the chat to retrieve messages from" }
+      }
+      response {
+        HttpStatusCode.OK to
+          {
+            description = "List of all chat messages retrieved successfully"
+            body<List<MessageDTO>> {
+              description = "A list of MessageDTO objects representing all the chats"
+            }
+          }
+        HttpStatusCode.InternalServerError to
+          {
+            description = "Internal server error occurred while retrieving chats"
+            body<List<Error>> {}
+          }
+      }
+    }) {
+      val messages: List<Message> = chatService.getMessages(it.parent.id)
+      call.respond(HttpStatusCode.OK, messages)
+      return@get
+    }
+
+    put<AdminChatController.Chat.Title>({
+      tags("admin/chats")
+      description = "Update chat title"
+      request {
+        pathParameter<String>("id") { description = "The ID of the chat" }
+        body<UpdateChatTitleDTO>()
+      }
+      response {
+        HttpStatusCode.OK to
+          {
+            description = "Updated chat retrieved successfully"
+            body<Chat> {}
+          }
+        HttpStatusCode.InternalServerError to
+          {
+            description = "Internal server error occurred while retrieving chats"
+            body<List<Error>> {}
+          }
+      }
+    }) {
+      val input: UpdateChatTitleDTO = call.receive()
+      val chat: Chat = chatService.updateTitle(it.parent.id, input)
+      call.respond(HttpStatusCode.OK, chat)
+      return@put
+    }
+
+    patch<AdminChatController.Chat.Messages.Message>({
+      tags("admin/chats")
+      description = "Evaluate chat message"
+      request {
+        pathParameter<String>("id") { description = "The ID of the chat" }
+        pathParameter<String>("messageId") { description = "The ID of the message" }
+        body<EvaluateMessageDTO>()
+      }
+      response {
+        HttpStatusCode.OK to
+          {
+            description = "Updated message retrieved successfully"
+            body<MessageDTO> {}
+          }
+        HttpStatusCode.InternalServerError to
+          {
+            description = "Internal server error occurred while retrieving chats"
+            body<List<Error>> {}
+          }
+      }
+    }) {
+      val input: EvaluateMessageDTO = call.receive()
+      val chatId = it.parent.parent.id
+      val messageId = it.messageId
+      val message = chatService.evaluateMessage(chatId, messageId, input)
+      call.respond(HttpStatusCode.OK, message)
+      return@patch
+    }
+  }
 }

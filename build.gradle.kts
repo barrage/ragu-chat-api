@@ -10,128 +10,124 @@ val exposedVersion = "0.52.0"
 val jooqVersion = "3.19.11"
 
 plugins {
-    kotlin("jvm") version "2.0.20"
-    id("io.ktor.plugin") version "2.3.12"
-    kotlin("plugin.serialization") version "2.0.20"
-    id("nu.studer.jooq") version "9.0"
-    id("org.flywaydb.flyway") version "10.17.3"
+  kotlin("jvm") version "2.0.20"
+  id("io.ktor.plugin") version "2.3.12"
+  kotlin("plugin.serialization") version "2.0.20"
+  id("nu.studer.jooq") version "9.0"
+  id("org.flywaydb.flyway") version "10.17.3"
 }
 
 group = "net.barrage"
+
 version = "0.0.1"
 
 application {
-    mainClass.set("io.ktor.server.netty.EngineMain")
+  mainClass.set("io.ktor.server.netty.EngineMain")
 
-    val isDevelopment: Boolean = project.ext.has("development")
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
+  val isDevelopment: Boolean = project.ext.has("development")
+  applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
-sourceSets {
-    main {
-        resources {
-            srcDir("config")
-        }
-    }
-}
+sourceSets { main { resources { srcDir("config") } } }
 
 buildscript {
-    dependencies {
-        classpath("org.flywaydb:flyway-database-postgresql:10.17.3")
-        classpath("org.flywaydb:flyway-core:10.17.3")
-        classpath("org.flywaydb:flyway-gradle-plugin:10.17.3")
-    }
+  dependencies {
+    classpath("org.flywaydb:flyway-database-postgresql:10.17.3")
+    classpath("org.flywaydb:flyway-core:10.17.3")
+    classpath("org.flywaydb:flyway-gradle-plugin:10.17.3")
+  }
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-client-apache-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-resources-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-request-validation:$ktorVersion")
-    implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-config-yaml:$ktorVersion")
-    implementation("io.ktor:ktor-server-websockets:$ktorVersion")
-    implementation("ch.qos.logback:logback-classic:$logbackVersion")
-    implementation("org.postgresql:postgresql:$postgresVersion")
-    implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
+  implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-resources-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-request-validation:$ktorVersion")
+  implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-config-yaml:$ktorVersion")
+  implementation("io.ktor:ktor-server-websockets:$ktorVersion")
 
-    // AI
-    implementation("com.aallam.openai:openai-client:3.8.2")
-    implementation("io.ktor:ktor-client-okhttp")
-    implementation("com.knuddels:jtokkit:1.1.0")
+  implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-client-apache-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
 
-    // Tests
-    testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
+  implementation("ch.qos.logback:logback-classic:$logbackVersion")
+  implementation("org.postgresql:postgresql:$postgresVersion")
+  implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
+  implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
 
-    // Error handling
-    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+  implementation("com.auth0:java-jwt:4.4.0")
 
-    // Database communication
-    jooqGenerator("org.postgresql:postgresql:$postgresVersion")
+  // AI
+  implementation("com.aallam.openai:openai-client:3.8.2")
+  implementation("io.ktor:ktor-client-okhttp")
+  implementation("com.knuddels:jtokkit:1.1.0")
 
-    // Weaviate client
-    implementation("io.weaviate:client:4.8.2")
+  // Tests
+  testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
+
+  // Error handling
+  implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+
+  // Database communication
+  jooqGenerator("org.postgresql:postgresql:$postgresVersion")
+
+  // Weaviate client
+  implementation("io.weaviate:client:4.8.2")
 }
 
 flyway {
-    detectEncoding = true
-    driver = project.properties["db.driver"] as String
-    url = project.properties["db.url"] as String
-    user = project.properties["db.user"] as String
-    password = project.properties["db.password"] as String
-    baselineOnMigrate = true
-    locations = arrayOf("filesystem:src/main/resources/db/migration")
-    schemas = arrayOf("public")
+  detectEncoding = true
+  driver = project.properties["db.driver"] as String
+  url = project.properties["db.url"] as String
+  user = project.properties["db.user"] as String
+  password = project.properties["db.password"] as String
+  baselineOnMigrate = true
+  locations = arrayOf("filesystem:src/main/resources/db/migration")
+  schemas = arrayOf("public")
 }
 
 jooq {
-    version = jooqVersion
-    edition = JooqEdition.OSS
+  version = jooqVersion
+  edition = JooqEdition.OSS
 
-    configurations {
-        create("main").apply {
-            generateSchemaSourceOnCompilation = true
-            jooqConfiguration.apply {
-                logging = Logging.ERROR
-                jdbc.apply {
-                    url = project.properties["db.url"] as String
-                    user = project.properties["db.user"] as String
-                    password = project.properties["db.password"] as String
-                }
-                generator.apply {
-                    name = "org.jooq.codegen.KotlinGenerator"
-                    database.apply {
-                        name = "org.jooq.meta.postgres.PostgresDatabase"
-                        inputSchema = "public"
-                        excludes = "flyway_schema_history"
-                    }
-                    generate.apply {
-                        isDeprecated = false
-                        isKotlinSetterJvmNameAnnotationsOnIsPrefix = true
-                        isPojosAsKotlinDataClasses = true
-                        isFluentSetters = true
-                    }
-                    target.apply {
-                        packageName = "net.barrage.llmao"
-                        directory = "build/generated-src/jooq"
-                    }
-                    strategy.name = "org.jooq.codegen.DefaultGeneratorStrategy"
-                }
-            }
+  configurations {
+    create("main").apply {
+      generateSchemaSourceOnCompilation = true
+      jooqConfiguration.apply {
+        logging = Logging.ERROR
+        jdbc.apply {
+          url = project.properties["db.url"] as String
+          user = project.properties["db.user"] as String
+          password = project.properties["db.password"] as String
         }
+        generator.apply {
+          name = "org.jooq.codegen.KotlinGenerator"
+          database.apply {
+            name = "org.jooq.meta.postgres.PostgresDatabase"
+            inputSchema = "public"
+            excludes = "flyway_schema_history"
+          }
+          generate.apply {
+            isDeprecated = false
+            isKotlinSetterJvmNameAnnotationsOnIsPrefix = true
+            isPojosAsKotlinDataClasses = true
+            isFluentSetters = true
+          }
+          target.apply {
+            packageName = "net.barrage.llmao"
+            directory = "build/generated-src/jooq"
+          }
+          strategy.name = "org.jooq.codegen.DefaultGeneratorStrategy"
+        }
+      }
     }
+  }
 }
 
-tasks.named("generateJooq") {
-    dependsOn("flywayMigrate")
-}
+tasks.named("generateJooq") { dependsOn("flywayMigrate") }

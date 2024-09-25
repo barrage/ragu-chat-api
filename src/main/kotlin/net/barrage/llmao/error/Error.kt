@@ -5,20 +5,17 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
-open class Error(
-    val type: String,
-    val cause: String,
-    val description: String? = null
-) {
-    override fun toString(): String {
-        return Json.encodeToString(this)
-    }
+open class Error(val type: String, val reason: String, val description: String? = null) :
+  Throwable() {
+  override fun toString(): String {
+    return Json.encodeToString(this)
+  }
 }
 
 fun internalError(): Error {
-    return Error("Internal", "Internal server error", "Something went wrong")
+  return Error("Internal", "Something went wrong")
 }
 
-fun apiError(cause: String, description: String? = null): Error {
-    return Error("API", cause, description)
+fun apiError(reason: String, description: String? = null): Error {
+  return Error("API", reason, description)
 }
