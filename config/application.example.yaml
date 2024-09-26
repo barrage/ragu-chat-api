@@ -33,9 +33,9 @@ weaviate:
   host: "localhost:8080"
   scheme: "http"
   documentation:
-    collection:
-    fields:
-    nResults:
+    collection: "LLMAODocumentation"
+    fields: "content parentDocumentId fileName fileType title section page"
+    nResults: 5
 #    where:
 #    distanceFilter:
 
