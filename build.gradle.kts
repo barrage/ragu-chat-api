@@ -41,6 +41,8 @@ buildscript {
   }
 }
 
+ktor { fatJar { archiveFileName.set("llmao.jar") } }
+
 dependencies {
   implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")

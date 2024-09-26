@@ -1,0 +1,12 @@
+ingress:
+  annotations:
+    cert-manager.io/cluster-issuer: "barrage-le-production"
+    ## The following annotation is to limit access to the ingress
+    nginx.ingress.kubernetes.io/whitelist-source-range: 0.0.0.0/0
+
+barrage:
+  vault:
+    env: prod
+    role: llmao-kappi-k8-s2
+    moduleWorkspace: llmao/data/deploy-kappi-prod
+    authPath: auth/kubernetes-s2
