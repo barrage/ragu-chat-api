@@ -12,9 +12,11 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.dtos.PaginationInfo
-import net.barrage.llmao.dtos.users.*
+import net.barrage.llmao.dtos.users.CreateUser
+import net.barrage.llmao.dtos.users.UpdateUserAdmin
 import net.barrage.llmao.error.Error
+import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.User
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.UserService
 
@@ -52,36 +54,33 @@ fun Route.adminUserRoutes() {
       val sortBy = it.sortBy ?: "lastName"
       val sortOrder = it.sortOrder ?: "asc"
 
-      val users: UserResponse = userService.getAll(page, size, sortBy, sortOrder)
-      val response =
-        toPaginatedUserDTO(users.users, PaginationInfo(users.count, page, size, sortBy, sortOrder))
-      call.respond(HttpStatusCode.OK, response)
-      return@get
+      val users = userService.getAll(page, size, sortBy, sortOrder)
+      call.respond(HttpStatusCode.OK, users)
     }
 
     get<AdminUserController.User>(adminGetUser()) {
-      val user: UserDTO = userService.get(it.id)
+      val user = userService.get(it.id)
       call.respond(HttpStatusCode.OK, user)
     }
 
-    post<AdminUserController> {
+    post<AdminUserController>(createUser()) {
       val newUser: CreateUser = call.receive<CreateUser>()
-      val user: User = userService.create(newUser)
+      val user = userService.create(newUser)
       call.respond(HttpStatusCode.Created, user)
     }
 
-    put<AdminUserController.User> {
+    put<AdminUserController.User>(adminUpdateUser()) {
       val updateUser = call.receive<UpdateUserAdmin>()
-      val user: User = userService.updateAdmin(it.id, updateUser)
+      val user = userService.updateAdmin(it.id, updateUser)
       call.respond(HttpStatusCode.OK, user)
     }
 
-    put<AdminUserController.User.Activate> {
+    put<AdminUserController.User.Activate>(setActiveStatus()) {
       userService.setActiveStatus(it.parent.id, true)
       call.respond(HttpStatusCode.OK)
     }
 
-    put<AdminUserController.User.Deactivate> {
+    put<AdminUserController.User.Deactivate>(setActiveStatus()) {
       userService.setActiveStatus(it.parent.id, false)
       call.respond(HttpStatusCode.OK)
     }
@@ -123,7 +122,7 @@ fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "List of all users"
-        body<PaginatedUserDTO>()
+        body<CountedList<User>>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -146,7 +145,7 @@ fun adminGetUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "User retrieved successfully"
-        body<UserDTO>()
+        body<User>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -156,15 +155,15 @@ fun adminGetUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun createUser(): OpenApiRoute.() -> Unit = {
+private fun createUser(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
   description = "Create new user"
-  request { body<NewUserDTO>() }
+  request { body<CreateUser>() }
   response {
     HttpStatusCode.Created to
       {
         description = "User created successfully"
-        body<UserDTO>()
+        body<User>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -182,13 +181,13 @@ fun adminUpdateUser(): OpenApiRoute.() -> Unit = {
       description = "User ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    body<AdminUpdateUserDTO>()
+    body<UpdateUserAdmin>()
   }
   response {
     HttpStatusCode.OK to
       {
         description = "User updated successfully"
-        body<UserDTO>()
+        body<User>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -198,33 +197,9 @@ fun adminUpdateUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun updateRole(): OpenApiRoute.() -> Unit = {
+fun setActiveStatus(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
-  description = "Update user role"
-  request {
-    pathParameter<String>("id") {
-      description = "User ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    body<UpdateUserRoleDTO>()
-  }
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "User role updated successfully"
-        body<UserDTO>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while updating user role"
-        body<List<Error>> {}
-      }
-  }
-}
-
-fun activateUser(): OpenApiRoute.() -> Unit = {
-  tags("admin/users")
-  description = "Activate user"
+  description = "Set user active status"
   request {
     pathParameter<String>("id") {
       description = "User ID"
@@ -235,34 +210,11 @@ fun activateUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "User activated successfully"
-        body<UserDTO>()
+        body<User>()
       }
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while activating user"
-        body<List<Error>> {}
-      }
-  }
-}
-
-fun deactivateUser(): OpenApiRoute.() -> Unit = {
-  tags("admin/users")
-  description = "Deactivate user"
-  request {
-    pathParameter<String>("id") {
-      description = "User ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-  }
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "User deactivated successfully"
-        body<UserDTO>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while deactivating user"
         body<List<Error>> {}
       }
   }

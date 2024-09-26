@@ -1,9 +1,8 @@
 package net.barrage.llmao.models
 
-import net.barrage.llmao.dtos.users.UserDTO
-import net.barrage.llmao.serializers.KUUID
+import io.ktor.util.*
 
-object UserContext {
-    var currentUser: UserDTO? = null
-    var sessionId: KUUID? = null
-}
+data class UserContext(val currentUser: User)
+
+/** Key to use for obtaining users from requests validated by the session middleware. */
+val RequestUser = AttributeKey<User>("User")

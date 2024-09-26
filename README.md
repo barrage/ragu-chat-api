@@ -50,3 +50,13 @@ If you work in IntelliJ IDEA, you can use the following steps to additionally se
   and turning on `Reformat Code` and `Optimize Imports` on any save action.
 
 This will ensure that your code is always formatted correctly, and has optimized imports.
+## Migrations and seeders
+
+Flyway is responsible for migrating the database schema.
+It is embedded into the application and will run migrations on app startup.
+
+To seed the database with the initial agent and users, run
+
+```bash
+psql -h localhost -p 5454 -U postgres -f src/main/resources/db/seed/initial.sql -d kappi 
+```

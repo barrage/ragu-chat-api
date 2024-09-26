@@ -1,34 +1,34 @@
 package net.barrage.llmao.services
 
 import io.ktor.server.plugins.*
+import java.util.*
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.error.apiError
+import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.User
 import net.barrage.llmao.repositories.UserRepository
 import net.barrage.llmao.serializers.KUUID
-import java.util.*
 
 class UserService {
   private val usersRepository = UserRepository()
 
-  fun getAll(page: Int, size: Int, sortBy: String, sortOrder: String): UserResponse {
+  fun getAll(page: Int, size: Int, sortBy: String, sortOrder: String): CountedList<User> {
     val offset = (page - 1) * size
 
     val users = usersRepository.getAll(offset, size, sortBy, sortOrder)
-    val count = usersRepository.countAll()
 
-    return UserResponse(users, count)
+    return users
   }
 
-  fun get(id: KUUID): UserDTO {
+  fun get(id: KUUID): User {
     return usersRepository.get(id) ?: throw NotFoundException("User not found")
   }
 
-  fun getByEmail(email: String): UserDTO {
+  fun getByEmail(email: String): User {
     return usersRepository.getByEmail(email) ?: throw NotFoundException("User not found")
   }
 
-  fun create(user: NewUserDTO): UserDTO {
+  fun create(user: CreateUser): User {
     val existingUser = usersRepository.getByEmail(user.email)
 
     if (existingUser != null) {

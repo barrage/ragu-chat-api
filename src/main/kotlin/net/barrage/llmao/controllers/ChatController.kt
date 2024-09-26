@@ -22,7 +22,7 @@ import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
-import net.barrage.llmao.models.UserContext
+import net.barrage.llmao.models.RequestUser
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.ChatService
 
@@ -54,8 +54,8 @@ fun Route.chatsRoutes() {
       val sortBy = it.sortBy ?: "createdAt"
       val sortOrder = it.sortOrder ?: "asc"
 
-      val user = UserContext.currentUser
-      val chatResponse: ChatResponse = chatService.getAll(page, size, sortBy, sortOrder, user?.id)
+      val user = call.attributes[RequestUser]
+      val chatResponse: ChatResponse = chatService.getAll(page, size, sortBy, sortOrder, user.id)
       val response =
         toPaginatedChatDTO(
           chatResponse.chats,
@@ -66,33 +66,33 @@ fun Route.chatsRoutes() {
     }
 
     get<ChatController.Chat.Messages>(getMessages()) {
-      val user = UserContext.currentUser
-      val messages: List<Message> = chatService.getMessages(it.parent.id, user?.id)
+      val user = call.attributes[RequestUser]
+      val messages: List<Message> = chatService.getMessages(it.parent.id, user.id)
       call.respond(HttpStatusCode.OK, messages)
       return@get
     }
 
     put<ChatController.Chat.Title>(updateTitle()) {
-      val user = UserContext.currentUser
+      val user = call.attributes[RequestUser]
       val input: UpdateChatTitleDTO = call.receive()
-      val chat: Chat = chatService.updateTitle(it.parent.id, input, user?.id)
+      val chat: Chat = chatService.updateTitle(it.parent.id, input, user.id)
       call.respond(HttpStatusCode.OK, chat)
       return@put
     }
 
     patch<ChatController.Chat.Messages.Message>(evaluate()) {
-      val user = UserContext.currentUser
+      val user = call.attributes[RequestUser]
       val input: EvaluateMessageDTO = call.receive()
       val chatId = it.parent.parent.id
       val messageId = it.messageId
-      val message = chatService.evaluateMessage(chatId, messageId, input, user?.id)
+      val message = chatService.evaluateMessage(chatId, messageId, input, user.id)
       call.respond(HttpStatusCode.OK, message)
       return@patch
     }
 
     delete<ChatController.Chat>(deleteChat()) {
-      val user = UserContext.currentUser
-      chatService.deleteChatUser(it.id, user!!.id)
+      val user = call.attributes[RequestUser]
+      chatService.deleteChatUser(it.id, user.id)
       call.respond(HttpStatusCode.NoContent)
       return@delete
     }
