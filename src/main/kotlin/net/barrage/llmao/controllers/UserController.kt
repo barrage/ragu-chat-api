@@ -2,22 +2,16 @@ package net.barrage.llmao.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.post
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
 import io.ktor.http.*
-import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
-import io.ktor.server.resources.*
-import io.ktor.server.resources.put
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
-import net.barrage.llmao.dtos.users.*
+import net.barrage.llmao.dtos.users.UpdateUser
 import net.barrage.llmao.error.Error
-import net.barrage.llmao.models.UserContext
+import net.barrage.llmao.models.User
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.plugins.sessionId
 import net.barrage.llmao.services.SessionService
@@ -27,7 +21,7 @@ fun Route.userRoutes() {
   val userService = UserService()
 
   authenticate("auth-session") {
-    get("/users/current") {
+    get("/users/current", getUser()) {
       val sessionId = call.sessionId()
       val userId = SessionService().get(sessionId)?.userId!!
 
@@ -56,43 +50,8 @@ fun getUser(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        description = "List logged in user"
-        body<UserDTO>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while retrieving user"
-        body<List<Error>> {}
-      }
-  }
-}
-
-fun getCurrent(): OpenApiRoute.() -> Unit = {
-  description = "Retrieve logged in user"
-  request {}
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "List logged in user"
-        body<CurrentUserDTO>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while retrieving user"
-        body<List<Error>> {}
-      }
-  }
-}
-
-fun updateUser(): OpenApiRoute.() -> Unit = {
-  tags("users")
-  description = "Update logged in user"
-  request {}
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "Return updated user"
-        body<UserDTO>()
+        description = "Get logged in user"
+        body<User>()
       }
     HttpStatusCode.InternalServerError to
       {

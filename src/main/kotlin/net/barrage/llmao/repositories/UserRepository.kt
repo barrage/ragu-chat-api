@@ -1,15 +1,19 @@
 package net.barrage.llmao.repositories
 
+import java.util.*
 import net.barrage.llmao.dtos.users.*
-import net.barrage.llmao.enums.Roles
+import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.User
+import net.barrage.llmao.models.toUser
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
-import java.time.OffsetDateTime
-import java.util.*
+import org.jooq.impl.DSL
 
 class UserRepository {
-  fun getAll(offset: Int, size: Int, sortBy: String, sortOrder: String): List<UserDTO> {
+  fun getAll(offset: Int, size: Int, sortBy: String, sortOrder: String): CountedList<User> {
+    val total = dslContext.selectCount().from(USERS).fetchOne(0, Int::class.java)!!
+
     val sortField =
       when (sortBy) {
         "email" -> USERS.EMAIL
@@ -28,27 +32,26 @@ class UserRepository {
         sortField.asc()
       }
 
-    return dslContext
-      .selectFrom(USERS)
-      .orderBy(orderField)
-      .limit(size)
-      .offset(offset)
-      .fetch(UsersRecord::toUser)
+    val users =
+      dslContext
+        .selectFrom(USERS)
+        .orderBy(orderField)
+        .limit(size)
+        .offset(offset)
+        .fetch(UsersRecord::toUser)
+
+    return CountedList(total, users)
   }
 
-  fun countAll(): Int {
-    return dslContext.selectCount().from(USERS).fetchOne(0, Int::class.java)!!
-  }
-
-  fun get(id: UUID): UserDTO? {
+  fun get(id: UUID): User? {
     return dslContext.selectFrom(USERS).where(USERS.ID.eq(id)).fetchOne(UsersRecord::toUser)
   }
 
-  fun getByEmail(email: String): UserDTO? {
+  fun getByEmail(email: String): User? {
     return dslContext.selectFrom(USERS).where(USERS.EMAIL.eq(email)).fetchOne(UsersRecord::toUser)
   }
 
-  fun create(user: NewUserDTO): UserDTO {
+  fun create(user: CreateUser): User {
     return dslContext
       .insertInto(USERS)
       .set(USERS.EMAIL, user.email)
@@ -61,7 +64,7 @@ class UserRepository {
   }
 
   fun updateNames(id: UUID, update: UpdateUser): User {
-    var updateQuery =
+    val updateQuery =
       dslContext
         .update(USERS)
         .set(USERS.FULL_NAME, DSL.coalesce(DSL.`val`(update.fullName), USERS.FULL_NAME))

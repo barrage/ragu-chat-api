@@ -1,7 +1,6 @@
 package net.barrage.llmao.dtos.auth
 
 import io.ktor.http.*
-import net.barrage.llmao.app.auth.AuthenticationProviderId
 import net.barrage.llmao.enums.LoginSource
 import net.barrage.llmao.error.apiError
 
@@ -9,7 +8,7 @@ class LoginPayload(
   val code: String,
   val grantType: String,
   val redirectUri: String,
-  val provider: AuthenticationProviderId,
+  val provider: String,
   val source: LoginSource,
 ) {
   companion object {
@@ -40,13 +39,7 @@ class LoginPayload(
         throw apiError("Validation", "Missing login source")
       }
 
-      return LoginPayload(
-        code,
-        grantType,
-        redirectUri,
-        AuthenticationProviderId.tryFromString(provider),
-        LoginSource.tryFromString(source),
-      )
+      return LoginPayload(code, grantType, redirectUri, provider, LoginSource.tryFromString(source))
     }
   }
 }

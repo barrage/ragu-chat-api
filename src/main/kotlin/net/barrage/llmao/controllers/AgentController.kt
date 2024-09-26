@@ -2,7 +2,6 @@ package net.barrage.llmao.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
@@ -14,10 +13,9 @@ import net.barrage.llmao.dtos.PaginationInfo
 import net.barrage.llmao.dtos.agents.AgentResponse
 import net.barrage.llmao.dtos.agents.PaginatedAgentDTO
 import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
-import net.barrage.llmao.dtos.users.UserDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
-import net.barrage.llmao.models.UserContext
+import net.barrage.llmao.models.User
 import net.barrage.llmao.services.AgentService
 
 @Resource("agents")
@@ -128,7 +126,7 @@ fun defaultAgent(): OpenApiRoute.() -> Unit = {
     }
   }
   response {
-    HttpStatusCode.OK to { body<UserDTO> { description = "An User object representing the user" } }
+    HttpStatusCode.OK to { body<User> { description = "An User object representing the user" } }
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while setting default agent"

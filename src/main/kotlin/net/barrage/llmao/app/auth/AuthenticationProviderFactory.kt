@@ -1,12 +1,11 @@
 package net.barrage.llmao.app.auth
 
 import io.ktor.server.application.*
+import net.barrage.llmao.core.AuthenticationFactory
 import net.barrage.llmao.core.AuthenticationProvider
-import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.env
-
-typealias AuthenticationFactory = ProviderFactory<AuthenticationProviderId, AuthenticationProvider>
+import net.barrage.llmao.error.apiError
 
 class AuthenticationProviderFactory(val application: Application) : AuthenticationFactory() {
   private val google: GoogleAuthenticationProvider
@@ -15,9 +14,10 @@ class AuthenticationProviderFactory(val application: Application) : Authenticati
     google = initGoogleOAuth(application)
   }
 
-  override fun getProvider(providerId: AuthenticationProviderId): AuthenticationProvider {
+  override fun getProvider(providerId: String): AuthenticationProvider {
     when (providerId) {
-      AuthenticationProviderId.Google -> return google
+      "google" -> return google
+      else -> throw apiError("Provider", "Unsupported auth provider '$providerId'")
     }
   }
 
