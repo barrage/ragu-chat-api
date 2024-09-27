@@ -1,11 +1,11 @@
-package net.barrage.llmao.dtos.messages
+package net.barrage.llmao.models
 
 import com.aallam.openai.api.core.FinishReason
 import net.barrage.llmao.serializers.KOffsetDateTime
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 
-class FailedMessageDto(
+class FailedMessage(
   val id: KUUID,
   val failReason: FinishReason,
   val userId: KUUID,
@@ -15,8 +15,8 @@ class FailedMessageDto(
   val updatedAt: KOffsetDateTime,
 )
 
-fun FailedMessagesRecord.toFailedMessageDto(): FailedMessageDto {
-  return FailedMessageDto(
+fun FailedMessagesRecord.toFailedMessage(): FailedMessage {
+  return FailedMessage(
     id = this.id!!,
     failReason = FinishReason(this.failReason!!),
     userId = this.userId!!,

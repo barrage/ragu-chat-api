@@ -3,224 +3,215 @@ package net.barrage.llmao.llm
 import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.exception.InvalidRequestException
 import kotlinx.coroutines.flow.Flow
-import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
+import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.error.internalError
-import net.barrage.llmao.llm.types.*
-import net.barrage.llmao.models.DocumentChunk
-import net.barrage.llmao.services.ChatService
+import net.barrage.llmao.llm.conversation.ConversationLlm
+import net.barrage.llmao.llm.types.ChatMessage
+import net.barrage.llmao.llm.types.LlmConfig
+import net.barrage.llmao.llm.types.TokenChunk
+import net.barrage.llmao.models.Language
+import net.barrage.llmao.models.VectorQueryOptions
+import net.barrage.llmao.serializers.KUUID
+import net.barrage.llmao.websocket.Emitter
 import net.barrage.llmao.websocket.FinishEvent
 
 class Chat(
-  val config: ChatConfig,
-  val infra: ChatInfra,
-  private var history: MutableList<ChatMessage> = mutableListOf(),
+  private val service: ChatService,
+
+  /** Chat ID. */
+  val id: KUUID,
+
+  /** The proompter. */
+  private val userId: KUUID,
+
+  /** Who the user is chatting with. */
+  private val agentId: Int,
+
+  /** LLM configuration. */
+  private val llmConfig: LlmConfig,
+
+  /** LLM implementation to use. */
+  private val llm: ConversationLlm,
+
+  /** How to format prompts. */
+  private val formatter: PromptFormatter,
+
+  /** Knowledge base options. */
+  private val vectorOptions: VectorQueryOptions,
+
+  /** Used to reason about storing the chat. */
+  private var messageReceived: Boolean = false,
+
+  /** Generated after the first message is received in this chat. */
+  private var title: String? = null,
+
+  /**
+   * If present, pops value from the front of the message history if the history gets larger than
+   * this.
+   */
+  private val maxHistory: Int = 20,
+
+  /**
+   * If present, summarize the chat using the history and swap the history with a single summary
+   * message after the specified amount of tokens is reached.
+   */
+  private val summarizeAfterTokens: Int? = null,
+
+  /** Chat message history. */
+  private val history: MutableList<ChatMessage> = mutableListOf(),
 ) {
-  private val chatService = ChatService()
-  private var lastRelevantDoc: String? = null
-  var streamActive: Boolean = false
+  private var streamActive: Boolean = false
 
   private fun persist() {
-    chatService.insertWithConfig(config, infra.llm.config())
+    service.storeChat(id, userId, agentId, llmConfig, title)
   }
 
-  private suspend fun generateTitle(proompt: String) {
-    val titlePrompt = infra.formatter.title(proompt)
-    val title = infra.llm.generateChatTitle(titlePrompt).trim()
+  suspend fun stream(proompt: String, emitter: Emitter) {
+    streamActive = true
 
-    chatService.updateTitle(this.config.id!!, UpdateChatTitleDTO(title))
-    if (this.infra.emitter != null) {
-      this.infra.emitter.emitTitle(this.config.id, title)
-    }
-  }
-
-  suspend fun stream(proompt: String) {
-    this.streamActive = true
-
-    if (this.config.messageReceived != true) {
-      this.persist()
-      this.config.messageReceived = true
+    if (!messageReceived) {
+      persist()
+      messageReceived = true
     }
 
-    val query = this.prepareProompt(proompt)
+    val query = service.prepareChatPrompt(proompt, history, formatter, vectorOptions)
 
-    val buf: MutableList<String> = mutableListOf()
-
-    val stream: Flow<List<TokenChunk>>?
-    stream = infra.llm.completionStream(query)
+    val stream: Flow<List<TokenChunk>> = llm.completionStream(query, llmConfig)
 
     try {
-      stream
-        .collect { tokens ->
-          if (!this.streamActive) {
-            println("Canceling stream for ${this.config.id}")
-
-            if (buf.isNotEmpty()) {
-              val response = buf.joinToString("")
-              this.processResponse(proompt, response)
-            }
-
-            return@collect
-          }
-
-          for (chunk in tokens) {
-            if (chunk.content.isNullOrBlank() && chunk.stopReason != FinishReason.Stop) {
-              continue
-            }
-
-            if (!chunk.content.isNullOrBlank()) {
-              this.infra.emitter!!.emitChunk(chunk)
-              buf.add(chunk.content)
-            }
-
-            if (chunk.stopReason == FinishReason.Stop) {
-              break
-            }
-          }
-        }
-        .let {
-          val response = buf.joinToString("")
-          this.streamActive = false
-
-          println("Chat ${this.config.id} got response: $response")
-
-          this.processResponse(proompt, response)
-        }
+      val response = collectStream(proompt, stream, emitter)
+      streamActive = false
+      println("Chat '$id' got response: $response")
+      processResponse(proompt, response, true, emitter)
     } catch (e: InvalidRequestException) {
-      this.streamActive = false
+      streamActive = false
       val response = contentFilterErrorMessage()
-      val failedMessage =
-        this.chatService.insertFailedMessage(
-          FinishReason.ContentFilter,
-          this.config.id!!,
-          this.config.userId,
-          true,
-          proompt,
-        )
-      this.infra.emitter!!.emitFinishResponse(
-        FinishEvent(this.config.id, failedMessage!!.id, response, FinishReason.ContentFilter)
+      service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter.value)
+      emitter.emitFinishResponse(
+        FinishEvent(id, reason = FinishReason.ContentFilter, content = response)
       )
     } catch (e: Exception) {
       e.printStackTrace()
-      this.streamActive = false
-      this.infra.emitter!!.emitError(internalError())
+      streamActive = false
+      emitter.emitError(internalError())
     }
   }
 
-  private fun contentFilterErrorMessage(): String {
-    val language = this.infra.llm.config().language.language
+  suspend fun respond(proompt: String, emitter: Emitter) {
+    if (!messageReceived) {
+      persist()
+      messageReceived = true
+    }
 
-    return if (language == "cro")
-      "Ispričavam se, ali trenutno ne mogu pružiti odgovor. Molim vas da preformulirate svoj zahtjev ili postavite drugo pitanje."
-    else
-      "I apologize, but I'm unable to provide a response at this time. Please try rephrasing your request or ask something else."
+    val response =
+      service.chatCompletion(proompt, history, formatter, vectorOptions, llm, llmConfig)
+
+    processResponse(proompt, response, false, emitter)
   }
 
-  suspend fun respond(proompt: String): String {
-    if (this.config.messageReceived != true) {
-      this.persist()
-      this.config.messageReceived = true
-    }
-
-    if (this.config.title.isNullOrBlank()) {
-      this.generateTitle(proompt)
-    }
-
-    val query = this.prepareProompt(proompt)
-    val response = infra.llm.chatCompletion(query).trim()
-
-    return this.processResponse(proompt, response).content
+  fun isStreaming(): Boolean {
+    return streamActive
   }
 
   fun closeStream() {
     this.streamActive = false
   }
 
-  private suspend fun processResponse(proompt: String, response: String): ChatMessage {
+  private suspend fun processResponse(
+    proompt: String,
+    response: String,
+    streaming: Boolean,
+    emitter: Emitter,
+  ): ChatMessage {
     val messages: List<ChatMessage> =
-      listOf(userChatMessage(proompt), assistantChatMessage(response))
+      listOf(ChatMessage.user(proompt), ChatMessage.assistant(response))
 
-    this.addToHistory(messages)
+    addToHistory(messages)
 
-    val userMessage = chatService.insertUserMessage(this.config.id!!, this.config.userId, proompt)
-    val assistantMessage =
-      chatService.insertAssistantMessage(
-        this.config.id,
-        this.config.agentId,
-        response,
-        userMessage.id,
+    val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, proompt, response)
+
+    val emitPayload =
+      FinishEvent(
+        id,
+        messageId = assistantMsg.id,
+        reason = FinishReason.Stop,
+        content = (!streaming).let { response },
       )
 
-    if (this.infra.emitter != null) {
-      val emitPayload = FinishEvent(this.config.id, assistantMessage.id, null, FinishReason.Stop)
+    emitter.emitFinishResponse(emitPayload)
 
-      if (!this.infra.llm.config().chat.stream) {
-        emitPayload.content = assistantMessage.content
-      }
-
-      this.infra.emitter.emitFinishResponse(emitPayload)
-      if (this.config.title.isNullOrBlank()) {
-        this.generateTitle(proompt)
-      }
+    if (title.isNullOrBlank()) {
+      this.generateTitle(proompt, emitter)
     }
 
-    return assistantChatMessage(response)
+    return ChatMessage.assistant(response)
   }
 
-  private fun prepareProompt(proompt: String): List<ChatMessage> {
-    val system = this.infra.formatter.systemMessage()
-    val history = this.history
-    val query = this.formatProompt(proompt)
-    val messages = mutableListOf(system, *history.toTypedArray(), query)
-    return messages
-  }
-
-  private fun formatProompt(proompt: String): ChatMessage {
-    val embedded = this.infra.encoder.encode(proompt).boxed()
-    val relatedChunks = this.infra.vectorDb.query(embedded, this.infra.vectorOptions)
-    val docContext = relatedChunks.map(DocumentChunk::content).toMutableList()
-
-    if (!this.lastRelevantDoc.isNullOrBlank()) {
-      docContext.add(this.lastRelevantDoc!!)
-    }
-
-    val context = docContext.joinToString("\n")
-    return this.infra.formatter.userMessage(proompt, context)
-  }
-
-  private fun countHistoryTokens(): Int {
-    val history = this.history.joinToString("") { it.content }
-    return this.infra.encoder.encode(history).size()
+  private suspend fun generateTitle(prompt: String, emitter: Emitter) {
+    val title = service.generateTitle(id, prompt, formatter, llm, llmConfig)
+    emitter.emitTitle(id, title)
   }
 
   private suspend fun addToHistory(messages: List<ChatMessage>) {
     this.history.addAll(messages)
 
-    if (
-      (this.config.summarizeAfterTokens != null &&
-        this.countHistoryTokens() > this.config.summarizeAfterTokens) ||
-        (this.config.maxHistory != null && this.history.size > this.config.maxHistory)
-    ) {
-      val conversation =
-        this.history.joinToString("\n") {
-          val s =
-            when (it.role) {
-              "user" -> "User"
-              "assistant" -> "Assistant"
-              "system" -> "System"
-              else -> ""
-            }
-          return@joinToString "$s: ${it.content}"
+    summarizeAfterTokens?.let {
+      val tokenCount = service.countHistoryTokens(history, llmConfig.model)
+      if (tokenCount >= it) {
+        val summary = service.summarizeConversation(id, history, formatter, llm, llmConfig)
+        history.clear()
+        history.add(ChatMessage.system(summary))
+      }
+      return@addToHistory
+    }
+
+    if (history.size > maxHistory) {
+      history.removeFirst()
+    }
+  }
+
+  private suspend fun collectStream(
+    prompt: String,
+    stream: Flow<List<TokenChunk>>,
+    emitter: Emitter,
+  ): String {
+    val buf: MutableList<String> = mutableListOf()
+
+    stream.collect { tokens ->
+      if (!streamActive) {
+        println("Canceling stream for '$id'")
+
+        if (buf.isNotEmpty()) {
+          val response = buf.joinToString("")
+          processResponse(prompt, response, true, emitter)
         }
 
-      val summaryPrompt = this.infra.formatter.summary(conversation)
+        return@collect
+      }
 
-      val summary = this.infra.llm.summarizeConversation(summaryPrompt)
+      for (chunk in tokens) {
+        if (chunk.content.isNullOrEmpty() && chunk.stopReason != FinishReason.Stop) {
+          continue
+        }
 
-      chatService.insertSystemMessage(this.config.id!!, summary.trim())
+        if (!chunk.content.isNullOrEmpty()) {
+          emitter.emitChunk(chunk)
+          buf.add(chunk.content)
+        }
 
-      this.history = mutableListOf(systemChatMessage(summary.trim()))
-    } else if (this.config.maxHistory != null) {
-      this.history.removeFirst()
+        if (chunk.stopReason == FinishReason.Stop) {
+          break
+        }
+      }
     }
+
+    return buf.joinToString("")
+  }
+
+  private fun contentFilterErrorMessage(): String {
+    return if (llmConfig.language == Language.CRO)
+      "Ispričavam se, ali trenutno ne mogu pružiti odgovor. Molim vas da preformulirate svoj zahtjev ili postavite drugo pitanje."
+    else
+      "I apologize, but I'm unable to provide a response at this time. Please try rephrasing your request or ask something else."
   }
 }

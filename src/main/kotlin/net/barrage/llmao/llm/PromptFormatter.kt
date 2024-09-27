@@ -1,36 +1,34 @@
 package net.barrage.llmao.llm
 
-import net.barrage.llmao.enums.Languages
 import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.systemChatMessage
-import net.barrage.llmao.llm.types.userChatMessage
+import net.barrage.llmao.models.Language
 
-class PromptFormatter(val context: String, val language: Languages) {
+class PromptFormatter(private val context: String, private val language: Language) {
   fun systemMessage(): ChatMessage {
-    return systemChatMessage(this.context)
+    return ChatMessage.system(context)
   }
 
   fun userMessage(prompt: String, documentation: String): ChatMessage {
-    return userChatMessage(this.proompt(prompt, documentation))
-  }
-
-  private fun proompt(proompt: String, documentation: String): String {
-    val promptLanguage = this.createLanguagePrompt(this.language.language)
-    return this.createPrompt(proompt, documentation, promptLanguage)
+    return ChatMessage.user(proompt(prompt, documentation))
   }
 
   fun title(message: String): String {
-    return when (this.language) {
-      Languages.CRO -> TITLE_CRO(message)
-      Languages.ENG -> TITLE_ENG(message)
+    return when (language) {
+      Language.CRO -> TITLE_CRO(message)
+      Language.ENG -> TITLE_ENG(message)
     }
   }
 
   fun summary(history: String): String {
-    return when (this.language) {
-      Languages.CRO -> SUMMARIZE_CRO(history)
-      Languages.ENG -> SUMMARIZE_ENG(history)
+    return when (language) {
+      Language.CRO -> SUMMARIZE_CRO(history)
+      Language.ENG -> SUMMARIZE_ENG(history)
     }
+  }
+
+  private fun proompt(proompt: String, documentation: String): String {
+    val promptLanguage = createLanguagePrompt(language.language)
+    return this.createPrompt(proompt, documentation, promptLanguage)
   }
 
   private fun createLanguagePrompt(languageDirective: String): String {
@@ -42,7 +40,7 @@ class PromptFormatter(val context: String, val language: Languages) {
   }
 }
 
-fun PROMPT(message: String, documentation: String, languagePrompt: String) =
+private fun PROMPT(message: String, documentation: String, languagePrompt: String) =
   """
 Use the relevant information below, as well as the information from the current conversation to answer the prompt below.
 If you can answer the prompt based on the current conversation, do so without referring to the relevant information.
@@ -58,7 +56,7 @@ $message
 ###
 """
 
-fun LANGUAGE(languageDirective: String) =
+private fun LANGUAGE(languageDirective: String) =
   """
 You do not speak any language other than $languageDirective. You will respond to the prompt exclusively in $languageDirective language.
 You will disregard the original prompt language and answer exclusively in $languageDirective language.
@@ -66,7 +64,7 @@ You will ignore the documentation language and you translate any terms from it y
 """
     .replace(Regex("/ {2,}/g"), " ")
 
-fun SUMMARIZE_CRO(history: String) =
+private fun SUMMARIZE_CRO(history: String) =
   """
 Create a summary for the conversation below denoted by triple #.
 The conversation language is Croatian.
@@ -80,7 +78,7 @@ $history
 ###
 """
 
-fun SUMMARIZE_ENG(history: String) =
+private fun SUMMARIZE_ENG(history: String) =
   """
 Create a summary for the conversation below denoted by triple #.
 The conversation language is English.
@@ -94,7 +92,7 @@ $history
 ###
 """
 
-fun TITLE_CRO(proompt: String) =
+private fun TITLE_CRO(proompt: String) =
   """
 Create a short and descriptive title based on the prompt below, denoted by triple quotes.
 It is very important that you output the title as a single statement in Croatian language.
@@ -107,7 +105,7 @@ Prompt: \"\"\"$proompt\"\"\"
 Title:
 """
 
-fun TITLE_ENG(proompt: String) =
+private fun TITLE_ENG(proompt: String) =
   """
 Create a short and descriptive title based on the prompt below, denoted by triple quotes.
 It is very important that you output the title as a single statement in English language.

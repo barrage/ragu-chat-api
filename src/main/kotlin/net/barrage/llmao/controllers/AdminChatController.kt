@@ -11,18 +11,15 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.dtos.PaginationInfo
-import net.barrage.llmao.dtos.chats.ChatResponse
-import net.barrage.llmao.dtos.chats.PaginatedChatDTO
+import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.chats.toPaginatedChatDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
-import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.ChatService
 
 @Resource("admin/chats")
 class AdminChatController(
@@ -42,9 +39,7 @@ class AdminChatController(
   }
 }
 
-fun Route.adminChatsRoutes() {
-  val chatService = ChatService()
-
+fun Route.adminChatsRoutes(service: ChatService) {
   authenticate("auth-session-admin") {
     get<AdminChatController>(adminGetAllChats()) {
       val page = it.page ?: 1
@@ -65,23 +60,40 @@ fun Route.adminChatsRoutes() {
     get<AdminChatController.Chat.Messages>(adminGetMessages()) {
       val messages: List<Message> = chatService.getMessages(it.parent.id)
       call.respond(HttpStatusCode.OK, messages)
-      return@get
     }
 
     put<AdminChatController.Chat.Title>(adminUpdateTitle()) {
       val input: UpdateChatTitleDTO = call.receive()
-      val chat: Chat = chatService.updateTitle(it.parent.id, input)
-      call.respond(HttpStatusCode.OK, chat)
-      return@put
+      service.updateTitle(it.parent.id, input.title)
+      call.respond(HttpStatusCode.OK)
     }
 
-    patch<AdminChatController.Chat.Messages.Message>(adminEvaluate()) {
+    patch<AdminChatController.Chat.Messages.Message>({
+      tags("admin/chats")
+      description = "Evaluate chat message"
+      request {
+        pathParameter<String>("id") { description = "The ID of the chat" }
+        pathParameter<String>("messageId") { description = "The ID of the message" }
+        body<EvaluateMessageDTO>()
+      }
+      response {
+        HttpStatusCode.OK to
+          {
+            description = "Updated message retrieved successfully"
+            body<Message> {}
+          }
+        HttpStatusCode.InternalServerError to
+          {
+            description = "Internal server error occurred while retrieving chats"
+            body<List<Error>> {}
+          }
+      }
+    }) {
       val input: EvaluateMessageDTO = call.receive()
       val chatId = it.parent.parent.id
       val messageId = it.messageId
-      val message = chatService.evaluateMessage(chatId, messageId, input)
+      val message = service.evaluateMessage(chatId, messageId, input.evaluation)
       call.respond(HttpStatusCode.OK, message)
-      return@patch
     }
   }
 }

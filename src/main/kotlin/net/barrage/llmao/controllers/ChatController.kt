@@ -12,19 +12,19 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.dtos.PaginationInfo
-import net.barrage.llmao.dtos.chats.ChatResponse
-import net.barrage.llmao.dtos.chats.PaginatedChatDTO
+import io.ktor.server.sessions.*
+import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.chats.toPaginatedChatDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
-import net.barrage.llmao.dtos.messages.MessageDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.Message
-import net.barrage.llmao.models.RequestUser
+import net.barrage.llmao.models.UserSession
+import net.barrage.llmao.plugins.sessionId
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.ChatService
+import net.barrage.llmao.services.SessionService
 
 @Resource("chats")
 class ChatController(
@@ -44,8 +44,7 @@ class ChatController(
   }
 }
 
-fun Route.chatsRoutes() {
-  val chatService = ChatService()
+fun Route.chatsRoutes(service: ChatService) {
 
   authenticate("auth-session") {
     get<ChatController>(getAllChats()) {
@@ -69,7 +68,6 @@ fun Route.chatsRoutes() {
       val user = call.attributes[RequestUser]
       val messages: List<Message> = chatService.getMessages(it.parent.id, user.id)
       call.respond(HttpStatusCode.OK, messages)
-      return@get
     }
 
     put<ChatController.Chat.Title>(updateTitle()) {
@@ -77,7 +75,6 @@ fun Route.chatsRoutes() {
       val input: UpdateChatTitleDTO = call.receive()
       val chat: Chat = chatService.updateTitle(it.parent.id, input, user.id)
       call.respond(HttpStatusCode.OK, chat)
-      return@put
     }
 
     patch<ChatController.Chat.Messages.Message>(evaluate()) {
@@ -87,7 +84,6 @@ fun Route.chatsRoutes() {
       val messageId = it.messageId
       val message = chatService.evaluateMessage(chatId, messageId, input, user.id)
       call.respond(HttpStatusCode.OK, message)
-      return@patch
     }
 
     delete<ChatController.Chat>(deleteChat()) {

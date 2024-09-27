@@ -1,6 +1,7 @@
 package net.barrage.llmao.llm.types
 
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
+import net.barrage.llmao.models.Message
 import net.barrage.llmao.serializers.KUUID
 
 data class ChatMessage(
@@ -18,10 +19,22 @@ data class ChatMessage(
       else -> throw InternalError("Unknown role")
     }
   }
+
+  companion object {
+    fun fromModel(model: Message): ChatMessage {
+      return ChatMessage(model.senderType, model.content, model.responseTo)
+    }
+
+    fun user(content: String): ChatMessage {
+      return ChatMessage("user", content)
+    }
+
+    fun assistant(content: String): ChatMessage {
+      return ChatMessage("assistant", content)
+    }
+
+    fun system(content: String): ChatMessage {
+      return ChatMessage("system", content)
+    }
+  }
 }
-
-fun userChatMessage(proompt: String) = ChatMessage("user", proompt)
-
-fun assistantChatMessage(response: String) = ChatMessage("assistant", response)
-
-fun systemChatMessage(response: String) = ChatMessage("system", response)

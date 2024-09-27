@@ -1,136 +1,78 @@
 package net.barrage.llmao.llm.factories
 
-import com.knuddels.jtokkit.Encodings
-import com.knuddels.jtokkit.api.Encoding
-import com.knuddels.jtokkit.api.ModelType
-import io.ktor.server.config.*
-import net.barrage.llmao.dtos.chats.ChatDTO
-import net.barrage.llmao.enums.LLMModels
+import net.barrage.llmao.app.LlmProviderFactory
+import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.error.apiError
 import net.barrage.llmao.llm.Chat
 import net.barrage.llmao.llm.PromptFormatter
-import net.barrage.llmao.llm.conversation.AzureAI
-import net.barrage.llmao.llm.conversation.ConversationLlm
-import net.barrage.llmao.llm.conversation.OpenAI
-import net.barrage.llmao.llm.types.*
-import net.barrage.llmao.models.Agent
+import net.barrage.llmao.llm.types.ChatMessage
+import net.barrage.llmao.llm.types.LlmConfig
+import net.barrage.llmao.models.Language
+import net.barrage.llmao.models.VectorQueryOptions
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
-import net.barrage.llmao.services.ChatService
-import net.barrage.llmao.weaviate.Weaver
-import net.barrage.llmao.weaviate.collections.Documentation
-import net.barrage.llmao.websocket.Emitter
 
-abstract class ChatFactory(open val vectorDb: Weaver) {
-  private val agentService = AgentService()
-  private val chatService = ChatService()
+class ChatFactory(
+  private val providers: LlmProviderFactory,
+  private val agentService: AgentService,
+  private val chatService: ChatService,
+) {
 
-  private val vectorOptions = Documentation.vectorQueryOptions
+  fun new(provider: String, userId: KUUID, agentId: Int, model: String, language: Language): Chat {
+    val agent = agentService.get(agentId)
 
-  fun new(model: LLMModels, config: ChatConfig, emitter: Emitter): Chat {
-    val agentId: Int = config.agentId
-    val agent: Agent = agentService.get(agentId)
+    val llm = providers.getProvider(provider)
 
-    val llmConfig =
-      LLMConversationConfig(
-        chat = LLMConfigChat(stream = true, temperature = 0.1),
-        model = model,
-        language = config.language,
-      )
+    if (!llm.supportsModel(model)) {
+      throw apiError("Invalid Model", "Provider '$provider' does not support model '$model'")
+    }
 
-    println(model)
+    val config = LlmConfig(model, 0.1, language, provider)
 
-    val llm = getConversationLlm(llmConfig)
+    val id = KUUID.randomUUID()
 
-    val infra =
-      ChatInfra(
-        llm,
-        PromptFormatter(agent.context, config.language),
-        emitter,
-        vectorDb,
-        vectorOptions,
-        getEncoder(model),
-      )
-
-    return Chat(config = config, infra = infra)
+    return Chat(
+      chatService,
+      id = id,
+      userId = userId,
+      agentId = agentId,
+      llm = llm,
+      llmConfig = config,
+      formatter = PromptFormatter(agent.context, language),
+      vectorOptions = VectorQueryOptions(listOf()),
+    )
   }
 
-  fun fromExisting(id: KUUID, userId: KUUID, emitter: Emitter): Chat {
-    val chat: ChatDTO = chatService.getUserChat(id, userId)
+  fun fromExisting(id: KUUID): Chat {
+    val chat = chatService.getChat(id)
 
-    val agent = agentService.get(chat.agentId)
+    val history = chatService.getMessages(id).map(ChatMessage::fromModel).toMutableList()
+    val agent = agentService.get(chat.chat.agentId)
+    val llm = providers.getProvider(chat.config.provider)
 
-    val llmConfig = chat.llmConfig.toLLMConversationConfig()
-
-    val llm = getConversationLlm(llmConfig)
-
-    val infra =
-      ChatInfra(
-        llm,
-        PromptFormatter(agent.context, chat.llmConfig.language),
-        emitter,
-        vectorDb,
-        vectorOptions,
-        getEncoder(llmConfig.model),
+    val config =
+      LlmConfig(
+        chat.config.model,
+        chat.config.temperature,
+        chat.config.language,
+        chat.config.provider,
       )
 
     // TODO: Implement message history
-    val history =
-      chat.messages
-        .map { message -> ChatMessage(message.senderType, message.content, message.responseTo) }
-        .toMutableList()
+    val vectorOptions = VectorQueryOptions(listOf())
 
     return Chat(
-      ChatConfig(
-        chat.id,
-        chat.userId,
-        chat.agentId,
-        chat.title,
-        language = chat.llmConfig.language,
-        messageReceived = true,
-      ),
-      infra,
-      history,
+      chatService,
+      id = chat.chat.id,
+      userId = chat.chat.userId,
+      agentId = chat.chat.agentId,
+      title = chat.chat.title,
+      messageReceived = history.size > 0,
+      llmConfig = config,
+      history = history,
+      llm = llm,
+      vectorOptions = vectorOptions,
+      formatter = PromptFormatter(agent.context, chat.config.language),
     )
-  }
-
-  abstract fun getConversationLlm(config: LLMConversationConfig): ConversationLlm
-}
-
-class AzureChatFactory(
-  private val apiKey: String,
-  private val endpoint: String,
-  private val apiVersion: String,
-  override val vectorDb: Weaver,
-) : ChatFactory(vectorDb) {
-  override fun getConversationLlm(config: LLMConversationConfig): ConversationLlm {
-    return AzureAI(apiKey, endpoint, apiVersion, config)
-  }
-}
-
-class OpenAIChatFactory(private val apiKey: String, override val vectorDb: Weaver) :
-  ChatFactory(vectorDb) {
-  override fun getConversationLlm(config: LLMConversationConfig): ConversationLlm {
-    return OpenAI(apiKey, config)
-  }
-}
-
-fun chatFactory(config: ApplicationConfig, vectorDb: Weaver): ChatFactory {
-  return if (config.property("llm.provider").getString() == "azure") {
-    AzureChatFactory(
-      config.property("llm.azure.LLMKey").getString(),
-      config.property("llm.azure.LLMEndpoint").getString(),
-      config.property("llm.azure.apiVersion").getString(),
-      vectorDb,
-    )
-  } else {
-    OpenAIChatFactory(config.property("llm.openai.authorization").getString(), vectorDb)
-  }
-}
-
-fun getEncoder(llmModel: LLMModels): Encoding {
-  val registry = Encodings.newDefaultEncodingRegistry()
-  return when (llmModel) {
-    LLMModels.GPT4 -> registry.getEncodingForModel(ModelType.GPT_4)
-    LLMModels.GPT35TURBO -> registry.getEncodingForModel(ModelType.GPT_3_5_TURBO)
   }
 }

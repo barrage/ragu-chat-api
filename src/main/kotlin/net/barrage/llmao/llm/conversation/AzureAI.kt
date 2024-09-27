@@ -9,62 +9,46 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import net.barrage.llmao.enums.LLMModels
+import net.barrage.llmao.error.apiError
 import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.LLMConversationConfig
+import net.barrage.llmao.llm.types.LlmConfig
 import net.barrage.llmao.llm.types.TokenChunk
 
 class AzureAI(
   private val apiKey: String,
   private val endpoint: String,
   private val apiVersion: String,
-  private val cfg: LLMConversationConfig,
 ) : ConversationLlm {
-  private var client: OpenAI? = null
-  private var deployment: LLMModels? = null
+  private var modelMap = mapOf("gpt-3.5-turbo" to "gpt-35-turbo")
 
-  init {
-    this.deployment = this.cfg.model
-    if (this.deployment == null) {
-      this.deployment = LLMModels.GPT4
-    }
-
-    this.client =
-      OpenAI(
-        OpenAIConfig(
-          host =
-            OpenAIHost.azure(
-              resourceName = this.endpoint,
-              deploymentId = this.deployment!!.azureModel,
-              apiVersion = this.apiVersion,
-            ),
-          headers = mapOf("api-key" to this.apiKey),
-          token = this.apiKey,
-        )
-      )
-  }
-
-  override suspend fun chatCompletion(messages: List<ChatMessage>): String {
+  override suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String {
+    val client = getClient(config.model)
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(this.deployment!!.azureModel),
+        model = ModelId(modelMap[config.model]!!),
         messages = messages.map { it.toOpenAiChatMessage() },
-        temperature = this.cfg.chat.temperature,
+        temperature = config.temperature,
       )
 
-    return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
+    // TODO: Remove yelling
+    return client.chatCompletion(chatRequest).choices[0].message.content!!
   }
 
-  override suspend fun completionStream(messages: List<ChatMessage>): Flow<List<TokenChunk>> {
+  override suspend fun completionStream(
+    messages: List<ChatMessage>,
+    config: LlmConfig,
+  ): Flow<List<TokenChunk>> {
+    val client = getClient(config.model)
+
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(this.deployment!!.azureModel),
+        model = ModelId(modelMap[config.model]!!),
         messages = messages.map { it.toOpenAiChatMessage() },
-        temperature = this.cfg.chat.temperature,
+        temperature = config.temperature,
         streamOptions = StreamOptions(true),
       )
 
-    return this.client!!.chatCompletions(chatRequest).map {
+    return client.chatCompletions(chatRequest).map {
       listOf(
         TokenChunk(
           it.id,
@@ -76,31 +60,64 @@ class AzureAI(
     }
   }
 
-  override suspend fun generateChatTitle(proompt: String): String {
+  override suspend fun generateChatTitle(proompt: String, config: LlmConfig): String {
+    val client = getClient(config.model)
+
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(this.deployment!!.azureModel),
+        model = ModelId(modelMap[config.model]!!),
         messages = listOf(OpenAIChatMessage.User(proompt)),
-        temperature = this.cfg.chat.temperature,
+        temperature = config.temperature,
       )
 
-    val response = this.client!!.chatCompletion(chatRequest)
+    val response = client.chatCompletion(chatRequest)
+
+    // TODO: Remove yelling
     return response.choices[0].message.content!!
   }
 
-  override suspend fun summarizeConversation(proompt: String, maxTokens: Int?): String {
+  override suspend fun summarizeConversation(
+    proompt: String,
+    maxTokens: Int?,
+    config: LlmConfig,
+  ): String {
+    val client = getClient(config.model)
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(this.deployment!!.azureModel),
+        model = ModelId(modelMap[config.model]!!),
         messages = listOf(OpenAIChatMessage.User(proompt)),
         maxTokens = maxTokens,
-        temperature = this.cfg.chat.temperature,
+        temperature = config.temperature,
       )
 
-    return this.client!!.chatCompletion(chatRequest).choices[0].message.content!!
+    // TODO: Remove yelling
+    return client.chatCompletion(chatRequest).choices[0].message.content!!
   }
 
-  override fun config(): LLMConversationConfig {
-    return this.cfg
+  override fun supportsModel(model: String): Boolean {
+    return when (model) {
+      "gpt-3.5-turbo" -> true
+      "gpt-4" -> true
+      else -> false
+    }
+  }
+
+  private fun getClient(model: String): OpenAI {
+    if (!modelMap.containsKey(model)) {
+      throw apiError("Invalid model", "Unsupported LLM '$model'")
+    }
+
+    return OpenAI(
+      OpenAIConfig(
+        host =
+          OpenAIHost.azure(
+            resourceName = endpoint,
+            deploymentId = modelMap[model]!!,
+            apiVersion = apiVersion,
+          ),
+        headers = mapOf("api-key" to apiKey),
+        token = apiKey,
+      )
+    )
   }
 }
