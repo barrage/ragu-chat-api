@@ -6,7 +6,6 @@ import io.ktor.server.application.*
 import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.controllers.adminAgentsRoutes
 import net.barrage.llmao.controllers.adminChatsRoutes
 import net.barrage.llmao.controllers.adminUserRoutes
@@ -15,10 +14,9 @@ import net.barrage.llmao.controllers.authRoutes
 import net.barrage.llmao.controllers.chatsRoutes
 import net.barrage.llmao.controllers.userRoutes
 import net.barrage.llmao.core.services.AuthenticationService
-import net.barrage.llmao.repositories.SessionRepository
-import net.barrage.llmao.repositories.UserRepository
+import net.barrage.llmao.core.services.ChatService
 
-fun Application.configureRouting() {
+fun Application.configureRouting(authService: AuthenticationService, chatService: ChatService) {
   install(Resources)
   routing {
     get(
@@ -35,12 +33,6 @@ fun Application.configureRouting() {
     }
 
     // TODO: Not the best place to initialize services, we should do this one level up
-    val authService =
-      AuthenticationService(
-        AuthenticationProviderFactory(application),
-        SessionRepository(),
-        UserRepository(),
-      )
 
     authRoutes(authService)
     openApiRoutes()
@@ -48,7 +40,7 @@ fun Application.configureRouting() {
     agentsRoutes()
     adminUserRoutes()
     userRoutes()
-    adminChatsRoutes()
-    chatsRoutes()
+    adminChatsRoutes(chatService)
+    chatsRoutes(chatService)
   }
 }

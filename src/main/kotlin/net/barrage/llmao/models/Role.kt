@@ -1,4 +1,4 @@
-package net.barrage.llmao.enums
+package net.barrage.llmao.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

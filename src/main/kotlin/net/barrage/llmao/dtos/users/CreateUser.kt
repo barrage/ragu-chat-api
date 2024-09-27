@@ -2,7 +2,7 @@ package net.barrage.llmao.dtos.users
 
 import io.ktor.server.plugins.requestvalidation.*
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.enums.Role
+import net.barrage.llmao.models.Role
 
 @Serializable
 class CreateUser(

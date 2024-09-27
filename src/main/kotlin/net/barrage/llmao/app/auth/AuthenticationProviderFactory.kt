@@ -7,26 +7,26 @@ import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.env
 import net.barrage.llmao.error.apiError
 
-class AuthenticationProviderFactory(val application: Application) : AuthenticationFactory() {
+class AuthenticationProviderFactory(env: ApplicationEnvironment) : AuthenticationFactory() {
   private val google: GoogleAuthenticationProvider
 
   init {
-    google = initGoogleOAuth(application)
+    google = initGoogleOAuth(env)
   }
 
   override fun getProvider(providerId: String): AuthenticationProvider {
-    when (providerId) {
-      "google" -> return google
+    return when (providerId) {
+      "google" -> google
       else -> throw apiError("Provider", "Unsupported auth provider '$providerId'")
     }
   }
 
-  private fun initGoogleOAuth(application: Application): GoogleAuthenticationProvider {
+  private fun initGoogleOAuth(env: ApplicationEnvironment): GoogleAuthenticationProvider {
     val client = httpClient()
-    val tokenEp = env(application, "oauth.google.tokenEndpoint")
-    val accEp = env(application, "oauth.google.accountEndpoint")
-    val clientId = env(application, "oauth.google.clientId")
-    val clientSecret = env(application, "oauth.google.clientSecret")
+    val tokenEp = env(env, "oauth.google.tokenEndpoint")
+    val accEp = env(env, "oauth.google.accountEndpoint")
+    val clientId = env(env, "oauth.google.clientId")
+    val clientSecret = env(env, "oauth.google.clientSecret")
     return GoogleAuthenticationProvider(client, tokenEp, accEp, clientId, clientSecret)
   }
 }
