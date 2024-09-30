@@ -3,7 +3,7 @@ import org.jooq.meta.jaxb.Logging
 
 val ktorVersion = "2.3.12"
 val kotlinVersion = "2.0.20"
-val logbackVersion = "1.4.14"
+val logbackVersion = "1.5.8"
 val postgresVersion = "42.7.4"
 val h2Version = "2.1.214"
 val exposedVersion = "0.52.0"
