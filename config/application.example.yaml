@@ -19,25 +19,22 @@ cors:
   maxAge: 3600
 
 llm:
-  provider: "azure"
   openAi:
-    authorization: "Bearer YOUR_API_KEY"
+    apiKey: "Bearer YOUR_API_KEY"
   azure:
     apiVersion: "2023-05-15"
-    embeddingsEndpoint: "YOUR_EMBEDDINGS_ENDPOINT"
-    embeddingsKey: "YOUR_EMBEDDINGS_KEY"
-    LLMEndpoint: "YOUR_LLM_ENDPOINT"
-    LLMKey: "YOUR_LLM_KEY"
+    endpoint: "YOUR_LLM_ENDPOINT"
+    apiKey: "YOUR_LLM_KEY"
+
+embeddings:
+  azure:
+    apiVersion: "2023-05-15"
+    endpoint: "YOUR_EMBEDDINGS_ENDPOINT"
+    apiKey: "YOUR_EMBEDDINGS_KEY"
 
 weaviate:
   host: "localhost:8080"
   scheme: "http"
-  documentation:
-    collection: "LLMAODocumentation"
-    fields: "content parentDocumentId fileName fileType title section page"
-    nResults: 5
-#    where:
-#    distanceFilter:
 
 oauth:
   google:
