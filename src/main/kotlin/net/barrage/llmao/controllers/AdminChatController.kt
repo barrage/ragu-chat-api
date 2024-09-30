@@ -12,22 +12,17 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.core.services.ChatService
-import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
-import net.barrage.llmao.dtos.chats.toPaginatedChatDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Chat
+import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
+import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.serializers.KUUID
 
 @Resource("admin/chats")
-class AdminChatController(
-  val page: Int? = 1,
-  val size: Int? = 10,
-  val sortBy: String? = "createdAt",
-  val sortOrder: String? = "asc",
-) {
+class AdminChatController(val pagination: PaginationSort) {
   @Resource("{id}")
   class Chat(val parent: AdminChatController, val id: KUUID) {
     @Resource("messages")
@@ -42,23 +37,12 @@ class AdminChatController(
 fun Route.adminChatsRoutes(service: ChatService) {
   authenticate("auth-session-admin") {
     get<AdminChatController>(adminGetAllChats()) {
-      val page = it.page ?: 1
-      val size = it.size ?: 10
-      val sortBy = it.sortBy ?: "createdAt"
-      val sortOrder = it.sortOrder ?: "asc"
-
-      val chatResponse: ChatResponse = chatService.getAll(page, size, sortBy, sortOrder, null)
-      val response =
-        toPaginatedChatDTO(
-          chatResponse.chats,
-          PaginationInfo(chatResponse.count, page, size, sortBy, sortOrder),
-        )
-      call.respond(HttpStatusCode.OK, response)
-      return@get
+      val chats = service.listChats(it.pagination)
+      call.respond(HttpStatusCode.OK, chats)
     }
 
     get<AdminChatController.Chat.Messages>(adminGetMessages()) {
-      val messages: List<Message> = chatService.getMessages(it.parent.id)
+      val messages: List<Message> = service.getMessages(it.parent.id)
       call.respond(HttpStatusCode.OK, messages)
     }
 
@@ -127,7 +111,9 @@ fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<PaginatedChatDTO> { description = "A list of Chat objects representing all the chats" }
+        body<CountedList<Chat>> {
+          description = "A list of Chat objects representing all the chats"
+        }
       }
     HttpStatusCode.InternalServerError to
       {
@@ -149,7 +135,7 @@ fun adminGetMessages(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<List<MessageDTO>> {
+        body<List<Message>> {
           description = "A list of Message objects representing all the messages from a chat"
         }
       }
@@ -203,7 +189,7 @@ fun adminEvaluate(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "Updated message retrieved successfully"
-        body<MessageDTO> {}
+        body<Message> {}
       }
     HttpStatusCode.InternalServerError to
       {

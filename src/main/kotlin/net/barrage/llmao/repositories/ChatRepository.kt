@@ -1,13 +1,15 @@
 package net.barrage.llmao.repositories
 
-import java.time.OffsetDateTime
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.error.internalError
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.ChatFull
 import net.barrage.llmao.models.ChatWithConfig
+import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.FailedMessage
 import net.barrage.llmao.models.Message
+import net.barrage.llmao.models.PaginationSort
+import net.barrage.llmao.models.SortOrder
 import net.barrage.llmao.models.toChat
 import net.barrage.llmao.models.toChatWithConfig
 import net.barrage.llmao.models.toFailedMessage
@@ -19,33 +21,28 @@ import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 import net.barrage.llmao.tables.records.MessagesRecord
-import net.barrage.llmao.tables.references.*
+import net.barrage.llmao.tables.references.CHATS
+import net.barrage.llmao.tables.references.FAILED_MESSAGES
+import net.barrage.llmao.tables.references.LLM_CONFIGS
+import net.barrage.llmao.tables.references.MESSAGES
+import org.jooq.SortField
+import org.jooq.impl.DSL
+import java.time.OffsetDateTime
 
 class ChatRepository {
-  fun getAll(
-    offset: Int,
-    size: Int,
-    sortBy: String,
-    sortOrder: String,
-    userId: KUUID? = null,
-  ): List<ChatDTO> {
-    val sortField =
-      when (sortBy) {
-        "createdAt" -> CHATS.CREATED_AT
-        "updatedAt" -> CHATS.UPDATED_AT
-        "agentId" -> CHATS.AGENT_ID
-        "model" -> LLM_CONFIGS.MODEL
-        else -> CHATS.CREATED_AT
-      }
+  fun getAll(pagination: PaginationSort, userId: KUUID? = null): CountedList<Chat> {
+    val order = getSortOrder(pagination)
+    val (limit, offset) = pagination.limitOffset()
 
-    val orderField =
-      if (sortOrder.equals("desc", ignoreCase = true)) {
-        sortField.desc()
-      } else {
-        sortField.asc()
-      }
+    val total =
+      dslContext
+        .selectCount()
+        .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+        .fetchOne(0, Int::class.java)
 
-    val selectQuery =
+    println(total)
+
+    val chats =
       dslContext
         .select()
         .from(CHATS)
@@ -53,31 +50,17 @@ class ChatRepository {
         .on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
         .leftJoin(MESSAGES)
         .on(CHATS.ID.eq(MESSAGES.CHAT_ID))
+        .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+        .orderBy(order)
+        .limit(limit)
+        .offset(offset)
+        .fetchInto(ChatsRecord::class.java)
+        .map { it.toChat() }
 
-    if (userId != null) {
-      selectQuery.where(CHATS.USER_ID.eq(userId))
-    }
-
-    return selectQuery
-      .orderBy(orderField)
-      .limit(size)
-      .offset(offset)
-      .fetch()
-      .groupBy { it[CHATS.ID] }
-      .map { toChatDTO(it.value) }
+    return CountedList(total!!, chats)
   }
 
-  fun countAll(userId: KUUID? = null): Int {
-    val selectQuery = dslContext.selectCount().from(CHATS)
-
-    if (userId != null) {
-      selectQuery.where(CHATS.USER_ID.eq(userId))
-    }
-
-    return selectQuery.fetchOne(0, Int::class.java)!!
-  }
-
-  fun get(id: KUUID): ChatDTO {
+  fun get(id: KUUID): ChatWithConfig? {
     return dslContext
       .select()
       .from(CHATS)
@@ -92,15 +75,6 @@ class ChatRepository {
     val chat = get(id) ?: return null
     val messages = getMessages(id)
     return ChatFull(chat, messages)
-  }
-
-  fun getAllForUser(userId: KUUID): List<Chat> {
-    return dslContext
-      .select()
-      .from(CHATS)
-      .where(CHATS.USER_ID.eq(userId))
-      .fetchInto(ChatsRecord::class.java)
-      .map { it.toChat() }
   }
 
   fun getMessages(id: KUUID): List<Message> {
@@ -315,5 +289,26 @@ class ChatRepository {
       .deleteFrom(CHATS)
       .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
       .execute()
+  }
+
+  private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "createdAt" -> CHATS.CREATED_AT
+        "updatedAt" -> CHATS.UPDATED_AT
+        "agentId" -> CHATS.AGENT_ID
+        "model" -> LLM_CONFIGS.MODEL
+        else -> CHATS.CREATED_AT
+      }
+
+    val order =
+      if (sortOrder == SortOrder.DESC) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return order
   }
 }

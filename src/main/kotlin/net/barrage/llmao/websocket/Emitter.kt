@@ -1,6 +1,8 @@
 package net.barrage.llmao.websocket
 
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.llm.types.TokenChunk
 import net.barrage.llmao.serializers.KUUID
@@ -11,18 +13,22 @@ class Emitter(private val messageResponseFlow: MutableSharedFlow<String>) {
   }
 
   suspend fun emitFinishResponse(event: FinishEvent) {
-    messageResponseFlow.emit(event.toString())
+    messageResponseFlow.emitJson(event)
   }
 
   suspend fun emitError(error: Error) {
-    messageResponseFlow.emit(error.toString())
+    messageResponseFlow.emitJson(error)
   }
 
   suspend fun emitServerMessage(message: ServerMessage) {
-    messageResponseFlow.emit(message.toString())
+    messageResponseFlow.emitJson(message)
   }
 
   suspend fun emitTitle(chatId: KUUID, title: String) {
-    messageResponseFlow.emit(ServerMessage.ChatTitle(chatId, title).toString())
+    messageResponseFlow.emitJson(ServerMessage.ChatTitle(chatId, title))
   }
+}
+
+private suspend inline fun <reified T> MutableSharedFlow<String>.emitJson(input: T) {
+  this.emit(Json.encodeToString(input))
 }

@@ -14,25 +14,18 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import net.barrage.llmao.core.services.ChatService
-import net.barrage.llmao.dtos.chats.ChatDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
-import net.barrage.llmao.dtos.chats.toPaginatedChatDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Chat
+import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
-import net.barrage.llmao.models.UserSession
-import net.barrage.llmao.plugins.sessionId
+import net.barrage.llmao.models.PaginationSort
+import net.barrage.llmao.models.RequestUser
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.SessionService
 
 @Resource("chats")
-class ChatController(
-  val page: Int? = 1,
-  val size: Int? = 10,
-  val sortBy: String? = "createdAt",
-  val sortOrder: String? = "asc",
-) {
+class ChatController(val pagination: PaginationSort) {
   @Resource("{id}")
   class Chat(val parent: ChatController, val id: KUUID) {
     @Resource("messages")
@@ -48,33 +41,22 @@ fun Route.chatsRoutes(service: ChatService) {
 
   authenticate("auth-session") {
     get<ChatController>(getAllChats()) {
-      val page = it.page ?: 1
-      val size = it.size ?: 10
-      val sortBy = it.sortBy ?: "createdAt"
-      val sortOrder = it.sortOrder ?: "asc"
-
       val user = call.attributes[RequestUser]
-      val chatResponse: ChatResponse = chatService.getAll(page, size, sortBy, sortOrder, user.id)
-      val response =
-        toPaginatedChatDTO(
-          chatResponse.chats,
-          PaginationInfo(chatResponse.count, page, size, sortBy, sortOrder),
-        )
-      call.respond(HttpStatusCode.OK, response)
-      return@get
+      val chats = service.listChats(it.pagination, user.id)
+      call.respond(HttpStatusCode.OK, chats)
     }
 
     get<ChatController.Chat.Messages>(getMessages()) {
       val user = call.attributes[RequestUser]
-      val messages: List<Message> = chatService.getMessages(it.parent.id, user.id)
+      val messages: List<Message> = service.getMessages(it.parent.id, user.id)
       call.respond(HttpStatusCode.OK, messages)
     }
 
     put<ChatController.Chat.Title>(updateTitle()) {
       val user = call.attributes[RequestUser]
       val input: UpdateChatTitleDTO = call.receive()
-      val chat: Chat = chatService.updateTitle(it.parent.id, input, user.id)
-      call.respond(HttpStatusCode.OK, chat)
+      service.updateTitle(it.parent.id, user.id, input.title)
+      call.respond(HttpStatusCode.OK)
     }
 
     patch<ChatController.Chat.Messages.Message>(evaluate()) {
@@ -82,15 +64,14 @@ fun Route.chatsRoutes(service: ChatService) {
       val input: EvaluateMessageDTO = call.receive()
       val chatId = it.parent.parent.id
       val messageId = it.messageId
-      val message = chatService.evaluateMessage(chatId, messageId, input, user.id)
+      val message = service.evaluateMessage(chatId, messageId, user.id, input.evaluation)
       call.respond(HttpStatusCode.OK, message)
     }
 
     delete<ChatController.Chat>(deleteChat()) {
       val user = call.attributes[RequestUser]
-      chatService.deleteChatUser(it.id, user.id)
+      service.deleteChat(it.id, user.id)
       call.respond(HttpStatusCode.NoContent)
-      return@delete
     }
   }
 }
@@ -124,7 +105,9 @@ fun getAllChats(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<PaginatedChatDTO> { description = "A list of Chat objects representing all the chats" }
+        body<CountedList<Chat>> {
+          description = "A list of Chat objects representing all the chats"
+        }
       }
     HttpStatusCode.InternalServerError to
       {
@@ -147,7 +130,7 @@ fun getMessages(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<List<MessageDTO>> {
+        body<List<Message>> {
           description = "A list of Message objects representing all the messages from a chat"
         }
       }
@@ -201,7 +184,7 @@ fun evaluate(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "Updated message retrieved successfully"
-        body<MessageDTO> {}
+        body<Message> {}
       }
     HttpStatusCode.InternalServerError to
       {
