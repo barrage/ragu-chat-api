@@ -16,17 +16,13 @@ import net.barrage.llmao.dtos.users.CreateUser
 import net.barrage.llmao.dtos.users.UpdateUserAdmin
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.User
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.UserService
 
 @Resource("admin/users")
-class AdminUserController(
-  val page: Int? = 1,
-  val size: Int? = 10,
-  val sortBy: String? = "lastName",
-  val sortOrder: String? = "asc",
-) {
+class AdminUserController(val pagination: PaginationSort = PaginationSort.default()) {
   @Resource("{id}")
   class User(val parent: AdminUserController, val id: KUUID) {
     @Resource("activate") class Activate(val parent: User)
@@ -49,12 +45,8 @@ fun Route.adminUserRoutes() {
 
   authenticate("auth-session-admin") {
     get<AdminUserController>(adminGetAllUsers()) {
-      val page = it.page ?: 1
-      val size = it.size ?: 10
-      val sortBy = it.sortBy ?: "lastName"
-      val sortOrder = it.sortOrder ?: "asc"
-
-      val users = userService.getAll(page, size, sortBy, sortOrder)
+      print(it.pagination)
+      val users = userService.getAll(it.pagination)
       call.respond(HttpStatusCode.OK, users)
     }
 

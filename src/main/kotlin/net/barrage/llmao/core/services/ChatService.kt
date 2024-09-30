@@ -11,19 +11,21 @@ import net.barrage.llmao.llm.types.ChatMessage
 import net.barrage.llmao.llm.types.LlmConfig
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.ChatWithConfig
+import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
+import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.VectorQueryOptions
 import net.barrage.llmao.repositories.ChatRepository
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.weaviate.Weaver
 
 class ChatService(private val chatRepo: ChatRepository, private val vectorDb: Weaver) {
-  fun listChats(): List<Chat> {
-    return chatRepo.getAll()
+  fun listChats(pagination: PaginationSort): CountedList<Chat> {
+    return chatRepo.getAll(pagination)
   }
 
-  fun listChats(userId: KUUID): List<Chat> {
-    return chatRepo.getAllForUser(userId)
+  fun listChats(pagination: PaginationSort, userId: KUUID): CountedList<Chat> {
+    return chatRepo.getAll(pagination, userId)
   }
 
   fun getChat(chatId: KUUID): ChatWithConfig {

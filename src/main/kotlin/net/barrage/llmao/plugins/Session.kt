@@ -6,8 +6,8 @@ import io.ktor.server.application.ApplicationCallPipeline.ApplicationPhase.Plugi
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
-import net.barrage.llmao.enums.Role
 import net.barrage.llmao.models.RequestUser
+import net.barrage.llmao.models.Role
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.SessionService

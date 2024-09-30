@@ -3,40 +3,27 @@ package net.barrage.llmao.repositories
 import java.util.*
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.PaginationSort
+import net.barrage.llmao.models.SortOrder
 import net.barrage.llmao.models.User
 import net.barrage.llmao.models.toUser
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
+import org.jooq.SortField
 import org.jooq.impl.DSL
 
 class UserRepository {
-  fun getAll(offset: Int, size: Int, sortBy: String, sortOrder: String): CountedList<User> {
+  fun getAll(pagination: PaginationSort): CountedList<User> {
+    val order = getSortOrder(pagination)
+    val (limit, offset) = pagination.limitOffset()
     val total = dslContext.selectCount().from(USERS).fetchOne(0, Int::class.java)!!
-
-    val sortField =
-      when (sortBy) {
-        "email" -> USERS.EMAIL
-        "firstName" -> USERS.FIRST_NAME
-        "lastName" -> USERS.LAST_NAME
-        "role" -> USERS.ROLE
-        "createdAt" -> USERS.CREATED_AT
-        "updatedAt" -> USERS.UPDATED_AT
-        else -> USERS.LAST_NAME
-      }
-
-    val orderField =
-      if (sortOrder.equals("desc", ignoreCase = true)) {
-        sortField.desc()
-      } else {
-        sortField.asc()
-      }
 
     val users =
       dslContext
         .selectFrom(USERS)
-        .orderBy(orderField)
-        .limit(size)
+        .orderBy(order)
+        .limit(limit)
         .offset(offset)
         .fetch(UsersRecord::toUser)
 
@@ -101,5 +88,28 @@ class UserRepository {
 
   fun delete(id: UUID): Boolean {
     return dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).execute() == 1
+  }
+
+  private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "email" -> USERS.EMAIL
+        "firstName" -> USERS.FIRST_NAME
+        "lastName" -> USERS.LAST_NAME
+        "role" -> USERS.ROLE
+        "createdAt" -> USERS.CREATED_AT
+        "updatedAt" -> USERS.UPDATED_AT
+        else -> USERS.LAST_NAME
+      }
+
+    val order =
+      if (sortOrder == SortOrder.DESC) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return order
   }
 }

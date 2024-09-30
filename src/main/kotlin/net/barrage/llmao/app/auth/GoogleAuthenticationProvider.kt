@@ -37,7 +37,6 @@ class GoogleAuthenticationProvider(
 
     val res = client.submitForm(url = tokenEndpoint, params, encodeInQuery = false)
     val response = res.body<GoogleTokenResponse>()
-
     val idToken = JWT.decode(response.idToken)
 
     val googleId = idToken.subject
