@@ -21,13 +21,13 @@ import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.serializers.KUUID
 
-@Resource("admin/chats")
+@Resource("/admin/chats")
 class AdminChatController(val pagination: PaginationSort) {
-  @Resource("{id}")
+  @Resource("/{id}")
   class Chat(val parent: AdminChatController, val id: KUUID) {
-    @Resource("messages")
+    @Resource("/messages")
     class Messages(val parent: Chat) {
-      @Resource("{messageId}") class Message(val parent: Messages, val messageId: KUUID)
+      @Resource("/{messageId}") class Message(val parent: Messages, val messageId: KUUID)
     }
 
     @Resource("title") class Title(val parent: Chat)

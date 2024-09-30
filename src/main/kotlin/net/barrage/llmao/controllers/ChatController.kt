@@ -1,8 +1,8 @@
 package net.barrage.llmao.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.patch
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
 import io.ktor.http.*
@@ -12,7 +12,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
@@ -22,13 +21,14 @@ import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.RequestUser
+import net.barrage.llmao.plugins.query
 import net.barrage.llmao.serializers.KUUID
 
-@Resource("chats")
+@Resource("/chats")
 class ChatController(val pagination: PaginationSort) {
-  @Resource("{id}")
+  @Resource("/{id}")
   class Chat(val parent: ChatController, val id: KUUID) {
-    @Resource("messages")
+    @Resource("/messages")
     class Messages(val parent: Chat) {
       @Resource("{messageId}") class Message(val parent: Messages, val messageId: KUUID)
     }
@@ -40,15 +40,17 @@ class ChatController(val pagination: PaginationSort) {
 fun Route.chatsRoutes(service: ChatService) {
 
   authenticate("auth-session") {
-    get<ChatController>(getAllChats()) {
+    get("/chats", getAllChats()) {
       val user = call.attributes[RequestUser]
-      val chats = service.listChats(it.pagination, user.id)
+      val pagination = call.query(PaginationSort::class)
+      val chats = service.listChats(pagination, user.id)
       call.respond(HttpStatusCode.OK, chats)
     }
 
-    get<ChatController.Chat.Messages>(getMessages()) {
+    get("/chats/{id}/messages", getMessages()) {
       val user = call.attributes[RequestUser]
-      val messages: List<Message> = service.getMessages(it.parent.id, user.id)
+      val chatId = KUUID.fromString(call.parameters["id"])
+      val messages: List<Message> = service.getMessages(chatId, user.id)
       call.respond(HttpStatusCode.OK, messages)
     }
 

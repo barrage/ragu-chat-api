@@ -4,11 +4,11 @@ import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.Encoding
 import com.knuddels.jtokkit.api.ModelType
 import io.ktor.server.plugins.*
+import net.barrage.llmao.core.chat.ChatMessage
+import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.llm.PromptFormatter
-import net.barrage.llmao.llm.conversation.ConversationLlm
-import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.LlmConfig
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.ChatWithConfig
 import net.barrage.llmao.models.CountedList
@@ -79,7 +79,7 @@ class ChatService(private val chatRepo: ChatRepository, private val vectorDb: We
     llmConfig: LlmConfig,
   ): String {
     val query = prepareChatPrompt(prompt, history, formatter, vectorOptions)
-    return llm.chatCompletion(query, llmConfig).trim()
+    return llm.chatCompletion(query, llmConfig)
   }
 
   fun processMessagePair(

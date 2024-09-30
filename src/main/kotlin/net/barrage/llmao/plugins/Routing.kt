@@ -16,6 +16,7 @@ import net.barrage.llmao.controllers.userRoutes
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 
+// TODO: Create service state
 fun Application.configureRouting(authService: AuthenticationService, chatService: ChatService) {
   install(Resources)
   routing {
@@ -31,8 +32,6 @@ fun Application.configureRouting(authService: AuthenticationService, chatService
     ) {
       call.respond(HttpStatusCode.OK)
     }
-
-    // TODO: Not the best place to initialize services, we should do this one level up
 
     authRoutes(authService)
     openApiRoutes()

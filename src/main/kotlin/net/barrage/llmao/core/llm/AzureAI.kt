@@ -1,4 +1,4 @@
-package net.barrage.llmao.llm.conversation
+package net.barrage.llmao.core.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
@@ -9,10 +9,8 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import net.barrage.llmao.core.chat.ChatMessage
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.LlmConfig
-import net.barrage.llmao.llm.types.TokenChunk
 
 class AzureAI(
   private val apiKey: String,

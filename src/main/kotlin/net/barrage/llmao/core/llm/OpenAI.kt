@@ -1,4 +1,4 @@
-package net.barrage.llmao.llm.conversation
+package net.barrage.llmao.core.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
@@ -7,9 +7,9 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.LlmConfig
-import net.barrage.llmao.llm.types.TokenChunk
+import net.barrage.llmao.core.chat.ChatMessage
+
+const val TITLE_GENERATION_MODEL = "gpt-4"
 
 class OpenAI(apiKey: String) : ConversationLlm {
   private val client: OpenAI = OpenAI(token = apiKey)
@@ -53,7 +53,7 @@ class OpenAI(apiKey: String) : ConversationLlm {
   override suspend fun generateChatTitle(proompt: String, config: LlmConfig): String {
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId("text-davinci-003"),
+        model = ModelId(TITLE_GENERATION_MODEL),
         messages = listOf(OpenAiChatMessage.User(proompt)),
         temperature = config.temperature,
       )

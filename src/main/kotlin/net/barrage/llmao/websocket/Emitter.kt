@@ -3,8 +3,8 @@ package net.barrage.llmao.websocket
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.error.Error
-import net.barrage.llmao.llm.types.TokenChunk
 import net.barrage.llmao.serializers.KUUID
 
 class Emitter(private val messageResponseFlow: MutableSharedFlow<String>) {

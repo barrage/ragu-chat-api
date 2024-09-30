@@ -1,14 +1,14 @@
-package net.barrage.llmao.llm
+package net.barrage.llmao.core.chat
 
 import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.exception.InvalidRequestException
 import kotlinx.coroutines.flow.Flow
+import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.PromptFormatter
+import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.error.internalError
-import net.barrage.llmao.llm.conversation.ConversationLlm
-import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.LlmConfig
-import net.barrage.llmao.llm.types.TokenChunk
 import net.barrage.llmao.models.Language
 import net.barrage.llmao.models.VectorQueryOptions
 import net.barrage.llmao.serializers.KUUID

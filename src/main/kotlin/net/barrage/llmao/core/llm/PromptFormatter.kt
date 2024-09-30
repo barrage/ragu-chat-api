@@ -1,6 +1,6 @@
-package net.barrage.llmao.llm
+package net.barrage.llmao.core.llm
 
-import net.barrage.llmao.llm.types.ChatMessage
+import net.barrage.llmao.core.chat.ChatMessage
 import net.barrage.llmao.models.Language
 
 class PromptFormatter(private val context: String, private val language: Language) {
@@ -14,15 +14,15 @@ class PromptFormatter(private val context: String, private val language: Languag
 
   fun title(message: String): String {
     return when (language) {
-      Language.CRO -> TITLE_CRO(message)
-      Language.ENG -> TITLE_ENG(message)
+      Language.CRO -> titlePromptCro(message)
+      Language.ENG -> titlePromptEng(message)
     }
   }
 
   fun summary(history: String): String {
     return when (language) {
-      Language.CRO -> SUMMARIZE_CRO(history)
-      Language.ENG -> SUMMARIZE_ENG(history)
+      Language.CRO -> summarizePromptCro(history)
+      Language.ENG -> summarizePromptEng(history)
     }
   }
 
@@ -32,15 +32,15 @@ class PromptFormatter(private val context: String, private val language: Languag
   }
 
   private fun createLanguagePrompt(languageDirective: String): String {
-    return LANGUAGE(languageDirective)
+    return languagePrompt(languageDirective)
   }
 
   private fun createPrompt(message: String, documentation: String, languagePrompt: String): String {
-    return PROMPT(message, documentation, languagePrompt)
+    return userPrompt(message, documentation, languagePrompt)
   }
 }
 
-private fun PROMPT(message: String, documentation: String, languagePrompt: String) =
+private fun userPrompt(message: String, documentation: String, languagePrompt: String) =
   """
 Use the relevant information below, as well as the information from the current conversation to answer the prompt below.
 If you can answer the prompt based on the current conversation, do so without referring to the relevant information.
@@ -56,7 +56,7 @@ $message
 ###
 """
 
-private fun LANGUAGE(languageDirective: String) =
+private fun languagePrompt(languageDirective: String) =
   """
 You do not speak any language other than $languageDirective. You will respond to the prompt exclusively in $languageDirective language.
 You will disregard the original prompt language and answer exclusively in $languageDirective language.
@@ -64,7 +64,7 @@ You will ignore the documentation language and you translate any terms from it y
 """
     .replace(Regex("/ {2,}/g"), " ")
 
-private fun SUMMARIZE_CRO(history: String) =
+private fun summarizePromptCro(history: String) =
   """
 Create a summary for the conversation below denoted by triple #.
 The conversation language is Croatian.
@@ -78,7 +78,7 @@ $history
 ###
 """
 
-private fun SUMMARIZE_ENG(history: String) =
+private fun summarizePromptEng(history: String) =
   """
 Create a summary for the conversation below denoted by triple #.
 The conversation language is English.
@@ -92,7 +92,7 @@ $history
 ###
 """
 
-private fun TITLE_CRO(proompt: String) =
+private fun titlePromptCro(proompt: String) =
   """
 Create a short and descriptive title based on the prompt below, denoted by triple quotes.
 It is very important that you output the title as a single statement in Croatian language.
@@ -105,7 +105,7 @@ Prompt: \"\"\"$proompt\"\"\"
 Title:
 """
 
-private fun TITLE_ENG(proompt: String) =
+private fun titlePromptEng(proompt: String) =
   """
 Create a short and descriptive title based on the prompt below, denoted by triple quotes.
 It is very important that you output the title as a single statement in English language.

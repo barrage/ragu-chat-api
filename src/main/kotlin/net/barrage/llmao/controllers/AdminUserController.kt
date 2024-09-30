@@ -22,7 +22,7 @@ import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.UserService
 
 @Resource("admin/users")
-class AdminUserController(val pagination: PaginationSort = PaginationSort.default()) {
+class AdminUserController(val pagination: PaginationSort = PaginationSort()) {
   @Resource("{id}")
   class User(val parent: AdminUserController, val id: KUUID) {
     @Resource("activate") class Activate(val parent: User)
