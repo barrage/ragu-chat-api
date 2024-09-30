@@ -2,11 +2,11 @@ package net.barrage.llmao.app
 
 import io.ktor.server.application.*
 import net.barrage.llmao.core.LlmFactory
+import net.barrage.llmao.core.llm.AzureAI
+import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.OpenAI
 import net.barrage.llmao.env
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.llm.conversation.AzureAI
-import net.barrage.llmao.llm.conversation.ConversationLlm
-import net.barrage.llmao.llm.conversation.OpenAI
 
 class LlmProviderFactory(env: ApplicationEnvironment) : LlmFactory() {
   private val openai: OpenAI

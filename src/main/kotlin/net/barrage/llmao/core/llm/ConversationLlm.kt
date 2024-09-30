@@ -1,9 +1,7 @@
-package net.barrage.llmao.llm.conversation
+package net.barrage.llmao.core.llm
 
 import kotlinx.coroutines.flow.Flow
-import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.LlmConfig
-import net.barrage.llmao.llm.types.TokenChunk
+import net.barrage.llmao.core.chat.ChatMessage
 
 interface ConversationLlm {
   suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String

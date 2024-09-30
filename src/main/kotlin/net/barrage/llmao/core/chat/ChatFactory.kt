@@ -1,12 +1,10 @@
-package net.barrage.llmao.llm.factories
+package net.barrage.llmao.core.chat
 
 import net.barrage.llmao.app.LlmProviderFactory
+import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.llm.Chat
-import net.barrage.llmao.llm.PromptFormatter
-import net.barrage.llmao.llm.types.ChatMessage
-import net.barrage.llmao.llm.types.LlmConfig
 import net.barrage.llmao.models.Language
 import net.barrage.llmao.models.VectorQueryOptions
 import net.barrage.llmao.serializers.KUUID

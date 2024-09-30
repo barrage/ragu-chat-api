@@ -1,4 +1,4 @@
-package net.barrage.llmao.llm.types
+package net.barrage.llmao.core.chat
 
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 import net.barrage.llmao.models.Message

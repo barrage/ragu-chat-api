@@ -1,4 +1,4 @@
-package net.barrage.llmao.llm.types
+package net.barrage.llmao.core.llm
 
 import net.barrage.llmao.models.Language
 

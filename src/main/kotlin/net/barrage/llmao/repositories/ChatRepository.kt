@@ -1,5 +1,6 @@
 package net.barrage.llmao.repositories
 
+import java.time.OffsetDateTime
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.error.internalError
 import net.barrage.llmao.models.Chat
@@ -27,7 +28,6 @@ import net.barrage.llmao.tables.references.LLM_CONFIGS
 import net.barrage.llmao.tables.references.MESSAGES
 import org.jooq.SortField
 import org.jooq.impl.DSL
-import java.time.OffsetDateTime
 
 class ChatRepository {
   fun getAll(pagination: PaginationSort, userId: KUUID? = null): CountedList<Chat> {
@@ -37,19 +37,14 @@ class ChatRepository {
     val total =
       dslContext
         .selectCount()
+        .from(CHATS)
         .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
         .fetchOne(0, Int::class.java)
-
-    println(total)
 
     val chats =
       dslContext
         .select()
         .from(CHATS)
-        .leftJoin(LLM_CONFIGS)
-        .on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
-        .leftJoin(MESSAGES)
-        .on(CHATS.ID.eq(MESSAGES.CHAT_ID))
         .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
         .orderBy(order)
         .limit(limit)

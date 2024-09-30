@@ -2,11 +2,19 @@ package net.barrage.llmao.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.plugins.QueryParameter
 
 /** Basic pagination parameters. */
 @Serializable
-data class Pagination(private val page: Int, private val perPage: Int) {
+data class Pagination(
+  @QueryParameter private var page: Int?,
+  @QueryParameter private var perPage: Int?,
+) {
+  constructor() : this(1, 25)
+
   fun limitOffset(): Pair<Int, Int> {
+    val perPage = perPage ?: 25
+    val page = page ?: 1
     return Pair(perPage, (page - 1) * perPage)
   }
 }
@@ -21,22 +29,21 @@ enum class SortOrder {
 /** Pagination parameters with sorting options. */
 @Serializable
 data class PaginationSort(
-  private val page: Int = 1,
-  private val perPage: Int = 25,
-  private val sortBy: String?,
-  private val sortOrder: SortOrder = SortOrder.ASC,
+  @QueryParameter private var page: Int?,
+  @QueryParameter private var perPage: Int?,
+  @QueryParameter private var sortBy: String?,
+  @QueryParameter private var sortOrder: SortOrder?,
 ) {
-  companion object {
-    fun default(): PaginationSort {
-      return PaginationSort(1, 25, null, SortOrder.ASC)
-    }
-  }
+
+  constructor() : this(1, 25, null, SortOrder.ASC)
 
   fun limitOffset(): Pair<Int, Int> {
+    val perPage = perPage ?: 25
+    val page = page ?: 1
     return Pair(perPage, (page - 1) * perPage)
   }
 
   fun sorting(): Pair<String?, SortOrder> {
-    return Pair(sortBy, sortOrder)
+    return Pair(sortBy, sortOrder ?: SortOrder.ASC)
   }
 }

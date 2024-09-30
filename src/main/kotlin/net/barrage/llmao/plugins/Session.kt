@@ -6,12 +6,29 @@ import io.ktor.server.application.ApplicationCallPipeline.ApplicationPhase.Plugi
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
-import net.barrage.llmao.models.RequestUser
+import io.ktor.util.*
 import net.barrage.llmao.models.Role
+import net.barrage.llmao.models.User
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.SessionService
 import net.barrage.llmao.services.UserService
+
+/** Key to use for obtaining users from requests validated by the session middleware. */
+val RequestUser = AttributeKey<User>("User")
+
+/**
+ * Extension that quickly extracts the session ID from the cookies. Use only in contexts where you
+ * are certain the session exists, e.g. after session check middleware.
+ */
+fun ApplicationCall.sessionId(): KUUID {
+  return sessions.get<UserSession>()!!.id
+}
+
+/** Obtain the current user initiating the request. */
+fun ApplicationCall.user(): User {
+  return attributes[RequestUser]
+}
 
 fun Application.configureSession() {
   install(Sessions) {
@@ -89,24 +106,17 @@ fun Application.configureSession() {
 
 fun Application.extendSession() {
   intercept(Plugins) {
-    val userSession = call.sessions.get<UserSession>()
-    if (userSession != null) {
-      val sessionService = SessionService()
-      val serverSession = sessionService.get(userSession.id)
-      if (serverSession != null && serverSession.isValid()) {
-        sessionService.extend(serverSession.sessionId)
-        call.sessions.set(UserSession(userSession.id))
-      } else {
-        call.sessions.clear<UserSession>()
-      }
-    }
-  }
-}
+    val userSession = call.sessions.get<UserSession>() ?: return@intercept
 
-/**
- * Extension that quickly extracts the session ID from the cookies. Use only in contexts where you
- * are certain the session exists, e.g. after session check middleware.
- */
-fun ApplicationCall.sessionId(): KUUID {
-  return sessions.get<UserSession>()!!.id
+    val sessionService = SessionService()
+
+    val serverSession = sessionService.get(userSession.id) ?: return@intercept
+
+    if (!serverSession.isValid()) {
+      return@intercept
+    }
+
+    sessionService.extend(serverSession.sessionId)
+    call.sessions.set(UserSession(userSession.id))
+  }
 }

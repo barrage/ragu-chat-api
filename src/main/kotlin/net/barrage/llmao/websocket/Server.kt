@@ -1,10 +1,10 @@
 package net.barrage.llmao.websocket
 
 import io.ktor.server.plugins.*
+import net.barrage.llmao.core.chat.Chat
+import net.barrage.llmao.core.chat.ChatFactory
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.error.internalError
-import net.barrage.llmao.llm.Chat
-import net.barrage.llmao.llm.factories.ChatFactory
 import net.barrage.llmao.serializers.KUUID
 
 class Server(private val factory: ChatFactory) {
