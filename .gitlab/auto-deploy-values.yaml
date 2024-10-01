@@ -50,7 +50,7 @@ application:
     - /bin/bash
     - -c
   args:
-    - ln -s /vault/values/secret_data /app/config/application.yaml && java -jar /app/llmao.jar
+    - ln -s /vault/values/secret_data /app/config/application.yaml && java -jar /app/llmao.jar -config=/app/config/application.yaml
 
   # You can omit `DATABASE_URL` variable injection into your deployment containers,
   # if you explicitly set `database_url` to `null`.
