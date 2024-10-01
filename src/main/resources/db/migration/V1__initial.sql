@@ -1,5 +1,23 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+    IF (
+        NEW IS DISTINCT FROM OLD AND
+        NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at
+    ) THEN
+        NEW.updated_at := current_timestamp;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION manage_updated_at(_tbl regclass) RETURNS VOID AS $$
+BEGIN
+    EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON %s FOR EACH ROW EXECUTE PROCEDURE set_updated_at()', _tbl);
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL UNIQUE,
@@ -99,3 +117,11 @@ CREATE TABLE failed_messages (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+SELECT manage_updated_at('users');
+SELECT manage_updated_at('sessions');
+SELECT manage_updated_at('agents');
+SELECT manage_updated_at('agent_collections');
+SELECT manage_updated_at('chats');
+SELECT manage_updated_at('messages');
+SELECT manage_updated_at('failed_messages');
