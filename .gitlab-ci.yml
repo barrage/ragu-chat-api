@@ -13,7 +13,6 @@ build-and-test:
     POSTGRES_PASSWORD: postgres
     POSTGRES_USER: postgres
     POSTGRES_DB: kappi
-  #    PGPORT: 5454
   services:
     - name: postgres:latest
       alias: postgres
@@ -30,12 +29,9 @@ build-and-test:
   script:
     - cp config/application.example.yaml config/application.yaml
     - sed -i "s|jdbc:postgresql://localhost:5454/kappi|jdbc:postgresql://postgres:5432/kappi|g" config/application.yaml
-    - cat config/application.yaml
     - cp gradle.example.properties gradle.properties
     - sed -i "s|jdbc:postgresql://localhost:5454/kappi|jdbc:postgresql://postgres:5432/kappi|g" gradle.properties
-    - cat gradle.properties
     - ./gradlew test
-    #    - mkdir build/libs/
     - ./gradlew buildFatJar
   artifacts:
     paths:
@@ -47,7 +43,7 @@ containerize:
     - build-and-test
   extends: .build
   rules:
-    - !reference [.build, rules]
+    - !reference [ .build, rules ]
     - when: on_success
 
 review:
