@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import nu.studer.gradle.jooq.JooqEdition
 import org.jooq.meta.jaxb.Logging
 
@@ -8,6 +9,7 @@ val postgresVersion = "42.7.4"
 val h2Version = "2.1.214"
 val exposedVersion = "0.52.0"
 val jooqVersion = "3.19.11"
+val flywayVersion = "10.17.3"
 
 plugins {
   kotlin("jvm") version "2.0.20"
@@ -16,6 +18,7 @@ plugins {
   id("nu.studer.jooq") version "9.0"
   id("org.flywaydb.flyway") version "10.17.3"
   id("com.ncorti.ktfmt.gradle") version "0.20.1"
+  id("com.gradleup.shadow") version "8.3.3"
 }
 
 group = "net.barrage"
@@ -63,6 +66,8 @@ dependencies {
   implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
   implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
   implementation("com.auth0:java-jwt:4.4.0")
+  implementation("org.flywaydb:flyway-core:$flywayVersion")
+  implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
   // AI
   implementation("com.aallam.openai:openai-client:3.8.2")
@@ -135,3 +140,7 @@ jooq {
 ktfmt { googleStyle() }
 
 tasks.named("generateJooq") { dependsOn("flywayMigrate") }
+
+tasks.withType<Jar> { exclude("application.yaml") }
+
+tasks.withType<ShadowJar> { mergeServiceFiles() }
