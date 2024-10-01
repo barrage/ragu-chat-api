@@ -1,31 +1,29 @@
 package net.barrage.llmao.core.chat
 
-import net.barrage.llmao.app.LlmProviderFactory
-import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.ProviderState
 import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.models.Language
-import net.barrage.llmao.models.VectorQueryOptions
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
 
 class ChatFactory(
-  private val providers: LlmProviderFactory,
+  private val providers: ProviderState,
   private val agentService: AgentService,
   private val chatService: ChatService,
 ) {
 
-  fun new(provider: String, userId: KUUID, agentId: Int, model: String, language: Language): Chat {
+  fun new(userId: KUUID, agentId: KUUID): Chat {
     val agent = agentService.get(agentId)
 
-    val llm = providers.getProvider(provider)
-
-    if (!llm.supportsModel(model)) {
-      throw apiError("Invalid Model", "Provider '$provider' does not support model '$model'")
-    }
-
-    val config = LlmConfig(model, 0.1, language, provider)
+    // TODO: Move this to agent creation/update routes
+    // val llm = providers.llm.getProvider(agent.llmProvider)
+    // if (!llm.supportsModel(agent.model)) {
+    //  throw apiError(
+    //    "Invalid Model",
+    //    "Provider '${llm.id()}' does not support model '${agent.model}'",
+    //  )
+    // }
 
     val id = KUUID.randomUUID()
 
@@ -34,30 +32,17 @@ class ChatFactory(
       id = id,
       userId = userId,
       agentId = agentId,
-      llm = llm,
-      llmConfig = config,
-      formatter = PromptFormatter(agent.context, language),
-      vectorOptions = VectorQueryOptions(listOf()),
+      formatter = PromptFormatter(agent.context, agent.language),
     )
   }
 
   fun fromExisting(id: KUUID): Chat {
-    val chat = chatService.getChat(id)
+    val chat =
+      chatService.getChat(id) ?: throw apiError("Entity does not exist", "Chat with ID '$id'")
 
-    val history = chatService.getMessages(id).map(ChatMessage::fromModel).toMutableList()
     val agent = agentService.get(chat.chat.agentId)
-    val llm = providers.getProvider(chat.config.provider)
 
-    val config =
-      LlmConfig(
-        chat.config.model,
-        chat.config.temperature,
-        chat.config.language,
-        chat.config.provider,
-      )
-
-    // TODO: Implement message history
-    val vectorOptions = VectorQueryOptions(listOf())
+    val history = chat.messages.map { ChatMessage(it.senderType, it.content, it.responseTo) }
 
     return Chat(
       chatService,
@@ -65,12 +50,9 @@ class ChatFactory(
       userId = chat.chat.userId,
       agentId = chat.chat.agentId,
       title = chat.chat.title,
-      messageReceived = history.size > 0,
-      llmConfig = config,
-      history = history,
-      llm = llm,
-      vectorOptions = vectorOptions,
-      formatter = PromptFormatter(agent.context, chat.config.language),
+      messageReceived = history.isNotEmpty(),
+      history = history as MutableList<ChatMessage>,
+      formatter = PromptFormatter(agent.context, agent.language),
     )
   }
 }

@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.llm
+package net.barrage.llmao.app.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
@@ -10,6 +10,9 @@ import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.core.chat.ChatMessage
+import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.error.apiError
 
 class AzureAI(
@@ -18,6 +21,10 @@ class AzureAI(
   private val apiVersion: String,
 ) : ConversationLlm {
   private var modelMap = mapOf("gpt-3.5-turbo" to "gpt-35-turbo")
+
+  override fun id(): String {
+    return "azure"
+  }
 
   override suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String {
     val client = getClient(config.model)
@@ -76,8 +83,8 @@ class AzureAI(
 
   override suspend fun summarizeConversation(
     proompt: String,
-    maxTokens: Int?,
     config: LlmConfig,
+    maxTokens: Int?,
   ): String {
     val client = getClient(config.model)
     val chatRequest =

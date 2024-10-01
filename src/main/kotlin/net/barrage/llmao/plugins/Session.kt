@@ -7,12 +7,10 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
-import net.barrage.llmao.models.Role
+import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.models.User
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.SessionService
-import net.barrage.llmao.services.UserService
 
 /** Key to use for obtaining users from requests validated by the session middleware. */
 val RequestUser = AttributeKey<User>("User")
@@ -30,7 +28,7 @@ fun ApplicationCall.user(): User {
   return attributes[RequestUser]
 }
 
-fun Application.configureSession() {
+fun Application.configureSession(service: AuthenticationService) {
   install(Sessions) {
     cookie<UserSession>(
       this@configureSession.environment.config.property("session.cookieName").getString()
@@ -53,24 +51,8 @@ fun Application.configureSession() {
   authentication {
     session<UserSession>("auth-session") {
       validate { session ->
-        if (session.id.toString().isEmpty()) {
-          return@validate null
-        }
-
-        val serverSession = SessionService().get(session.id)
-
-        if (serverSession == null || !serverSession.isValid()) {
-          return@validate null
-        }
-
-        val user = UserService().get(serverSession.userId)
-
-        if (!user.active) {
-          return@validate null
-        }
-
+        val (_, user) = service.validateUserSession(session.id) ?: return@validate null
         attributes.put(RequestUser, user)
-
         return@validate session
       }
 
@@ -79,24 +61,8 @@ fun Application.configureSession() {
 
     session<UserSession>("auth-session-admin") {
       validate { session ->
-        if (session.id.toString().isEmpty()) {
-          return@validate null
-        }
-
-        val serverSession = SessionService().get(session.id)
-
-        if (serverSession == null || !serverSession.isValid()) {
-          return@validate null
-        }
-
-        val user = UserService().get(serverSession.userId)
-
-        if (!user.active || user.role != Role.ADMIN.name) {
-          return@validate null
-        }
-
+        val (_, user) = service.validateAdminSession(session.id) ?: return@validate null
         attributes.put(RequestUser, user)
-
         return@validate session
       }
       challenge { call.respond(HttpStatusCode.Unauthorized, "Unauthorized access") }
@@ -104,19 +70,10 @@ fun Application.configureSession() {
   }
 }
 
-fun Application.extendSession() {
+fun Application.extendSession(service: AuthenticationService) {
   intercept(Plugins) {
     val userSession = call.sessions.get<UserSession>() ?: return@intercept
-
-    val sessionService = SessionService()
-
-    val serverSession = sessionService.get(userSession.id) ?: return@intercept
-
-    if (!serverSession.isValid()) {
-      return@intercept
-    }
-
-    sessionService.extend(serverSession.sessionId)
+    service.extend(userSession.id)
     call.sessions.set(UserSession(userSession.id))
   }
 }

@@ -4,22 +4,28 @@ import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.Encoding
 import com.knuddels.jtokkit.api.ModelType
 import io.ktor.server.plugins.*
+import kotlinx.coroutines.flow.Flow
+import net.barrage.llmao.ProviderState
 import net.barrage.llmao.core.chat.ChatMessage
-import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.PromptFormatter
+import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.repository.AgentRepository
+import net.barrage.llmao.core.repository.ChatRepository
+import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.models.Chat
-import net.barrage.llmao.models.ChatWithConfig
+import net.barrage.llmao.models.ChatWithMessages
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
-import net.barrage.llmao.models.VectorQueryOptions
-import net.barrage.llmao.repositories.ChatRepository
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.weaviate.Weaver
 
-class ChatService(private val chatRepo: ChatRepository, private val vectorDb: Weaver) {
+class ChatService(
+  private val providers: ProviderState,
+  private val chatRepo: ChatRepository,
+  private val agentRepository: AgentRepository,
+) {
   fun listChats(pagination: PaginationSort): CountedList<Chat> {
     return chatRepo.getAll(pagination)
   }
@@ -28,36 +34,33 @@ class ChatService(private val chatRepo: ChatRepository, private val vectorDb: We
     return chatRepo.getAll(pagination, userId)
   }
 
-  fun getChat(chatId: KUUID): ChatWithConfig {
-    return chatRepo.getChatWithConfig(chatId)
+  fun getChat(chatId: KUUID): ChatWithMessages? {
+    return chatRepo.getWithMessages(chatId)
   }
 
   fun getMessages(chatId: KUUID): List<Message> {
     return chatRepo.getMessages(chatId)
   }
 
-  fun storeChat(id: KUUID, userId: KUUID, agentId: Int, llmConfig: LlmConfig, title: String?) {
-    chatRepo.insertWithConfig(
-      id,
-      userId,
-      agentId,
-      title,
-      llmConfig.model,
-      llmConfig.temperature,
-      llmConfig.language.language,
-      llmConfig.provider,
-    )
+  fun storeChat(id: KUUID, userId: KUUID, agentId: KUUID, title: String?) {
+    chatRepo.insert(id, userId, agentId, title)
   }
 
   suspend fun generateTitle(
     chatId: KUUID,
     prompt: String,
     formatter: PromptFormatter,
-    llm: ConversationLlm,
-    llmConfig: LlmConfig,
+    agentId: KUUID,
   ): String {
     val titlePrompt = formatter.title(prompt)
-    val title = llm.generateChatTitle(titlePrompt, llmConfig).trim()
+    val agent =
+      agentRepository.get(agentId)
+        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+    val llm = providers.llm.getProvider(agent.llmProvider)
+    val title =
+      llm
+        .generateChatTitle(titlePrompt, LlmConfig(agent.model, agent.temperature, agent.language))
+        .trim()
     chatRepo.updateTitle(chatId, title) ?: throw NotFoundException("Chat not found")
     return title
   }
@@ -70,22 +73,49 @@ class ChatService(private val chatRepo: ChatRepository, private val vectorDb: We
     chatRepo.updateTitle(chatId, userId, title)
   }
 
+  suspend fun chatCompletionStream(
+    prompt: String,
+    history: List<ChatMessage>,
+    agentId: KUUID,
+    formatter: PromptFormatter,
+  ): Flow<List<TokenChunk>> {
+    val agent =
+      agentRepository.get(agentId)
+        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+
+    val collections = agentRepository.getCollections(agentId)
+
+    val vectorDb = providers.vector.getProvider(agent.vectorProvider)
+    val llm = providers.llm.getProvider(agent.llmProvider)
+
+    val query = prepareChatPrompt(prompt, history, formatter, collections, vectorDb)
+
+    return llm.completionStream(query, LlmConfig(agent.model, agent.temperature, agent.language))
+  }
+
   suspend fun chatCompletion(
     prompt: String,
     history: List<ChatMessage>,
+    agentId: KUUID,
     formatter: PromptFormatter,
-    vectorOptions: VectorQueryOptions,
-    llm: ConversationLlm,
-    llmConfig: LlmConfig,
   ): String {
-    val query = prepareChatPrompt(prompt, history, formatter, vectorOptions)
-    return llm.chatCompletion(query, llmConfig)
+    val agent =
+      agentRepository.get(agentId)
+        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+
+    val collections = agentRepository.getCollections(agentId)
+
+    val vectorDb = providers.vector.getProvider(agent.vectorProvider)
+    val llm = providers.llm.getProvider(agent.llmProvider)
+
+    val query = prepareChatPrompt(prompt, history, formatter, collections, vectorDb)
+    return llm.chatCompletion(query, LlmConfig(agent.model, agent.temperature, agent.language))
   }
 
   fun processMessagePair(
     chatId: KUUID,
     userId: KUUID,
-    agentId: Int,
+    agentId: KUUID,
     userPrompt: String,
     llmResponse: String,
   ): Pair<Message, Message> {
@@ -100,11 +130,12 @@ class ChatService(private val chatRepo: ChatRepository, private val vectorDb: We
     chatRepo.insertFailedMessage(chatId, userId, prompt, reason)
   }
 
-  fun prepareChatPrompt(
+  private fun prepareChatPrompt(
     prompt: String,
     history: List<ChatMessage>,
     formatter: PromptFormatter,
-    queryOptions: VectorQueryOptions,
+    queryOptions: List<Pair<String, Int>>,
+    vectorDb: VectorDatabase,
   ): List<ChatMessage> {
     val system = formatter.systemMessage()
 
@@ -125,9 +156,13 @@ class ChatService(private val chatRepo: ChatRepository, private val vectorDb: We
     chatId: KUUID,
     history: List<ChatMessage>,
     formatter: PromptFormatter,
-    llm: ConversationLlm,
-    llmConfig: LlmConfig,
+    agentId: KUUID,
   ): String {
+    val agent =
+      agentRepository.get(agentId)
+        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+
+    val llm = providers.llm.getProvider(agent.llmProvider)
 
     val conversation =
       history.joinToString("\n") {
@@ -143,7 +178,11 @@ class ChatService(private val chatRepo: ChatRepository, private val vectorDb: We
 
     val summaryPrompt = formatter.summary(conversation)
 
-    val summary = llm.summarizeConversation(summaryPrompt, config = llmConfig).trim()
+    val summary =
+      llm.summarizeConversation(
+        summaryPrompt,
+        LlmConfig(agent.model, agent.temperature, agent.language),
+      )
 
     chatRepo.insertSystemMessage(chatId, summary)
 
@@ -183,9 +222,12 @@ class ChatService(private val chatRepo: ChatRepository, private val vectorDb: We
     }
   }
 
-  fun countHistoryTokens(history: List<ChatMessage>, llm: String): Int {
+  fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
+    val agent =
+      agentRepository.get(agentId)
+        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
     val text = history.joinToString("\n") { it.content }
-    return getEncoder(llm).encode(text).size()
+    return getEncoder(agent.model).encode(text).size()
   }
 
   private fun getEncoder(llm: String): Encoding {

@@ -16,6 +16,7 @@ import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.models.User
+import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
 
 @Resource("agents")
@@ -25,12 +26,10 @@ class AgentController(
   val sortBy: String? = "name",
   val sortOrder: String? = "asc",
 ) {
-  @Resource("{id}") class Agent(val parent: AgentController, val id: Int)
+  @Resource("{id}") class Agent(val parent: AgentController, val id: KUUID)
 }
 
-fun Route.agentsRoutes() {
-  val agentService = AgentService()
-
+fun Route.agentsRoutes(agentService: AgentService) {
   authenticate("auth-session") {
     get<AgentController>(getAllAgents()) {
       val page = it.page ?: 1

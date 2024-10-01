@@ -1,22 +1,25 @@
-package net.barrage.llmao.weaviate
+package net.barrage.llmao.app.vector
 
 import io.ktor.server.plugins.*
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
 import io.weaviate.client.v1.graphql.query.argument.NearVectorArgument
 import io.weaviate.client.v1.graphql.query.fields.Field
-import java.util.*
-import net.barrage.llmao.models.*
+import net.barrage.llmao.core.vector.VectorDatabase
 
-class Weaver(config: WeaviateConfig) {
-  private val client: WeaviateClient = WeaviateClient(Config(config.scheme, config.host))
+class Weaveiate(scheme: String, host: String) : VectorDatabase {
+  private val client: WeaviateClient = WeaviateClient(Config(scheme, host))
 
-  fun query(embeddings: List<Double>, options: VectorQueryOptions): List<String> {
+  override fun id(): String {
+    return "weaviate"
+  }
+
+  override fun query(searchVector: List<Double>, options: List<Pair<String, Int>>): List<String> {
     val fields = Field.builder().name("content").build()
 
     val results = mutableListOf<String>()
 
-    for (collection in options.collections) {
+    for ((collection, amount) in options) {
       val query =
         client
           .graphQL()
@@ -25,10 +28,10 @@ class Weaver(config: WeaviateConfig) {
           .withClassName(collection)
           .withNearVector(
             NearVectorArgument.builder()
-              .vector(embeddings.map { it.toFloat() }.toTypedArray())
+              .vector(searchVector.map { it.toFloat() }.toTypedArray())
               .build()
           )
-          .withLimit(options.amountResults)
+          .withLimit(amount)
 
       val queryResult = query.run()
 
@@ -54,7 +57,7 @@ class Weaver(config: WeaviateConfig) {
       val collectionData = data[collection] as? List<*>
 
       if (collectionData == null) {
-        println("Cannot cast ${collectionData} to List")
+        println("Cannot cast $collectionData to List")
         continue
       }
 

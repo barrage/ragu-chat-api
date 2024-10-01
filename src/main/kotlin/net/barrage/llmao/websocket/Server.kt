@@ -53,14 +53,7 @@ class Server(private val factory: ChatFactory) {
   private suspend fun handleSystemMessage(emitter: Emitter, userId: KUUID, message: SystemMessage) {
     when (message) {
       is SystemMessage.OpenNewChat -> {
-        val (
-          llmProvider,
-          agentId,
-          llm,
-          language,
-        ) = message
-
-        val chat = factory.new(llmProvider, userId, agentId, llm, language)
+        val chat = factory.new(userId, message.agentId)
         this.chats[userId] = chat
         emitter.emitServerMessage(ServerMessage.ChatOpen(chat.id))
       }

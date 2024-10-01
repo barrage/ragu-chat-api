@@ -9,11 +9,10 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.plugins.sessionId
-import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.SessionService
+import net.barrage.llmao.plugins.user
 
 fun Application.websocketServer(server: Server) {
   install(WebSockets) {
@@ -22,33 +21,11 @@ fun Application.websocketServer(server: Server) {
     contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
   }
 
-  // Keeps track of currently open chats
-
-  // TODO: Remove when we have user context
-  val sessionService = SessionService()
-
   routing {
     authenticate("auth-session") {
       webSocket {
         // Validate session
-        val sessionId = call.sessionId()
-
-        val userId: KUUID
-        val session = sessionService.get(sessionId)
-
-        if (session == null) {
-          // TODO: logs
-          send(apiError("Unauthorized").toString())
-          close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
-          return@webSocket
-        }
-
-        if (!session.isValid()) {
-          // TODO: logs
-          send(apiError("Unauthorized").toString())
-          close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Session expired"))
-          return@webSocket
-        }
+        val user = call.user()
 
         // Handles connection concurrently
         val messageResponseFlow = MutableSharedFlow<String>()
@@ -66,26 +43,30 @@ fun Application.websocketServer(server: Server) {
                 message = Json.decodeFromString(frame.readText())
               } catch (e: Throwable) {
                 e.printStackTrace()
-                send(apiError("Unprocessable Entity", "Message format malformed").toString())
+                sendJson(apiError("Unprocessable Entity", "Message format malformed"))
                 continue
               }
 
-              server.handleMessage(session.userId, message, emitter)
+              server.handleMessage(user.id, message, emitter)
             }
 
             is Frame.Close -> {
               job.cancel()
-              server.removeChat(session.userId)
+              server.removeChat(user.id)
               close(CloseReason(CloseReason.Codes.NORMAL, "Session closed"))
               return@webSocket
             }
 
             else -> {
-              send(apiError("Invalid message format", "Only text messages are allowed").toString())
+              sendJson(apiError("Invalid message format", "Only text messages are allowed"))
             }
           }
         }
       }
     }
   }
+}
+
+suspend inline fun <reified T> WebSocketSession.sendJson(data: T) {
+  send(Json.encodeToString(data))
 }

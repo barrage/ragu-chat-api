@@ -12,32 +12,21 @@ import io.ktor.server.sessions.*
 import net.barrage.llmao.dtos.users.UpdateUser
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.User
-import net.barrage.llmao.models.UserSession
-import net.barrage.llmao.plugins.sessionId
-import net.barrage.llmao.services.SessionService
+import net.barrage.llmao.plugins.user
 import net.barrage.llmao.services.UserService
 
-fun Route.userRoutes() {
-  val userService = UserService()
-
+fun Route.userRoutes(userService: UserService) {
   authenticate("auth-session") {
-    get("/users/current", getUser()) {
-      val sessionId = call.sessionId()
-      val userId = SessionService().get(sessionId)?.userId!!
+    get("/users/current", getUser()) { call.respond(call.user()) }
 
-      val user = userService.get(userId)
+    put("/users") {
+      val user = call.user()
 
-      call.respond(user)
-    }
+      val updateUser = call.receive<UpdateUser>()
 
-    put("/users/current") {
-      val userSession = call.sessions.get<UserSession>()
-      val userId = SessionService().get(userSession!!.id)?.userId!!
-      val updateUser: UpdateUser = call.receive<UpdateUser>()
+      val userUpdated = userService.updateUser(user.id, updateUser)
 
-      val user = userService.updateUser(userId, updateUser)
-
-      call.respond(user)
+      call.respond(userUpdated)
     }
   }
 }

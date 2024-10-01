@@ -16,7 +16,7 @@ class AuthenticationProviderFactory(env: ApplicationEnvironment) : Authenticatio
 
   override fun getProvider(providerId: String): AuthenticationProvider {
     return when (providerId) {
-      "google" -> google
+      google.id() -> google
       else -> throw apiError("Provider", "Unsupported auth provider '$providerId'")
     }
   }

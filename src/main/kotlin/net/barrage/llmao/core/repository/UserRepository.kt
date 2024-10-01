@@ -1,8 +1,9 @@
-package net.barrage.llmao.repositories
+package net.barrage.llmao.core.repository
 
-import java.util.*
-import net.barrage.llmao.dtos.users.*
+import net.barrage.llmao.dtos.users.UpdateUser
+import net.barrage.llmao.dtos.users.UpdateUserAdmin
 import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.CreateUser
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.SortOrder
 import net.barrage.llmao.models.User
@@ -12,6 +13,7 @@ import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
 import org.jooq.SortField
 import org.jooq.impl.DSL
+import java.util.*
 
 class UserRepository {
   fun getAll(pagination: PaginationSort): CountedList<User> {

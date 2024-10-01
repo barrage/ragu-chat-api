@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.llm
+package net.barrage.llmao.app.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
@@ -8,11 +8,18 @@ import com.aallam.openai.client.OpenAI
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.core.chat.ChatMessage
+import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.TokenChunk
 
 const val TITLE_GENERATION_MODEL = "gpt-4"
 
 class OpenAI(apiKey: String) : ConversationLlm {
   private val client: OpenAI = OpenAI(token = apiKey)
+
+  override fun id(): String {
+    return "openai"
+  }
 
   override suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String {
     val chatRequest =
@@ -66,8 +73,8 @@ class OpenAI(apiKey: String) : ConversationLlm {
 
   override suspend fun summarizeConversation(
     proompt: String,
-    maxTokens: Int?,
     config: LlmConfig,
+    maxTokens: Int?,
   ): String {
     val chatRequest =
       ChatCompletionRequest(

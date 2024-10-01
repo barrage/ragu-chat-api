@@ -1,30 +1,23 @@
-package net.barrage.llmao.repositories
+package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
-import net.barrage.llmao.error.apiError
-import net.barrage.llmao.error.internalError
 import net.barrage.llmao.models.Chat
-import net.barrage.llmao.models.ChatFull
-import net.barrage.llmao.models.ChatWithConfig
+import net.barrage.llmao.models.ChatWithMessages
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.FailedMessage
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.SortOrder
 import net.barrage.llmao.models.toChat
-import net.barrage.llmao.models.toChatWithConfig
 import net.barrage.llmao.models.toFailedMessage
-import net.barrage.llmao.models.toLlmConfig
 import net.barrage.llmao.models.toMessage
 import net.barrage.llmao.plugins.Database.dslContext
-import net.barrage.llmao.plugins.transaction
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 import net.barrage.llmao.tables.records.MessagesRecord
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.FAILED_MESSAGES
-import net.barrage.llmao.tables.references.LLM_CONFIGS
 import net.barrage.llmao.tables.references.MESSAGES
 import org.jooq.SortField
 import org.jooq.impl.DSL
@@ -55,21 +48,19 @@ class ChatRepository {
     return CountedList(total!!, chats)
   }
 
-  fun get(id: KUUID): ChatWithConfig? {
+  fun get(id: KUUID): Chat? {
     return dslContext
       .select()
       .from(CHATS)
-      .leftJoin(LLM_CONFIGS)
-      .on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
       .where(CHATS.ID.eq(id))
-      .fetchOne()
-      ?.toChatWithConfig()
+      .fetchOneInto(ChatsRecord::class.java)
+      ?.toChat()
   }
 
-  fun getWithMessages(id: KUUID): ChatFull? {
+  fun getWithMessages(id: KUUID): ChatWithMessages? {
     val chat = get(id) ?: return null
     val messages = getMessages(id)
-    return ChatFull(chat, messages)
+    return ChatWithMessages(chat, messages)
   }
 
   fun getMessages(id: KUUID): List<Message> {
@@ -126,7 +117,7 @@ class ChatRepository {
       .update(MESSAGES)
       .set(MESSAGES.EVALUATION, evaluation)
       .set(MESSAGES.UPDATED_AT, OffsetDateTime.now())
-      .where(MESSAGES.ID.eq(id).and(MESSAGES.SENDER.eq(userId.toString())))
+      .where(MESSAGES.ID.eq(id).and(MESSAGES.SENDER.eq(userId)))
       .returning()
       .fetchOne(MessagesRecord::toMessage)
   }
@@ -151,61 +142,24 @@ class ChatRepository {
       .fetchOne(ChatsRecord::toChat)
   }
 
-  fun insertWithConfig(
-    id: KUUID,
-    userId: KUUID,
-    agentId: Int,
-    title: String?,
-    model: String,
-    temperature: Double,
-    language: String,
-    provider: String,
-  ): ChatWithConfig {
+  fun insert(id: KUUID, userId: KUUID, agentId: KUUID, title: String?): Chat? {
+    val chat =
+      dslContext
+        .insertInto(CHATS)
+        .set(CHATS.ID, id)
+        .set(CHATS.USER_ID, userId)
+        .set(CHATS.AGENT_ID, agentId)
+        .set(CHATS.TITLE, title)
+        .returning()
+        .fetchOne() ?: return null
 
-    val (chat, config) =
-      transaction { config ->
-        val insertedChat =
-          config
-            .dsl()
-            .insertInto(CHATS)
-            .set(CHATS.ID, id)
-            .set(CHATS.USER_ID, userId)
-            .set(CHATS.AGENT_ID, agentId)
-            .set(CHATS.TITLE, title)
-            .returning()
-            .fetchOne()
-
-        val insertedLLMConfig =
-          config
-            .dsl()
-            .insertInto(LLM_CONFIGS)
-            .set(LLM_CONFIGS.CHAT_ID, id)
-            .set(LLM_CONFIGS.MODEL, model)
-            .set(LLM_CONFIGS.LANGUAGE, language)
-            .set(LLM_CONFIGS.TEMPERATURE, temperature)
-            .set(LLM_CONFIGS.PROVIDER, provider)
-            .returning()
-            .fetchOne()
-
-        return@transaction Pair(insertedChat, insertedLLMConfig)
-      }
-
-    if (chat == null || config == null) {
-      // TODO: Figure out
-      throw internalError()
-    }
-
-    return ChatWithConfig(
-      chat =
-        Chat(
-          id = chat.id!!,
-          userId = chat.userId!!,
-          agentId = chat.agentId!!,
-          title = chat.title,
-          createdAt = chat.createdAt!!,
-          updatedAt = chat.updatedAt!!,
-        ),
-      config = config.toLlmConfig(),
+    return Chat(
+      id = chat.id!!,
+      userId = chat.userId!!,
+      agentId = chat.agentId!!,
+      title = chat.title,
+      createdAt = chat.createdAt!!,
+      updatedAt = chat.updatedAt!!,
     )
   }
 
@@ -229,18 +183,23 @@ class ChatRepository {
     return dslContext
       .insertInto(MESSAGES)
       .set(MESSAGES.CHAT_ID, id)
-      .set(MESSAGES.SENDER, userId.toString())
+      .set(MESSAGES.SENDER, userId)
       .set(MESSAGES.SENDER_TYPE, "user")
       .set(MESSAGES.CONTENT, proompt)
       .returning()
       .fetchOne(MessagesRecord::toMessage)!!
   }
 
-  fun insertAssistantMessage(id: KUUID, agentId: Int, response: String, messageId: KUUID): Message {
+  fun insertAssistantMessage(
+    id: KUUID,
+    agentId: KUUID,
+    response: String,
+    messageId: KUUID,
+  ): Message {
     return dslContext
       .insertInto(MESSAGES)
       .set(MESSAGES.CHAT_ID, id)
-      .set(MESSAGES.SENDER, agentId.toString())
+      .set(MESSAGES.SENDER, agentId)
       .set(MESSAGES.SENDER_TYPE, "assistant")
       .set(MESSAGES.CONTENT, response)
       .set(MESSAGES.RESPONSE_TO, messageId)
@@ -256,23 +215,6 @@ class ChatRepository {
       .set(MESSAGES.CONTENT, message)
       .returning()
       .fetchOne(MessagesRecord::toMessage)!!
-  }
-
-  fun getChatWithConfig(id: KUUID): ChatWithConfig {
-    val record =
-      dslContext
-        .select()
-        .from(CHATS)
-        .leftJoin(LLM_CONFIGS)
-        .on(CHATS.ID.eq(LLM_CONFIGS.CHAT_ID))
-        .where(CHATS.ID.eq(id))
-        .fetchOne()
-
-    if (record == null) {
-      throw apiError("Entity does not exist", "Chat with ID '$id'")
-    }
-
-    return record.toChatWithConfig()
   }
 
   fun delete(id: KUUID): Int {
@@ -293,7 +235,7 @@ class ChatRepository {
         "createdAt" -> CHATS.CREATED_AT
         "updatedAt" -> CHATS.UPDATED_AT
         "agentId" -> CHATS.AGENT_ID
-        "model" -> LLM_CONFIGS.MODEL
+        "title" -> CHATS.TITLE
         else -> CHATS.CREATED_AT
       }
 

@@ -1,13 +1,17 @@
-package net.barrage.llmao.repositories
+package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import net.barrage.llmao.dtos.agents.NewAgentDTO
 import net.barrage.llmao.dtos.agents.UpdateAgentDTO
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.models.toAgent
+import net.barrage.llmao.models.toCollectionParams
 import net.barrage.llmao.plugins.Database.dslContext
+import net.barrage.llmao.serializers.KUUID
+import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
+import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 
 class AgentRepository {
   fun getAll(
@@ -48,7 +52,7 @@ class AgentRepository {
       .fetchOne(0, Int::class.java)!!
   }
 
-  fun get(id: Int): Agent? {
+  fun get(id: KUUID): Agent? {
     return dslContext.selectFrom(AGENTS).where(AGENTS.ID.eq(id)).fetchOne(AgentsRecord::toAgent)
   }
 
@@ -61,7 +65,7 @@ class AgentRepository {
       .fetchOne(AgentsRecord::toAgent)
   }
 
-  fun update(id: Int, updated: UpdateAgentDTO): Agent? {
+  fun update(id: KUUID, updated: UpdateAgentDTO): Agent? {
     return dslContext
       .update(AGENTS)
       .set(AGENTS.NAME, updated.name)
@@ -72,7 +76,7 @@ class AgentRepository {
       .fetchOne(AgentsRecord::toAgent)
   }
 
-  fun activate(id: Int): Agent? {
+  fun activate(id: KUUID): Agent? {
     return dslContext
       .update(AGENTS)
       .set(AGENTS.ACTIVE, true)
@@ -82,7 +86,7 @@ class AgentRepository {
       .fetchOne(AgentsRecord::toAgent)
   }
 
-  fun deactivate(id: Int): Agent? {
+  fun deactivate(id: KUUID): Agent? {
     return dslContext
       .update(AGENTS)
       .set(AGENTS.ACTIVE, false)
@@ -90,5 +94,14 @@ class AgentRepository {
       .where(AGENTS.ID.eq(id))
       .returning()
       .fetchOne(AgentsRecord::toAgent)
+  }
+
+  fun getCollections(id: KUUID): List<Pair<String, Int>> {
+    val collections =
+      dslContext
+        .selectFrom(AGENT_COLLECTIONS)
+        .where(AGENT_COLLECTIONS.AGENT_ID.eq(id))
+        .fetchInto(AgentCollectionsRecord::class.java)
+    return collections.map { it.toCollectionParams() }
   }
 }

@@ -5,9 +5,9 @@ import io.ktor.server.plugins.requestvalidation.*
 import net.barrage.llmao.dtos.agents.NewAgentDTO
 import net.barrage.llmao.dtos.agents.UpdateAgentDTO
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
-import net.barrage.llmao.dtos.users.CreateUser
 import net.barrage.llmao.dtos.users.UpdateUser
 import net.barrage.llmao.dtos.users.UpdateUserAdmin
+import net.barrage.llmao.models.CreateUser
 
 fun Application.configureRequestValidation() {
   install(RequestValidation) {

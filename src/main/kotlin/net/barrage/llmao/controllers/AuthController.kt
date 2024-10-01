@@ -10,7 +10,6 @@ import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.dtos.auth.LoginPayload
 import net.barrage.llmao.models.UserSession
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.SessionService
 
 fun Route.authRoutes(service: AuthenticationService) {
   post("/auth/login") {
@@ -27,7 +26,7 @@ fun Route.authRoutes(service: AuthenticationService) {
     post("/dev/auth/login/{id}") {
       val sessionId = KUUID.randomUUID()
       val userId = KUUID.fromString(call.parameters["id"])
-      SessionService().store(sessionId, userId)
+      service.store(sessionId, userId)
 
       call.sessions.set(UserSession(sessionId))
 
@@ -43,13 +42,10 @@ fun Route.authRoutes(service: AuthenticationService) {
       return@post
     }
 
-    val serverSession = SessionService().get(userSession.id)
-
-    if (serverSession != null && serverSession.isValid()) {
-      SessionService().expire(serverSession.sessionId)
-    }
+    service.logout(userSession.id)
 
     call.sessions.clear<UserSession>()
+
     call.respond(HttpStatusCode.OK)
   }
 }

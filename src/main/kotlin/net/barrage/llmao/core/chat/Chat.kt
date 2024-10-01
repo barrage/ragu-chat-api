@@ -3,14 +3,10 @@ package net.barrage.llmao.core.chat
 import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.exception.InvalidRequestException
 import kotlinx.coroutines.flow.Flow
-import net.barrage.llmao.core.llm.ConversationLlm
-import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.error.internalError
-import net.barrage.llmao.models.Language
-import net.barrage.llmao.models.VectorQueryOptions
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.websocket.Emitter
 import net.barrage.llmao.websocket.FinishEvent
@@ -25,19 +21,10 @@ class Chat(
   private val userId: KUUID,
 
   /** Who the user is chatting with. */
-  private val agentId: Int,
-
-  /** LLM configuration. */
-  private val llmConfig: LlmConfig,
-
-  /** LLM implementation to use. */
-  private val llm: ConversationLlm,
+  private val agentId: KUUID,
 
   /** How to format prompts. */
   private val formatter: PromptFormatter,
-
-  /** Knowledge base options. */
-  private val vectorOptions: VectorQueryOptions,
 
   /** Used to reason about storing the chat. */
   private var messageReceived: Boolean = false,
@@ -63,7 +50,7 @@ class Chat(
   private var streamActive: Boolean = false
 
   private fun persist() {
-    service.storeChat(id, userId, agentId, llmConfig, title)
+    service.storeChat(id, userId, agentId, title)
   }
 
   suspend fun stream(proompt: String, emitter: Emitter) {
@@ -74,9 +61,7 @@ class Chat(
       messageReceived = true
     }
 
-    val query = service.prepareChatPrompt(proompt, history, formatter, vectorOptions)
-
-    val stream: Flow<List<TokenChunk>> = llm.completionStream(query, llmConfig)
+    val stream = service.chatCompletionStream(proompt, history, agentId, formatter)
 
     try {
       val response = collectStream(proompt, stream, emitter)
@@ -85,11 +70,12 @@ class Chat(
       processResponse(proompt, response, true, emitter)
     } catch (e: InvalidRequestException) {
       streamActive = false
-      val response = contentFilterErrorMessage()
+      // TODO: Failure
+      // val response = contentFilterErrorMessage()
       service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter.value)
-      emitter.emitFinishResponse(
-        FinishEvent(id, reason = FinishReason.ContentFilter, content = response)
-      )
+      // emitter.emitFinishResponse(
+      //  FinishEvent(id, reason = FinishReason.ContentFilter, content = response)
+      // )
     } catch (e: Exception) {
       e.printStackTrace()
       streamActive = false
@@ -103,8 +89,7 @@ class Chat(
       messageReceived = true
     }
 
-    val response =
-      service.chatCompletion(proompt, history, formatter, vectorOptions, llm, llmConfig)
+    val response = service.chatCompletion(proompt, history, agentId, formatter)
 
     processResponse(proompt, response, false, emitter)
   }
@@ -148,7 +133,7 @@ class Chat(
   }
 
   private suspend fun generateTitle(prompt: String, emitter: Emitter) {
-    val title = service.generateTitle(id, prompt, formatter, llm, llmConfig)
+    val title = service.generateTitle(id, prompt, formatter, agentId)
     emitter.emitTitle(id, title)
   }
 
@@ -156,9 +141,9 @@ class Chat(
     this.history.addAll(messages)
 
     summarizeAfterTokens?.let {
-      val tokenCount = service.countHistoryTokens(history, llmConfig.model)
+      val tokenCount = service.countHistoryTokens(history, agentId)
       if (tokenCount >= it) {
-        val summary = service.summarizeConversation(id, history, formatter, llm, llmConfig)
+        val summary = service.summarizeConversation(id, history, formatter, agentId)
         history.clear()
         history.add(ChatMessage.system(summary))
       }
@@ -208,10 +193,12 @@ class Chat(
     return buf.joinToString("")
   }
 
-  private fun contentFilterErrorMessage(): String {
-    return if (llmConfig.language == Language.CRO)
-      "Ispričavam se, ali trenutno ne mogu pružiti odgovor. Molim vas da preformulirate svoj zahtjev ili postavite drugo pitanje."
-    else
-      "I apologize, but I'm unable to provide a response at this time. Please try rephrasing your request or ask something else."
-  }
+  // private fun contentFilterErrorMessage(): String {
+  //   return if (llmConfig.language == Language.CRO)
+  //     "Ispričavam se, ali trenutno ne mogu pružiti odgovor. Molim vas da preformulirate svoj
+  // zahtjev ili postavite drugo pitanje."
+  //   else
+  //     "I apologize, but I'm unable to provide a response at this time. Please try rephrasing your
+  // request or ask something else."
+  // }
 }
