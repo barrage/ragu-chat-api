@@ -1,7 +1,6 @@
-package net.barrage.llmao.app
+package net.barrage.llmao.app.vector
 
 import io.ktor.server.application.*
-import net.barrage.llmao.app.vector.Weaveiate
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.apiError
