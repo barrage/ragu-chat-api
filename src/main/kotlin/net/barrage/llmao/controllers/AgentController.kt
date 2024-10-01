@@ -10,7 +10,6 @@ import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.dtos.PaginationInfo
-import net.barrage.llmao.dtos.agents.AgentResponse
 import net.barrage.llmao.dtos.agents.PaginatedAgentDTO
 import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
 import net.barrage.llmao.error.Error
