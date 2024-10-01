@@ -17,8 +17,8 @@ class LlmProviderFactory(env: ApplicationEnvironment) : LlmFactory() {
 
   override fun getProvider(providerId: String): ConversationLlm {
     return when (providerId) {
-      "openai" -> openai
-      "azure" -> azure
+      openai.id() -> openai
+      azure.id() -> azure
       else -> throw apiError("Provider", "Unsupported LLM provider '$providerId'")
     }
   }
