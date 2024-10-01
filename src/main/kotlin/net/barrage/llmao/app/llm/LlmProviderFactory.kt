@@ -1,8 +1,6 @@
-package net.barrage.llmao.app
+package net.barrage.llmao.app.llm
 
 import io.ktor.server.application.*
-import net.barrage.llmao.app.llm.AzureAI
-import net.barrage.llmao.app.llm.OpenAI
 import net.barrage.llmao.core.LlmFactory
 import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.env

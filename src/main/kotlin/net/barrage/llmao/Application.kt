@@ -1,9 +1,9 @@
 package net.barrage.llmao
 
 import io.ktor.server.application.*
-import net.barrage.llmao.app.LlmProviderFactory
-import net.barrage.llmao.app.VectorDatabaseProviderFactory
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
+import net.barrage.llmao.app.llm.LlmProviderFactory
+import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
 import net.barrage.llmao.core.chat.ChatFactory
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
