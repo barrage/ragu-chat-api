@@ -4,6 +4,8 @@ import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.core.chat.ChatMessage
 
 interface ConversationLlm {
+  fun id(): String
+
   suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String
 
   suspend fun completionStream(
@@ -15,8 +17,8 @@ interface ConversationLlm {
 
   suspend fun summarizeConversation(
     proompt: String,
-    maxTokens: Int? = 1000,
     config: LlmConfig,
+    maxTokens: Int? = 1000,
   ): String
 
   fun supportsModel(model: String): Boolean

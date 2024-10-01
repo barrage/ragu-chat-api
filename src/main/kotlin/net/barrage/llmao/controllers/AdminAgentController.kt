@@ -12,9 +12,14 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.dtos.PaginationInfo
-import net.barrage.llmao.dtos.agents.*
+import net.barrage.llmao.dtos.agents.AgentResponse
+import net.barrage.llmao.dtos.agents.NewAgentDTO
+import net.barrage.llmao.dtos.agents.PaginatedAgentDTO
+import net.barrage.llmao.dtos.agents.UpdateAgentDTO
+import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
+import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
 
 @Resource("admin/agents")
@@ -26,15 +31,14 @@ class AdminAgentController(
   val showDeactivated: Boolean? = true,
 ) {
   @Resource("{id}")
-  class Agent(val parent: AdminAgentController, val id: Int) {
+  class Agent(val parent: AdminAgentController, val id: KUUID) {
     @Resource("activate") class Activate(val parent: Agent)
 
     @Resource("deactivate") class Deactivate(val parent: Agent)
   }
 }
 
-fun Route.adminAgentsRoutes() {
-  val agentService = AgentService()
+fun Route.adminAgentsRoutes(agentService: AgentService) {
 
   authenticate("auth-session-admin") {
     get<AdminAgentController>(adminGetAllAgents()) {

@@ -20,8 +20,8 @@ import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
-import net.barrage.llmao.models.RequestUser
 import net.barrage.llmao.plugins.query
+import net.barrage.llmao.plugins.user
 import net.barrage.llmao.serializers.KUUID
 
 @Resource("/chats")
@@ -41,28 +41,28 @@ fun Route.chatsRoutes(service: ChatService) {
 
   authenticate("auth-session") {
     get("/chats", getAllChats()) {
-      val user = call.attributes[RequestUser]
+      val user = call.user()
       val pagination = call.query(PaginationSort::class)
       val chats = service.listChats(pagination, user.id)
       call.respond(HttpStatusCode.OK, chats)
     }
 
     get("/chats/{id}/messages", getMessages()) {
-      val user = call.attributes[RequestUser]
+      val user = call.user()
       val chatId = KUUID.fromString(call.parameters["id"])
       val messages: List<Message> = service.getMessages(chatId, user.id)
       call.respond(HttpStatusCode.OK, messages)
     }
 
     put<ChatController.Chat.Title>(updateTitle()) {
-      val user = call.attributes[RequestUser]
+      val user = call.user()
       val input: UpdateChatTitleDTO = call.receive()
       service.updateTitle(it.parent.id, user.id, input.title)
       call.respond(HttpStatusCode.OK)
     }
 
     patch<ChatController.Chat.Messages.Message>(evaluate()) {
-      val user = call.attributes[RequestUser]
+      val user = call.user()
       val input: EvaluateMessageDTO = call.receive()
       val chatId = it.parent.parent.id
       val messageId = it.messageId
@@ -71,7 +71,7 @@ fun Route.chatsRoutes(service: ChatService) {
     }
 
     delete<ChatController.Chat>(deleteChat()) {
-      val user = call.attributes[RequestUser]
+      val user = call.user()
       service.deleteChat(it.id, user.id)
       call.respond(HttpStatusCode.NoContent)
     }

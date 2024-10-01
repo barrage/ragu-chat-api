@@ -8,7 +8,7 @@ import net.barrage.llmao.tables.records.MessagesRecord
 @Serializable
 class Message(
   val id: KUUID,
-  val sender: String,
+  val sender: KUUID,
   val senderType: String,
   val content: String,
   val chatId: KUUID,

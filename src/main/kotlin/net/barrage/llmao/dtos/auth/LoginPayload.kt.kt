@@ -1,7 +1,7 @@
 package net.barrage.llmao.dtos.auth
 
 import io.ktor.http.*
-import net.barrage.llmao.enums.LoginSource
+import net.barrage.llmao.app.auth.LoginSource
 import net.barrage.llmao.error.apiError
 
 class LoginPayload(

@@ -11,7 +11,4 @@ data class LlmConfig(
 
   /** Used by the prompt formatter to specify language directives to the LLM. */
   val language: Language = Language.CRO,
-
-  /** LLM provider ID. */
-  val provider: String,
 )

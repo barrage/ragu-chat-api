@@ -1,15 +1,14 @@
 package net.barrage.llmao.services
 
 import io.ktor.server.plugins.*
+import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.dtos.agents.AgentResponse
 import net.barrage.llmao.dtos.agents.NewAgentDTO
 import net.barrage.llmao.dtos.agents.UpdateAgentDTO
 import net.barrage.llmao.models.Agent
-import net.barrage.llmao.repositories.AgentRepository
+import net.barrage.llmao.serializers.KUUID
 
-class AgentService {
-  private val agentRepository = AgentRepository()
-
+class AgentService(private val agentRepository: AgentRepository) {
   fun getAll(
     page: Int,
     size: Int,
@@ -25,7 +24,7 @@ class AgentService {
     return AgentResponse(agents, count)
   }
 
-  fun get(id: Int): Agent {
+  fun get(id: KUUID): Agent {
     return agentRepository.get(id) ?: throw NotFoundException("Agent not found")
   }
 
@@ -33,15 +32,15 @@ class AgentService {
     return agentRepository.create(newAgent) ?: throw IllegalStateException("Something went wrong")
   }
 
-  fun update(id: Int, updated: UpdateAgentDTO): Agent {
+  fun update(id: KUUID, updated: UpdateAgentDTO): Agent {
     return agentRepository.update(id, updated) ?: throw NotFoundException("Agent not found")
   }
 
-  fun activate(id: Int): Agent {
+  fun activate(id: KUUID): Agent {
     return agentRepository.activate(id) ?: throw NotFoundException("Agent not found")
   }
 
-  fun deactivate(id: Int): Agent {
+  fun deactivate(id: KUUID): Agent {
     return agentRepository.deactivate(id) ?: throw NotFoundException("Agent not found")
   }
 }

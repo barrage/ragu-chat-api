@@ -6,7 +6,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import net.barrage.llmao.models.Language
 import net.barrage.llmao.serializers.KUUID
 
 @Serializable
@@ -22,12 +21,7 @@ sealed class ClientMessage {
 sealed class SystemMessage {
   @Serializable
   @SerialName("chat_open_new")
-  data class OpenNewChat(
-    val llmProvider: String,
-    val agentId: Int,
-    val llm: String,
-    val language: Language,
-  ) : SystemMessage()
+  data class OpenNewChat(val agentId: KUUID) : SystemMessage()
 
   @Serializable
   @SerialName("chat_open_existing")

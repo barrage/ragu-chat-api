@@ -2,17 +2,16 @@ package net.barrage.llmao.services
 
 import io.ktor.server.plugins.*
 import java.util.*
+import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.CreateUser
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.User
-import net.barrage.llmao.repositories.UserRepository
 import net.barrage.llmao.serializers.KUUID
 
-class UserService {
-  private val usersRepository = UserRepository()
-
+class UserService(private val usersRepository: UserRepository) {
   fun getAll(pagination: PaginationSort): CountedList<User> {
     return usersRepository.getAll(pagination)
   }

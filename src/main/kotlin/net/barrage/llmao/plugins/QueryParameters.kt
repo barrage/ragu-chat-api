@@ -6,11 +6,18 @@ import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.jvm.isAccessible
+import net.barrage.llmao.models.SortOrder
+
+/** Annotate class fields you want to include for parsing with [query]. */
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class QueryParameter(val key: String = "")
 
 /**
  * Extension function for application calls that parse query parameters to a Kotlin data class.
  * Note, each parameter must be parsable from a string, and the class being populated must have a
- * null-constructor (a constructor with no parameters).
+ * null-constructor (a constructor with no parameters). Additionally, any field being populated with
+ * this (i.e. annotated with [QueryParameter]) must be `var`.
  */
 fun <T : Any> ApplicationCall.query(clazz: KClass<T>): T {
   val query = request.queryParameters
@@ -45,11 +52,6 @@ fun <T : Any> ApplicationCall.query(clazz: KClass<T>): T {
   return instance
 }
 
-/** Annotate class fields you want to include for parsing with [query]. */
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class QueryParameter(val key: String = "")
-
 // Helper function to set the field value, handling basic type conversions
 private fun setFieldValue(field: KMutableProperty<*>, instance: Any, value: String) {
   val fieldType = field.returnType.classifier as KClass<*>
@@ -63,6 +65,9 @@ private fun setFieldValue(field: KMutableProperty<*>, instance: Any, value: Stri
       Double::class.java -> value.toDoubleOrNull()
       Boolean::class.java -> value.toBoolean()
       String::class.java -> value
+
+      // Custom application types
+      SortOrder::class -> if (value == "asc") SortOrder.ASC else SortOrder.DESC
       else -> null
     }
 

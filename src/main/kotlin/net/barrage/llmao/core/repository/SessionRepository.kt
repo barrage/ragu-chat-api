@@ -1,4 +1,4 @@
-package net.barrage.llmao.repositories
+package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable

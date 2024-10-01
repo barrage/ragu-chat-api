@@ -6,6 +6,7 @@ import io.ktor.server.application.*
 import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.ServiceState
 import net.barrage.llmao.controllers.adminAgentsRoutes
 import net.barrage.llmao.controllers.adminChatsRoutes
 import net.barrage.llmao.controllers.adminUserRoutes
@@ -13,11 +14,9 @@ import net.barrage.llmao.controllers.agentsRoutes
 import net.barrage.llmao.controllers.authRoutes
 import net.barrage.llmao.controllers.chatsRoutes
 import net.barrage.llmao.controllers.userRoutes
-import net.barrage.llmao.core.services.AuthenticationService
-import net.barrage.llmao.core.services.ChatService
 
 // TODO: Create service state
-fun Application.configureRouting(authService: AuthenticationService, chatService: ChatService) {
+fun Application.configureRouting(services: ServiceState) {
   install(Resources)
   routing {
     get(
@@ -33,13 +32,13 @@ fun Application.configureRouting(authService: AuthenticationService, chatService
       call.respond(HttpStatusCode.OK)
     }
 
-    authRoutes(authService)
+    authRoutes(services.auth)
     openApiRoutes()
-    adminAgentsRoutes()
-    agentsRoutes()
-    adminUserRoutes()
-    userRoutes()
-    adminChatsRoutes(chatService)
-    chatsRoutes(chatService)
+    adminAgentsRoutes(services.agent)
+    agentsRoutes(services.agent)
+    adminUserRoutes(services.user)
+    userRoutes(services.user)
+    adminChatsRoutes(services.chat)
+    chatsRoutes(services.chat)
   }
 }
