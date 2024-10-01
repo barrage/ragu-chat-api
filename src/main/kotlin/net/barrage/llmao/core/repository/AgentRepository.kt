@@ -1,9 +1,12 @@
 package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
-import net.barrage.llmao.dtos.agents.NewAgentDTO
-import net.barrage.llmao.dtos.agents.UpdateAgentDTO
 import net.barrage.llmao.models.Agent
+import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.CreateAgent
+import net.barrage.llmao.models.PaginationSort
+import net.barrage.llmao.models.SortOrder
+import net.barrage.llmao.models.UpdateAgent
 import net.barrage.llmao.models.toAgent
 import net.barrage.llmao.models.toCollectionParams
 import net.barrage.llmao.plugins.Database.dslContext
@@ -12,51 +15,38 @@ import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
+import org.jooq.SortField
+import org.jooq.impl.DSL
 
 class AgentRepository {
-  fun getAll(
-    offset: Int,
-    size: Int,
-    sortBy: String,
-    sortOrder: String,
-    showDeactivated: Boolean,
-  ): List<Agent> {
-    val sortField =
-      when (sortBy) {
-        "name" -> AGENTS.NAME
-        "createdAt" -> AGENTS.CREATED_AT
-        else -> AGENTS.CREATED_AT
-      }
+  fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
+    val order = getSortOrder(pagination)
+    val (limit, offset) = pagination.limitOffset()
 
-    val orderField =
-      if (sortOrder.equals("desc", ignoreCase = true)) {
-        sortField.desc()
-      } else {
-        sortField.asc()
-      }
+    val total =
+      dslContext
+        .selectCount()
+        .from(AGENTS)
+        .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
+        .fetchOne(0, Int::class.java)!!
 
-    return dslContext
-      .selectFrom(AGENTS)
-      .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else null)
-      .orderBy(orderField)
-      .limit(size)
-      .offset(offset)
-      .fetch(AgentsRecord::toAgent)
-  }
+    val agents =
+      dslContext
+        .selectFrom(AGENTS)
+        .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
+        .orderBy(order)
+        .limit(limit)
+        .offset(offset)
+        .fetch(AgentsRecord::toAgent)
 
-  fun countAll(showDeactivated: Boolean): Int {
-    return dslContext
-      .selectCount()
-      .from(AGENTS)
-      .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else null)
-      .fetchOne(0, Int::class.java)!!
+    return CountedList(total, agents)
   }
 
   fun get(id: KUUID): Agent? {
     return dslContext.selectFrom(AGENTS).where(AGENTS.ID.eq(id)).fetchOne(AgentsRecord::toAgent)
   }
 
-  fun create(newAgent: NewAgentDTO): Agent? {
+  fun create(newAgent: CreateAgent): Agent? {
     return dslContext
       .insertInto(AGENTS)
       .set(AGENTS.NAME, newAgent.name)
@@ -65,7 +55,7 @@ class AgentRepository {
       .fetchOne(AgentsRecord::toAgent)
   }
 
-  fun update(id: KUUID, updated: UpdateAgentDTO): Agent? {
+  fun update(id: KUUID, updated: UpdateAgent): Agent? {
     return dslContext
       .update(AGENTS)
       .set(AGENTS.NAME, updated.name)
@@ -103,5 +93,27 @@ class AgentRepository {
         .where(AGENT_COLLECTIONS.AGENT_ID.eq(id))
         .fetchInto(AgentCollectionsRecord::class.java)
     return collections.map { it.toCollectionParams() }
+  }
+
+  private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "name" -> AGENTS.NAME
+        "description" -> AGENTS.DESCRIPTION
+        "context" -> AGENTS.CONTEXT
+        "createdAt" -> AGENTS.CREATED_AT
+        "updatedAt" -> AGENTS.UPDATED_AT
+        else -> AGENTS.NAME
+      }
+
+    val order =
+      if (sortOrder == SortOrder.DESC) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return order
   }
 }

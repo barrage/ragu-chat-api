@@ -11,12 +11,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.dtos.PaginationInfo
-import net.barrage.llmao.dtos.agents.AgentResponse
-import net.barrage.llmao.dtos.agents.NewAgentDTO
-import net.barrage.llmao.dtos.agents.PaginatedAgentDTO
-import net.barrage.llmao.dtos.agents.UpdateAgentDTO
-import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.serializers.KUUID
@@ -48,13 +42,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
       val sortOrder = it.sortOrder ?: "asc"
       val showDeactivated = it.showDeactivated ?: true
 
-      val agents: AgentResponse =
-        agentService.getAll(page, size, sortBy, sortOrder, showDeactivated)
-      val response =
-        toPaginatedAgentDTO(
-          agents.agents,
-          PaginationInfo(agents.count, page, size, sortBy, sortOrder),
-        )
+      val agents = agentService.getAll(page, size, sortBy, sortOrder, showDeactivated)
       call.respond(HttpStatusCode.OK, response)
       return@get
     }
@@ -66,14 +54,14 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     }
 
     post<AdminAgentController>(createAgent()) {
-      val newAgent: NewAgentDTO = call.receive()
+      val newAgent: CreateAgent = call.receive()
       val agent: Agent = agentService.create(newAgent)
       call.respond(HttpStatusCode.Created, agent)
       return@post
     }
 
     put<AdminAgentController.Agent>(updateAgent()) {
-      val updatedAgent: UpdateAgentDTO = call.receive()
+      val updatedAgent: UpdateAgent = call.receive()
       val agent: Agent = agentService.update(it.id, updatedAgent)
       call.respond(HttpStatusCode.OK, agent)
       return@put
@@ -166,7 +154,7 @@ fun adminGetAgent(): OpenApiRoute.() -> Unit = {
 fun createAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Create a new agent"
-  request { body<NewAgentDTO> { description = "New agent object" } }
+  request { body<CreateAgent> { description = "New agent object" } }
   response {
     HttpStatusCode.Created to
       {
@@ -188,7 +176,7 @@ fun updateAgent(): OpenApiRoute.() -> Unit = {
       description = "Agent ID"
       example("default") { value = 1 }
     }
-    body<UpdateAgentDTO> { description = "Updated agent object" }
+    body<UpdateAgent> { description = "Updated agent object" }
   }
   response {
     HttpStatusCode.OK to
