@@ -1,9 +1,9 @@
 package net.barrage.llmao.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.post
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
@@ -11,17 +11,19 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.util.*
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
+import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.CreateAgent
+import net.barrage.llmao.models.PaginationSort
+import net.barrage.llmao.models.UpdateAgent
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
 
 @Resource("admin/agents")
 class AdminAgentController(
-  val page: Int? = 1,
-  val size: Int? = 10,
-  val sortBy: String? = "name",
-  val sortOrder: String? = "asc",
+  val pagination: PaginationSort? = PaginationSort(),
   val showDeactivated: Boolean? = true,
 ) {
   @Resource("{id}")
@@ -36,47 +38,38 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
 
   authenticate("auth-session-admin") {
     get<AdminAgentController>(adminGetAllAgents()) {
-      val page = it.page ?: 1
-      val size = it.size ?: 10
-      val sortBy = it.sortBy ?: "name"
-      val sortOrder = it.sortOrder ?: "asc"
       val showDeactivated = it.showDeactivated ?: true
 
-      val agents = agentService.getAll(page, size, sortBy, sortOrder, showDeactivated)
-      call.respond(HttpStatusCode.OK, response)
-      return@get
+      val agents = agentService.getAll(it.pagination!!, showDeactivated)
+      call.respond(HttpStatusCode.OK, agents)
     }
 
     get<AdminAgentController.Agent>(adminGetAgent()) {
       val agent: Agent = agentService.get(it.id)
       call.respond(HttpStatusCode.OK, agent)
-      return@get
     }
 
     post<AdminAgentController>(createAgent()) {
       val newAgent: CreateAgent = call.receive()
       val agent: Agent = agentService.create(newAgent)
       call.respond(HttpStatusCode.Created, agent)
-      return@post
     }
 
-    put<AdminAgentController.Agent>(updateAgent()) {
+    put("/admin/agents/{id}", updateAgent()) {
+      val agentId = UUID.fromString(call.parameters["id"])
       val updatedAgent: UpdateAgent = call.receive()
-      val agent: Agent = agentService.update(it.id, updatedAgent)
+      val agent: Agent = agentService.update(agentId, updatedAgent)
       call.respond(HttpStatusCode.OK, agent)
-      return@put
     }
 
     put<AdminAgentController.Agent.Activate>(activateAgent()) {
       val agent = agentService.activate(it.parent.id)
       call.respond(HttpStatusCode.OK, agent)
-      return@put
     }
 
     put<AdminAgentController.Agent.Deactivate>(deactivateAgent()) {
       val agent = agentService.deactivate(it.parent.id)
       call.respond(HttpStatusCode.OK, agent)
-      return@put
     }
   }
 }
@@ -115,7 +108,7 @@ fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<PaginatedAgentDTO> {
+        body<CountedList<Agent>> {
           description = "A list of Agent objects representing all the agents"
         }
       }

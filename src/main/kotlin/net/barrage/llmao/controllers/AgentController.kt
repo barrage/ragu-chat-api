@@ -9,47 +9,29 @@ import io.ktor.server.auth.*
 import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.dtos.PaginationInfo
-import net.barrage.llmao.dtos.agents.PaginatedAgentDTO
-import net.barrage.llmao.dtos.agents.toPaginatedAgentDTO
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
+import net.barrage.llmao.models.CountedList
+import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.User
 import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.services.AgentService
 
 @Resource("agents")
-class AgentController(
-  val page: Int? = 1,
-  val size: Int? = 10,
-  val sortBy: String? = "name",
-  val sortOrder: String? = "asc",
-) {
+class AgentController(val pagination: PaginationSort) {
   @Resource("{id}") class Agent(val parent: AgentController, val id: KUUID)
 }
 
 fun Route.agentsRoutes(agentService: AgentService) {
   authenticate("auth-session") {
     get<AgentController>(getAllAgents()) {
-      val page = it.page ?: 1
-      val size = it.size ?: 10
-      val sortBy = it.sortBy ?: "name"
-      val sortOrder = it.sortOrder ?: "asc"
-
-      val agents: AgentResponse = agentService.getAll(page, size, sortBy, sortOrder, false)
-      val response =
-        toPaginatedAgentDTO(
-          agents.agents,
-          PaginationInfo(agents.count, page, size, sortBy, sortOrder),
-        )
-      call.respond(HttpStatusCode.OK, response)
-      return@get
+      val agents = agentService.getAll(it.pagination, false)
+      call.respond(HttpStatusCode.OK, agents)
     }
 
     get<AgentController.Agent>(getAgent()) {
       val agent: Agent = agentService.get(it.id)
       call.respond(HttpStatusCode.OK, agent)
-      return@get
     }
   }
 }
@@ -83,7 +65,7 @@ fun getAllAgents(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<PaginatedAgentDTO> {
+        body<CountedList<Agent>> {
           description = "A list of Agent objects representing all the agents"
         }
       }

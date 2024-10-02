@@ -58,9 +58,8 @@ class AgentRepository {
   fun update(id: KUUID, updated: UpdateAgent): Agent? {
     return dslContext
       .update(AGENTS)
-      .set(AGENTS.NAME, updated.name)
-      .set(AGENTS.CONTEXT, updated.context)
-      .set(AGENTS.UPDATED_AT, OffsetDateTime.now())
+      .set(AGENTS.NAME, DSL.coalesce(DSL.`val`(updated.name), AGENTS.NAME))
+      .set(AGENTS.CONTEXT, DSL.coalesce(DSL.`val`(updated.context), AGENTS.CONTEXT))
       .where(AGENTS.ID.eq(id))
       .returning()
       .fetchOne(AgentsRecord::toAgent)
