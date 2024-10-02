@@ -31,6 +31,8 @@ embeddings:
     apiVersion: "2023-05-15"
     endpoint: "YOUR_EMBEDDINGS_ENDPOINT"
     apiKey: "YOUR_EMBEDDINGS_KEY"
+  fembed:
+    endpoint: ""
 
 weaviate:
   host: "localhost:8080"
