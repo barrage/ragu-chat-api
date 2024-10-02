@@ -1,4 +1,4 @@
-package net.barrage.llmao.dtos.auth
+package net.barrage.llmao.core.auth
 
 import io.ktor.http.*
 import net.barrage.llmao.app.auth.LoginSource

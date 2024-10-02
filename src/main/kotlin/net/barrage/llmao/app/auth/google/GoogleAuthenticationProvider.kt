@@ -1,16 +1,13 @@
-package net.barrage.llmao.app.auth
+package net.barrage.llmao.app.auth.google
 
 import com.auth0.jwt.JWT
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
-import net.barrage.llmao.core.AuthenticationProvider
-import net.barrage.llmao.dtos.auth.LoginPayload
-import net.barrage.llmao.dtos.auth.google.GoogleTokenResponse
-import net.barrage.llmao.dtos.auth.google.GoogleUserInfo
+import net.barrage.llmao.core.auth.AuthenticationProvider
+import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.models.UserInfo
 

@@ -2,10 +2,10 @@ package net.barrage.llmao.core.services
 
 import java.util.*
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
+import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.dtos.auth.LoginPayload
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.models.Role
 import net.barrage.llmao.models.SessionData
