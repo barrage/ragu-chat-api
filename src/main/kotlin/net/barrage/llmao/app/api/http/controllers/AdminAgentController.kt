@@ -1,9 +1,9 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.post
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*

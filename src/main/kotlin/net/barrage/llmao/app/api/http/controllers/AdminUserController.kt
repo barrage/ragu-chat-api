@@ -13,12 +13,12 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.core.models.CreateUser
+import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.dtos.users.UpdateUserAdmin
 import net.barrage.llmao.error.Error
 
 @Resource("admin/users")

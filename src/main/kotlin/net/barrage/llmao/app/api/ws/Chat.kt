@@ -115,7 +115,7 @@ class Chat(
     val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, proompt, response)
 
     val emitPayload =
-      FinishEvent(
+      ServerMessage.FinishEvent(
         id,
         messageId = assistantMsg.id,
         reason = FinishReason.Stop,
@@ -127,7 +127,7 @@ class Chat(
           },
       )
 
-    emitter.emitFinishResponse(emitPayload)
+    emitter.emitServer(emitPayload)
 
     if (title.isNullOrBlank()) {
       this.generateTitle(proompt, emitter)
