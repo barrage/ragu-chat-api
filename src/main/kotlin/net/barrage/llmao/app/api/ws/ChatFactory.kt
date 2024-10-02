@@ -17,15 +17,6 @@ class ChatFactory(
   fun new(userId: KUUID, agentId: KUUID): Chat {
     val agent = agentService.get(agentId)
 
-    // TODO: Move this to agent creation/update routes
-    // val llm = providers.llm.getProvider(agent.llmProvider)
-    // if (!llm.supportsModel(agent.model)) {
-    //  throw apiError(
-    //    "Invalid Model",
-    //    "Provider '${llm.id()}' does not support model '${agent.model}'",
-    //  )
-    // }
-
     val id = KUUID.randomUUID()
 
     return Chat(

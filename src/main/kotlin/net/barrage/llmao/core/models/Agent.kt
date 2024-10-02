@@ -44,16 +44,39 @@ fun AgentsRecord.toAgent() =
   )
 
 @Serializable
-data class CreateAgent(val name: String, val context: String) {
+data class CreateAgent(
+  val name: String,
+  val description: String?,
+  val context: String,
+  val llmProvider: String,
+  val model: String,
+  val temperature: Double,
+  val vectorProvider: String,
+  val language: Language,
+  val active: Boolean,
+  val embeddingProvider: String,
+  val embeddingModel: String,
+) {
   fun validate(): ValidationResult {
     val errors: MutableList<String> = mutableListOf()
-
     return ValidationResult.Valid
   }
 }
 
 @Serializable
-data class UpdateAgent(val name: String? = null, val context: String? = null) {
+data class UpdateAgent(
+  val name: String? = null,
+  val description: String? = null,
+  val context: String? = null,
+  val llmProvider: String? = null,
+  val model: String? = null,
+  val temperature: Double? = null,
+  val vectorProvider: String? = null,
+  val language: Language? = null,
+  val active: Boolean? = null,
+  val embeddingProvider: String? = null,
+  val embeddingModel: String? = null,
+) {
   fun validate(): ValidationResult {
     val errors: MutableList<String> = mutableListOf()
 

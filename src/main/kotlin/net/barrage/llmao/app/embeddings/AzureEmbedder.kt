@@ -47,6 +47,10 @@ class AzureEmbedder(apiVersion: String, endpoint: String, apiKey: String) : Embe
     return "azure"
   }
 
+  override fun supportsModel(model: String): Boolean {
+    return OpenAiModel.tryFromString(model) != null
+  }
+
   override suspend fun embed(input: String, model: String): List<Double> {
     OpenAiModel.tryFromString(model)
       ?: throw apiError(

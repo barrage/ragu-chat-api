@@ -30,11 +30,17 @@ private enum class FembedModel(val value: String) {
   }
 }
 
+// TODO: Grab models from remote instance and store them to check for validity instead of using
+// enum.
 class FastEmbedder(private val endpoint: String) : Embedder {
   private val client: HttpClient = httpClient()
 
   override fun id(): String {
     return "fembed"
+  }
+
+  override fun supportsModel(model: String): Boolean {
+    return FembedModel.tryFromString(model) != null
   }
 
   override suspend fun embed(input: String, model: String): List<Double> {
