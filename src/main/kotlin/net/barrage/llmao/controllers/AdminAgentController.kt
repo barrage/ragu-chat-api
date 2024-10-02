@@ -12,6 +12,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.*
+import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.models.CountedList
@@ -19,7 +20,6 @@ import net.barrage.llmao.models.CreateAgent
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.UpdateAgent
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.AgentService
 
 @Resource("admin/agents")
 class AdminAgentController(
