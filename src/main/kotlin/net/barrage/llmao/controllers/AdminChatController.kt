@@ -12,6 +12,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
 import net.barrage.llmao.error.Error
@@ -19,7 +20,6 @@ import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
-import net.barrage.llmao.serializers.KUUID
 
 @Resource("/admin/chats")
 class AdminChatController(val pagination: PaginationSort) {

@@ -2,11 +2,11 @@ package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.internalError
 import net.barrage.llmao.models.SessionData
 import net.barrage.llmao.models.toSessionData
 import net.barrage.llmao.plugins.Database.dslContext
-import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.references.SESSIONS
 

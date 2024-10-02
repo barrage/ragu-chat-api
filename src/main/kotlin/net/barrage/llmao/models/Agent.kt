@@ -2,8 +2,8 @@ package net.barrage.llmao.models
 
 import io.ktor.server.plugins.requestvalidation.*
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.serializers.KOffsetDateTime
-import net.barrage.llmao.serializers.KUUID
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentsRecord
 
 @Serializable

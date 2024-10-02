@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.internalError
-import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.websocket.Emitter
 import net.barrage.llmao.websocket.FinishEvent
 

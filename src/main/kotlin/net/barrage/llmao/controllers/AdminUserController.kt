@@ -13,13 +13,13 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.core.services.UserService
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.dtos.users.UpdateUserAdmin
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.CreateUser
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.User
-import net.barrage.llmao.serializers.KUUID
 
 @Resource("admin/users")
 class AdminUserController(val pagination: PaginationSort = PaginationSort()) {

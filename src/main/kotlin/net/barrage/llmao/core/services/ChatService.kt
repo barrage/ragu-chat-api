@@ -12,6 +12,7 @@ import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.models.Chat
@@ -19,7 +20,6 @@ import net.barrage.llmao.models.ChatWithMessages
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
-import net.barrage.llmao.serializers.KUUID
 
 class ChatService(
   private val providers: ProviderState,

@@ -2,12 +2,12 @@ package net.barrage.llmao.core.services
 
 import io.ktor.server.plugins.*
 import net.barrage.llmao.core.repository.AgentRepository
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.CreateAgent
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.UpdateAgent
-import net.barrage.llmao.serializers.KUUID
 
 class AgentService(private val agentRepository: AgentRepository) {
   fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {

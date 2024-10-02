@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.CreateAgent
@@ -10,7 +11,6 @@ import net.barrage.llmao.models.UpdateAgent
 import net.barrage.llmao.models.toAgent
 import net.barrage.llmao.models.toCollectionParams
 import net.barrage.llmao.plugins.Database.dslContext
-import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS

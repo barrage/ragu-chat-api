@@ -13,6 +13,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
 import net.barrage.llmao.dtos.messages.EvaluateMessageDTO
 import net.barrage.llmao.error.Error
@@ -22,7 +23,6 @@ import net.barrage.llmao.models.Message
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.user
-import net.barrage.llmao.serializers.KUUID
 
 @Resource("/chats")
 class ChatController(val pagination: PaginationSort) {
