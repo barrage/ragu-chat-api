@@ -16,15 +16,7 @@ import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
-import net.barrage.llmao.plugins.Database
-import net.barrage.llmao.plugins.configureCors
-import net.barrage.llmao.plugins.configureErrorHandling
-import net.barrage.llmao.plugins.configureOpenApi
-import net.barrage.llmao.plugins.configureRequestValidation
-import net.barrage.llmao.plugins.configureRouting
-import net.barrage.llmao.plugins.configureSerialization
-import net.barrage.llmao.plugins.configureSession
-import net.barrage.llmao.plugins.extendSession
+import net.barrage.llmao.plugins.*
 
 fun main(args: Array<String>) {
   io.ktor.server.netty.EngineMain.main(args)
@@ -75,7 +67,7 @@ class ProviderState(env: ApplicationEnvironment) {
 
 class ServiceState(state: ApplicationState) {
   val chat = ChatService(state.providers, state.repository.chat, state.repository.agent)
-  val agent = AgentService(state.repository.agent)
+  val agent = AgentService(state.providers, state.repository.agent)
   val user = UserService(state.repository.user)
   val auth =
     AuthenticationService(state.providers.auth, state.repository.session, state.repository.user)

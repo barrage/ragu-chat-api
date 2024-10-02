@@ -52,6 +52,11 @@ fun <T : Any> ApplicationCall.query(clazz: KClass<T>): T {
   return instance
 }
 
+/** Shorthand for indexing into the request's queryParameters map. */
+fun ApplicationCall.queryParam(key: String): String? {
+  return request.queryParameters[key]
+}
+
 // Helper function to set the field value, handling basic type conversions
 private fun setFieldValue(field: KMutableProperty<*>, instance: Any, value: String) {
   val fieldType = field.returnType.classifier as KClass<*>

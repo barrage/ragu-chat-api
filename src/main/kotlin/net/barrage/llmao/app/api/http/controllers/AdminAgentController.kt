@@ -1,11 +1,10 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.put
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
 import io.ktor.http.*
-import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -20,55 +19,34 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.Error
-
-@Resource("admin/agents")
-class AdminAgentController(
-  val pagination: PaginationSort? = PaginationSort(),
-  val showDeactivated: Boolean? = true,
-) {
-  @Resource("{id}")
-  class Agent(val parent: AdminAgentController, val id: KUUID) {
-    @Resource("activate") class Activate(val parent: Agent)
-
-    @Resource("deactivate") class Deactivate(val parent: Agent)
-  }
-}
+import net.barrage.llmao.plugins.query
+import net.barrage.llmao.plugins.queryParam
 
 fun Route.adminAgentsRoutes(agentService: AgentService) {
-
   authenticate("auth-session-admin") {
-    get<AdminAgentController>(adminGetAllAgents()) {
-      val showDeactivated = it.showDeactivated ?: true
-
-      val agents = agentService.getAll(it.pagination!!, showDeactivated)
+    get("/admin/agents", adminGetAllAgents()) {
+      val pagination = call.query(PaginationSort::class)
+      val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() ?: false
+      val agents = agentService.getAll(pagination, showDeactivated)
       call.respond(HttpStatusCode.OK, agents)
     }
 
-    get<AdminAgentController.Agent>(adminGetAgent()) {
-      val agent: Agent = agentService.get(it.id)
-      call.respond(HttpStatusCode.OK, agent)
-    }
-
-    post<AdminAgentController>(createAgent()) {
+    post("/admin/agents", createAgent()) {
       val newAgent: CreateAgent = call.receive()
       val agent: Agent = agentService.create(newAgent)
       call.respond(HttpStatusCode.Created, agent)
+    }
+
+    get("/admin/agents/{id}", adminGetAgent()) {
+      val id = KUUID.fromString(call.parameters["id"])
+      val agent: Agent = agentService.get(id)
+      call.respond(HttpStatusCode.OK, agent)
     }
 
     put("/admin/agents/{id}", updateAgent()) {
       val agentId = UUID.fromString(call.parameters["id"])
       val updatedAgent: UpdateAgent = call.receive()
       val agent: Agent = agentService.update(agentId, updatedAgent)
-      call.respond(HttpStatusCode.OK, agent)
-    }
-
-    put<AdminAgentController.Agent.Activate>(activateAgent()) {
-      val agent = agentService.activate(it.parent.id)
-      call.respond(HttpStatusCode.OK, agent)
-    }
-
-    put<AdminAgentController.Agent.Deactivate>(deactivateAgent()) {
-      val agent = agentService.deactivate(it.parent.id)
       call.respond(HttpStatusCode.OK, agent)
     }
   }
@@ -179,50 +157,6 @@ fun updateAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating agent"
-        body<List<Error>> {}
-      }
-  }
-}
-
-fun activateAgent(): OpenApiRoute.() -> Unit = {
-  tags("admin/agents")
-  description = "Activate an agent"
-  request {
-    pathParameter<Int>("id") {
-      description = "Agent ID"
-      example("default") { value = 1 }
-    }
-  }
-  response {
-    HttpStatusCode.OK to
-      {
-        body<Agent> { description = "An Agent object representing the activated agent" }
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while activating agent"
-        body<List<Error>> {}
-      }
-  }
-}
-
-fun deactivateAgent(): OpenApiRoute.() -> Unit = {
-  tags("admin/agents")
-  description = "Deactivate an agent"
-  request {
-    pathParameter<Int>("id") {
-      description = "Agent ID"
-      example("default") { value = 1 }
-    }
-  }
-  response {
-    HttpStatusCode.OK to
-      {
-        body<Agent> { description = "An Agent object representing the deactivated agent" }
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while deactivating agent"
         body<List<Error>> {}
       }
   }
