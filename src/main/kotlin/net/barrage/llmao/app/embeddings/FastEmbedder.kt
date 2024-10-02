@@ -5,7 +5,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.Embedder
+import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.error.apiError
 

@@ -1,8 +1,8 @@
 package net.barrage.llmao.app.embeddings
 
 import io.ktor.server.application.*
-import net.barrage.llmao.core.Embedder
 import net.barrage.llmao.core.ProviderFactory
+import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.error.apiError
 
 class EmbeddingProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Embedder>() {

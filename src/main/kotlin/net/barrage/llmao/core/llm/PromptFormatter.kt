@@ -1,7 +1,6 @@
 package net.barrage.llmao.core.llm
 
-import net.barrage.llmao.core.chat.ChatMessage
-import net.barrage.llmao.models.Language
+import net.barrage.llmao.core.models.common.Language
 
 // TODO: Interface and customizable formatting
 class PromptFormatter(private val context: String, private val language: Language) {

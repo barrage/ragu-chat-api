@@ -3,13 +3,13 @@ package net.barrage.llmao.core.services
 import java.util.*
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.core.auth.LoginPayload
+import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.models.Role
-import net.barrage.llmao.models.SessionData
-import net.barrage.llmao.models.User
 
 class AuthenticationService(
   private val providers: AuthenticationProviderFactory,
@@ -20,7 +20,7 @@ class AuthenticationService(
   /**
    * Authenticate the user using the provider from the payload and establish a session upon success.
    */
-  suspend fun authenticateUser(login: LoginPayload): SessionData {
+  suspend fun authenticateUser(login: LoginPayload): Session {
     val provider = providers.getProvider(login.provider)
     val userInfo = provider.authenticate(login)
     val sessionId = UUID.randomUUID()
@@ -39,7 +39,7 @@ class AuthenticationService(
    * - The user cannot be found or their active flag is `false`
    * - The user's role is not ADMIN
    */
-  fun validateAdminSession(sessionId: KUUID): Pair<SessionData, User>? {
+  fun validateAdminSession(sessionId: KUUID): Pair<Session, User>? {
     val serverSession = sessionRepo.get(sessionId)
 
     if (serverSession == null || !serverSession.isValid()) {
@@ -61,7 +61,7 @@ class AuthenticationService(
    * - The session does not exist or is expired
    * - The user cannot be found or their active flag is `false`
    */
-  fun validateUserSession(sessionId: KUUID): Pair<SessionData, User>? {
+  fun validateUserSession(sessionId: KUUID): Pair<Session, User>? {
     val serverSession = sessionRepo.get(sessionId)
 
     if (serverSession == null || !serverSession.isValid()) {
@@ -82,7 +82,7 @@ class AuthenticationService(
     sessionRepo.create(sessionId, userId)
   }
 
-  fun get(sessionId: KUUID): SessionData? {
+  fun get(sessionId: KUUID): Session? {
     return sessionRepo.get(sessionId)
   }
 

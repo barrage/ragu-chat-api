@@ -1,7 +1,6 @@
 package net.barrage.llmao.core.llm
 
 import kotlinx.coroutines.flow.Flow
-import net.barrage.llmao.core.chat.ChatMessage
 
 interface ConversationLlm {
   fun id(): String

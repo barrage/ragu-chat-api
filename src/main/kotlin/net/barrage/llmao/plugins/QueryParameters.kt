@@ -6,7 +6,7 @@ import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.jvm.isAccessible
-import net.barrage.llmao.models.SortOrder
+import net.barrage.llmao.core.models.common.SortOrder
 
 /** Annotate class fields you want to include for parsing with [query]. */
 @Target(AnnotationTarget.PROPERTY)

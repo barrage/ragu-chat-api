@@ -7,7 +7,7 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import net.barrage.llmao.core.chat.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk

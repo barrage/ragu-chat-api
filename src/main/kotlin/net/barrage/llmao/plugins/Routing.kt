@@ -7,13 +7,13 @@ import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.ServiceState
-import net.barrage.llmao.controllers.adminAgentsRoutes
-import net.barrage.llmao.controllers.adminChatsRoutes
-import net.barrage.llmao.controllers.adminUserRoutes
-import net.barrage.llmao.controllers.agentsRoutes
-import net.barrage.llmao.controllers.authRoutes
-import net.barrage.llmao.controllers.chatsRoutes
-import net.barrage.llmao.controllers.userRoutes
+import net.barrage.llmao.app.api.http.controllers.adminAgentsRoutes
+import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
+import net.barrage.llmao.app.api.http.controllers.adminUserRoutes
+import net.barrage.llmao.app.api.http.controllers.agentsRoutes
+import net.barrage.llmao.app.api.http.controllers.authRoutes
+import net.barrage.llmao.app.api.http.controllers.chatsRoutes
+import net.barrage.llmao.app.api.http.controllers.userRoutes
 
 // TODO: Create service state
 fun Application.configureRouting(services: ServiceState) {

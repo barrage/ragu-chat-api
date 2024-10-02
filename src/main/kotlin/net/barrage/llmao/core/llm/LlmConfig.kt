@@ -1,6 +1,6 @@
 package net.barrage.llmao.core.llm
 
-import net.barrage.llmao.models.Language
+import net.barrage.llmao.core.models.common.Language
 
 data class LlmConfig(
   /** LLM to use. */
