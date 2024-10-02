@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import net.barrage.llmao.serializers.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 @Serializable
 sealed class ClientMessage {

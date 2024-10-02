@@ -4,8 +4,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.Error
-import net.barrage.llmao.serializers.KUUID
 
 class Emitter(private val messageResponseFlow: MutableSharedFlow<String>) {
   suspend fun emitChunk(chunk: TokenChunk) {

@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.models.Chat
 import net.barrage.llmao.models.ChatWithMessages
 import net.barrage.llmao.models.CountedList
@@ -12,7 +13,6 @@ import net.barrage.llmao.models.toChat
 import net.barrage.llmao.models.toFailedMessage
 import net.barrage.llmao.models.toMessage
 import net.barrage.llmao.plugins.Database.dslContext
-import net.barrage.llmao.serializers.KUUID
 import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 import net.barrage.llmao.tables.records.MessagesRecord

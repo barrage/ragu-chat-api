@@ -1,4 +1,4 @@
-package net.barrage.llmao.serializers
+package net.barrage.llmao.core.types
 
 import java.util.*
 import kotlinx.serialization.KSerializer
@@ -9,9 +9,10 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-typealias KUUID = @Serializable(with = KUUIDSerializer::class) UUID
+/** Shorthand for the [UUID] class with a custom serializer. */
+typealias KUUID = @Serializable(with = UUIDSerializer::class) UUID
 
-object KUUIDSerializer : KSerializer<UUID> {
+object UUIDSerializer : KSerializer<UUID> {
   override val descriptor: SerialDescriptor =
     PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
 

@@ -3,9 +3,9 @@ package net.barrage.llmao.websocket
 import io.ktor.server.plugins.*
 import net.barrage.llmao.core.chat.Chat
 import net.barrage.llmao.core.chat.ChatFactory
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.apiError
 import net.barrage.llmao.error.internalError
-import net.barrage.llmao.serializers.KUUID
 
 class Server(private val factory: ChatFactory) {
   private val chats: MutableMap<KUUID, Chat> = mutableMapOf()

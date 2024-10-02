@@ -1,8 +1,8 @@
 package net.barrage.llmao.core.chat
 
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.models.Message
-import net.barrage.llmao.serializers.KUUID
 
 data class ChatMessage(
   val role: String,

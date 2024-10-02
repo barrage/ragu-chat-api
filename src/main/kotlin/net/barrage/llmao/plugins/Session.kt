@@ -8,9 +8,9 @@ import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
 import net.barrage.llmao.core.services.AuthenticationService
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.models.User
 import net.barrage.llmao.models.UserSession
-import net.barrage.llmao.serializers.KUUID
 
 /** Key to use for obtaining users from requests validated by the session middleware. */
 val RequestUser = AttributeKey<User>("User")

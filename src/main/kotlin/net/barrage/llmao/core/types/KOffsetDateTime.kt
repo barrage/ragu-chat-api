@@ -1,4 +1,4 @@
-package net.barrage.llmao.serializers
+package net.barrage.llmao.core.types
 
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -10,9 +10,10 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-typealias KOffsetDateTime = @Serializable(with = KOffsetDateTimeSerializer::class) OffsetDateTime
+/** Shorthand for [OffsetDateTime] with a custom serializer. */
+typealias KOffsetDateTime = @Serializable(with = OffsetDateTimeSerializer::class) OffsetDateTime
 
-object KOffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
+object OffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
   override val descriptor: SerialDescriptor =
     PrimitiveSerialDescriptor("OffsetDateTime", PrimitiveKind.STRING)
 

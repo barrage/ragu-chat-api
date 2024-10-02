@@ -1,7 +1,7 @@
 package net.barrage.llmao.models
 
-import net.barrage.llmao.serializers.KOffsetDateTime
-import net.barrage.llmao.serializers.KUUID
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 
 class FailedMessage(

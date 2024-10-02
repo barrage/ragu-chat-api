@@ -4,8 +4,8 @@ import net.barrage.llmao.ProviderState
 import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.serializers.KUUID
 
 class ChatFactory(
   private val providers: ProviderState,
