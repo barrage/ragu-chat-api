@@ -10,7 +10,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.util.*
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
@@ -24,30 +23,34 @@ import net.barrage.llmao.plugins.queryParam
 
 fun Route.adminAgentsRoutes(agentService: AgentService) {
   authenticate("auth-session-admin") {
-    get("/admin/agents", adminGetAllAgents()) {
-      val pagination = call.query(PaginationSort::class)
-      val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() ?: false
-      val agents = agentService.getAll(pagination, showDeactivated)
-      call.respond(HttpStatusCode.OK, agents)
+    route("/admin/agents") {
+      get(adminGetAllAgents()) {
+        val pagination = call.query(PaginationSort::class)
+        val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() ?: false
+        val agents = agentService.getAll(pagination, showDeactivated)
+        call.respond(HttpStatusCode.OK, agents)
+      }
+
+      post(createAgent()) {
+        val newAgent: CreateAgent = call.receive()
+        val agent: Agent = agentService.create(newAgent)
+        call.respond(HttpStatusCode.Created, agent)
+      }
     }
 
-    post("/admin/agents", createAgent()) {
-      val newAgent: CreateAgent = call.receive()
-      val agent: Agent = agentService.create(newAgent)
-      call.respond(HttpStatusCode.Created, agent)
-    }
+    route("/admin/agents/{id}") {
+      get(adminGetAgent()) {
+        val id = KUUID.fromString(call.parameters["id"])
+        val agent: Agent = agentService.get(id)
+        call.respond(HttpStatusCode.OK, agent)
+      }
 
-    get("/admin/agents/{id}", adminGetAgent()) {
-      val id = KUUID.fromString(call.parameters["id"])
-      val agent: Agent = agentService.get(id)
-      call.respond(HttpStatusCode.OK, agent)
-    }
-
-    put("/admin/agents/{id}", updateAgent()) {
-      val agentId = UUID.fromString(call.parameters["id"])
-      val updatedAgent: UpdateAgent = call.receive()
-      val agent: Agent = agentService.update(agentId, updatedAgent)
-      call.respond(HttpStatusCode.OK, agent)
+      put(updateAgent()) {
+        val agentId = KUUID.fromString(call.parameters["id"])
+        val updatedAgent: UpdateAgent = call.receive()
+        val agent: Agent = agentService.update(agentId, updatedAgent)
+        call.respond(HttpStatusCode.OK, agent)
+      }
     }
   }
 }
