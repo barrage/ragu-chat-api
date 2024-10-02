@@ -7,10 +7,10 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
+import net.barrage.llmao.app.api.http.dto.SessionCookie
+import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.models.User
-import net.barrage.llmao.models.UserSession
 
 /** Key to use for obtaining users from requests validated by the session middleware. */
 val RequestUser = AttributeKey<User>("User")
@@ -20,7 +20,7 @@ val RequestUser = AttributeKey<User>("User")
  * are certain the session exists, e.g. after session check middleware.
  */
 fun ApplicationCall.sessionId(): KUUID {
-  return sessions.get<UserSession>()!!.id
+  return sessions.get<SessionCookie>()!!.id
 }
 
 /** Obtain the current user initiating the request. */
@@ -30,7 +30,7 @@ fun ApplicationCall.user(): User {
 
 fun Application.configureSession(service: AuthenticationService) {
   install(Sessions) {
-    cookie<UserSession>(
+    cookie<SessionCookie>(
       this@configureSession.environment.config.property("session.cookieName").getString()
     ) {
       cookie.path = "/"
@@ -49,7 +49,7 @@ fun Application.configureSession(service: AuthenticationService) {
   }
 
   authentication {
-    session<UserSession>("auth-session") {
+    session<SessionCookie>("auth-session") {
       validate { session ->
         val (_, user) = service.validateUserSession(session.id) ?: return@validate null
         attributes.put(RequestUser, user)
@@ -59,7 +59,7 @@ fun Application.configureSession(service: AuthenticationService) {
       challenge { call.respond(HttpStatusCode.Unauthorized, "Unauthorized access") }
     }
 
-    session<UserSession>("auth-session-admin") {
+    session<SessionCookie>("auth-session-admin") {
       validate { session ->
         val (_, user) = service.validateAdminSession(session.id) ?: return@validate null
         attributes.put(RequestUser, user)
@@ -72,8 +72,8 @@ fun Application.configureSession(service: AuthenticationService) {
 
 fun Application.extendSession(service: AuthenticationService) {
   intercept(Plugins) {
-    val userSession = call.sessions.get<UserSession>() ?: return@intercept
+    val userSession = call.sessions.get<SessionCookie>() ?: return@intercept
     service.extend(userSession.id)
-    call.sessions.set(UserSession(userSession.id))
+    call.sessions.set(SessionCookie(userSession.id))
   }
 }

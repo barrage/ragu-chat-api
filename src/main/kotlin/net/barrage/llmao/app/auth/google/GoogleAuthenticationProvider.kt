@@ -8,8 +8,8 @@ import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.auth.LoginPayload
+import net.barrage.llmao.core.auth.UserInfo
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.models.UserInfo
 
 class GoogleAuthenticationProvider(
   private val client: HttpClient,

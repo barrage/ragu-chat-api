@@ -1,17 +1,17 @@
 package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
+import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithMessages
+import net.barrage.llmao.core.models.FailedMessage
+import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.models.common.SortOrder
+import net.barrage.llmao.core.models.toChat
+import net.barrage.llmao.core.models.toFailedMessage
+import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.models.Chat
-import net.barrage.llmao.models.ChatWithMessages
-import net.barrage.llmao.models.CountedList
-import net.barrage.llmao.models.FailedMessage
-import net.barrage.llmao.models.Message
-import net.barrage.llmao.models.PaginationSort
-import net.barrage.llmao.models.SortOrder
-import net.barrage.llmao.models.toChat
-import net.barrage.llmao.models.toFailedMessage
-import net.barrage.llmao.models.toMessage
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.FailedMessagesRecord

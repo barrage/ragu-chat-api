@@ -1,11 +1,13 @@
 package net.barrage.llmao
 
 import io.ktor.server.application.*
+import net.barrage.llmao.app.api.ws.ChatFactory
+import net.barrage.llmao.app.api.ws.Server
+import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
-import net.barrage.llmao.core.chat.ChatFactory
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.SessionRepository
@@ -23,8 +25,6 @@ import net.barrage.llmao.plugins.configureRouting
 import net.barrage.llmao.plugins.configureSerialization
 import net.barrage.llmao.plugins.configureSession
 import net.barrage.llmao.plugins.extendSession
-import net.barrage.llmao.websocket.Server
-import net.barrage.llmao.websocket.websocketServer
 
 fun main(args: Array<String>) {
   io.ktor.server.netty.EngineMain.main(args)

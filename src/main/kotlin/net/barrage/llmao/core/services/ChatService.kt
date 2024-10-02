@@ -6,20 +6,20 @@ import com.knuddels.jtokkit.api.ModelType
 import io.ktor.server.plugins.*
 import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.ProviderState
-import net.barrage.llmao.core.chat.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithMessages
+import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.apiError
-import net.barrage.llmao.models.Chat
-import net.barrage.llmao.models.ChatWithMessages
-import net.barrage.llmao.models.CountedList
-import net.barrage.llmao.models.Message
-import net.barrage.llmao.models.PaginationSort
 
 class ChatService(
   private val providers: ProviderState,

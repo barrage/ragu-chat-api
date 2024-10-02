@@ -2,12 +2,12 @@ package net.barrage.llmao.plugins
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*
-import net.barrage.llmao.dtos.chats.UpdateChatTitleDTO
+import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.core.models.CreateAgent
+import net.barrage.llmao.core.models.CreateUser
+import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.dtos.users.UpdateUser
 import net.barrage.llmao.dtos.users.UpdateUserAdmin
-import net.barrage.llmao.models.CreateAgent
-import net.barrage.llmao.models.CreateUser
-import net.barrage.llmao.models.UpdateAgent
 
 fun Application.configureRequestValidation() {
   install(RequestValidation) {
