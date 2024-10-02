@@ -37,7 +37,9 @@ fun <T : Any> ApplicationCall.query(clazz: KClass<T>): T {
 
     val qp = field.findAnnotations(QueryParameter::class)
 
-    if (qp.isEmpty()) continue
+    if (qp.isEmpty()) {
+      continue
+    }
 
     val key = qp.first().key.ifBlank { field.name }
 
