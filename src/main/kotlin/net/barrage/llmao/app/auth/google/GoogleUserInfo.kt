@@ -1,4 +1,4 @@
-package net.barrage.llmao.dtos.auth.google
+package net.barrage.llmao.app.auth.google
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

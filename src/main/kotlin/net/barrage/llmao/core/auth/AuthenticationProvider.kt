@@ -1,6 +1,5 @@
-package net.barrage.llmao.core
+package net.barrage.llmao.core.auth
 
-import net.barrage.llmao.dtos.auth.LoginPayload
 import net.barrage.llmao.models.UserInfo
 
 interface AuthenticationProvider {

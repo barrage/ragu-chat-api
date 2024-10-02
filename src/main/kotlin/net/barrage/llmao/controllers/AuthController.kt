@@ -6,9 +6,9 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.dtos.auth.LoginPayload
 import net.barrage.llmao.models.UserSession
 
 fun Route.authRoutes(service: AuthenticationService) {

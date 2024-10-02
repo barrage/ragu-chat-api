@@ -1,5 +1,6 @@
 package net.barrage.llmao.core
 
+import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.llm.ConversationLlm
 
 typealias AuthenticationFactory = ProviderFactory<AuthenticationProvider>
