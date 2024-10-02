@@ -6,8 +6,8 @@ import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateAgent
-import net.barrage.llmao.dtos.users.UpdateUser
-import net.barrage.llmao.dtos.users.UpdateUserAdmin
+import net.barrage.llmao.core.models.UpdateUser
+import net.barrage.llmao.core.models.UpdateUserAdmin
 
 fun Application.configureRequestValidation() {
   install(RequestValidation) {

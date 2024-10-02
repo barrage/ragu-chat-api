@@ -2,13 +2,13 @@ package net.barrage.llmao.core.repository
 
 import java.util.*
 import net.barrage.llmao.core.models.CreateUser
+import net.barrage.llmao.core.models.UpdateUser
+import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toUser
-import net.barrage.llmao.dtos.users.UpdateUser
-import net.barrage.llmao.dtos.users.UpdateUserAdmin
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS

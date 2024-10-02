@@ -3,12 +3,13 @@ package net.barrage.llmao.core.services
 import io.ktor.server.plugins.*
 import java.util.*
 import net.barrage.llmao.core.models.CreateUser
+import net.barrage.llmao.core.models.UpdateUser
+import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.dtos.users.*
 import net.barrage.llmao.error.apiError
 
 class UserService(private val usersRepository: UserRepository) {
