@@ -1,5 +1,15 @@
-INSERT INTO agents (id, name, description, context, llm_provider, model, language, vector_provider)
-OVERRIDING SYSTEM VALUE
+INSERT INTO agents (
+    id,
+    name,
+    description,
+    context,
+    llm_provider,
+    model,
+    language,
+    vector_provider,
+    embedding_provider,
+    embedding_model
+)
 VALUES (
  '00000000-0000-0000-0000-000000000000',
  'Glorious God Emperor Bayram of the Chadlands',
@@ -8,7 +18,9 @@ VALUES (
  'azure',
  'gpt-4',
  'cro',
- 'azure'
+ 'weaviate',
+ 'azure',
+ 'text-embedding-ada-002'
 ) ON CONFLICT DO NOTHING;
 
 INSERT INTO users (email, full_name, first_name, last_name, role, active)
@@ -18,3 +30,5 @@ VALUES
 ('filip.brkic@barrage.net', 'Brx', 'Filip', 'B', 'ADMIN', TRUE),
 ('dino@barrage.net', 'Bayram, Blazing Quasar of the Chadoverse', 'Dino', 'B', 'ADMIN', TRUE)
 ON CONFLICT DO NOTHING;
+
+SELECT id, email, full_name FROM users;

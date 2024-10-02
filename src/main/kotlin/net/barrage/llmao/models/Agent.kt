@@ -18,6 +18,8 @@ class Agent(
   val vectorProvider: String,
   val language: Language,
   val active: Boolean,
+  val embeddingProvider: String,
+  val embeddingModel: String,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
@@ -34,6 +36,8 @@ fun AgentsRecord.toAgent() =
     vectorProvider = this.vectorProvider!!,
     language = Language.tryFromString(this.language!!),
     active = this.active!!,
+    embeddingProvider = this.embeddingProvider!!,
+    embeddingModel = this.embeddingModel!!,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

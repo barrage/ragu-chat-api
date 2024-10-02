@@ -2,6 +2,7 @@ package net.barrage.llmao
 
 import io.ktor.server.application.*
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
+import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
 import net.barrage.llmao.core.chat.ChatFactory
@@ -53,6 +54,11 @@ fun env(env: ApplicationEnvironment, key: String): String {
   return env.config.property(key).getString()
 }
 
+class ApplicationState(env: ApplicationEnvironment) {
+  val repository = RepositoryState()
+  val providers = ProviderState(env)
+}
+
 class RepositoryState(
   val user: UserRepository = UserRepository(),
   val session: SessionRepository = SessionRepository(),
@@ -64,11 +70,7 @@ class ProviderState(env: ApplicationEnvironment) {
   val auth: AuthenticationProviderFactory = AuthenticationProviderFactory(env)
   val llm: LlmProviderFactory = LlmProviderFactory(env)
   val vector: VectorDatabaseProviderFactory = VectorDatabaseProviderFactory(env)
-}
-
-class ApplicationState(env: ApplicationEnvironment) {
-  val repository = RepositoryState()
-  val providers = ProviderState(env)
+  val embedding: EmbeddingProviderFactory = EmbeddingProviderFactory(env)
 }
 
 class ServiceState(state: ApplicationState) {

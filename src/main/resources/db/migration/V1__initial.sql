@@ -59,7 +59,7 @@ CREATE TABLE agents (
     -- LLM LSD consumption amount
     temperature FLOAT NOT NULL DEFAULT 0.1,
 
-    -- Vector database provider, e.g. weaviate
+    -- Vector database provider, e.g. weaviate, qdrant, etc.
     vector_provider TEXT NOT NULL,
 
     -- Conversation language
@@ -67,6 +67,12 @@ CREATE TABLE agents (
 
     -- Soft deletion flag
     active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Which embedding provider to use, e.g. azure, fembed
+    embedding_provider TEXT NOT NULL,
+
+    -- Which embedding model to use, must be supported by provider
+    embedding_model TEXT NOT NULL,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
