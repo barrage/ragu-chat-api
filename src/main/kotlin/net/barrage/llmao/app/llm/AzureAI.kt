@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
@@ -14,13 +13,14 @@ import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.error.apiError
+import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 
 class AzureAI(
   private val apiKey: String,
   private val endpoint: String,
   private val apiVersion: String,
 ) : ConversationLlm {
-  private var modelMap = mapOf("gpt-3.5-turbo" to "gpt-35-turbo")
+  private var modelMap = mapOf("gpt-3.5-turbo" to "gpt-35-turbo", "gpt-4" to "gpt-4")
 
   override fun id(): String {
     return "azure"

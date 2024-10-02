@@ -88,7 +88,16 @@ class ChatService(
     val vectorDb = providers.vector.getProvider(agent.vectorProvider)
     val llm = providers.llm.getProvider(agent.llmProvider)
 
-    val query = prepareChatPrompt(prompt, history, formatter, collections, vectorDb)
+    val query =
+      prepareChatPrompt(
+        prompt,
+        history,
+        formatter,
+        collections,
+        vectorDb,
+        agent.embeddingProvider,
+        agent.embeddingModel,
+      )
 
     return llm.completionStream(query, LlmConfig(agent.model, agent.temperature, agent.language))
   }
@@ -108,7 +117,17 @@ class ChatService(
     val vectorDb = providers.vector.getProvider(agent.vectorProvider)
     val llm = providers.llm.getProvider(agent.llmProvider)
 
-    val query = prepareChatPrompt(prompt, history, formatter, collections, vectorDb)
+    val query =
+      prepareChatPrompt(
+        prompt,
+        history,
+        formatter,
+        collections,
+        vectorDb,
+        agent.embeddingProvider,
+        agent.embeddingModel,
+      )
+
     return llm.chatCompletion(query, LlmConfig(agent.model, agent.temperature, agent.language))
   }
 
@@ -128,28 +147,6 @@ class ChatService(
 
   fun processFailedMessage(chatId: KUUID, userId: KUUID, prompt: String, reason: String) {
     chatRepo.insertFailedMessage(chatId, userId, prompt, reason)
-  }
-
-  private fun prepareChatPrompt(
-    prompt: String,
-    history: List<ChatMessage>,
-    formatter: PromptFormatter,
-    queryOptions: List<Pair<String, Int>>,
-    vectorDb: VectorDatabase,
-  ): List<ChatMessage> {
-    val system = formatter.systemMessage()
-
-    val embedded = embedQuery(prompt)
-
-    val relatedChunks = vectorDb.query(embedded, queryOptions)
-
-    val context = relatedChunks.joinToString("\n")
-
-    val query = formatter.userMessage(prompt, context)
-
-    val messages = mutableListOf(system, *history.toTypedArray(), query)
-
-    return messages
   }
 
   suspend fun summarizeConversation(
@@ -187,6 +184,30 @@ class ChatService(
     chatRepo.insertSystemMessage(chatId, summary)
 
     return summary
+  }
+
+  private suspend fun prepareChatPrompt(
+    prompt: String,
+    history: List<ChatMessage>,
+    formatter: PromptFormatter,
+    queryOptions: List<Pair<String, Int>>,
+    vectorDb: VectorDatabase,
+    embeddingProvider: String,
+    embeddingModel: String,
+  ): List<ChatMessage> {
+    val system = formatter.systemMessage()
+
+    val embedded = embedQuery(embeddingProvider, embeddingModel, prompt)
+
+    val relatedChunks = vectorDb.query(embedded, queryOptions)
+
+    val context = relatedChunks.joinToString("\n")
+
+    val query = formatter.userMessage(prompt, context)
+
+    val messages = mutableListOf(system, *history.toTypedArray(), query)
+
+    return messages
   }
 
   fun deleteChat(id: KUUID) {
@@ -240,8 +261,8 @@ class ChatService(
     throw apiError("Invalid model", "Cannot find tokenizer for model '$llm'")
   }
 
-  fun embedQuery(query: String): List<Double> {
-    // TODO: Implement
-    return listOf()
+  private suspend fun embedQuery(provider: String, model: String, input: String): List<Double> {
+    val embedder = providers.embedding.getProvider(provider)
+    return embedder.embed(input, model)
   }
 }

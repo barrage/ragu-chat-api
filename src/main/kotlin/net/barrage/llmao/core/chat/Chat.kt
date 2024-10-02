@@ -120,7 +120,12 @@ class Chat(
         id,
         messageId = assistantMsg.id,
         reason = FinishReason.Stop,
-        content = (!streaming).let { response },
+        content =
+          if (!streaming) {
+            response
+          } else {
+            null
+          },
       )
 
     emitter.emitFinishResponse(emitPayload)
