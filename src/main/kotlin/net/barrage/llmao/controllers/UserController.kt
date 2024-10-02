@@ -8,12 +8,11 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
+import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.dtos.users.UpdateUser
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.User
 import net.barrage.llmao.plugins.user
-import net.barrage.llmao.services.UserService
 
 fun Route.userRoutes(userService: UserService) {
   authenticate("auth-session") {

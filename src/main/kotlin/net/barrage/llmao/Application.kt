@@ -10,8 +10,10 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
+import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.plugins.Database
 import net.barrage.llmao.plugins.configureCors
 import net.barrage.llmao.plugins.configureErrorHandling
@@ -21,8 +23,6 @@ import net.barrage.llmao.plugins.configureRouting
 import net.barrage.llmao.plugins.configureSerialization
 import net.barrage.llmao.plugins.configureSession
 import net.barrage.llmao.plugins.extendSession
-import net.barrage.llmao.services.AgentService
-import net.barrage.llmao.services.UserService
 import net.barrage.llmao.websocket.Server
 import net.barrage.llmao.websocket.websocketServer
 

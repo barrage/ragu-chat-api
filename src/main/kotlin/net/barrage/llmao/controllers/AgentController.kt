@@ -6,16 +6,15 @@ import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.error.Error
 import net.barrage.llmao.models.Agent
 import net.barrage.llmao.models.CountedList
 import net.barrage.llmao.models.PaginationSort
 import net.barrage.llmao.models.User
 import net.barrage.llmao.serializers.KUUID
-import net.barrage.llmao.services.AgentService
 
 @Resource("agents")
 class AgentController(val pagination: PaginationSort) {

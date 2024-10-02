@@ -1,4 +1,4 @@
-package net.barrage.llmao.services
+package net.barrage.llmao.core.services
 
 import io.ktor.server.plugins.*
 import java.util.*
