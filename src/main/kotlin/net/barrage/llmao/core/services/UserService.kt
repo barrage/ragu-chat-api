@@ -10,7 +10,8 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class UserService(private val usersRepository: UserRepository) {
   fun getAll(pagination: PaginationSort): CountedList<User> {
@@ -29,7 +30,7 @@ class UserService(private val usersRepository: UserRepository) {
     val existingUser = usersRepository.getByEmail(user.email)
 
     if (existingUser != null) {
-      throw apiError("Entity already exists", "User with email '${user.email}'")
+      throw AppError.api(ErrorReason.EntityAlreadyExists, "User with email '${user.email}'")
     }
 
     return usersRepository.create(user)
@@ -39,7 +40,7 @@ class UserService(private val usersRepository: UserRepository) {
     val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (!user.active) {
-      throw apiError("Entity not found", "User with id '$id'")
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "User with id '$id'")
     }
 
     return usersRepository.updateNames(id, update)
@@ -50,7 +51,7 @@ class UserService(private val usersRepository: UserRepository) {
     val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
     if (!user.active) {
-      throw apiError("Entity not found", "User with id '$id'")
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "User with id '$id'")
     }
 
     return usersRepository.updateFull(id, update)

@@ -19,7 +19,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.Error
+import net.barrage.llmao.error.AppError
 
 @Resource("/admin/chats")
 class AdminChatController(val pagination: PaginationSort) {
@@ -69,7 +69,7 @@ fun Route.adminChatsRoutes(service: ChatService) {
         HttpStatusCode.InternalServerError to
           {
             description = "Internal server error occurred while retrieving chats"
-            body<List<Error>> {}
+            body<List<AppError>> {}
           }
       }
     }) {
@@ -118,7 +118,7 @@ fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving chats"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -142,7 +142,7 @@ fun adminGetMessages(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving messages"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -166,7 +166,7 @@ fun adminUpdateTitle(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving chat"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -194,7 +194,7 @@ fun adminEvaluate(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving message"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }

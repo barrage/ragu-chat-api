@@ -10,6 +10,7 @@ val h2Version = "2.1.214"
 val exposedVersion = "0.52.0"
 val jooqVersion = "3.19.11"
 val flywayVersion = "10.17.3"
+val junitVersion = "5.8.1"
 
 plugins {
   kotlin("jvm") version "2.0.20"
@@ -78,6 +79,11 @@ dependencies {
   testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
 
+  // TODO: Use these for hooks and testcontainers, or remove if
+  // not needed
+  // testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
+  // testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+
   // Error handling
   implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
 
@@ -138,6 +144,8 @@ jooq {
 }
 
 ktfmt { googleStyle() }
+
+// tasks.test { testLogging { showStandardStreams = true } }
 
 tasks.named("generateJooq") { dependsOn("flywayMigrate") }
 

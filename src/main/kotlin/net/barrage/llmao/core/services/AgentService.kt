@@ -9,7 +9,8 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class AgentService(
   private val providers: ProviderState,
@@ -53,7 +54,10 @@ class AgentService(
       // Throws if invalid provider
       val llm = providers.llm.getProvider(llmProvider)
       if (!llm.supportsModel(model)) {
-        throw apiError("Invalid Model", "Provider '${llm.id()}' does not support model '${model}'")
+        throw AppError.api(
+          ErrorReason.InvalidParameter,
+          "Provider '${llm.id()}' does not support model '${model}'",
+        )
       }
     }
 
@@ -65,8 +69,8 @@ class AgentService(
     if (embeddingProvider != null && embeddingModel != null) {
       val embedder = providers.embedding.getProvider(embeddingProvider)
       if (!embedder.supportsModel(embeddingModel)) {
-        throw apiError(
-          "Invalid Model",
+        throw AppError.api(
+          ErrorReason.InvalidParameter,
           "Provider '${embedder.id()}' does not support model '${embeddingModel}'",
         )
       }

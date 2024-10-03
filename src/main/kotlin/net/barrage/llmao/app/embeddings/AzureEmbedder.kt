@@ -6,8 +6,8 @@ import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import net.barrage.llmao.core.embeddings.Embedder
-import net.barrage.llmao.error.apiError
-import net.barrage.llmao.error.internalError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 private const val DEPLOYMENT_ID = "gipitty-text-embedding-ada-002"
 
@@ -53,8 +53,8 @@ class AzureEmbedder(apiVersion: String, endpoint: String, apiKey: String) : Embe
 
   override suspend fun embed(input: String, model: String): List<Double> {
     OpenAiModel.tryFromString(model)
-      ?: throw apiError(
-        "Invalid embedding model",
+      ?: throw AppError.api(
+        ErrorReason.InvalidParameter,
         "Embedder '${id()}' does not support model '$model'",
       )
 
@@ -64,7 +64,7 @@ class AzureEmbedder(apiVersion: String, endpoint: String, apiKey: String) : Embe
 
     // TODO: Figure out proper error
     if (response.embeddings.isEmpty()) {
-      throw internalError()
+      throw AppError.internal()
     }
 
     // We always get embeddings in a 1:1 manner relative to the input

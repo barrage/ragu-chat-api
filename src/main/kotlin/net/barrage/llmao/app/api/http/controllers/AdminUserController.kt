@@ -19,7 +19,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.Error
+import net.barrage.llmao.error.AppError
 
 @Resource("admin/users")
 class AdminUserController(val pagination: PaginationSort = PaginationSort()) {
@@ -117,7 +117,7 @@ fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving users"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -140,7 +140,7 @@ fun adminGetUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving user"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -158,7 +158,7 @@ private fun createUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while creating user"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -182,7 +182,7 @@ fun adminUpdateUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating user"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -205,7 +205,7 @@ fun setActiveStatus(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while activating user"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -224,7 +224,7 @@ fun deleteUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while deleting user"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }

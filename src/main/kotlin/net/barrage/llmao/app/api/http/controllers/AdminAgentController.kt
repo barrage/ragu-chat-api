@@ -17,7 +17,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.Error
+import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.queryParam
 
@@ -96,7 +96,7 @@ fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving agents"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -115,12 +115,12 @@ fun adminGetAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.NotFound to
       {
         description = "Agent not found"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving agent"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -137,7 +137,7 @@ fun createAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while creating agent"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -160,7 +160,7 @@ fun updateAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating agent"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }

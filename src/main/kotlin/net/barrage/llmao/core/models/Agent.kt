@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.models
 
-import io.ktor.server.plugins.requestvalidation.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.common.Language
 import net.barrage.llmao.core.types.KOffsetDateTime
@@ -83,18 +82,18 @@ data class UpdateAgent(
     val errors = mutableListOf<ValidationError>()
     when (Pair(llmProvider == null, model == null)) {
       Pair(false, true) ->
-        errors.addSchemaErr(message = "`llmProvider` must be specified when passing `model` ")
+        errors.addSchemaErr(message = "`llmProvider` must be specified when passing `model`")
       Pair(true, false) ->
-        errors.addSchemaErr(message = "`model` must be specified when passing `llmProvider` ")
+        errors.addSchemaErr(message = "`model` must be specified when passing `llmProvider`")
     }
     when (Pair(embeddingProvider == null, embeddingModel == null)) {
       Pair(false, true) ->
         errors.addSchemaErr(
-          message = "`embeddingProvider` must be specified when passing `embeddingModel` "
+          message = "`embeddingProvider` must be specified when passing `embeddingModel`"
         )
       Pair(true, false) ->
         errors.addSchemaErr(
-          message = "`embeddingModel` must be specified when passing `embeddingProvider` "
+          message = "`embeddingModel` must be specified when passing `embeddingProvider`"
         )
     }
     return errors

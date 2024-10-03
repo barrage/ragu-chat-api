@@ -6,7 +6,8 @@ import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class ChatFactory(
   private val providers: ProviderState,
@@ -30,7 +31,8 @@ class ChatFactory(
 
   fun fromExisting(id: KUUID): Chat {
     val chat =
-      chatService.getChat(id) ?: throw apiError("Entity does not exist", "Chat with ID '$id'")
+      chatService.getChat(id)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$id'")
 
     val agent = agentService.get(chat.chat.agentId)
 

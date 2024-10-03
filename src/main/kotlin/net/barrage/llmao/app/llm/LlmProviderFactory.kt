@@ -4,7 +4,8 @@ import io.ktor.server.application.*
 import net.barrage.llmao.core.LlmFactory
 import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.env
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class LlmProviderFactory(env: ApplicationEnvironment) : LlmFactory() {
   private val openai: OpenAI
@@ -19,7 +20,8 @@ class LlmProviderFactory(env: ApplicationEnvironment) : LlmFactory() {
     return when (providerId) {
       openai.id() -> openai
       azure.id() -> azure
-      else -> throw apiError("Provider", "Unsupported LLM provider '$providerId'")
+      else ->
+        throw AppError.api(ErrorReason.InvalidProvider, "Unsupported LLM provider '$providerId'")
     }
   }
 
