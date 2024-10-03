@@ -14,8 +14,10 @@ import net.barrage.llmao.app.api.http.controllers.agentsRoutes
 import net.barrage.llmao.app.api.http.controllers.authRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
 import net.barrage.llmao.app.api.http.controllers.userRoutes
+import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
-// TODO: Create service state
 fun Application.configureRouting(services: ServiceState) {
   install(Resources)
   routing {
@@ -40,5 +42,18 @@ fun Application.configureRouting(services: ServiceState) {
     userRoutes(services.user)
     adminChatsRoutes(services.chat)
     chatsRoutes(services.chat)
+  }
+}
+
+/**
+ * Utility for quickly obtaining a path segment from a URL and converting it to a UUID. Throws an
+ * [Error] if the UUID is malformed.
+ */
+fun ApplicationCall.pathUuid(param: String): KUUID {
+  val value = parameters[param]
+  try {
+    return KUUID.fromString(value)
+  } catch (e: IllegalArgumentException) {
+    throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID")
   }
 }

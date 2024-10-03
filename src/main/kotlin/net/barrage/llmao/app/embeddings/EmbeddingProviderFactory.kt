@@ -3,7 +3,8 @@ package net.barrage.llmao.app.embeddings
 import io.ktor.server.application.*
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.embeddings.Embedder
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class EmbeddingProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Embedder>() {
   private val azure: AzureEmbedder
@@ -18,7 +19,11 @@ class EmbeddingProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Em
     return when (providerId) {
       azure.id() -> azure
       fembed.id() -> fembed
-      else -> throw apiError("Provider", "Unsupported embedding provider '$providerId'")
+      else ->
+        throw AppError.api(
+          ErrorReason.InvalidProvider,
+          "Unsupported embedding provider '$providerId'",
+        )
     }
   }
 

@@ -5,14 +5,14 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.Error
+import net.barrage.llmao.error.AppError
 
 class Emitter(private val messageResponseFlow: MutableSharedFlow<String>) {
   suspend fun emitChunk(chunk: TokenChunk) {
     messageResponseFlow.emit(chunk.content ?: "")
   }
 
-  suspend fun emitError(error: Error) {
+  suspend fun emitError(error: AppError) {
     messageResponseFlow.emitJson(error)
   }
 

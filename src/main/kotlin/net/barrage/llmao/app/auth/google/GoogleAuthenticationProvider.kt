@@ -10,7 +10,8 @@ import io.ktor.http.*
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.auth.UserInfo
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.utils.Logger
 
 class GoogleAuthenticationProvider(
@@ -39,8 +40,8 @@ class GoogleAuthenticationProvider(
     if (res.status != HttpStatusCode.OK) {
       val errorBody = res.bodyAsText()
       Logger.error("Failed to retrieve token: ${res.status}. Response: $errorBody")
-      throw apiError(
-        "Authentication",
+      throw AppError.api(
+        ErrorReason.Authentication,
         "Failed to retrieve token: ${res.status}. Response: $errorBody",
       )
     }
@@ -52,7 +53,7 @@ class GoogleAuthenticationProvider(
     val isVerified = idToken.getClaim("email_verified")?.asBoolean()
 
     if (isVerified == null || !isVerified) {
-      throw apiError("Authentication", "Email not verified")
+      throw AppError.api(ErrorReason.Authentication, "Email not verified")
     }
 
     val userInfo =

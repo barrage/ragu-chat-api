@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.internalError
+import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.references.SESSIONS
@@ -34,7 +34,7 @@ class SessionRepository {
     // are generating a unique UUID every time, this should never
     // happen.
     if (session == null) {
-      throw internalError()
+      throw AppError.internal()
     }
 
     return session.toSessionData()

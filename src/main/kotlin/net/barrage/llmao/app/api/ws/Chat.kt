@@ -8,7 +8,7 @@ import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.internalError
+import net.barrage.llmao.error.AppError
 
 class Chat(
   private val service: ChatService,
@@ -78,7 +78,7 @@ class Chat(
     } catch (e: Exception) {
       e.printStackTrace()
       streamActive = false
-      emitter.emitError(internalError())
+      emitter.emitError(AppError.internal())
     }
   }
 

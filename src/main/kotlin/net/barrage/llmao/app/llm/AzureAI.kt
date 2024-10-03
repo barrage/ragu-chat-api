@@ -13,7 +13,8 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class AzureAI(
   private val apiKey: String,
@@ -109,7 +110,10 @@ class AzureAI(
 
   private fun getClient(model: String): OpenAI {
     if (!modelMap.containsKey(model)) {
-      throw apiError("Invalid model", "Unsupported LLM '$model'")
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "LLM provider ${id()} does not support model '$model'",
+      )
     }
 
     return OpenAI(

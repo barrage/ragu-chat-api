@@ -20,7 +20,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.Error
+import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.user
 
@@ -114,7 +114,7 @@ fun getAllChats(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving chats"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -139,7 +139,7 @@ fun getMessages(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving messages"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -163,7 +163,7 @@ fun updateTitle(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving chat"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -191,7 +191,7 @@ fun evaluate(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving chat"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -210,7 +210,7 @@ fun deleteChat(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while deleting chat"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }

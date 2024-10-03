@@ -2,7 +2,8 @@ package net.barrage.llmao.app.auth
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 @Serializable
 enum class LoginSource {
@@ -16,7 +17,8 @@ enum class LoginSource {
         "android" -> ANDROID
         "ios" -> IOS
         "web" -> WEB
-        else -> throw apiError("Validation", "Unsupported login source")
+        else ->
+          throw AppError.api(ErrorReason.InvalidParameter, "Unsupported login source '$value'")
       }
     }
   }

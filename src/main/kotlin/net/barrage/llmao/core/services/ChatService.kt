@@ -19,7 +19,8 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorDatabase
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class ChatService(
   private val providers: ProviderState,
@@ -55,7 +56,7 @@ class ChatService(
     val titlePrompt = formatter.title(prompt)
     val agent =
       agentRepository.get(agentId)
-        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
     val llm = providers.llm.getProvider(agent.llmProvider)
     val title =
       llm
@@ -81,7 +82,7 @@ class ChatService(
   ): Flow<List<TokenChunk>> {
     val agent =
       agentRepository.get(agentId)
-        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
 
     val collections = agentRepository.getCollections(agentId)
 
@@ -110,7 +111,7 @@ class ChatService(
   ): String {
     val agent =
       agentRepository.get(agentId)
-        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
 
     val collections = agentRepository.getCollections(agentId)
 
@@ -157,7 +158,7 @@ class ChatService(
   ): String {
     val agent =
       agentRepository.get(agentId)
-        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
 
     val llm = providers.llm.getProvider(agent.llmProvider)
 
@@ -246,7 +247,7 @@ class ChatService(
   fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
     val agent =
       agentRepository.get(agentId)
-        ?: throw apiError("Entity not found", "Agent with ID '$agentId' does not exist")
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
     val text = history.joinToString("\n") { it.content }
     return getEncoder(agent.model).encode(text).size()
   }
@@ -258,7 +259,7 @@ class ChatService(
         return registry.getEncodingForModel(type)
       }
     }
-    throw apiError("Invalid model", "Cannot find tokenizer for model '$llm'")
+    throw AppError.api(ErrorReason.InvalidParameter, "Cannot find tokenizer for model '$llm'")
   }
 
   private suspend fun embedQuery(provider: String, model: String, input: String): List<Double> {

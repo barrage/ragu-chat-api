@@ -2,8 +2,8 @@ package net.barrage.llmao.app.api.ws
 
 import io.ktor.server.plugins.*
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.apiError
-import net.barrage.llmao.error.internalError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class Server(private val factory: ChatFactory) {
   private val chats: MutableMap<KUUID, Chat> = mutableMapOf()
@@ -13,23 +13,9 @@ class Server(private val factory: ChatFactory) {
   }
 
   suspend fun handleMessage(userId: KUUID, message: ClientMessage, emitter: Emitter) {
-    println(userId)
-    try {
-      when (message) {
-        is ClientMessage.Chat -> handleChatMessage(emitter, userId, message.text)
-        is ClientMessage.System -> handleSystemMessage(emitter, userId, message.payload)
-      }
-    } catch (e: Exception) {
-      when (e) {
-        is NoSuchElementException -> emitter.emitError(apiError("Not Found", e.message))
-        is NotFoundException -> emitter.emitError(apiError("Not Found", e.message))
-        is IllegalArgumentException -> emitter.emitError(apiError("Bad Request", e.message))
-        is BadRequestException -> emitter.emitError(apiError("Bad Request", e.message))
-        else -> {
-          e.printStackTrace()
-          emitter.emitError(internalError())
-        }
-      }
+    when (message) {
+      is ClientMessage.Chat -> handleChatMessage(emitter, userId, message.text)
+      is ClientMessage.System -> handleSystemMessage(emitter, userId, message.payload)
     }
   }
 
@@ -37,12 +23,14 @@ class Server(private val factory: ChatFactory) {
     val chat = chats[userId]
 
     if (chat == null) {
-      emitter.emitError(apiError("Bad Request", "Have you opened a chat?"))
+      emitter.emitError(
+        AppError.api(ErrorReason.Websocket, "Unable to process message, have you opened a chat?")
+      )
       return
     }
 
     if (chat.isStreaming()) {
-      emitter.emitError(apiError("Bad Request", "Stream already active"))
+      emitter.emitError(AppError.api(ErrorReason.Websocket, "Stream already active"))
     }
 
     chat.stream(message, emitter)

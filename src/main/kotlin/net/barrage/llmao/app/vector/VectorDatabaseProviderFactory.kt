@@ -3,7 +3,8 @@ package net.barrage.llmao.app.vector
 import io.ktor.server.application.*
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.vector.VectorDatabase
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class VectorDatabaseProviderFactory(env: ApplicationEnvironment) :
   ProviderFactory<VectorDatabase>() {
@@ -16,7 +17,11 @@ class VectorDatabaseProviderFactory(env: ApplicationEnvironment) :
   override fun getProvider(providerId: String): VectorDatabase {
     return when (providerId) {
       weaviate.id() -> weaviate
-      else -> throw apiError("Provider", "Unsupported vector database provider '$providerId'")
+      else ->
+        throw AppError.api(
+          ErrorReason.InvalidProvider,
+          "Unsupported vector database provider '$providerId'",
+        )
     }
   }
 

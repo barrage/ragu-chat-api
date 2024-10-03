@@ -6,7 +6,8 @@ import net.barrage.llmao.core.AuthenticationFactory
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.env
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class AuthenticationProviderFactory(env: ApplicationEnvironment) : AuthenticationFactory() {
   private val google: GoogleAuthenticationProvider
@@ -18,7 +19,8 @@ class AuthenticationProviderFactory(env: ApplicationEnvironment) : Authenticatio
   override fun getProvider(providerId: String): AuthenticationProvider {
     return when (providerId) {
       google.id() -> google
-      else -> throw apiError("Provider", "Unsupported auth provider '$providerId'")
+      else ->
+        throw AppError.api(ErrorReason.InvalidProvider, "Unsupported auth provider '$providerId'")
     }
   }
 

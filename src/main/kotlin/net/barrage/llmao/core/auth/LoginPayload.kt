@@ -2,7 +2,8 @@ package net.barrage.llmao.core.auth
 
 import io.ktor.http.*
 import net.barrage.llmao.app.auth.LoginSource
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class LoginPayload(
   val code: String,
@@ -20,23 +21,23 @@ class LoginPayload(
       val redirectUri = form["redirect_uri"]
 
       if (code.isNullOrBlank()) {
-        throw apiError("Validation", "Missing authorization code")
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing authorization code")
       }
 
       if (grantType.isNullOrBlank()) {
-        throw apiError("Validation", "Missing grant type")
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing grant type")
       }
 
       if (redirectUri.isNullOrBlank()) {
-        throw apiError("Validation", "Missing redirect URI")
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing redirect URI")
       }
 
       if (provider.isNullOrBlank()) {
-        throw apiError("Validation", "Missing auth provider")
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing auth provider")
       }
 
       if (source.isNullOrBlank()) {
-        throw apiError("Validation", "Missing login source")
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing login source")
       }
 
       return LoginPayload(code, grantType, redirectUri, provider, LoginSource.tryFromString(source))

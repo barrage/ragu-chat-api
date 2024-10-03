@@ -2,7 +2,8 @@ package net.barrage.llmao.core.models.common
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 @Serializable
 enum class Language(val language: String) {
@@ -14,7 +15,7 @@ enum class Language(val language: String) {
       return when (value) {
         "cro" -> CRO
         "eng" -> ENG
-        else -> throw apiError("Unsupported language", "Language '$value' not supported")
+        else -> throw AppError.api(ErrorReason.InvalidParameter, "Language '$value' not supported")
       }
     }
   }

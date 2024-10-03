@@ -9,7 +9,8 @@ import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 class AuthenticationService(
   private val providers: AuthenticationProviderFactory,
@@ -27,7 +28,10 @@ class AuthenticationService(
 
     val user =
       userRepo.getByEmail(userInfo.email)
-        ?: throw apiError("Entity not found", "User '${userInfo.email}' does not exist")
+        ?: throw AppError.api(
+          ErrorReason.EntityDoesNotExist,
+          "User '${userInfo.email}' does not exist",
+        )
 
     return sessionRepo.create(sessionId, user.id)
   }

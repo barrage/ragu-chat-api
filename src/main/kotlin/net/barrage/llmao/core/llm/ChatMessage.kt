@@ -3,6 +3,8 @@ package net.barrage.llmao.core.llm
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 data class ChatMessage(
   val role: String,
@@ -12,11 +14,11 @@ data class ChatMessage(
   val responseTo: KUUID? = null,
 ) {
   fun toOpenAiChatMessage(): OpenAIChatMessage {
-    return when (this.role) {
-      "user" -> OpenAIChatMessage.User(this.content)
-      "assistant" -> OpenAIChatMessage.Assistant(this.content)
-      "system" -> OpenAIChatMessage.System(this.content)
-      else -> throw InternalError("Unknown role")
+    return when (role) {
+      "user" -> OpenAIChatMessage.User(content)
+      "assistant" -> OpenAIChatMessage.Assistant(content)
+      "system" -> OpenAIChatMessage.System(content)
+      else -> throw AppError.api(ErrorReason.InvalidParameter, "Invalid message role '$role'")
     }
   }
 

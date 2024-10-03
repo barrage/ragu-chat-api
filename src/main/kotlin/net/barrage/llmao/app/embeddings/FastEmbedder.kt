@@ -7,7 +7,8 @@ import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.core.httpClient
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 private enum class FembedModel(val value: String) {
   AllMiniL6("Qdrant/all-MiniLM-L6-v2-onnx"),
@@ -45,8 +46,8 @@ class FastEmbedder(private val endpoint: String) : Embedder {
 
   override suspend fun embed(input: String, model: String): List<Double> {
     FembedModel.tryFromString(model)
-      ?: throw apiError(
-        "Invalid embedding model",
+      ?: throw AppError.api(
+        ErrorReason.InvalidParameter,
         "Embedder '${id()}' does not support model '$model'",
       )
     val request = EmbeddingRequest(listOf(input), model)

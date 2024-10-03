@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.error.apiError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.user
 
 fun Application.websocketServer(server: Server) {
@@ -43,7 +44,7 @@ fun Application.websocketServer(server: Server) {
                 message = Json.decodeFromString(frame.readText())
               } catch (e: Throwable) {
                 e.printStackTrace()
-                sendJson(apiError("Unprocessable Entity", "Message format malformed"))
+                sendJson(AppError.api(ErrorReason.InvalidParameter, "Message format malformed"))
                 continue
               }
 
@@ -58,7 +59,7 @@ fun Application.websocketServer(server: Server) {
             }
 
             else -> {
-              sendJson(apiError("Invalid message format", "Only text messages are allowed"))
+              sendJson(AppError.api(ErrorReason.InvalidParameter, "Only text messages are allowed"))
             }
           }
         }

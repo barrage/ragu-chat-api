@@ -14,7 +14,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.Error
+import net.barrage.llmao.error.AppError
 
 @Resource("agents")
 class AgentController(val pagination: PaginationSort) {
@@ -71,7 +71,7 @@ fun getAllAgents(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving agents"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -90,7 +90,7 @@ fun getAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving agent"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }
@@ -109,7 +109,7 @@ fun defaultAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while setting default agent"
-        body<List<Error>> {}
+        body<List<AppError>> {}
       }
   }
 }

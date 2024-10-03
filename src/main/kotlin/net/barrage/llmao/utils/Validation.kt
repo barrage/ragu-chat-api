@@ -38,7 +38,7 @@ annotation class Range(
   val min: Double = Double.MAX_VALUE * -1,
   val max: Double = Double.MAX_VALUE,
   val code: String = "range",
-  val message: String = "Value is not within specified range",
+  val message: String = "",
 )
 
 /**
@@ -125,7 +125,11 @@ private fun validateInternal(
       return if (validateRange(value, annotation.min, annotation.max)) {
         null
       } else {
-        listOf(ValidationError(annotation.code, annotation.message, fieldName))
+        val message =
+          annotation.message.ifBlank {
+            "Value must be in range ${annotation.min} - ${annotation.max}"
+          }
+        listOf(ValidationError(annotation.code, message, fieldName))
       }
     }
     else -> {
@@ -151,7 +155,7 @@ fun MutableList<ValidationError>.addSchemaErr(code: String = "schema", message: 
 }
 
 private fun validateEmail(email: String): Boolean {
-  return email.isNotBlank() && email.matches(Regex("^[\\w\\-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$"))
+  return email.isNotBlank() && email.matches(Regex("^[\\w\\-.]+@([\\w-]+\\.)+[\\w-]{2,4}$"))
 }
 
 private fun validateNotBlank(param: String): Boolean {
