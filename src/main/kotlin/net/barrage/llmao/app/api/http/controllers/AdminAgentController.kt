@@ -9,8 +9,10 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.util.*
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentWithCollections
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
@@ -93,13 +95,16 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve an agent by ID"
   request {
-    pathParameter<KUUID>("id") {
+    pathParameter<UUID>("id") {
       description = "Agent ID"
-      example("default") { value = 1 }
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
   }
   response {
-    HttpStatusCode.OK to { body<Agent> { description = "An Agent object representing the agent" } }
+    HttpStatusCode.OK to
+      {
+        body<AgentWithCollections> { description = "An Agent object with its collections" }
+      }
     HttpStatusCode.NotFound to
       {
         description = "Agent not found"
@@ -116,7 +121,12 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
 private fun createAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Create a new agent"
-  request { body<CreateAgent> { description = "New agent object" } }
+  request {
+    body<CreateAgent> {
+      description = "New agent object"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
   response {
     HttpStatusCode.Created to
       {
@@ -134,9 +144,9 @@ private fun updateAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent"
   request {
-    pathParameter<KUUID>("id") {
+    pathParameter<UUID>("id") {
       description = "Agent ID"
-      example("default") { value = 1 }
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
     body<UpdateAgent> { description = "Updated agent object" }
   }
@@ -160,7 +170,7 @@ private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
   request {
     pathParameter<KUUID>("id") {
       description = "Agent ID"
-      example("default") { value = 1 }
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
     body<UpdateCollections> {
       description = "The updated collections for the agent"
@@ -168,7 +178,6 @@ private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
     }
   }
 
-  // Define the response
   response {
     HttpStatusCode.OK to { description = "Collections updated successfully" }
     HttpStatusCode.BadRequest to

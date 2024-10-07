@@ -22,19 +22,10 @@ import net.barrage.llmao.error.ErrorReason
 
 fun Application.configureRouting(services: ServiceState) {
   install(Resources)
+
   routing {
-    get(
-      "__health",
-      {
-        tags("health")
-        description = "Endpoint to check system health"
-        response {
-          HttpStatusCode.OK to { description = "Health check successful. No body content." }
-        }
-      },
-    ) {
-      call.respond(HttpStatusCode.OK)
-    }
+    // K8S specific route
+    get("__health") { call.respond(HttpStatusCode.OK) }
 
     authRoutes(services.auth)
     openApiRoutes()

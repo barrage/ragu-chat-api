@@ -9,6 +9,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentWithCollections
 import net.barrage.llmao.core.models.common.CountedList
@@ -39,28 +40,7 @@ fun Route.agentsRoutes(agentService: AgentService) {
 private fun getAllAgents(): OpenApiRoute.() -> Unit = {
   tags("agents")
   description = "Retrieve list of all agents"
-  request {
-    queryParameter<Int>("page") {
-      description = "Page number for pagination"
-      required = false
-      example("default") { value = 1 }
-    }
-    queryParameter<Int>("size") {
-      description = "Number of items per page"
-      required = false
-      example("default") { value = 10 }
-    }
-    queryParameter<String>("sortBy") {
-      description = "Sort by field"
-      required = false
-      example("default") { value = "name" }
-    }
-    queryParameter<String>("sortOrder") {
-      description = "Sort order (asc or desc)"
-      required = false
-      example("default") { value = "asc" }
-    }
-  }
+  request { queryPagination() }
   response {
     HttpStatusCode.OK to
       {
@@ -82,7 +62,7 @@ private fun getAgent(): OpenApiRoute.() -> Unit = {
   request {
     pathParameter<KUUID>("id") {
       description = "Agent ID"
-      example("default") { value = 1 }
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
   }
   response {
