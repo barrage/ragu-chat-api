@@ -49,6 +49,9 @@ fun AgentsRecord.toAgent() =
   )
 
 @Serializable
+data class AgentWithCollections(val agent: Agent, val collections: List<AgentCollection>)
+
+@Serializable
 data class CreateAgent(
   @NotBlank val name: String,
   @NotBlank val description: String?,
@@ -89,11 +92,11 @@ data class UpdateAgent(
     when (Pair(embeddingProvider == null, embeddingModel == null)) {
       Pair(false, true) ->
         errors.addSchemaErr(
-          message = "`embeddingProvider` must be specified when passing `embeddingModel`"
+          message = "`embeddingModel` must be specified when passing `embeddingProvider`"
         )
       Pair(true, false) ->
         errors.addSchemaErr(
-          message = "`embeddingModel` must be specified when passing `embeddingProvider`"
+          message = "`embeddingProvider` must be specified when passing `embeddingModel`"
         )
     }
     return errors

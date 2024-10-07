@@ -9,7 +9,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.AgentWithCollections
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
@@ -29,7 +29,7 @@ fun Route.agentsRoutes(agentService: AgentService) {
     }
 
     get<AgentController.Agent>(getAgent()) {
-      val agent: Agent = agentService.get(it.id)
+      val agent = agentService.get(it.id)
       call.respond(HttpStatusCode.OK, agent)
     }
   }
@@ -80,35 +80,19 @@ fun getAgent(): OpenApiRoute.() -> Unit = {
   tags("agents")
   description = "Retrieve agent by ID"
   request {
-    pathParameter<Int>("id") {
+    pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("default") { value = 1 }
     }
   }
   response {
-    HttpStatusCode.OK to { body<Agent> { description = "An Agent object representing the agent" } }
+    HttpStatusCode.OK to
+      {
+        body<AgentWithCollections> { description = "An Agent object representing the agent" }
+      }
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving agent"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-fun defaultAgent(): OpenApiRoute.() -> Unit = {
-  tags("agents")
-  description = "Set default agent"
-  request {
-    pathParameter<Int>("id") {
-      description = "Agent ID"
-      example("default") { value = 1 }
-    }
-  }
-  response {
-    HttpStatusCode.OK to { body<User> { description = "An User object representing the user" } }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while setting default agent"
         body<List<AppError>> {}
       }
   }

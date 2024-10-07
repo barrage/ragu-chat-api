@@ -28,7 +28,7 @@ fun Application.module() {
   val state = ApplicationState(environment)
   val services = ServiceState(state)
 
-  val chatFactory = ChatFactory(state.providers, services.agent, services.chat)
+  val chatFactory = ChatFactory(services.agent, services.chat)
   val websocketServer = Server(chatFactory)
 
   configureSerialization()

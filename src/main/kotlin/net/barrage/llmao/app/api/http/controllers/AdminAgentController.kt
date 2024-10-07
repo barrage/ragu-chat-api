@@ -10,14 +10,17 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
+import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.queryParam
 
@@ -33,23 +36,32 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
 
       post(createAgent()) {
         val newAgent: CreateAgent = call.receive()
-        val agent: Agent = agentService.create(newAgent)
+        val agent = agentService.create(newAgent)
         call.respond(HttpStatusCode.Created, agent)
       }
     }
 
     route("/admin/agents/{id}") {
       get(adminGetAgent()) {
-        val id = KUUID.fromString(call.parameters["id"])
-        val agent: Agent = agentService.get(id)
+        val id = call.pathUuid("id")
+        val agent = agentService.get(id)
         call.respond(HttpStatusCode.OK, agent)
       }
 
       put(updateAgent()) {
-        val agentId = KUUID.fromString(call.parameters["id"])
+        val agentId = call.pathUuid("id")
         val updatedAgent: UpdateAgent = call.receive()
-        val agent: Agent = agentService.update(agentId, updatedAgent)
+        val agent = agentService.update(agentId, updatedAgent)
         call.respond(HttpStatusCode.OK, agent)
+      }
+    }
+
+    route("/admin/agents/{id}/collections") {
+      put(updateAgentCollections()) {
+        val agentId = call.pathUuid("id")
+        val update: UpdateCollections = call.receive()
+        agentService.updateCollections(agentId, update)
+        call.respond(HttpStatusCode.OK)
       }
     }
   }
@@ -60,26 +72,7 @@ fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve list of all agents"
   request {
-    queryParameter<Int>("page") {
-      description = "Page number for pagination"
-      required = false
-      example("default") { value = 1 }
-    }
-    queryParameter<Int>("size") {
-      description = "Number of items per page"
-      required = false
-      example("default") { value = 10 }
-    }
-    queryParameter<String>("sortBy") {
-      description = "Sort by field"
-      required = false
-      example("default") { value = "name" }
-    }
-    queryParameter<String>("sortOrder") {
-      description = "Sort order (asc or desc)"
-      required = false
-      example("default") { value = "asc" }
-    }
+    queryPagination()
     queryParameter<Boolean>("showDeactivated") {
       description = "Show deactivated agents"
       required = false
@@ -105,7 +98,7 @@ fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve an agent by ID"
   request {
-    pathParameter<Int>("id") {
+    pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("default") { value = 1 }
     }
@@ -146,7 +139,7 @@ fun updateAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent"
   request {
-    pathParameter<Int>("id") {
+    pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("default") { value = 1 }
     }
@@ -160,6 +153,37 @@ fun updateAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating agent"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents")
+  description = "Update an agent's collections"
+
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("default") { value = 1 }
+    }
+    body<UpdateCollections> {
+      description = "The updated collections for the agent"
+      required = true
+    }
+  }
+
+  // Define the response
+  response {
+    HttpStatusCode.OK to { description = "Collections updated successfully" }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid input or agent ID"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while updating collections"
         body<List<AppError>> {}
       }
   }

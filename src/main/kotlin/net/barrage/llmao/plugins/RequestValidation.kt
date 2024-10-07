@@ -6,6 +6,7 @@ import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateAgent
+import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 
@@ -16,6 +17,7 @@ fun Application.configureRequestValidation() {
     // Agent DTOs validations
     validate<CreateAgent>(CreateAgent::validate)
     validate<UpdateAgent>(UpdateAgent::validate)
+    validate<UpdateCollections>(UpdateCollections::validate)
 
     // User DTOs validations
     validate<CreateUser>(CreateUser::validate)
