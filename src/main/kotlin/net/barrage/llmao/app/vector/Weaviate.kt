@@ -6,6 +6,7 @@ import io.weaviate.client.WeaviateClient
 import io.weaviate.client.v1.graphql.query.argument.NearVectorArgument
 import io.weaviate.client.v1.graphql.query.fields.Field
 import net.barrage.llmao.core.vector.VectorDatabase
+import net.barrage.llmao.utils.Logger
 
 class Weaveiate(scheme: String, host: String) : VectorDatabase {
   private val client: WeaviateClient = WeaviateClient(Config(scheme, host))
@@ -19,7 +20,9 @@ class Weaveiate(scheme: String, host: String) : VectorDatabase {
 
     val results = mutableListOf<String>()
 
-    for ((collection, amount) in options) {
+    for ((collectionName, amount) in options) {
+      val collection = toWeaviateClassName(collectionName)
+
       val query =
         client
           .graphQL()
@@ -61,6 +64,9 @@ class Weaveiate(scheme: String, host: String) : VectorDatabase {
         continue
       }
 
+      Logger.debug("Query in '$collection' ($amount results):")
+      Logger.debug("$collectionData")
+
       for (item in collectionData) {
         (item as? Map<*, *>)?.let {
           val content = it["content"] as String
@@ -70,5 +76,16 @@ class Weaveiate(scheme: String, host: String) : VectorDatabase {
     }
 
     return results
+  }
+
+  override fun validateCollection(name: String): Boolean {
+    println(toWeaviateClassName(name))
+    val result = client.schema().exists().withClassName(toWeaviateClassName(name)).run()
+    return result.result
+  }
+
+  /** Necessary because weaviate capitalizes all class names. */
+  private fun toWeaviateClassName(name: String): String {
+    return name.replaceFirstChar { it.uppercaseChar() }
   }
 }

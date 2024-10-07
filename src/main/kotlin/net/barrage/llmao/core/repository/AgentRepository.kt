@@ -1,14 +1,19 @@
 package net.barrage.llmao.core.repository
 
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentCollection
+import net.barrage.llmao.core.models.AgentWithCollections
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
+import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toAgent
-import net.barrage.llmao.core.models.toCollectionParams
+import net.barrage.llmao.core.models.toCollection
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
@@ -41,8 +46,14 @@ class AgentRepository {
     return CountedList(total, agents)
   }
 
-  fun get(id: KUUID): Agent? {
-    return dslContext.selectFrom(AGENTS).where(AGENTS.ID.eq(id)).fetchOne(AgentsRecord::toAgent)
+  fun get(id: KUUID): AgentWithCollections {
+    val agent =
+      dslContext.selectFrom(AGENTS).where(AGENTS.ID.eq(id)).fetchOne(AgentsRecord::toAgent)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
+
+    val collections = getCollections(id)
+
+    return AgentWithCollections(agent, collections)
   }
 
   fun create(newAgent: CreateAgent): Agent? {
@@ -82,13 +93,38 @@ class AgentRepository {
       .fetchOne(AgentsRecord::toAgent)
   }
 
-  fun getCollections(id: KUUID): List<Pair<String, Int>> {
+  fun updateCollections(agentId: KUUID, update: UpdateCollections) {
+    val insertQuery =
+      dslContext.batch(
+        update.add.map { (name, amount) ->
+          dslContext
+            .insertInto(AGENT_COLLECTIONS)
+            .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
+            .set(AGENT_COLLECTIONS.COLLECTION, name)
+            .set(AGENT_COLLECTIONS.AMOUNT, amount)
+            .onConflict(AGENT_COLLECTIONS.AGENT_ID, AGENT_COLLECTIONS.COLLECTION)
+            .doUpdate()
+            .set(AGENT_COLLECTIONS.AMOUNT, amount)
+        }
+      )
+
+    insertQuery.execute()
+
+    dslContext
+      .deleteFrom(AGENT_COLLECTIONS)
+      .where(
+        AGENT_COLLECTIONS.AGENT_ID.eq(agentId).and(AGENT_COLLECTIONS.COLLECTION.`in`(update.remove))
+      )
+      .execute()
+  }
+
+  fun getCollections(id: KUUID): List<AgentCollection> {
     val collections =
       dslContext
         .selectFrom(AGENT_COLLECTIONS)
         .where(AGENT_COLLECTIONS.AGENT_ID.eq(id))
         .fetchInto(AgentCollectionsRecord::class.java)
-    return collections.map { it.toCollectionParams() }
+    return collections.map { it.toCollection() }
   }
 
   private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {

@@ -10,6 +10,7 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.Message
@@ -54,13 +55,14 @@ class ChatService(
     agentId: KUUID,
   ): String {
     val titlePrompt = formatter.title(prompt)
-    val agent =
-      agentRepository.get(agentId)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
-    val llm = providers.llm.getProvider(agent.llmProvider)
+    val agentFull = agentRepository.get(agentId)
+    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
     val title =
       llm
-        .generateChatTitle(titlePrompt, LlmConfig(agent.model, agent.temperature, agent.language))
+        .generateChatTitle(
+          titlePrompt,
+          LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
+        )
         .trim()
     chatRepo.updateTitle(chatId, title) ?: throw NotFoundException("Chat not found")
     return title
@@ -80,14 +82,12 @@ class ChatService(
     agentId: KUUID,
     formatter: PromptFormatter,
   ): Flow<List<TokenChunk>> {
-    val agent =
-      agentRepository.get(agentId)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+    val agentFull = agentRepository.get(agentId)
 
     val collections = agentRepository.getCollections(agentId)
 
-    val vectorDb = providers.vector.getProvider(agent.vectorProvider)
-    val llm = providers.llm.getProvider(agent.llmProvider)
+    val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
+    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
 
     val query =
       prepareChatPrompt(
@@ -96,11 +96,14 @@ class ChatService(
         formatter,
         collections,
         vectorDb,
-        agent.embeddingProvider,
-        agent.embeddingModel,
+        agentFull.agent.embeddingProvider,
+        agentFull.agent.embeddingModel,
       )
 
-    return llm.completionStream(query, LlmConfig(agent.model, agent.temperature, agent.language))
+    return llm.completionStream(
+      query,
+      LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
+    )
   }
 
   suspend fun chatCompletion(
@@ -109,14 +112,12 @@ class ChatService(
     agentId: KUUID,
     formatter: PromptFormatter,
   ): String {
-    val agent =
-      agentRepository.get(agentId)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+    val agentFull = agentRepository.get(agentId)
 
     val collections = agentRepository.getCollections(agentId)
 
-    val vectorDb = providers.vector.getProvider(agent.vectorProvider)
-    val llm = providers.llm.getProvider(agent.llmProvider)
+    val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
+    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
 
     val query =
       prepareChatPrompt(
@@ -125,11 +126,14 @@ class ChatService(
         formatter,
         collections,
         vectorDb,
-        agent.embeddingProvider,
-        agent.embeddingModel,
+        agentFull.agent.embeddingProvider,
+        agentFull.agent.embeddingModel,
       )
 
-    return llm.chatCompletion(query, LlmConfig(agent.model, agent.temperature, agent.language))
+    return llm.chatCompletion(
+      query,
+      LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
+    )
   }
 
   fun processMessagePair(
@@ -156,11 +160,9 @@ class ChatService(
     formatter: PromptFormatter,
     agentId: KUUID,
   ): String {
-    val agent =
-      agentRepository.get(agentId)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+    val agentFull = agentRepository.get(agentId)
 
-    val llm = providers.llm.getProvider(agent.llmProvider)
+    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
 
     val conversation =
       history.joinToString("\n") {
@@ -179,7 +181,7 @@ class ChatService(
     val summary =
       llm.summarizeConversation(
         summaryPrompt,
-        LlmConfig(agent.model, agent.temperature, agent.language),
+        LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
       )
 
     chatRepo.insertSystemMessage(chatId, summary)
@@ -191,7 +193,7 @@ class ChatService(
     prompt: String,
     history: List<ChatMessage>,
     formatter: PromptFormatter,
-    queryOptions: List<Pair<String, Int>>,
+    collections: List<AgentCollection>,
     vectorDb: VectorDatabase,
     embeddingProvider: String,
     embeddingModel: String,
@@ -200,6 +202,7 @@ class ChatService(
 
     val embedded = embedQuery(embeddingProvider, embeddingModel, prompt)
 
+    val queryOptions = collections.map { Pair(it.collection, it.amount) }
     val relatedChunks = vectorDb.query(embedded, queryOptions)
 
     val context = relatedChunks.joinToString("\n")
@@ -245,11 +248,9 @@ class ChatService(
   }
 
   fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
-    val agent =
-      agentRepository.get(agentId)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+    val agentFull = agentRepository.get(agentId)
     val text = history.joinToString("\n") { it.content }
-    return getEncoder(agent.model).encode(text).size()
+    return getEncoder(agentFull.agent.model).encode(text).size()
   }
 
   private fun getEncoder(llm: String): Encoding {
