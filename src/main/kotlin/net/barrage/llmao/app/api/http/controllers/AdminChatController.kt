@@ -11,6 +11,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
@@ -60,28 +61,7 @@ fun Route.adminChatsRoutes(service: ChatService) {
 private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve list of all chats"
-  request {
-    queryParameter<Int>("page") {
-      description = "Page number for pagination"
-      required = false
-      example("default") { value = 1 }
-    }
-    queryParameter<Int>("size") {
-      description = "Number of items per page"
-      required = false
-      example("default") { value = 10 }
-    }
-    queryParameter<String>("sortBy") {
-      description = "Sort by field"
-      required = false
-      example("default") { value = "createdAt" }
-    }
-    queryParameter<String>("sortOrder") {
-      description = "Sort order (asc or desc)"
-      required = false
-      example("default") { value = "asc" }
-    }
-  }
+  request { queryPagination() }
   response {
     HttpStatusCode.OK to
       {
