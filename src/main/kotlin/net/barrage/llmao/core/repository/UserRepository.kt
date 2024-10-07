@@ -64,19 +64,18 @@ class UserRepository {
   }
 
   fun updateFull(id: UUID, update: UpdateUserAdmin): User {
-    var updateQuery =
-      dslContext
-        .update(USERS)
-        .set(USERS.FULL_NAME, DSL.coalesce(DSL.`val`(update.fullName), USERS.FULL_NAME))
-        .set(USERS.FIRST_NAME, DSL.coalesce(DSL.`val`(update.firstName), USERS.FIRST_NAME))
-        .set(USERS.LAST_NAME, DSL.coalesce(DSL.`val`(update.lastName), USERS.LAST_NAME))
-        .set(USERS.EMAIL, DSL.coalesce(DSL.`val`(update.email), USERS.EMAIL))
-
-    update.role?.let {
-      updateQuery = updateQuery.set(USERS.ROLE, DSL.coalesce(DSL.`val`(it.name), USERS.ROLE))
-    }
-
-    return updateQuery.where(USERS.ID.eq(id)).returning().fetchOne(UsersRecord::toUser)!!
+    // TODO: Yelling
+    return dslContext
+      .update(USERS)
+      .set(USERS.FULL_NAME, DSL.coalesce(DSL.`val`(update.fullName), USERS.FULL_NAME))
+      .set(USERS.FIRST_NAME, DSL.coalesce(DSL.`val`(update.firstName), USERS.FIRST_NAME))
+      .set(USERS.LAST_NAME, DSL.coalesce(DSL.`val`(update.lastName), USERS.LAST_NAME))
+      .set(USERS.EMAIL, DSL.coalesce(DSL.`val`(update.email), USERS.EMAIL))
+      .set(USERS.ACTIVE, DSL.coalesce(DSL.`val`(update.active), USERS.ACTIVE))
+      .set(USERS.ROLE, DSL.coalesce(DSL.`val`(update.role?.name), USERS.ROLE))
+      .where(USERS.ID.eq(id))
+      .returning()
+      .fetchOne(UsersRecord::toUser)!!
   }
 
   fun setActiveStatus(id: UUID, status: Boolean): Int {

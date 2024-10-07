@@ -1,17 +1,17 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.post
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
+import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
@@ -20,94 +20,51 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-
-@Resource("admin/users")
-class AdminUserController(val pagination: PaginationSort = PaginationSort()) {
-  @Resource("{id}")
-  class User(val parent: AdminUserController, val id: KUUID) {
-    @Resource("activate") class Activate(val parent: User)
-
-    @Resource("deactivate") class Deactivate(val parent: User)
-  }
-}
+import net.barrage.llmao.plugins.pathUuid
+import net.barrage.llmao.plugins.query
 
 fun Route.adminUserRoutes(userService: UserService) {
-  // Unprotected routes for that sweet development efficiency
-  if (application.environment.config.property("ktor.environment").getString() == "development") {
-    post("/dev/users") {
-      val newUser = call.receive<CreateUser>()
-      val user = userService.create(newUser)
-      call.respond(user)
-    }
-  }
-
-  authenticate("auth-session-admin") {
-    get<AdminUserController>(adminGetAllUsers()) {
-      print(it.pagination)
-      val users = userService.getAll(it.pagination)
+  route("/admin/users") {
+    get(adminGetAllUsers()) {
+      val pagination = call.query(PaginationSort::class)
+      val users = userService.getAll(pagination)
       call.respond(HttpStatusCode.OK, users)
     }
 
-    get<AdminUserController.User>(adminGetUser()) {
-      val user = userService.get(it.id)
-      call.respond(HttpStatusCode.OK, user)
-    }
-
-    post<AdminUserController>(createUser()) {
+    post(createUser()) {
       val newUser: CreateUser = call.receive<CreateUser>()
       val user = userService.create(newUser)
       call.respond(HttpStatusCode.Created, user)
     }
 
-    put<AdminUserController.User>(adminUpdateUser()) {
-      val updateUser = call.receive<UpdateUserAdmin>()
-      val user = userService.updateAdmin(it.id, updateUser)
-      call.respond(HttpStatusCode.OK, user)
-    }
+    route("/{id}") {
+      get(adminGetUser()) {
+        val userId = call.pathUuid("id")
+        val user = userService.get(userId)
+        call.respond(HttpStatusCode.OK, user)
+      }
 
-    put<AdminUserController.User.Activate>(setActiveStatus()) {
-      userService.setActiveStatus(it.parent.id, true)
-      call.respond(HttpStatusCode.OK)
-    }
+      put(adminUpdateUser()) {
+        val userId = call.pathUuid("id")
+        val updateUser = call.receive<UpdateUserAdmin>()
+        val user = userService.updateAdmin(userId, updateUser)
+        call.respond(HttpStatusCode.OK, user)
+      }
 
-    put<AdminUserController.User.Deactivate>(setActiveStatus()) {
-      userService.setActiveStatus(it.parent.id, false)
-      call.respond(HttpStatusCode.OK)
-    }
-
-    delete<AdminUserController.User>(deleteUser()) {
-      userService.delete(it.id)
-      call.respond(HttpStatusCode.NoContent)
+      delete(deleteUser()) {
+        val userId = call.pathUuid("id")
+        userService.delete(userId)
+        call.respond(HttpStatusCode.NoContent)
+      }
     }
   }
 }
 
 // OpenAPI documentation
-fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
+private fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
   description = "Retrieve list of all users"
-  request {
-    queryParameter<Int>("page") {
-      description = "Page number for pagination"
-      required = false
-      example("default") { value = 1 }
-    }
-    queryParameter<Int>("size") {
-      description = "Number of items per page"
-      required = false
-      example("default") { value = 10 }
-    }
-    queryParameter<String>("sortBy") {
-      description = "Sort by field"
-      required = false
-      example("default") { value = "lastName" }
-    }
-    queryParameter<String>("sortOrder") {
-      description = "Sort order (asc or desc)"
-      required = false
-      example("default") { value = "asc" }
-    }
-  }
+  request { queryPagination() }
   response {
     HttpStatusCode.OK to
       {
@@ -122,11 +79,11 @@ fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun adminGetUser(): OpenApiRoute.() -> Unit = {
+private fun adminGetUser(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
   description = "Retrieve user by ID"
   request {
-    pathParameter<String>("id") {
+    pathParameter<KUUID>("id") {
       description = "User ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -163,11 +120,11 @@ private fun createUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun adminUpdateUser(): OpenApiRoute.() -> Unit = {
+private fun adminUpdateUser(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
   description = "Update user"
   request {
-    pathParameter<String>("id") {
+    pathParameter<KUUID>("id") {
       description = "User ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -187,34 +144,11 @@ fun adminUpdateUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun setActiveStatus(): OpenApiRoute.() -> Unit = {
-  tags("admin/users")
-  description = "Set user active status"
-  request {
-    pathParameter<String>("id") {
-      description = "User ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-  }
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "User activated successfully"
-        body<User>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while activating user"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-fun deleteUser(): OpenApiRoute.() -> Unit = {
+private fun deleteUser(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
   description = "Delete user"
   request {
-    pathParameter<String>("id") {
+    pathParameter<KUUID>("id") {
       description = "User ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }

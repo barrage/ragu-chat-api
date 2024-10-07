@@ -1,13 +1,11 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.patch
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.patch
+import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.ktor.http.*
-import io.ktor.resources.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -20,70 +18,46 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-
-@Resource("/admin/chats")
-class AdminChatController(val pagination: PaginationSort) {
-  @Resource("/{id}")
-  class Chat(val parent: AdminChatController, val id: KUUID) {
-    @Resource("/messages")
-    class Messages(val parent: Chat) {
-      @Resource("/{messageId}") class Message(val parent: Messages, val messageId: KUUID)
-    }
-
-    @Resource("title") class Title(val parent: Chat)
-  }
-}
+import net.barrage.llmao.plugins.pathUuid
+import net.barrage.llmao.plugins.query
 
 fun Route.adminChatsRoutes(service: ChatService) {
-  authenticate("auth-session-admin") {
-    get<AdminChatController>(adminGetAllChats()) {
-      val chats = service.listChats(it.pagination)
+  route("/admin/chats") {
+    get(adminGetAllChats()) {
+      val pagination = call.query(PaginationSort::class)
+      val chats = service.listChats(pagination)
       call.respond(HttpStatusCode.OK, chats)
     }
 
-    get<AdminChatController.Chat.Messages>(adminGetMessages()) {
-      val messages: List<Message> = service.getMessages(it.parent.id)
-      call.respond(HttpStatusCode.OK, messages)
-    }
-
-    put<AdminChatController.Chat.Title>(adminUpdateTitle()) {
-      val input: UpdateChatTitleDTO = call.receive()
-      service.updateTitle(it.parent.id, input.title)
-      call.respond(HttpStatusCode.OK)
-    }
-
-    patch<AdminChatController.Chat.Messages.Message>({
-      tags("admin/chats")
-      description = "Evaluate chat message"
-      request {
-        pathParameter<String>("id") { description = "The ID of the chat" }
-        pathParameter<String>("messageId") { description = "The ID of the message" }
-        body<EvaluateMessageDTO>()
+    route("/{chatId}") {
+      put(adminUpdateTitle()) {
+        val chatId = call.pathUuid("chatId")
+        val input: UpdateChatTitleDTO = call.receive()
+        service.updateTitle(chatId, input.title)
+        call.respond(HttpStatusCode.OK, "Chat title successfully updated")
       }
-      response {
-        HttpStatusCode.OK to
-          {
-            description = "Updated message retrieved successfully"
-            body<Message> {}
-          }
-        HttpStatusCode.InternalServerError to
-          {
-            description = "Internal server error occurred while retrieving chats"
-            body<List<AppError>> {}
-          }
+
+      route("/messages") {
+        get(adminGetMessages()) {
+          val chatId = call.pathUuid("chatId")
+          val messages: List<Message> = service.getMessages(chatId)
+          call.respond(HttpStatusCode.OK, messages)
+        }
+
+        patch("/{messageId}", adminEvaluate()) {
+          val input: EvaluateMessageDTO = call.receive()
+          val chatId = call.pathUuid("chatId")
+          val messageId = call.pathUuid("messageId")
+          val message = service.evaluateMessage(chatId, messageId, input.evaluation)
+          call.respond(HttpStatusCode.OK, message)
+        }
       }
-    }) {
-      val input: EvaluateMessageDTO = call.receive()
-      val chatId = it.parent.parent.id
-      val messageId = it.messageId
-      val message = service.evaluateMessage(chatId, messageId, input.evaluation)
-      call.respond(HttpStatusCode.OK, message)
     }
   }
 }
 
 // OpenAPI documentation
-fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
+private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve list of all chats"
   request {
@@ -123,7 +97,7 @@ fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun adminGetMessages(): OpenApiRoute.() -> Unit = {
+private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve chat messages"
   request {
@@ -147,11 +121,11 @@ fun adminGetMessages(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun adminUpdateTitle(): OpenApiRoute.() -> Unit = {
+private fun adminUpdateTitle(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Update chat title"
   request {
-    pathParameter<String>("id") {
+    pathParameter<KUUID>("id") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -171,15 +145,15 @@ fun adminUpdateTitle(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun adminEvaluate(): OpenApiRoute.() -> Unit = {
+private fun adminEvaluate(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Evaluate chat message"
   request {
-    pathParameter<String>("id") {
+    pathParameter<KUUID>("id") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    pathParameter<String>("messageId") {
+    pathParameter<KUUID>("messageId") {
       description = "The ID of the message"
       example("default") { value = "eb771f1a-cd4a-4288-9eb4-bd2b33c58d48" }
     }

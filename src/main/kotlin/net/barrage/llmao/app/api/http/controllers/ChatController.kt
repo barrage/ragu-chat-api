@@ -1,109 +1,80 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.patch
-import io.github.smiley4.ktorswaggerui.dsl.routing.resources.put
+import io.github.smiley4.ktorswaggerui.dsl.routing.patch
+import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.user
 
-@Resource("/chats")
-class ChatController(val pagination: PaginationSort) {
-  @Resource("/{id}")
-  class Chat(val parent: ChatController, val id: KUUID) {
-    @Resource("/messages")
-    class Messages(val parent: Chat) {
-      @Resource("{messageId}") class Message(val parent: Messages, val messageId: KUUID)
-    }
-
-    @Resource("title") class Title(val parent: Chat)
-  }
-}
-
 fun Route.chatsRoutes(service: ChatService) {
-
-  authenticate("auth-session") {
-    get("/chats", getAllChats()) {
+  route("/chats") {
+    get(getAllChats()) {
       val user = call.user()
       val pagination = call.query(PaginationSort::class)
       val chats = service.listChats(pagination, user.id)
       call.respond(HttpStatusCode.OK, chats)
     }
 
-    get("/chats/{id}/messages", getMessages()) {
-      val user = call.user()
-      val chatId = KUUID.fromString(call.parameters["id"])
-      val messages: List<Message> = service.getMessages(chatId, user.id)
-      call.respond(HttpStatusCode.OK, messages)
-    }
+    route("/{chatId}") {
+      put(updateTitle()) {
+        val user = call.user()
+        val chatId = call.pathUuid("chatId")
+        val input: UpdateChatTitleDTO = call.receive()
+        service.updateTitle(chatId, user.id, input.title)
+        call.respond(HttpStatusCode.OK)
+      }
 
-    put<ChatController.Chat.Title>(updateTitle()) {
-      val user = call.user()
-      val input: UpdateChatTitleDTO = call.receive()
-      service.updateTitle(it.parent.id, user.id, input.title)
-      call.respond(HttpStatusCode.OK)
-    }
+      delete(deleteChat()) {
+        val user = call.user()
+        val chatId = call.pathUuid("chatId")
+        service.deleteChat(chatId, user.id)
+        call.respond(HttpStatusCode.NoContent)
+      }
 
-    patch<ChatController.Chat.Messages.Message>(evaluate()) {
-      val user = call.user()
-      val input: EvaluateMessageDTO = call.receive()
-      val chatId = it.parent.parent.id
-      val messageId = it.messageId
-      val message = service.evaluateMessage(chatId, messageId, user.id, input.evaluation)
-      call.respond(HttpStatusCode.OK, message)
-    }
+      route("/messages") {
+        get(getMessages()) {
+          val user = call.user()
+          val chatId = call.pathUuid("chatId")
+          val messages: List<Message> = service.getMessages(chatId, user.id)
+          call.respond(HttpStatusCode.OK, messages)
+        }
 
-    delete<ChatController.Chat>(deleteChat()) {
-      val user = call.user()
-      service.deleteChat(it.id, user.id)
-      call.respond(HttpStatusCode.NoContent)
+        patch("/{messageId}", evaluate()) {
+          val user = call.user()
+          val input: EvaluateMessageDTO = call.receive()
+          val chatId = call.pathUuid("chatId")
+          val messageId = call.pathUuid("messageId")
+          val message = service.evaluateMessage(chatId, messageId, user.id, input.evaluation)
+          call.respond(HttpStatusCode.OK, message)
+        }
+      }
     }
   }
 }
 
 // OpenAPI documentation
-fun getAllChats(): OpenApiRoute.() -> Unit = {
+private fun getAllChats(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Retrieve list of all chats"
-  request {
-    queryParameter<Int>("page") {
-      description = "Page number for pagination"
-      required = false
-      example("default") { value = 1 }
-    }
-    queryParameter<Int>("size") {
-      description = "Number of items per page"
-      required = false
-      example("default") { value = 10 }
-    }
-    queryParameter<String>("sortBy") {
-      description = "Field to sort by"
-      required = false
-      example("default") { value = "createdAt" }
-    }
-    queryParameter<String>("sortOrder") {
-      description = "Sort order (asc or desc)"
-      required = false
-      example("default") { value = "asc" }
-    }
-  }
+  request { queryPagination() }
   response {
     HttpStatusCode.OK to
       {
@@ -119,7 +90,7 @@ fun getAllChats(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun getMessages(): OpenApiRoute.() -> Unit = {
+private fun getMessages(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Retrieve chat messages"
   request {
@@ -144,7 +115,7 @@ fun getMessages(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun updateTitle(): OpenApiRoute.() -> Unit = {
+private fun updateTitle(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Update chat title"
   request {
@@ -168,7 +139,7 @@ fun updateTitle(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun evaluate(): OpenApiRoute.() -> Unit = {
+private fun evaluate(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Evaluate chat message"
   request {
@@ -196,7 +167,7 @@ fun evaluate(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun deleteChat(): OpenApiRoute.() -> Unit = {
+private fun deleteChat(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Delete chat"
   request {

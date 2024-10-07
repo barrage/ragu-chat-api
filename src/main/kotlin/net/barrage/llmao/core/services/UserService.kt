@@ -57,16 +57,6 @@ class UserService(private val usersRepository: UserRepository) {
     return usersRepository.updateFull(id, update)
   }
 
-  fun setActiveStatus(id: UUID, active: Boolean): Int {
-    val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
-
-    if (user.active == active) {
-      throw BadRequestException("User is already active")
-    }
-
-    return usersRepository.setActiveStatus(id, active)
-  }
-
   fun delete(id: UUID) {
     if (!usersRepository.delete(id)) {
       throw NotFoundException("User not found")
