@@ -15,23 +15,17 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.user
 
 fun Route.userRoutes(userService: UserService) {
-  authenticate("auth-session") {
-    get("/users/current", getUser()) { call.respond(call.user()) }
-
-    put("/users") {
-      val user = call.user()
-
-      val updateUser = call.receive<UpdateUser>()
-
-      val userUpdated = userService.updateUser(user.id, updateUser)
-
-      call.respond(userUpdated)
-    }
+  get("/users/current", getUser()) { call.respond(call.user()) }
+  put("/users") {
+    val user = call.user()
+    val updateUser = call.receive<UpdateUser>()
+    val userUpdated = userService.updateUser(user.id, updateUser)
+    call.respond(userUpdated)
   }
 }
 
 // OpenAPI documentation
-fun getUser(): OpenApiRoute.() -> Unit = {
+private fun getUser(): OpenApiRoute.() -> Unit = {
   tags("users")
   description = "Retrieve logged in user"
   request {}

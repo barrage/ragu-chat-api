@@ -59,4 +59,5 @@ data class UpdateUserAdmin(
   @NotBlank val lastName: String?,
   @Email val email: String?,
   val role: Role?,
+  val active: Boolean?,
 ) : Validation

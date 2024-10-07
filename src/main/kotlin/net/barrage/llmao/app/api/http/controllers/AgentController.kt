@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.resources.get
 import io.ktor.http.*
 import io.ktor.resources.*
@@ -15,28 +16,27 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-
-@Resource("agents")
-class AgentController(val pagination: PaginationSort) {
-  @Resource("{id}") class Agent(val parent: AgentController, val id: KUUID)
-}
+import net.barrage.llmao.plugins.pathUuid
+import net.barrage.llmao.plugins.query
 
 fun Route.agentsRoutes(agentService: AgentService) {
-  authenticate("auth-session") {
-    get<AgentController>(getAllAgents()) {
-      val agents = agentService.getAll(it.pagination, false)
+  route("/agents") {
+    get(getAllAgents()) {
+      val pagination = call.query(PaginationSort::class)
+      val agents = agentService.getAll(pagination, false)
       call.respond(HttpStatusCode.OK, agents)
     }
 
-    get<AgentController.Agent>(getAgent()) {
-      val agent = agentService.get(it.id)
+    get("/{id}", getAgent()) {
+      val agentId = call.pathUuid("id")
+      val agent = agentService.get(agentId)
       call.respond(HttpStatusCode.OK, agent)
     }
   }
 }
 
 // OpenAPI documentation
-fun getAllAgents(): OpenApiRoute.() -> Unit = {
+private fun getAllAgents(): OpenApiRoute.() -> Unit = {
   tags("agents")
   description = "Retrieve list of all agents"
   request {
@@ -76,7 +76,7 @@ fun getAllAgents(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun getAgent(): OpenApiRoute.() -> Unit = {
+private fun getAgent(): OpenApiRoute.() -> Unit = {
   tags("agents")
   description = "Retrieve agent by ID"
   request {

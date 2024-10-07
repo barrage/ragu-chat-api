@@ -6,7 +6,6 @@ import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -25,23 +24,21 @@ import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.queryParam
 
 fun Route.adminAgentsRoutes(agentService: AgentService) {
-  authenticate("auth-session-admin") {
-    route("/admin/agents") {
-      get(adminGetAllAgents()) {
-        val pagination = call.query(PaginationSort::class)
-        val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() ?: false
-        val agents = agentService.getAll(pagination, showDeactivated)
-        call.respond(HttpStatusCode.OK, agents)
-      }
-
-      post(createAgent()) {
-        val newAgent: CreateAgent = call.receive()
-        val agent = agentService.create(newAgent)
-        call.respond(HttpStatusCode.Created, agent)
-      }
+  route("/admin/agents") {
+    get(adminGetAllAgents()) {
+      val pagination = call.query(PaginationSort::class)
+      val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() ?: false
+      val agents = agentService.getAll(pagination, showDeactivated)
+      call.respond(HttpStatusCode.OK, agents)
     }
 
-    route("/admin/agents/{id}") {
+    post(createAgent()) {
+      val newAgent: CreateAgent = call.receive()
+      val agent = agentService.create(newAgent)
+      call.respond(HttpStatusCode.Created, agent)
+    }
+
+    route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
         val agent = agentService.get(id)
@@ -54,10 +51,8 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
         val agent = agentService.update(agentId, updatedAgent)
         call.respond(HttpStatusCode.OK, agent)
       }
-    }
 
-    route("/admin/agents/{id}/collections") {
-      put(updateAgentCollections()) {
+      put("/collections", updateAgentCollections()) {
         val agentId = call.pathUuid("id")
         val update: UpdateCollections = call.receive()
         agentService.updateCollections(agentId, update)
@@ -68,7 +63,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
 }
 
 // OpenAPI documentation
-fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
+private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve list of all agents"
   request {
@@ -94,7 +89,7 @@ fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun adminGetAgent(): OpenApiRoute.() -> Unit = {
+private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve an agent by ID"
   request {
@@ -118,7 +113,7 @@ fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun createAgent(): OpenApiRoute.() -> Unit = {
+private fun createAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Create a new agent"
   request { body<CreateAgent> { description = "New agent object" } }
@@ -135,7 +130,7 @@ fun createAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun updateAgent(): OpenApiRoute.() -> Unit = {
+private fun updateAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent"
   request {
@@ -158,7 +153,7 @@ fun updateAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
+private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent's collections"
 
