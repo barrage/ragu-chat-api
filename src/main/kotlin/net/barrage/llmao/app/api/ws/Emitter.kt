@@ -4,7 +4,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.TokenChunk
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 
 class Emitter(private val messageResponseFlow: MutableSharedFlow<String>) {
@@ -18,10 +17,6 @@ class Emitter(private val messageResponseFlow: MutableSharedFlow<String>) {
 
   suspend fun emitServer(message: ServerMessage) {
     messageResponseFlow.emitJson(message)
-  }
-
-  suspend fun emitTitle(chatId: KUUID, title: String) {
-    messageResponseFlow.emitJson(ServerMessage.ChatTitle(chatId, title))
   }
 }
 

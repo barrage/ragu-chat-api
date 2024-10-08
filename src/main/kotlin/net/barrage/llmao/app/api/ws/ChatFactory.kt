@@ -31,7 +31,7 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
 
     val agentFull = agentService.get(chat.chat.agentId)
 
-    val history = chat.messages.map { ChatMessage(it.senderType, it.content, it.responseTo) }
+    val history = chat.messages.map(ChatMessage::fromModel)
 
     return Chat(
       chatService,

@@ -1,12 +1,5 @@
 package net.barrage.llmao.core
 
-import net.barrage.llmao.core.auth.AuthenticationProvider
-import net.barrage.llmao.core.llm.ConversationLlm
-
-typealias AuthenticationFactory = ProviderFactory<AuthenticationProvider>
-
-typealias LlmFactory = ProviderFactory<ConversationLlm>
-
 /**
  * Generic interface for dynamic dispatch of various provider implementations.
  * - *T* - The type of provider returned by this factory.

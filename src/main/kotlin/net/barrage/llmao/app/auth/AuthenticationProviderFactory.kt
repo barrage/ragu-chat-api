@@ -2,14 +2,15 @@ package net.barrage.llmao.app.auth
 
 import io.ktor.server.application.*
 import net.barrage.llmao.app.auth.google.GoogleAuthenticationProvider
-import net.barrage.llmao.core.AuthenticationFactory
+import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.env
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-class AuthenticationProviderFactory(env: ApplicationEnvironment) : AuthenticationFactory() {
+class AuthenticationProviderFactory(env: ApplicationEnvironment) :
+  ProviderFactory<AuthenticationProvider>() {
   private val google: GoogleAuthenticationProvider
 
   init {
