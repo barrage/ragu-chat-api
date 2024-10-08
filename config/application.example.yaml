@@ -25,6 +25,8 @@ llm:
     apiVersion: "2023-05-15"
     endpoint: "YOUR_LLM_ENDPOINT"
     apiKey: "YOUR_LLM_KEY"
+  ollama:
+    endpoint: ""
 
 embeddings:
   azure:

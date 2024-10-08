@@ -58,7 +58,7 @@ class AzureAI(
       listOf(
         TokenChunk(
           it.id,
-          it.created,
+          it.created.toLong(),
           it.choices.firstOrNull()?.delta?.content ?: " ",
           it.choices.firstOrNull()?.finishReason,
         )
@@ -100,12 +100,16 @@ class AzureAI(
     return client.chatCompletion(chatRequest).choices[0].message.content!!
   }
 
-  override fun supportsModel(model: String): Boolean {
+  override suspend fun supportsModel(model: String): Boolean {
     return when (model) {
       "gpt-3.5-turbo" -> true
       "gpt-4" -> true
       else -> false
     }
+  }
+
+  override suspend fun listModels(): List<String> {
+    return listOf("gpt-3.5-turbo", "gpt-4")
   }
 
   private fun getClient(model: String): OpenAI {
