@@ -26,7 +26,7 @@ class AgentService(
     return agentRepository.get(id)
   }
 
-  fun create(create: CreateAgent): Agent {
+  suspend fun create(create: CreateAgent): Agent {
     validateAgentParams(
       create.llmProvider,
       create.model,
@@ -37,7 +37,7 @@ class AgentService(
     return agentRepository.create(create) ?: throw IllegalStateException("Something went wrong")
   }
 
-  fun update(id: KUUID, update: UpdateAgent): Agent {
+  suspend fun update(id: KUUID, update: UpdateAgent): Agent {
     validateAgentParams(
       update.llmProvider,
       update.model,
@@ -68,7 +68,7 @@ class AgentService(
    * Checks whether the providers and their respective models are supported. Data passed to this
    * function should come from already validated DTOs.
    */
-  private fun validateAgentParams(
+  private suspend fun validateAgentParams(
     llmProvider: String?,
     model: String?,
     vectorProvider: String?,
