@@ -56,11 +56,20 @@ class AgentRepository {
     return AgentWithCollections(agent, collections)
   }
 
-  fun create(newAgent: CreateAgent): Agent? {
+  fun create(create: CreateAgent): Agent? {
     return dslContext
       .insertInto(AGENTS)
-      .set(AGENTS.NAME, newAgent.name)
-      .set(AGENTS.CONTEXT, newAgent.context)
+      .set(AGENTS.NAME, create.name)
+      .set(AGENTS.CONTEXT, create.context)
+      .set(AGENTS.DESCRIPTION, create.description)
+      .set(AGENTS.LLM_PROVIDER, create.llmProvider)
+      .set(AGENTS.MODEL, create.model)
+      .set(AGENTS.VECTOR_PROVIDER, create.vectorProvider)
+      .set(AGENTS.EMBEDDING_PROVIDER, create.embeddingProvider)
+      .set(AGENTS.EMBEDDING_MODEL, create.embeddingModel)
+      .set(AGENTS.ACTIVE, create.active)
+      .set(AGENTS.LANGUAGE, create.language.language)
+      .set(AGENTS.TEMPERATURE, create.temperature)
       .returning()
       .fetchOne(AgentsRecord::toAgent)
   }
@@ -94,28 +103,29 @@ class AgentRepository {
   }
 
   fun updateCollections(agentId: KUUID, update: UpdateCollections) {
-    val insertQuery =
-      dslContext.batch(
-        update.add.map { (name, amount) ->
-          dslContext
-            .insertInto(AGENT_COLLECTIONS)
-            .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
-            .set(AGENT_COLLECTIONS.COLLECTION, name)
-            .set(AGENT_COLLECTIONS.AMOUNT, amount)
-            .onConflict(AGENT_COLLECTIONS.AGENT_ID, AGENT_COLLECTIONS.COLLECTION)
-            .doUpdate()
-            .set(AGENT_COLLECTIONS.AMOUNT, amount)
-        }
-      )
+    update.add?.let {
+      dslContext
+        .batch(
+          it.map { (name, amount) ->
+            dslContext
+              .insertInto(AGENT_COLLECTIONS)
+              .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
+              .set(AGENT_COLLECTIONS.COLLECTION, name)
+              .set(AGENT_COLLECTIONS.AMOUNT, amount)
+              .onConflict(AGENT_COLLECTIONS.AGENT_ID, AGENT_COLLECTIONS.COLLECTION)
+              .doUpdate()
+              .set(AGENT_COLLECTIONS.AMOUNT, amount)
+          }
+        )
+        .execute()
+    }
 
-    insertQuery.execute()
-
-    dslContext
-      .deleteFrom(AGENT_COLLECTIONS)
-      .where(
-        AGENT_COLLECTIONS.AGENT_ID.eq(agentId).and(AGENT_COLLECTIONS.COLLECTION.`in`(update.remove))
-      )
-      .execute()
+    update.remove?.let {
+      dslContext
+        .deleteFrom(AGENT_COLLECTIONS)
+        .where(AGENT_COLLECTIONS.AGENT_ID.eq(agentId).and(AGENT_COLLECTIONS.COLLECTION.`in`(it)))
+        .execute()
+    }
   }
 
   fun getCollections(id: KUUID): List<AgentCollection> {
