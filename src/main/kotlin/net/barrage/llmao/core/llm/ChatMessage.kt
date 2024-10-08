@@ -1,18 +1,13 @@
 package net.barrage.llmao.core.llm
 
 import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
+import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.Message
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-data class ChatMessage(
-  val role: String,
-  val content: String,
-
-  /** If this message is a response to a user message, the ID of the message being responded to. */
-  val responseTo: KUUID? = null,
-) {
+@Serializable
+data class ChatMessage(val role: String, val content: String) {
   fun toOpenAiChatMessage(): OpenAIChatMessage {
     return when (role) {
       "user" -> OpenAIChatMessage.User(content)
@@ -24,7 +19,7 @@ data class ChatMessage(
 
   companion object {
     fun fromModel(model: Message): ChatMessage {
-      return ChatMessage(model.senderType, model.content, model.responseTo)
+      return ChatMessage(model.senderType, model.content)
     }
 
     fun user(content: String): ChatMessage {

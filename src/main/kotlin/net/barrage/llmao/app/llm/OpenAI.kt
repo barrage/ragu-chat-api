@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
@@ -11,8 +10,9 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk
+import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 
-const val TITLE_GENERATION_MODEL = "gpt-4"
+private const val TITLE_GENERATION_MODEL = "gpt-4"
 
 class OpenAI(apiKey: String) : ConversationLlm {
   private val client: OpenAI = OpenAI(token = apiKey)
@@ -49,7 +49,7 @@ class OpenAI(apiKey: String) : ConversationLlm {
       listOf(
         TokenChunk(
           it.id,
-          it.created,
+          it.created.toLong(),
           it.choices.firstOrNull()?.delta?.content ?: " ",
           it.choices.firstOrNull()?.finishReason,
         )
@@ -88,11 +88,15 @@ class OpenAI(apiKey: String) : ConversationLlm {
     return this.client.chatCompletion(chatRequest).choices[0].message.content!!
   }
 
-  override fun supportsModel(model: String): Boolean {
+  override suspend fun supportsModel(model: String): Boolean {
     return when (model) {
       "gpt-3.5-turbo" -> true
       "gpt-4" -> true
       else -> false
     }
+  }
+
+  override suspend fun listModels(): List<String> {
+    return listOf("gpt-3.5-turbo", "gpt-4")
   }
 }
