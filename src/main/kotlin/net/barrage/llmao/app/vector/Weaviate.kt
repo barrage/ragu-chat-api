@@ -43,24 +43,25 @@ class Weaveiate(scheme: String, host: String) : VectorDatabase {
         throw BadRequestException("Failed to query: $errorMessage")
       }
 
+      // TODO: Check result.error and act accordingly
       val result = queryResult.result.data as? Map<*, *>
 
       if (result == null) {
-        println("Cannot cast ${queryResult.result.data} to Map")
+        Logger.error("Cannot cast ${queryResult.result.data} to Map")
         continue
       }
 
       val data = result["Get"] as? Map<*, *>
 
       if (data == null) {
-        println("Cannot cast ${result["Get"]} to Map")
+        Logger.error("Cannot cast ${result["Get"]} to Map")
         continue
       }
 
       val collectionData = data[collection] as? List<*>
 
       if (collectionData == null) {
-        println("Cannot cast $collectionData to List")
+        Logger.error("Cannot cast $collectionData to List, skipping")
         continue
       }
 
@@ -79,7 +80,6 @@ class Weaveiate(scheme: String, host: String) : VectorDatabase {
   }
 
   override fun validateCollection(name: String): Boolean {
-    println(toWeaviateClassName(name))
     val result = client.schema().exists().withClassName(toWeaviateClassName(name)).run()
     return result.result
   }
