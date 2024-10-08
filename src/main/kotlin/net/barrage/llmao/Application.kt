@@ -12,6 +12,7 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
+import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
@@ -71,4 +72,5 @@ class ServiceState(state: ApplicationState) {
   val user = UserService(state.repository.user)
   val auth =
     AuthenticationService(state.providers.auth, state.repository.session, state.repository.user)
+  val admin = AdministrationService(state.providers)
 }

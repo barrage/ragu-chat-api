@@ -11,6 +11,7 @@ import net.barrage.llmao.ServiceState
 import net.barrage.llmao.app.api.http.controllers.adminAgentsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminUserRoutes
+import net.barrage.llmao.app.api.http.controllers.administrationRouter
 import net.barrage.llmao.app.api.http.controllers.agentsRoutes
 import net.barrage.llmao.app.api.http.controllers.authRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
@@ -34,6 +35,7 @@ fun Application.configureRouting(services: ServiceState) {
       adminAgentsRoutes(services.agent)
       adminUserRoutes(services.user)
       adminChatsRoutes(services.chat)
+      administrationRouter(services.admin)
     }
 
     authenticate("auth-session") {
