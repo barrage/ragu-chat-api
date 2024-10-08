@@ -52,12 +52,14 @@ class AgentService(
     val vectorDb = providers.vector.getProvider(update.provider)
 
     // Ensure the collections being added exist
-    for (collection in update.add) {
-      if (!vectorDb.validateCollection(collection.key)) {
-        throw AppError.api(
-          ErrorReason.EntityDoesNotExist,
-          "Collection with name '${collection.key}'",
-        )
+    update.add?.let {
+      for (collection in it) {
+        if (!vectorDb.validateCollection(collection.key)) {
+          throw AppError.api(
+            ErrorReason.EntityDoesNotExist,
+            "Collection with name '${collection.key}'",
+          )
+        }
       }
     }
 
