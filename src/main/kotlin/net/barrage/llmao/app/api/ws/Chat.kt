@@ -138,7 +138,8 @@ class Chat(
 
   private suspend fun generateTitle(prompt: String, emitter: Emitter) {
     val title = service.generateTitle(id, prompt, formatter, agentId)
-    emitter.emitTitle(id, title)
+    emitter.emitServer(ServerMessage.ChatTitle(id, title))
+    this.title = title
   }
 
   private suspend fun addToHistory(messages: List<ChatMessage>) {

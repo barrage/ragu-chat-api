@@ -65,8 +65,7 @@ class Weaveiate(scheme: String, host: String) : VectorDatabase {
         continue
       }
 
-      Logger.debug("Query in '$collection' ($amount results):")
-      Logger.debug("$collectionData")
+      Logger.debug("Successful query in '$collection' (target $amount results)")
 
       for (item in collectionData) {
         (item as? Map<*, *>)?.let {

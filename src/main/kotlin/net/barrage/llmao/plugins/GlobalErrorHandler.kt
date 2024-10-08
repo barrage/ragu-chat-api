@@ -53,7 +53,7 @@ fun Application.configureErrorHandling() {
           println(err)
           call.respond(
             HttpStatusCode.BadRequest,
-            AppError.api(ErrorReason.InvalidParameter, "YOU SUCK"),
+            AppError.api(ErrorReason.InvalidParameter, err.localizedMessage),
           )
         }
 
