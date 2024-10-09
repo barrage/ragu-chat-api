@@ -25,6 +25,10 @@ class AuthenticationProviderFactory(env: ApplicationEnvironment) :
     }
   }
 
+  override fun listProviders(): List<String> {
+    return listOf(google.id())
+  }
+
   private fun initGoogleOAuth(env: ApplicationEnvironment): GoogleAuthenticationProvider {
     val client = httpClient()
     val tokenEp = env(env, "oauth.google.tokenEndpoint")

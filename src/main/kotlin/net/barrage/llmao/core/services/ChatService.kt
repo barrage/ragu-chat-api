@@ -5,7 +5,7 @@ import com.knuddels.jtokkit.api.Encoding
 import com.knuddels.jtokkit.api.ModelType
 import io.ktor.server.plugins.*
 import kotlinx.coroutines.flow.Flow
-import net.barrage.llmao.ProviderState
+import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.PromptFormatter

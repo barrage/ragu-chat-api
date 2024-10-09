@@ -27,6 +27,10 @@ class EmbeddingProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Em
     }
   }
 
+  override fun listProviders(): List<String> {
+    return listOf(azure.id(), fembed.id())
+  }
+
   private fun initAzureEmbedder(env: ApplicationEnvironment): AzureEmbedder {
     val apiVersion = env.config.property("embeddings.azure.apiVersion").getString()
     val endpoint = env.config.property("embeddings.azure.endpoint").getString()

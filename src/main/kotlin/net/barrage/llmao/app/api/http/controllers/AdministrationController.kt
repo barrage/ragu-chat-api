@@ -7,6 +7,11 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.core.services.AdministrationService
 
 fun Route.administrationRouter(service: AdministrationService) {
+  get("/admin/providers") {
+    val models = service.listProviders()
+    call.respond(HttpStatusCode.OK, models)
+  }
+
   get("/admin/providers/llm/{provider}") {
     // Safe to yell since the route won't match if there's no provider
     val provider = call.parameters["provider"]!!

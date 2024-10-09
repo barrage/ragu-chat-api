@@ -28,6 +28,10 @@ class LlmProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Conversa
     }
   }
 
+  override fun listProviders(): List<String> {
+    return listOf(openai.id(), azure.id(), ollama.id())
+  }
+
   private fun initOpenAi(env: ApplicationEnvironment): OpenAI {
     val apiKey = env(env, "llm.openAi.apiKey")
 
