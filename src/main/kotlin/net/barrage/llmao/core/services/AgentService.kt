@@ -1,7 +1,7 @@
 package net.barrage.llmao.core.services
 
 import io.ktor.server.plugins.*
-import net.barrage.llmao.ProviderState
+import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentWithCollections
 import net.barrage.llmao.core.models.CreateAgent

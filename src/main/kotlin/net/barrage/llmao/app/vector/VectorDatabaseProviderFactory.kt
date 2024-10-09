@@ -25,6 +25,10 @@ class VectorDatabaseProviderFactory(env: ApplicationEnvironment) :
     }
   }
 
+  override fun listProviders(): List<String> {
+    return listOf(weaviate.id())
+  }
+
   private fun initWeaviate(env: ApplicationEnvironment): Weaveiate {
     return Weaveiate(
       env.config.property("weaviate.scheme").getString(),
