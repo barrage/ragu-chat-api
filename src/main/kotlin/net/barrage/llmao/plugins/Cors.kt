@@ -11,9 +11,7 @@ fun Application.configureCors() {
   val maxAgeInSeconds: Long = environment.config.property("cors.maxAge").getString().toLong()
 
   install(CORS) {
-    for (origin in origins) {
-      allowHost(origin, schemes = listOf("http", "https"))
-    }
+    this.allowOrigins { origins.contains(it) }
     this.methods.addAll(methods)
     this.headers.addAll(headers)
     this.maxAgeInSeconds = maxAgeInSeconds
