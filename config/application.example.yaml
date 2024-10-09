@@ -15,8 +15,7 @@ db:
 cors:
   origins: [ "http://localhost:3000", "http://localhost:3001" ]
   methods: [ "GET","HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS" ]
-  headers: [ "*" ]
-  maxAge: 3600
+  headers: [ ]
 
 llm:
   openAi:
