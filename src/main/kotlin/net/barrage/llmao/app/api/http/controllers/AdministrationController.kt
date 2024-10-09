@@ -8,8 +8,8 @@ import net.barrage.llmao.core.services.AdministrationService
 
 fun Route.administrationRouter(service: AdministrationService) {
   get("/admin/providers") {
-    val models = service.listProviders()
-    call.respond(HttpStatusCode.OK, models)
+    val providers = service.listProviders()
+    call.respond(HttpStatusCode.OK, providers)
   }
 
   get("/admin/providers/llm/{provider}") {

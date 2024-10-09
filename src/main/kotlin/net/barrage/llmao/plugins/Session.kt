@@ -44,7 +44,8 @@ fun Application.configureSession(service: AuthenticationService) {
         this@configureSession.environment.config.property("session.secure").getString().toBoolean()
       cookie.domain =
         this@configureSession.environment.config.property("session.domain").getString()
-      cookie.extensions["SameSite"] = "Lax"
+      cookie.extensions["SameSite"] =
+        this@configureSession.environment.config.property("session.sameSite").getString()
     }
   }
 

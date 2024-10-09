@@ -51,6 +51,7 @@ session:
   httpOnly: false
   secure: false
   domain: "localhost" # ".barrage.corp" for guja
+  sameSite: "Lax"
 
 infobip:
   api_key: "apiKey"
