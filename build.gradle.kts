@@ -76,13 +76,9 @@ dependencies {
   implementation("com.knuddels:jtokkit:1.1.0")
 
   // Tests
+  testImplementation("org.testcontainers:postgresql:1.20.2")
   testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
-
-  // TODO: Use these for hooks and testcontainers, or remove if
-  // not needed
-  // testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
-  // testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
 
   // Error handling
   implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
@@ -91,7 +87,7 @@ dependencies {
   jooqGenerator("org.postgresql:postgresql:$postgresVersion")
 
   // Weaviate client
-  implementation("io.weaviate:client:4.8.2")
+  implementation("io.weaviate:client:4.8.3")
 }
 
 flyway {
