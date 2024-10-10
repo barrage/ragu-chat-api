@@ -38,10 +38,10 @@ fun UsersRecord.toUser() =
 
 @Serializable
 data class CreateUser(
-  val email: String,
-  val fullName: String,
-  val firstName: String,
-  val lastName: String,
+  @Email val email: String,
+  @NotBlank val fullName: String,
+  @NotBlank val firstName: String,
+  @NotBlank val lastName: String,
   val role: Role,
 ) : Validation
 

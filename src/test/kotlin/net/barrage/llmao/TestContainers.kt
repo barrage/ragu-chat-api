@@ -73,6 +73,10 @@ class TestPostgres {
       .fetchOne(UsersRecord::toUser)!!
   }
 
+  fun deleteTestUser(id: UUID) {
+    dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).execute()
+  }
+
   fun testSession(userId: UUID): Session {
     return dslContext
       .insertInto(SESSIONS)

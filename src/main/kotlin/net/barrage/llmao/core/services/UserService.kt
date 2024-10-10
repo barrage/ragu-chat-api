@@ -50,10 +50,6 @@ class UserService(private val usersRepository: UserRepository) {
   fun updateAdmin(id: KUUID, update: UpdateUserAdmin): User {
     val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
 
-    if (!user.active) {
-      throw AppError.api(ErrorReason.EntityDoesNotExist, "User with id '$id'")
-    }
-
     return usersRepository.updateFull(id, update)
   }
 
