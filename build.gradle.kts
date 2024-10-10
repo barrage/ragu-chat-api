@@ -77,6 +77,7 @@ dependencies {
 
   // Tests
   testImplementation("org.testcontainers:postgresql:1.20.2")
+  testImplementation("org.testcontainers:weaviate:1.20.2")
   testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
 

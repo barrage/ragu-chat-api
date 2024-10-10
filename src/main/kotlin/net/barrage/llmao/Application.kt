@@ -13,8 +13,6 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-  Database.init(environment.config)
-
   val state = ApplicationState(environment)
   val services = ServiceState(state)
 
