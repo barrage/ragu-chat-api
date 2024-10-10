@@ -10,12 +10,8 @@ import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.barrage.llmao.core.models.*
-import net.barrage.llmao.tables.records.AgentsRecord
-import net.barrage.llmao.tables.records.SessionsRecord
-import net.barrage.llmao.tables.records.UsersRecord
-import net.barrage.llmao.tables.references.AGENTS
-import net.barrage.llmao.tables.references.SESSIONS
-import net.barrage.llmao.tables.references.USERS
+import net.barrage.llmao.tables.records.*
+import net.barrage.llmao.tables.references.*
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
@@ -123,6 +119,28 @@ class TestPostgres {
       )
       .returning()
       .fetchOne(AgentsRecord::toAgent)!!
+  }
+
+  fun testChat(userId: UUID, agentId: UUID, title: String = "Test Chat Title"): Chat {
+    return dslContext
+      .insertInto(CHATS)
+      .set(CHATS.ID, UUID.randomUUID())
+      .set(CHATS.USER_ID, userId)
+      .set(CHATS.AGENT_ID, agentId)
+      .set(CHATS.TITLE, title)
+      .returning()
+      .fetchOne(ChatsRecord::toChat)!!
+  }
+
+  fun testChatMessage(chatId: UUID, userId: UUID, content: String): Message {
+    return dslContext
+      .insertInto(MESSAGES)
+      .set(MESSAGES.CHAT_ID, chatId)
+      .set(MESSAGES.SENDER, userId)
+      .set(MESSAGES.SENDER_TYPE, "user")
+      .set(MESSAGES.CONTENT, "Test message")
+      .returning()
+      .fetchOne(MessagesRecord::toMessage)!!
   }
 }
 
