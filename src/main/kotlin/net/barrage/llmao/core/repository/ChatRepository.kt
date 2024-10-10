@@ -12,17 +12,17 @@ import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toFailedMessage
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 import net.barrage.llmao.tables.records.MessagesRecord
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.FAILED_MESSAGES
 import net.barrage.llmao.tables.references.MESSAGES
+import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
 
-class ChatRepository {
+class ChatRepository(private val dslContext: DSLContext) {
   fun getAll(pagination: PaginationSort, userId: KUUID? = null): CountedList<Chat> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()

@@ -9,13 +9,13 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toUser
-import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
+import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
 
-class UserRepository {
+class UserRepository(private val dslContext: DSLContext) {
   fun getAll(pagination: PaginationSort): CountedList<User> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()

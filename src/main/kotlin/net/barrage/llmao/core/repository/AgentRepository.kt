@@ -14,15 +14,15 @@ import net.barrage.llmao.core.models.toCollection
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
+import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
 
-class AgentRepository {
+class AgentRepository(private val dslContext: DSLContext) {
   fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()

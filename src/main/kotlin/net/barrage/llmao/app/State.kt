@@ -14,17 +14,20 @@ import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
+import net.barrage.llmao.plugins.initDatabase
+import org.jooq.DSLContext
 
 class ApplicationState(env: ApplicationEnvironment) {
-  val repository = RepositoryState()
+  val repository = RepositoryState(initDatabase(env))
   val providers = ProviderState(env)
 }
 
 class RepositoryState(
-  val user: UserRepository = UserRepository(),
-  val session: SessionRepository = SessionRepository(),
-  val agent: AgentRepository = AgentRepository(),
-  val chat: ChatRepository = ChatRepository(),
+  client: DSLContext,
+  val user: UserRepository = UserRepository(client),
+  val session: SessionRepository = SessionRepository(client),
+  val agent: AgentRepository = AgentRepository(client),
+  val chat: ChatRepository = ChatRepository(client),
 )
 
 class ProviderState(env: ApplicationEnvironment) {

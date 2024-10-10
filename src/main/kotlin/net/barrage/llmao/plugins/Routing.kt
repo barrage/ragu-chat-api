@@ -4,7 +4,6 @@ import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.ServiceState
@@ -22,8 +21,6 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
 fun Application.configureRouting(services: ServiceState) {
-  install(Resources)
-
   routing {
     // K8S specific route
     get("__health") { call.respond(HttpStatusCode.OK) }

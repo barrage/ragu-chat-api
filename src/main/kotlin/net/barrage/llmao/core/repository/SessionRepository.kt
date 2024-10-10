@@ -6,12 +6,12 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.plugins.Database.dslContext
 import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.references.SESSIONS
+import org.jooq.DSLContext
 
 @Serializable
-class SessionRepository {
+class SessionRepository(private val dslContext: DSLContext) {
   fun create(sessionId: KUUID, userId: KUUID): Session {
     val session =
       dslContext
