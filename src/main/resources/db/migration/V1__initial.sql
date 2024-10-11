@@ -40,40 +40,17 @@ CREATE TABLE sessions (
 
 CREATE TABLE agents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-
-    -- User friendly agent name
     name TEXT NOT NULL,
-
-    -- User friendly agent description
     description TEXT,
-
-    -- Agent context used when prompting
     context TEXT NOT NULL,
-
-    -- LLM provider, e.g. openai, azure, etc.
     llm_provider TEXT NOT NULL,
-
-    -- LLM the agent uses
     model TEXT NOT NULL,
-
-    -- LLM LSD consumption amount
     temperature FLOAT NOT NULL DEFAULT 0.1,
-
-    -- Vector database provider, e.g. weaviate, qdrant, etc.
     vector_provider TEXT NOT NULL,
-
-    -- Conversation language
-    language TEXT NOT NULL,
-
-    -- Soft deletion flag
+    language TEXT NOT NULL DEFAULT 'english',
     active BOOLEAN NOT NULL DEFAULT TRUE,
-
-    -- Which embedding provider to use, e.g. azure, fembed
     embedding_provider TEXT NOT NULL,
-
-    -- Which embedding model to use, must be supported by provider
     embedding_model TEXT NOT NULL,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,6 +58,9 @@ CREATE TABLE agents (
 CREATE TABLE agent_collections(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+
+    -- Specifies what the agent should do with the data obtained from this collection.
+    instruction TEXT NOT NULL,
 
     -- The collection name
     collection TEXT NOT NULL,
@@ -91,6 +71,15 @@ CREATE TABLE agent_collections(
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT unique_agent_collection UNIQUE(agent_id, collection)
+);
+
+CREATE TABLE agent_instructions(
+    agent_id UUID UNIQUE REFERENCES agents(id) ON DELETE CASCADE,
+    title_instruction TEXT,
+    language_instruction TEXT,
+    summary_instruction TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE chats (
@@ -128,6 +117,7 @@ SELECT manage_updated_at('users');
 SELECT manage_updated_at('sessions');
 SELECT manage_updated_at('agents');
 SELECT manage_updated_at('agent_collections');
+SELECT manage_updated_at('agent_instructions');
 SELECT manage_updated_at('chats');
 SELECT manage_updated_at('messages');
 SELECT manage_updated_at('failed_messages');

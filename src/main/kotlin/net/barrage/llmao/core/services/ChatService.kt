@@ -4,13 +4,13 @@ import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.Encoding
 import com.knuddels.jtokkit.api.ModelType
 import io.ktor.server.plugins.*
+import io.ktor.util.logging.*
 import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.LlmConfig
-import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
-import net.barrage.llmao.core.models.AgentCollection
+import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.Message
@@ -22,6 +22,8 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.services.ChatService")
 
 class ChatService(
   private val providers: ProviderState,
@@ -48,23 +50,24 @@ class ChatService(
     chatRepo.insert(id, userId, agentId, title)
   }
 
-  suspend fun generateTitle(
-    chatId: KUUID,
-    prompt: String,
-    formatter: PromptFormatter,
-    agentId: KUUID,
-  ): String {
-    val titlePrompt = formatter.title(prompt)
+  suspend fun generateTitle(chatId: KUUID, prompt: String, agentId: KUUID): String {
     val agentFull = agentRepository.get(agentId)
+
+    val titlePrompt = agentFull.instructions.title(prompt, agentFull.agent.language)
+    LOG.trace("Created title prompt:\n{}", titlePrompt)
+
     val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
     val title =
       llm
         .generateChatTitle(
           titlePrompt,
-          LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
+          LlmConfig(agentFull.agent.model, agentFull.agent.temperature),
         )
         .trim()
+
+    LOG.trace("Title generated: {}", title)
     chatRepo.updateTitle(chatId, title) ?: throw NotFoundException("Chat not found")
+
     return title
   }
 
@@ -80,60 +83,29 @@ class ChatService(
     prompt: String,
     history: List<ChatMessage>,
     agentId: KUUID,
-    formatter: PromptFormatter,
   ): Flow<List<TokenChunk>> {
     val agentFull = agentRepository.get(agentId)
 
-    val collections = agentRepository.getCollections(agentId)
-
     val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
     val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
 
-    val query =
-      prepareChatPrompt(
-        prompt,
-        history,
-        formatter,
-        collections,
-        vectorDb,
-        agentFull.agent.embeddingProvider,
-        agentFull.agent.embeddingModel,
-      )
+    val query = prepareChatPrompt(prompt, agentFull, history, vectorDb)
 
     return llm.completionStream(
       query,
-      LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
+      LlmConfig(agentFull.agent.model, agentFull.agent.temperature),
     )
   }
 
-  suspend fun chatCompletion(
-    prompt: String,
-    history: List<ChatMessage>,
-    agentId: KUUID,
-    formatter: PromptFormatter,
-  ): String {
+  suspend fun chatCompletion(prompt: String, history: List<ChatMessage>, agentId: KUUID): String {
     val agentFull = agentRepository.get(agentId)
-
-    val collections = agentRepository.getCollections(agentId)
 
     val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
     val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
 
-    val query =
-      prepareChatPrompt(
-        prompt,
-        history,
-        formatter,
-        collections,
-        vectorDb,
-        agentFull.agent.embeddingProvider,
-        agentFull.agent.embeddingModel,
-      )
+    val query = prepareChatPrompt(prompt, agentFull, history, vectorDb)
 
-    return llm.chatCompletion(
-      query,
-      LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
-    )
+    return llm.chatCompletion(query, LlmConfig(agentFull.agent.model, agentFull.agent.temperature))
   }
 
   fun processMessagePair(
@@ -157,7 +129,6 @@ class ChatService(
   suspend fun summarizeConversation(
     chatId: KUUID,
     history: List<ChatMessage>,
-    formatter: PromptFormatter,
     agentId: KUUID,
   ): String {
     val agentFull = agentRepository.get(agentId)
@@ -176,12 +147,12 @@ class ChatService(
         return@joinToString "$s: ${it.content}"
       }
 
-    val summaryPrompt = formatter.summary(conversation)
+    val summaryPrompt = agentFull.instructions.summary(conversation, agentFull.agent.language)
 
     val summary =
       llm.summarizeConversation(
         summaryPrompt,
-        LlmConfig(agentFull.agent.model, agentFull.agent.temperature, agentFull.agent.language),
+        LlmConfig(agentFull.agent.model, agentFull.agent.temperature),
       )
 
     chatRepo.insertSystemMessage(chatId, summary)
@@ -191,27 +162,53 @@ class ChatService(
 
   private suspend fun prepareChatPrompt(
     prompt: String,
+    agent: AgentFull,
     history: List<ChatMessage>,
-    formatter: PromptFormatter,
-    collections: List<AgentCollection>,
     vectorDb: VectorDatabase,
-    embeddingProvider: String,
-    embeddingModel: String,
   ): List<ChatMessage> {
-    val system = formatter.systemMessage()
+    val systemMessage =
+      systemMessage("${agent.agent.context}\n${agent.instructions.language(agent.agent.language)}")
 
-    val embedded = embedQuery(embeddingProvider, embeddingModel, prompt)
+    LOG.trace("Created system message {}", systemMessage)
+    val embedded = embedQuery(agent.agent.embeddingProvider, agent.agent.embeddingModel, prompt)
 
-    val queryOptions = collections.map { Pair(it.collection, it.amount) }
+    val queryOptions = agent.collections.map { Pair(it.collection, it.amount) }
+
+    // TODO: For loop with instructions per collection
     val relatedChunks = vectorDb.query(embedded, queryOptions)
 
-    val context = relatedChunks.joinToString("\n")
+    val documentation = relatedChunks.joinToString("\n")
 
-    val query = formatter.userMessage(prompt, context)
+    val message = userMessage(prompt, documentation)
+    LOG.trace("Created user message {}", message)
 
-    val messages = mutableListOf(system, *history.toTypedArray(), query)
+    val messages = mutableListOf(systemMessage, *history.toTypedArray(), message)
 
     return messages
+  }
+
+  private fun systemMessage(context: String): ChatMessage {
+    return ChatMessage.system(context)
+  }
+
+  private fun userMessage(prompt: String, documentation: String): ChatMessage {
+    val message =
+      """
+      Use the relevant information below, as well as the information from the current conversation to answer
+      the prompt below. If there is enough information from the current conversation to answer the prompt,
+      do so without referring to the relevant information. The user is not aware of the relevant information.
+      Do not refer to the relevant information unless explicitly asked.
+      
+      Relevant information: ${"\"\"\""}
+        $documentation
+      ${"\"\"\""}
+      
+      Prompt: ${"\"\"\""}
+        $prompt
+      ${"\"\"\""}
+    """
+        .trimIndent()
+    return ChatMessage.user(message)
   }
 
   fun deleteChat(id: KUUID) {

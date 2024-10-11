@@ -4,7 +4,6 @@ import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.exception.InvalidRequestException
 import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.PromptFormatter
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
@@ -21,9 +20,6 @@ class Chat(
 
   /** Who the user is chatting with. */
   private val agentId: KUUID,
-
-  /** How to format prompts. */
-  private val formatter: PromptFormatter,
 
   /** Used to reason about storing the chat. */
   private var messageReceived: Boolean = false,
@@ -60,7 +56,7 @@ class Chat(
       messageReceived = true
     }
 
-    val stream = service.chatCompletionStream(proompt, history, agentId, formatter)
+    val stream = service.chatCompletionStream(proompt, history, agentId)
 
     try {
       val response = collectStream(proompt, stream, emitter)
@@ -88,7 +84,7 @@ class Chat(
       messageReceived = true
     }
 
-    val response = service.chatCompletion(proompt, history, agentId, formatter)
+    val response = service.chatCompletion(proompt, history, agentId)
 
     processResponse(proompt, response, false, emitter)
   }
@@ -137,7 +133,7 @@ class Chat(
   }
 
   private suspend fun generateTitle(prompt: String, emitter: Emitter) {
-    val title = service.generateTitle(id, prompt, formatter, agentId)
+    val title = service.generateTitle(id, prompt, agentId)
     emitter.emitServer(ServerMessage.ChatTitle(id, title))
     this.title = title
   }
@@ -148,7 +144,7 @@ class Chat(
     summarizeAfterTokens?.let {
       val tokenCount = service.countHistoryTokens(history, agentId)
       if (tokenCount >= it) {
-        val summary = service.summarizeConversation(id, history, formatter, agentId)
+        val summary = service.summarizeConversation(id, history, agentId)
         history.clear()
         history.add(ChatMessage.system(summary))
       }

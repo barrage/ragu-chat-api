@@ -6,7 +6,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.MessagesRecord
 
 @Serializable
-class Message(
+data class Message(
   val id: KUUID,
   val sender: KUUID,
   val senderType: String,

@@ -11,7 +11,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentWithCollections
+import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
@@ -30,7 +30,7 @@ fun Route.agentsRoutes(agentService: AgentService) {
 
     get("/{id}", getAgent()) {
       val agentId = call.pathUuid("id")
-      val agent = agentService.get(agentId)
+      val agent = agentService.getDisplay(agentId)
       call.respond(HttpStatusCode.OK, agent)
     }
   }
@@ -68,7 +68,7 @@ private fun getAgent(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<AgentWithCollections> { description = "An Agent object representing the agent" }
+        body<AgentFull> { description = "An Agent object representing the agent" }
       }
     HttpStatusCode.InternalServerError to
       {
