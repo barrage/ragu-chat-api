@@ -8,14 +8,14 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import net.barrage.llmao.TestClass
+import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentWithCollections
+import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 
-class AgentControllerTests : TestClass() {
+class AgentControllerTests : IntegrationTest() {
   private val agentOne: Agent = postgres!!.testAgent()
   private val agentTwo: Agent = postgres!!.testAgent(active = false)
   private val user: User = postgres!!.testUser(admin = false)
@@ -40,7 +40,7 @@ class AgentControllerTests : TestClass() {
         header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
       }
     assertEquals(200, response.status.value)
-    val body = response.body<AgentWithCollections>()
+    val body = response.body<AgentFull>()
     assertNotNull(body)
     assertEquals(agentOne.id, body.agent.id)
   }

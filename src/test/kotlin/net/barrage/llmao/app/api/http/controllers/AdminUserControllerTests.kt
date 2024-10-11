@@ -7,7 +7,7 @@ import io.ktor.serialization.kotlinx.json.*
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import net.barrage.llmao.TestClass
+import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
@@ -15,7 +15,7 @@ import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.utils.ValidationError
 import org.junit.Test
 
-class AdminUserControllerTests : TestClass() {
+class AdminUserControllerTests : IntegrationTest() {
   private val adminUser = postgres!!.testUser("foo@bar.com", admin = true)
   private val peasantUser = postgres!!.testUser("bar@foo.com", admin = false)
   private val adminSession = postgres!!.testSession(adminUser.id)
