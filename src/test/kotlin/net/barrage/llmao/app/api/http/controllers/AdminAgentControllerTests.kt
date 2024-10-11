@@ -7,13 +7,13 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import net.barrage.llmao.TestClass
+import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 
-class AdminAgentControllerTests : TestClass() {
+class AdminAgentControllerTests : IntegrationTest() {
   val agentOne: Agent = postgres!!.testAgent()
   val agentTwo: Agent = postgres!!.testAgent(active = false)
   val adminUser: User = postgres!!.testUser("foo@bar.com", admin = true)

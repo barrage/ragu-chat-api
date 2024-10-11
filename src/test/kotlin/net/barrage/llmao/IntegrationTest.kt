@@ -1,13 +1,11 @@
 package net.barrage.llmao
 
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.config.*
 import io.ktor.server.config.yaml.*
 import io.ktor.server.testing.*
 import java.util.*
 
-open class TestClass(usePostgres: Boolean = true, useWeaviate: Boolean = false) {
+open class IntegrationTest(usePostgres: Boolean = true, useWeaviate: Boolean = false) {
   val postgres: TestPostgres? = if (usePostgres) TestPostgres() else null
   val weaviate: TestWeaviate? = if (useWeaviate) TestWeaviate() else null
   var cfg = YamlConfigLoader().load("application.yaml")!!
