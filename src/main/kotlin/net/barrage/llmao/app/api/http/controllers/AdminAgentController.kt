@@ -12,7 +12,7 @@ import io.ktor.server.routing.*
 import java.util.*
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentWithCollections
+import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
@@ -43,7 +43,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
-        val agent = agentService.get(id)
+        val agent = agentService.getDisplay(id)
         call.respond(HttpStatusCode.OK, agent)
       }
 
@@ -103,7 +103,7 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<AgentWithCollections> { description = "An Agent object with its collections" }
+        body<AgentFull> { description = "An Agent object with its collections" }
       }
     HttpStatusCode.NotFound to
       {

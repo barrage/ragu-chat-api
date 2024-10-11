@@ -23,6 +23,10 @@ VALUES (
  'text-embedding-ada-002'
 ) ON CONFLICT DO NOTHING;
 
+INSERT INTO agent_instructions(agent_id)
+VALUES ('00000000-0000-0000-0000-000000000000')
+ON CONFLICT DO NOTHING;
+
 INSERT INTO users (email, full_name, first_name, last_name, role, active)
 VALUES
 ('josip.benkodakovic@barrage.net', 'Biblius Khan', 'Biblius', 'Khan', 'ADMIN', TRUE),

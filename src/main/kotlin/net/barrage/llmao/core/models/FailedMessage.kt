@@ -1,10 +1,12 @@
 package net.barrage.llmao.core.models
 
+import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 
-class FailedMessage(
+@Serializable
+data class FailedMessage(
   val id: KUUID,
   val failReason: String,
   val userId: KUUID,

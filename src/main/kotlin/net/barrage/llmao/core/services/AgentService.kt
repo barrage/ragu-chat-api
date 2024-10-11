@@ -3,7 +3,8 @@ package net.barrage.llmao.core.services
 import io.ktor.server.plugins.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentWithCollections
+import net.barrage.llmao.core.models.AgentFull
+import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
@@ -22,8 +23,23 @@ class AgentService(
     return agentRepository.getAll(pagination, showDeactivated)
   }
 
-  fun get(id: KUUID): AgentWithCollections {
+  fun get(id: KUUID): AgentFull {
     return agentRepository.get(id)
+  }
+
+  /**
+   * Get an agent with full configuration, with its instructions populated with placeholders for
+   * display purposes.
+   */
+  fun getDisplay(id: KUUID): AgentFull {
+    val agent = agentRepository.get(id)
+    val instructions =
+      AgentInstructions(
+        agent.instructions.title("<PROMPT>", agent.agent.language),
+        agent.instructions.language(agent.agent.language),
+        agent.instructions.summary("<HISTORY>", agent.agent.language),
+      )
+    return AgentFull(agent.agent, instructions, agent.collections)
   }
 
   suspend fun create(create: CreateAgent): Agent {
