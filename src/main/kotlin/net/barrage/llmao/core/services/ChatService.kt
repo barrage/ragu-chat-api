@@ -170,16 +170,19 @@ class ChatService(
       systemMessage("${agent.agent.context}\n${agent.instructions.language(agent.agent.language)}")
 
     LOG.trace("Created system message {}", systemMessage)
+
     val embedded = embedQuery(agent.agent.embeddingProvider, agent.agent.embeddingModel, prompt)
 
-    val queryOptions = agent.collections.map { Pair(it.collection, it.amount) }
-
-    // TODO: For loop with instructions per collection
-    val relatedChunks = vectorDb.query(embedded, queryOptions)
-
-    val documentation = relatedChunks.joinToString("\n")
+    var documentation = ""
+    for (collection in agent.collections) {
+      val relatedChunks =
+        vectorDb.query(embedded, collection.collection, collection.amount).joinToString("\n")
+      val instruction = collection.instruction
+      documentation += "$instruction\n$relatedChunks"
+    }
 
     val message = userMessage(prompt, documentation)
+
     LOG.trace("Created user message {}", message)
 
     val messages = mutableListOf(systemMessage, *history.toTypedArray(), message)

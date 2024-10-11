@@ -11,6 +11,7 @@ import net.barrage.llmao.utils.Validation
 data class AgentCollection(
   val id: KUUID,
   val agentId: KUUID,
+  val instruction: String,
   val collection: String,
   val amount: Int,
   val createdAt: KOffsetDateTime,
@@ -21,6 +22,7 @@ fun AgentCollectionsRecord.toCollection(): AgentCollection {
   return AgentCollection(
     id = id!!,
     agentId = agentId!!,
+    instruction = instruction!!,
     collection = collection!!,
     amount = amount!!,
     createdAt = createdAt!!,

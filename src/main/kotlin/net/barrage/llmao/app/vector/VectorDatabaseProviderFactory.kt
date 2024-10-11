@@ -8,7 +8,7 @@ import net.barrage.llmao.error.ErrorReason
 
 class VectorDatabaseProviderFactory(env: ApplicationEnvironment) :
   ProviderFactory<VectorDatabase>() {
-  private val weaviate: Weaveiate
+  private val weaviate: Weaviate
 
   init {
     weaviate = initWeaviate(env)
@@ -29,8 +29,8 @@ class VectorDatabaseProviderFactory(env: ApplicationEnvironment) :
     return listOf(weaviate.id())
   }
 
-  private fun initWeaviate(env: ApplicationEnvironment): Weaveiate {
-    return Weaveiate(
+  private fun initWeaviate(env: ApplicationEnvironment): Weaviate {
+    return Weaviate(
       env.config.property("weaviate.scheme").getString(),
       env.config.property("weaviate.host").getString(),
     )

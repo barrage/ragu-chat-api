@@ -1,77 +1,79 @@
 package net.barrage.llmao.app.vector
 
 import io.ktor.server.plugins.*
+import io.ktor.util.logging.*
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
 import io.weaviate.client.v1.graphql.query.argument.NearVectorArgument
 import io.weaviate.client.v1.graphql.query.fields.Field
 import net.barrage.llmao.core.vector.VectorDatabase
-import net.barrage.llmao.utils.Logger
+import net.barrage.llmao.error.AppError
 
-class Weaveiate(scheme: String, host: String) : VectorDatabase {
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.vector.Weaviate")
+
+class Weaviate(scheme: String, host: String) : VectorDatabase {
   private val client: WeaviateClient = WeaviateClient(Config(scheme, host))
 
   override fun id(): String {
     return "weaviate"
   }
 
-  override fun query(searchVector: List<Double>, options: List<Pair<String, Int>>): List<String> {
+  @Suppress("NAME_SHADOWING")
+  override fun query(searchVector: List<Double>, collection: String, amount: Int): List<String> {
     val fields = Field.builder().name("content").build()
 
     val results = mutableListOf<String>()
 
-    for ((collectionName, amount) in options) {
-      val collection = toWeaviateClassName(collectionName)
+    val collection = toWeaviateClassName(collection)
 
-      val query =
-        client
-          .graphQL()
-          .get()
-          .withFields(fields)
-          .withClassName(collection)
-          .withNearVector(
-            NearVectorArgument.builder()
-              .vector(searchVector.map { it.toFloat() }.toTypedArray())
-              .build()
-          )
-          .withLimit(amount)
+    val query =
+      client
+        .graphQL()
+        .get()
+        .withFields(fields)
+        .withClassName(collection)
+        .withNearVector(
+          NearVectorArgument.builder()
+            .vector(searchVector.map { it.toFloat() }.toTypedArray())
+            .build()
+        )
+        .withLimit(amount)
 
-      val queryResult = query.run()
+    val queryResult = query.run()
 
-      if (queryResult.hasErrors()) {
-        val errorMessage = queryResult.error.messages.joinToString(", ")
-        throw BadRequestException("Failed to query: $errorMessage")
-      }
+    if (queryResult.hasErrors()) {
+      val errorMessage = queryResult.error.messages.joinToString(", ")
+      throw BadRequestException("Failed to query: $errorMessage")
+    }
 
-      // TODO: Check result.error and act accordingly
-      val result = queryResult.result.data as? Map<*, *>
+    // TODO: Check result.error and act accordingly
+    val result = queryResult.result.data as? Map<*, *>
 
-      if (result == null) {
-        Logger.error("Cannot cast ${queryResult.result.data} to Map")
-        continue
-      }
+    if (result == null) {
+      LOG.error("Cannot cast ${queryResult.result.data} to Map")
+      throw AppError.internal()
+    }
 
-      val data = result["Get"] as? Map<*, *>
+    val data = result["Get"] as? Map<*, *>
 
-      if (data == null) {
-        Logger.error("Cannot cast ${result["Get"]} to Map")
-        continue
-      }
+    if (data == null) {
+      LOG.error("Cannot cast ${result["Get"]} to Map")
+      throw AppError.internal()
+    }
 
-      val collectionData = data[collection] as? List<*>
+    val collectionData = data[collection] as? List<*>
 
-      if (collectionData == null) {
-        Logger.error("Cannot cast $collectionData to List, skipping")
-        continue
-      }
+    if (collectionData == null) {
+      LOG.error("Cannot cast $collectionData to List, skipping")
+      throw AppError.internal()
+    }
 
-      Logger.debug("Successful query in '$collection' (target $amount results)")
+    LOG.debug("Successful query in '$collection' (target $amount results)")
 
-      for (item in collectionData) {
-        (item as? Map<*, *>)?.let {
-          val content = it["content"] as String
-          results.add(content)
-        }
+    for (item in collectionData) {
+      (item as? Map<*, *>)?.let {
+        val content = it["content"] as String
+        results.add(content)
       }
     }
 

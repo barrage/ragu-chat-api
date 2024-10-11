@@ -4,10 +4,10 @@ interface VectorDatabase {
   fun id(): String
 
   /**
-   * Perform semantic similarity search in the given `collections`, returning `amount` most similar
-   * results from each.
+   * Perform semantic similarity search in the given `collection`, returning `amount` most similar
+   * results.
    */
-  fun query(searchVector: List<Double>, options: List<Pair<String, Int>>): List<String>
+  fun query(searchVector: List<Double>, collection: String, amount: Int): List<String>
 
   /**
    * Used by services to reason about the existence of collections. Returns `true` if the collection
