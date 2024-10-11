@@ -8,9 +8,9 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import net.barrage.llmao.TestClass
+import net.barrage.llmao.IntegrationTest
 
-class AdministrationControllerTests : TestClass() {
+class AdministrationControllerTests : IntegrationTest() {
   private val user = postgres!!.testUser(admin = true)
   private val userSession = postgres!!.testSession(user.id)
 

@@ -7,12 +7,12 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import net.barrage.llmao.TestClass
+import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.User
 
-class UserControllerTests : TestClass() {
+class UserControllerTests : IntegrationTest() {
   private val user: User = postgres!!.testUser(admin = false)
   private val userSession: Session = postgres!!.testSession(user.id)
 
