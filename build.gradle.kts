@@ -17,9 +17,9 @@ plugins {
   id("io.ktor.plugin") version "2.3.12"
   kotlin("plugin.serialization") version "2.0.20"
   id("nu.studer.jooq") version "9.0"
-  id("org.flywaydb.flyway") version "10.17.3"
   id("com.ncorti.ktfmt.gradle") version "0.20.1"
   id("com.gradleup.shadow") version "8.3.3"
+  id("org.liquibase.gradle") version "3.0.1"
 }
 
 group = "net.barrage"
@@ -37,13 +37,7 @@ repositories { mavenCentral() }
 
 sourceSets { main { resources { srcDir("config") } } }
 
-buildscript {
-  dependencies {
-    classpath("org.flywaydb:flyway-database-postgresql:10.17.3")
-    classpath("org.flywaydb:flyway-core:10.17.3")
-    classpath("org.flywaydb:flyway-gradle-plugin:10.17.3")
-  }
-}
+buildscript { dependencies { dependencies { classpath("org.liquibase:liquibase-core:4.29.2") } } }
 
 ktor { fatJar { archiveFileName.set("llmao.jar") } }
 
@@ -67,8 +61,6 @@ dependencies {
   implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
   implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
   implementation("com.auth0:java-jwt:4.4.0")
-  implementation("org.flywaydb:flyway-core:$flywayVersion")
-  implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
   // AI
   implementation("com.aallam.openai:openai-client:3.8.2")
@@ -80,26 +72,36 @@ dependencies {
   testImplementation("org.testcontainers:weaviate:1.20.2")
   testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
+  testImplementation("org.liquibase:liquibase-core:4.29.2")
+  testImplementation("org.postgresql:postgresql:$postgresVersion")
 
   // Error handling
   implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
 
   // Database communication
+  liquibaseRuntime("org.liquibase:liquibase-core:4.29.2")
+  liquibaseRuntime("ch.qos.logback:logback-core:1.2.3")
+  liquibaseRuntime("ch.qos.logback:logback-classic:1.2.3")
+  liquibaseRuntime("info.picocli:picocli:4.7.5")
+  liquibaseRuntime("javax.xml.bind:jaxb-api:2.2.4")
+  liquibaseRuntime("org.postgresql:postgresql:$postgresVersion")
   jooqGenerator("org.postgresql:postgresql:$postgresVersion")
 
   // Weaviate client
   implementation("io.weaviate:client:4.8.3")
 }
 
-flyway {
-  detectEncoding = true
-  driver = project.properties["db.driver"] as String
-  url = project.properties["db.url"] as String
-  user = project.properties["db.user"] as String
-  password = project.properties["db.password"] as String
-  baselineOnMigrate = true
-  locations = arrayOf("filesystem:src/main/resources/db/migration")
-  schemas = arrayOf("public")
+liquibase {
+  activities.register("main") {
+    arguments =
+      mapOf(
+        "url" to project.properties["db.url"] as String,
+        "username" to project.properties["db.user"] as String,
+        "password" to project.properties["db.password"] as String,
+        "changelogFile" to "src/main/resources/db/changelog.xml",
+        "logLevel" to "info",
+      )
+  }
 }
 
 jooq {
@@ -121,7 +123,7 @@ jooq {
           database.apply {
             name = "org.jooq.meta.postgres.PostgresDatabase"
             inputSchema = "public"
-            excludes = "flyway_schema_history"
+            excludes = "databasechangelog | databasechangeloglock"
           }
           generate.apply {
             isDeprecated = false
@@ -142,9 +144,7 @@ jooq {
 
 ktfmt { googleStyle() }
 
-// tasks.test { testLogging { showStandardStreams = true } }
-
-tasks.named("generateJooq") { dependsOn("flywayMigrate") }
+tasks.named("generateJooq") { dependsOn("update") }
 
 tasks.withType<Jar> { exclude("application.yaml") }
 

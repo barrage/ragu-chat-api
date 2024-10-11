@@ -1,8 +1,6 @@
 package net.barrage.llmao.plugins
 
 import io.ktor.server.application.*
-import io.ktor.server.config.*
-import org.flywaydb.core.Flyway
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
@@ -19,12 +17,5 @@ fun initDatabase(env: ApplicationEnvironment): DSLContext {
       this.password = pw
     }
   val dslContext = DSL.using(dataSource, SQLDialect.POSTGRES)
-  runFlyWayMigrations(dataSource)
   return dslContext
-}
-
-private fun runFlyWayMigrations(dataSource: PGSimpleDataSource) {
-  val flyway = Flyway.configure().dataSource(dataSource).validateMigrationNaming(true).load()
-  flyway.repair()
-  flyway.migrate()
 }

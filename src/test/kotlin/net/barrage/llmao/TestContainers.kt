@@ -6,19 +6,16 @@ import io.weaviate.client.v1.schema.model.Property
 import io.weaviate.client.v1.schema.model.WeaviateClass
 import java.time.OffsetDateTime
 import java.util.*
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
-import net.barrage.llmao.core.models.toAgent
-import net.barrage.llmao.core.models.toSessionData
-import net.barrage.llmao.core.models.toUser
+import liquibase.Liquibase
+import liquibase.database.jvm.JdbcConnection
+import liquibase.resource.ClassLoaderResourceAccessor
+import net.barrage.llmao.core.models.*
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.SESSIONS
 import net.barrage.llmao.tables.references.USERS
-import org.flywaydb.core.Flyway
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
@@ -44,15 +41,18 @@ class TestPostgres {
 
     val dataSource =
       PGSimpleDataSource().apply {
-        setURL(container.getJdbcUrl())
+        setURL(container.jdbcUrl)
         password = "test"
         user = "test"
         databaseName = "test"
       }
 
-    val flyway = Flyway.configure().dataSource(dataSource).validateMigrationNaming(true).load()
-    flyway.repair()
-    flyway.migrate()
+    Liquibase(
+        "db/changelog.xml",
+        ClassLoaderResourceAccessor(),
+        JdbcConnection(dataSource.connection),
+      )
+      .update("main")
 
     dslContext = DSL.using(dataSource, SQLDialect.POSTGRES)
   }
