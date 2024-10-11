@@ -101,8 +101,43 @@ This will ensure that your code is always formatted correctly, and has optimized
 
 ### Migrations and seeders
 
-Flyway is responsible for migrating the database schema.
+Liquibase is responsible for migrating the database schema.
 It is embedded into the application and will run migrations on app startup.
+
+Migrations are located in the `src/main/resources/db/migrations` directory.
+Every migration folder should have a name in the format `{migration_number}_{migration_description}`, with `up.sql` and
+`down.sql` files that will handle migration and migration rollback.
+When creating new migrations to add to the database, make sure to insert incremented version tag in the `changelog.xml`
+in `src/main/resources/db`.
+
+Updated `changelog.xml` should look like this:
+
+```xml
+
+<changeSet id="{n+1}" author="barrage">
+    <tagDatabase tag="{version_tag}"/>
+</changeSet>
+<changeSet id="{n+2}" author="barrage">
+<sqlFile
+        encoding="utf8"
+        path="migration/{migration_number}_{migration_description}/up.sql"
+        relativeToChangelogFile="true"
+        splitStatements="false"/>
+<rollback>
+    <sqlFile
+            encoding="utf8"
+            path="migration/{migration_number}_{migration_description}/down.sql"
+            relativeToChangelogFile="true"
+            splitStatements="false"/>
+</rollback>
+</changeSet>
+```
+
+To rollback migrations to the tag, run the following command:
+
+```bash
+./gradlew liquibaseRollback -PliquibaseTag={version_tag}
+```
 
 To seed the database with the initial agent and users, run
 

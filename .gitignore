@@ -28,4 +28,5 @@ out/
 .vscode/
 
 gradle.properties
+liquibase.properties
 config/application.yaml
