@@ -4,11 +4,13 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
+import io.ktor.util.logging.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.utils.Logger
 import net.barrage.llmao.utils.ValidationError
+
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.plugins.GlobalErrorHandler")
 
 fun Application.configureErrorHandling() {
   install(StatusPages) {
@@ -68,7 +70,7 @@ fun Application.configureErrorHandling() {
     }
 
     exception<Throwable> { call, err ->
-      Logger.error("${err::class} | ${err.localizedMessage} | ${err.cause} | ${err.cause?.cause}")
+      LOG.error("${err::class} | ${err.localizedMessage} | ${err.cause} | ${err.cause?.cause}")
       call.respond(HttpStatusCode.InternalServerError, err.localizedMessage)
     }
   }

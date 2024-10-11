@@ -7,12 +7,14 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.util.logging.*
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.auth.UserInfo
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.utils.Logger
+
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.auth.google")
 
 class GoogleAuthenticationProvider(
   private val client: HttpClient,
@@ -39,7 +41,7 @@ class GoogleAuthenticationProvider(
 
     if (res.status != HttpStatusCode.OK) {
       val errorBody = res.bodyAsText()
-      Logger.error("Failed to retrieve token: ${res.status}. Response: $errorBody")
+      LOG.error("Failed to retrieve token: ${res.status}. Response: $errorBody")
       throw AppError.api(
         ErrorReason.Authentication,
         "Failed to retrieve token: ${res.status}. Response: $errorBody",
