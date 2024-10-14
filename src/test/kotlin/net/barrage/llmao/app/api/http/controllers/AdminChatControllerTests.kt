@@ -5,6 +5,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -25,6 +26,11 @@ class AdminChatControllerTests : IntegrationTest() {
   private val messageOne: Message = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
   private val messageTwo: Message =
     postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
+
+  @AfterTest
+  fun cleanup() {
+    postgres!!.container.stop()
+  }
 
   @Test
   fun shouldRetrieveAllChatsDefaultPagination() = test {

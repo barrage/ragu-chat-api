@@ -5,6 +5,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import java.util.*
+import kotlin.test.AfterTest
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import net.barrage.llmao.IntegrationTest
@@ -19,6 +20,11 @@ class AdminUserControllerTests : IntegrationTest() {
   private val adminUser = postgres!!.testUser("foo@bar.com", admin = true)
   private val peasantUser = postgres!!.testUser("bar@foo.com", admin = false)
   private val adminSession = postgres!!.testSession(adminUser.id)
+
+  @AfterTest
+  fun cleanup() {
+    postgres!!.container.stop()
+  }
 
   @Test
   fun listAllUsersDefaultPagination() = test {

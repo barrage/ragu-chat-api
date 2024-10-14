@@ -5,6 +5,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -13,6 +14,11 @@ import net.barrage.llmao.IntegrationTest
 class AdministrationControllerTests : IntegrationTest() {
   private val user = postgres!!.testUser(admin = true)
   private val userSession = postgres!!.testSession(user.id)
+
+  @AfterTest
+  fun cleanup() {
+    postgres!!.container.stop()
+  }
 
   @Test
   fun getProvidersTest() = test {
