@@ -41,6 +41,6 @@ enum class ErrorReason(val reason: String) {
   InvalidProvider("Unsupported provider"),
 
   // Websocket errors
-  Websocket("Unprocessable system message"),
+  Websocket("Unprocessable message"),
   Internal("Something went wrong"),
 }

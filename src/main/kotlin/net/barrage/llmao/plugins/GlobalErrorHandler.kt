@@ -69,7 +69,7 @@ fun Application.configureErrorHandling() {
       )
     }
 
-    exception<Throwable> { call, err ->
+    exception<Exception> { call, err ->
       LOG.error("${err::class} | ${err.localizedMessage} | ${err.cause} | ${err.cause?.cause}")
       call.respond(HttpStatusCode.InternalServerError, err.localizedMessage)
     }
