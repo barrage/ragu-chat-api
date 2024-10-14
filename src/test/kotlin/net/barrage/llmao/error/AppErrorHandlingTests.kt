@@ -66,8 +66,6 @@ class AppErrorHandlingTests {
 
     val error = response.body<AppError>()
 
-    println(error)
-
     assertEquals(400, response.status.value)
     assertEquals(error.reason, ErrorReason.InvalidParameter)
   }

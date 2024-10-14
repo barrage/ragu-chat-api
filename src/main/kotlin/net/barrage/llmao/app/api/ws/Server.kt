@@ -1,12 +1,44 @@
 package net.barrage.llmao.app.api.ws
 
-import io.ktor.server.plugins.*
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
 class Server(private val factory: ChatFactory) {
+  /** Maps user IDs to their chat instances. */
   private val chats: MutableMap<KUUID, Chat> = mutableMapOf()
+
+  /** Maps one time tokens to user IDs. */
+  private val tokens: MutableMap<KUUID, KUUID> = mutableMapOf()
+
+  /** The reverse of `tokens`. Used to prevent overflowing the map. */
+  private val pendingTokens: MutableMap<KUUID, KUUID> = mutableMapOf()
+
+  /** Register a token and map it to the authenticating user's ID. */
+  fun registerToken(userId: KUUID): KUUID {
+    val existingToken = pendingTokens[userId]
+
+    if (existingToken != null) {
+      return existingToken
+    }
+
+    val token = KUUID.randomUUID()
+
+    tokens[token] = userId
+    pendingTokens[userId] = token
+
+    return token
+  }
+
+  /**
+   * Remove the token from the token map. If this returns a non-null value, the user is
+   * authenticated.
+   */
+  fun removeToken(token: KUUID): KUUID? {
+    val userId = tokens.remove(token) ?: return null
+    pendingTokens.remove(userId)
+    return userId
+  }
 
   fun removeChat(userId: KUUID) {
     chats.remove(userId)
@@ -20,17 +52,11 @@ class Server(private val factory: ChatFactory) {
   }
 
   private suspend fun handleChatMessage(emitter: Emitter, userId: KUUID, message: String) {
-    val chat = chats[userId]
-
-    if (chat == null) {
-      emitter.emitError(
-        AppError.api(ErrorReason.Websocket, "Unable to process message, have you opened a chat?")
-      )
-      return
-    }
+    val chat =
+      chats[userId] ?: throw AppError.api(ErrorReason.Websocket, "Chat not open for user '$userId'")
 
     if (chat.isStreaming()) {
-      emitter.emitError(AppError.api(ErrorReason.Websocket, "Stream already active"))
+      throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
     chat.stream(message, emitter)
@@ -62,8 +88,6 @@ class Server(private val factory: ChatFactory) {
       }
       is SystemMessage.StopStream -> {
         val chat = chats[userId]
-        // Closing the stream during streaming will result emit the event
-        // from the chat
         chat?.closeStream()
       }
     }

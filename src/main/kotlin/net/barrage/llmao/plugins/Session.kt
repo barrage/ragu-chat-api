@@ -23,7 +23,10 @@ fun ApplicationCall.sessionId(): KUUID {
   return sessions.get<SessionCookie>()!!.id
 }
 
-/** Obtain the current user initiating the request. */
+/**
+ * Obtain the current user initiating the request. The user is put in the request attributes from
+ * the database via the session middleware.
+ */
 fun ApplicationCall.user(): User {
   return attributes[RequestUser]
 }
