@@ -48,7 +48,7 @@ class TestPostgres {
       }
 
     Liquibase(
-        "db/changelog.xml",
+        "db/changelog.yaml",
         ClassLoaderResourceAccessor(),
         JdbcConnection(dataSource.connection),
       )

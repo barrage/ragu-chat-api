@@ -6,31 +6,22 @@ include:
 build-and-test:
   stage: build
   image:
-    name: nexus.barrage.net:13455/barrage-internal/ubuntu-java-17
+    name: nexus.barrage.net:13455/barrage-internal/ubuntu-java-17-dind
   tags:
     - docker-executor
   variables:
-    POSTGRES_PASSWORD: postgres
-    POSTGRES_USER: postgres
-    POSTGRES_DB: kappi
+    DOCKER_HOST: "tcp://docker:2375"
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_STARTUP_TIMEOUT: "120"
+    TESTCONTAINERS_RYUK_DISABLED: "true"
   services:
-    - name: postgres:latest
-      alias: postgres
-    - name: semitechnologies/weaviate:1.20.0
-      alias: weaviate
-      variables:
-        QUERY_DEFAULTS_LIMIT: "25"
-        AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-        PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-        DEFAULT_VECTORIZER_MODULE: "none"
-        ENABLE_MODULES: ""
-        CLUSTER_HOSTNAME: "node1"
-      command: [ "/bin/bash", "-c", "--host 0.0.0.0 --port 8080 --scheme http && weaviate" ]
+    - name: docker:dind-rootless
+      alias: docker
   script:
-    - cp config/application.example.yaml config/application.yaml
-    - sed -i "s|jdbc:postgresql://localhost:5454/kappi|jdbc:postgresql://postgres:5432/kappi|g" config/application.yaml
+    # - export DOCKER_DRIVER=overlay2
+    - screen -d -m /usr/local/bin/dockerd
     - cp gradle.example.properties gradle.properties
-    - sed -i "s|jdbc:postgresql://localhost:5454/kappi|jdbc:postgresql://postgres:5432/kappi|g" gradle.properties
+    - cp config/application.example.yaml config/application.yaml
     - ./gradlew test
     - ./gradlew buildFatJar
   artifacts:
