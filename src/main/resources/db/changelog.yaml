@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 1.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/1_extensions/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/1_extensions/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+
+  - changeSet:
+      id: 2
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 2.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/2_initial_migration/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/2_initial_migration/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
