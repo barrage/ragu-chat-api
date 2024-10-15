@@ -8,12 +8,14 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*
 import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.utils.NotBlank
 import net.barrage.llmao.utils.Range
 import net.barrage.llmao.utils.Validation
@@ -144,10 +146,6 @@ class AppErrorHandlingTests {
 
     routing {
       put("/error-test") {
-        // This is done automatically by KTOR, however
-        // the validation plugin is already installed in the global
-        // app and this is the most painless way of simulating this
-        // behaviour
         val data = call.receive<ValidationTestJson>()
         val results = data.validate()
         if (results is ValidationResult.Invalid) {
@@ -172,5 +170,40 @@ class AppErrorHandlingTests {
     assertEquals("range", error.code)
     assertEquals("foo", error.fieldName)
     assertEquals("Value must be in range 0.0 - 1.0", error.message)
+  }
+
+  @Test
+  fun happyPathUuid() = testApplication {
+    routing {
+      get("/happy/{path}") {
+        call.pathUuid("path")
+        call.respond(HttpStatusCode.OK)
+      }
+    }
+
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val id = KUUID.randomUUID()
+    val response = client.get("/happy/$id") {}
+
+    assertEquals(200, response.status.value)
+  }
+
+  @Test
+  fun sadPathUuid() = testApplication {
+    routing {
+      get("/sad/{path}") {
+        call.pathUuid("path")
+        call.respond(HttpStatusCode.OK)
+      }
+    }
+
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response = client.get("/sad/foo") {}
+
+    val error = response.body<AppError>()
+
+    assertEquals(400, response.status.value)
+    assertEquals(ErrorReason.InvalidParameter, error.reason)
+    assert(error.description!!.contains("not a valid UUID"))
   }
 }

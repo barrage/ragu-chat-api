@@ -49,7 +49,7 @@ fun Application.configureRouting(services: ServiceState) {
 
 /**
  * Utility for quickly obtaining a path segment from a URL and converting it to a UUID. Throws an
- * [Error] if the UUID is malformed.
+ * [AppError] if the UUID is malformed.
  */
 fun ApplicationCall.pathUuid(param: String): KUUID {
   val value = parameters[param]
