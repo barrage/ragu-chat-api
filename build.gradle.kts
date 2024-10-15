@@ -102,32 +102,33 @@ val env =
   project.properties["env"] as? String
     ?: throw Exception("`env` variable not set; check gradle.properties")
 
-val dbUrl =
+var dbUrl =
   project.properties["db.url"] as? String
     ?: throw Exception("`db.url` variable not set; check gradle.properties")
 
-val dbUser =
+var dbUser =
   project.properties["db.user"] as? String
     ?: throw Exception("`db.user` variable not set; check gradle.properties")
 
-val dbPassword =
+var dbPassword =
   project.properties["db.password"] as? String
     ?: throw Exception("`db.password` variable not set; check gradle.properties")
 
 var tempDb: PostgreSQLContainer<*>? = null
 
-tasks.register("startBuildDb") {
-  doLast {
-    tempDb =
-      PostgreSQLContainer<Nothing>("postgres:latest")
-        .apply {
-          withDatabaseName("test")
-          withUsername("test")
-          withPassword("test")
-        }
-        .waitingFor(org.testcontainers.containers.wait.strategy.Wait.defaultWaitStrategy())
-    tempDb!!.start()
-  }
+if (env != "local") {
+  tempDb =
+    PostgreSQLContainer<Nothing>("postgres:latest")
+      .apply {
+        withDatabaseName("test")
+        withUsername("test")
+        withPassword("test")
+      }
+      .waitingFor(org.testcontainers.containers.wait.strategy.Wait.defaultWaitStrategy())
+  tempDb!!.start()
+  dbUrl = tempDb!!.jdbcUrl
+  dbUser = "test"
+  dbPassword = "test"
 }
 
 tasks.register("stopBuildDb") {
@@ -141,9 +142,9 @@ liquibase {
   activities.register("main") {
     arguments =
       mapOf(
-        "url" to (tempDb?.jdbcUrl ?: dbUrl),
-        "username" to (tempDb?.username ?: dbUser),
-        "password" to (tempDb?.password ?: dbPassword),
+        "url" to dbUrl,
+        "username" to dbUser,
+        "password" to dbPassword,
         "changelogFile" to "src/main/resources/db/changelog.yaml",
         "logLevel" to "info",
       )
@@ -160,16 +161,16 @@ jooq {
       jooqConfiguration.apply {
         logging = Logging.ERROR
         jdbc.apply {
-          url = tempDb?.jdbcUrl ?: dbUrl
-          user = tempDb?.jdbcUrl ?: dbUser
-          password = tempDb?.jdbcUrl ?: dbPassword
+          url = dbUrl
+          user = dbUser
+          password = dbPassword
         }
         generator.apply {
           name = "org.jooq.codegen.KotlinGenerator"
           database.apply {
             name = "org.jooq.meta.postgres.PostgresDatabase"
             inputSchema = "public"
-            excludes = "databasechangelog | databasechangeloglock | .*_trigger"
+            excludes = "databasechangelog | databasechangeloglock"
           }
           generate.apply {
             isDeprecated = false
@@ -190,11 +191,9 @@ jooq {
 
 ktfmt { googleStyle() }
 
-tasks.named("liquibaseUpdate") {
-  if (env != "local") {
-    dependsOn("startBuildDb")
-  }
-}
+tasks.test { testLogging { showStandardStreams = true } }
+
+tasks.named("build") { dependsOn("generateJooq") }
 
 tasks.named("generateJooq") {
   dependsOn("liquibaseUpdate")

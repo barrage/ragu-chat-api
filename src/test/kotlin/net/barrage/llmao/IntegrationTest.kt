@@ -12,26 +12,33 @@ open class IntegrationTest(usePostgres: Boolean = true, useWeaviate: Boolean = f
   val cookieName = cfg.property("session.cookieName").getString()
 
   fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
-    postgres?.let {
-      cfg =
-        cfg.mergeWith(
-          MapApplicationConfig(
-            "db.url" to it.container.getJdbcUrl(),
-            "db.user" to it.container.username,
-            "db.password" to it.container.password,
+    try {
+      postgres?.let {
+        println("POSTGRES START")
+        println(it.container.jdbcUrl)
+        cfg =
+          cfg.mergeWith(
+            MapApplicationConfig(
+              "db.url" to it.container.jdbcUrl,
+              "db.user" to it.container.username,
+              "db.password" to it.container.password,
+            )
           )
-        )
-    }
-    weaviate?.let {
-      cfg =
-        cfg.mergeWith(
-          MapApplicationConfig(
-            "weaviate.host" to it.container.httpHostAddress,
-            "weaviate.scheme" to "http",
+      }
+      weaviate?.let {
+        cfg =
+          cfg.mergeWith(
+            MapApplicationConfig(
+              "weaviate.host" to it.container.httpHostAddress,
+              "weaviate.scheme" to "http",
+            )
           )
-        )
+      }
+      environment { config = cfg }
+    } catch (e: Exception) {
+      e.printStackTrace()
+      throw e
     }
-    environment { config = cfg }
     block()
   }
 
