@@ -20,7 +20,7 @@ plugins {
   id("nu.studer.jooq") version "9.0"
   id("com.ncorti.ktfmt.gradle") version "0.20.1"
   id("com.gradleup.shadow") version "8.3.3"
-  id("org.liquibase.gradle") version "3.0.1"
+  id("org.liquibase.gradle") version "3.0.0"
 }
 
 group = "net.barrage"
@@ -97,9 +97,26 @@ dependencies {
   implementation("io.weaviate:client:4.8.3")
 }
 
+// Ensures all properties are set in gradle.properties and throws a user friendly error if not
+val env =
+  project.properties["env"] as? String
+    ?: throw Exception("`env` variable not set; check gradle.properties")
+
+val dbUrl =
+  project.properties["db.url"] as? String
+    ?: throw Exception("`db.url` variable not set; check gradle.properties")
+
+val dbUser =
+  project.properties["db.user"] as? String
+    ?: throw Exception("`db.user` variable not set; check gradle.properties")
+
+val dbPassword =
+  project.properties["db.password"] as? String
+    ?: throw Exception("`db.password` variable not set; check gradle.properties")
+
 var tempDb: PostgreSQLContainer<*>? = null
 
-tasks.register("startTestDb") {
+tasks.register("startBuildDb") {
   doLast {
     tempDb =
       PostgreSQLContainer<Nothing>("postgres:latest")
@@ -113,7 +130,7 @@ tasks.register("startTestDb") {
   }
 }
 
-tasks.register("stopTestDb") {
+tasks.register("stopBuildDb") {
   doLast {
     tempDb?.stop()
     tempDb = null
@@ -124,12 +141,10 @@ liquibase {
   activities.register("main") {
     arguments =
       mapOf(
-        "url" to if (tempDb != null) tempDb!!.jdbcUrl else project.properties["db.url"] as String,
-        "username" to
-          if (tempDb != null) tempDb!!.username else project.properties["db.user"] as String,
-        "password" to
-          if (tempDb != null) tempDb!!.password else project.properties["db.password"] as String,
-        "changelogFile" to "src/main/resources/db/changelog.xml",
+        "url" to (tempDb?.jdbcUrl ?: dbUrl),
+        "username" to (tempDb?.username ?: dbUser),
+        "password" to (tempDb?.password ?: dbPassword),
+        "changelogFile" to "src/main/resources/db/changelog.yaml",
         "logLevel" to "info",
       )
   }
@@ -145,21 +160,16 @@ jooq {
       jooqConfiguration.apply {
         logging = Logging.ERROR
         jdbc.apply {
-          url = project.properties["db.url"] as String
-          user = project.properties["db.user"] as String
-          password = project.properties["db.password"] as String
-          tempDb?.let {
-            url = it.jdbcUrl
-            user = it.username
-            password = it.password
-          }
+          url = tempDb?.jdbcUrl ?: dbUrl
+          user = tempDb?.jdbcUrl ?: dbUser
+          password = tempDb?.jdbcUrl ?: dbPassword
         }
         generator.apply {
           name = "org.jooq.codegen.KotlinGenerator"
           database.apply {
             name = "org.jooq.meta.postgres.PostgresDatabase"
             inputSchema = "public"
-            excludes = "databasechangelog | databasechangeloglock"
+            excludes = "databasechangelog | databasechangeloglock | .*_trigger"
           }
           generate.apply {
             isDeprecated = false
@@ -180,15 +190,18 @@ jooq {
 
 ktfmt { googleStyle() }
 
-tasks.named("generateJooq") { dependsOn("update") }
-
-tasks.test {
-  testLogging { showStandardStreams = true }
-  dependsOn("startTestDb", "update", "generateJooq")
-  finalizedBy("stopTestDb")
+tasks.named("liquibaseUpdate") {
+  if (env != "local") {
+    dependsOn("startBuildDb")
+  }
 }
 
-tasks.named("generateJooq") { dependsOn("update") }
+tasks.named("generateJooq") {
+  dependsOn("liquibaseUpdate")
+  if (env != "local") {
+    finalizedBy("stopBuildDb")
+  }
+}
 
 tasks.withType<Jar> { exclude("application.yaml") }
 
