@@ -1,6 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import nu.studer.gradle.jooq.JooqEdition
 import org.jooq.meta.jaxb.Logging
+import org.testcontainers.containers.PostgreSQLContainer
 
 val ktorVersion = "2.3.12"
 val kotlinVersion = "2.0.20"
@@ -37,7 +38,12 @@ repositories { mavenCentral() }
 
 sourceSets { main { resources { srcDir("config") } } }
 
-buildscript { dependencies { dependencies { classpath("org.liquibase:liquibase-core:4.29.2") } } }
+buildscript {
+  dependencies {
+    classpath("org.testcontainers:postgresql:1.20.2")
+    classpath("org.liquibase:liquibase-core:4.29.2")
+  }
+}
 
 ktor { fatJar { archiveFileName.set("llmao.jar") } }
 
@@ -91,13 +97,38 @@ dependencies {
   implementation("io.weaviate:client:4.8.3")
 }
 
+var tempDb: PostgreSQLContainer<*>? = null
+
+tasks.register("startTestDb") {
+  doLast {
+    tempDb =
+      PostgreSQLContainer<Nothing>("postgres:latest")
+        .apply {
+          withDatabaseName("test")
+          withUsername("test")
+          withPassword("test")
+        }
+        .waitingFor(org.testcontainers.containers.wait.strategy.Wait.defaultWaitStrategy())
+    tempDb!!.start()
+  }
+}
+
+tasks.register("stopTestDb") {
+  doLast {
+    tempDb?.stop()
+    tempDb = null
+  }
+}
+
 liquibase {
   activities.register("main") {
     arguments =
       mapOf(
-        "url" to project.properties["db.url"] as String,
-        "username" to project.properties["db.user"] as String,
-        "password" to project.properties["db.password"] as String,
+        "url" to if (tempDb != null) tempDb!!.jdbcUrl else project.properties["db.url"] as String,
+        "username" to
+          if (tempDb != null) tempDb!!.username else project.properties["db.user"] as String,
+        "password" to
+          if (tempDb != null) tempDb!!.password else project.properties["db.password"] as String,
         "changelogFile" to "src/main/resources/db/changelog.xml",
         "logLevel" to "info",
       )
@@ -117,6 +148,11 @@ jooq {
           url = project.properties["db.url"] as String
           user = project.properties["db.user"] as String
           password = project.properties["db.password"] as String
+          tempDb?.let {
+            url = it.jdbcUrl
+            user = it.username
+            password = it.password
+          }
         }
         generator.apply {
           name = "org.jooq.codegen.KotlinGenerator"
@@ -143,6 +179,14 @@ jooq {
 }
 
 ktfmt { googleStyle() }
+
+tasks.named("generateJooq") { dependsOn("update") }
+
+tasks.test {
+  testLogging { showStandardStreams = true }
+  dependsOn("startTestDb", "update", "generateJooq")
+  finalizedBy("stopTestDb")
+}
 
 tasks.named("generateJooq") { dependsOn("update") }
 
