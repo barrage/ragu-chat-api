@@ -43,6 +43,10 @@ fun AgentCollectionsRecord.toCollection(): AgentCollection {
 @Serializable
 data class UpdateCollections(
   @NotBlank val provider: String,
-  val add: Map<String, Int>?,
-  val remove: List<String>?,
+  val add: List<CollectionItem>? = null,
+  val remove: List<String>? = null,
 ) : Validation
+
+@Serializable
+data class CollectionItem(@NotBlank val name: String, val amount: Int, val instruction: String) :
+  Validation

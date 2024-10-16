@@ -14,8 +14,6 @@ open class IntegrationTest(usePostgres: Boolean = true, useWeaviate: Boolean = f
   fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
     try {
       postgres?.let {
-        println("POSTGRES START")
-        println(it.container.jdbcUrl)
         cfg =
           cfg.mergeWith(
             MapApplicationConfig(

@@ -181,12 +181,13 @@ class AgentRepository(private val dslContext: DSLContext) {
     update.add?.let {
       dslContext
         .batch(
-          it.map { (name, amount) ->
+          it.map { (name, amount, instruction) ->
             dslContext
               .insertInto(AGENT_COLLECTIONS)
               .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
               .set(AGENT_COLLECTIONS.COLLECTION, name)
               .set(AGENT_COLLECTIONS.AMOUNT, amount)
+              .set(AGENT_COLLECTIONS.INSTRUCTION, instruction)
               .onConflict(AGENT_COLLECTIONS.AGENT_ID, AGENT_COLLECTIONS.COLLECTION)
               .doUpdate()
               .set(AGENT_COLLECTIONS.AMOUNT, amount)
