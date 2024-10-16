@@ -107,30 +107,29 @@ It is embedded into the application and will run migrations on app startup.
 Migrations are located in the `src/main/resources/db/migrations` directory.
 Every migration folder should have a name in the format `{migration_number}_{migration_description}`, with `up.sql` and
 `down.sql` files that will handle migration and migration rollback.
-When creating new migrations to add to the database, make sure to insert incremented version tag in the `changelog.xml`
+When creating new migrations to add to the database, make sure to insert incremented version tag in the `changelog.yaml`
 in `src/main/resources/db`.
 
-Updated `changelog.xml` should look like this:
+Updated `changelog.yaml` should look like this:
 
-```xml
-
-<changeSet id="{n+1}" author="barrage">
-    <tagDatabase tag="{version_tag}"/>
-</changeSet>
-<changeSet id="{n+2}" author="barrage">
-<sqlFile
-        encoding="utf8"
-        path="migration/{migration_number}_{migration_description}/up.sql"
-        relativeToChangelogFile="true"
-        splitStatements="false"/>
-<rollback>
-    <sqlFile
-            encoding="utf8"
-            path="migration/{migration_number}_{migration_description}/down.sql"
-            relativeToChangelogFile="true"
-            splitStatements="false"/>
-</rollback>
-</changeSet>
+```yaml
+- changeSet:
+  id: { migration_number }
+  author: barrage
+  changes:
+    - tagDatabase:
+        tag: { migration_tag }
+    - sqlFile:
+        encoding: utf8
+        path: migration/{ migration_number }_{ migration_name }/up.sql
+        relativeToChangelogFile: true
+        splitStatements: false
+  rollback:
+    - sqlFile:
+        encoding: utf8
+        path: migration/{ migration_number }_{ migration_name }/down.sql
+        relativeToChangelogFile: true
+        splitStatements: false
 ```
 
 To rollback migrations to the tag, run the following command:
