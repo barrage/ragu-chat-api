@@ -135,7 +135,7 @@ Updated `changelog.yaml` should look like this:
 To rollback migrations to the tag, run the following command:
 
 ```bash
-./gradlew liquibaseRollback -PliquibaseTag={version_tag}
+./gradlew liquibaseRollback -PliquibaseCommandValue={version_tag}
 ```
 
 To seed the database with the initial agent and users, run

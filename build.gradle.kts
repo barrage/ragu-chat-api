@@ -20,7 +20,7 @@ plugins {
   id("nu.studer.jooq") version "9.0"
   id("com.ncorti.ktfmt.gradle") version "0.20.1"
   id("com.gradleup.shadow") version "8.3.3"
-  id("org.liquibase.gradle") version "3.0.0"
+  id("org.liquibase.gradle") version "2.2.2"
 }
 
 group = "net.barrage"
@@ -114,6 +114,8 @@ var dbPassword =
   project.properties["db.password"] as? String
     ?: throw Exception("`db.password` variable not set; check gradle.properties")
 
+val dbChangelog = "src/main/resources/db/changelog.yaml"
+
 var tempDb: PostgreSQLContainer<*>? = null
 
 if (env != "local") {
@@ -145,10 +147,11 @@ liquibase {
         "url" to dbUrl,
         "username" to dbUser,
         "password" to dbPassword,
-        "changelogFile" to "src/main/resources/db/changelog.yaml",
+        "changelogFile" to dbChangelog,
         "logLevel" to "info",
       )
   }
+  runList = "main"
 }
 
 jooq {
@@ -177,6 +180,7 @@ jooq {
             isKotlinSetterJvmNameAnnotationsOnIsPrefix = true
             isPojosAsKotlinDataClasses = true
             isFluentSetters = true
+            isRoutines = false
           }
           target.apply {
             packageName = "net.barrage.llmao"
@@ -195,12 +199,9 @@ tasks.test { testLogging { showStandardStreams = true } }
 
 tasks.named("build") { dependsOn("generateJooq") }
 
-tasks.named("generateJooq") {
-  dependsOn("liquibaseUpdate")
-  if (env != "local") {
-    finalizedBy("stopBuildDb")
-  }
-}
+tasks.named("generateJooq") { dependsOn("liquibaseUpdate") }
+
+tasks.matching { it.name != "stopBuildDb" }.all { finalizedBy("stopBuildDb") }
 
 tasks.withType<Jar> { exclude("application.yaml") }
 
