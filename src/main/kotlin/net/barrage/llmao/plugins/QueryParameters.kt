@@ -66,12 +66,12 @@ private fun setFieldValue(field: KMutableProperty<*>, instance: Any, value: Stri
   // Convert the query parameter string to the appropriate field type
   val convertedValue: Any? =
     when (fieldType) {
-      Int::class.java -> value.toIntOrNull()
-      Long::class.java -> value.toLongOrNull()
-      Float::class.java -> value.toFloatOrNull()
-      Double::class.java -> value.toDoubleOrNull()
-      Boolean::class.java -> value.toBoolean()
-      String::class.java -> value
+      Int::class -> value.toIntOrNull()
+      Long::class -> value.toLongOrNull()
+      Float::class -> value.toFloatOrNull()
+      Double::class -> value.toDoubleOrNull()
+      Boolean::class -> value.toBoolean()
+      String::class -> value
 
       // Custom application types
       SortOrder::class -> if (value == "asc") SortOrder.ASC else SortOrder.DESC

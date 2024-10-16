@@ -69,11 +69,11 @@ class AgentService(
 
     // Ensure the collections being added exist
     update.add?.let {
-      for (collection in it) {
-        if (!vectorDb.validateCollection(collection.key)) {
+      for (collectionItem in it) {
+        if (!vectorDb.validateCollection(collectionItem.name)) {
           throw AppError.api(
             ErrorReason.EntityDoesNotExist,
-            "Collection with name '${collection.key}'",
+            "Collection with name '${collectionItem.name}'",
           )
         }
       }

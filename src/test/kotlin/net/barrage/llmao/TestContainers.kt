@@ -9,9 +9,26 @@ import java.util.*
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
-import net.barrage.llmao.core.models.*
-import net.barrage.llmao.tables.records.*
-import net.barrage.llmao.tables.references.*
+import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.toAgent
+import net.barrage.llmao.core.models.toChat
+import net.barrage.llmao.core.models.toMessage
+import net.barrage.llmao.core.models.toSessionData
+import net.barrage.llmao.core.models.toUser
+import net.barrage.llmao.tables.records.AgentsRecord
+import net.barrage.llmao.tables.records.ChatsRecord
+import net.barrage.llmao.tables.records.MessagesRecord
+import net.barrage.llmao.tables.records.SessionsRecord
+import net.barrage.llmao.tables.records.UsersRecord
+import net.barrage.llmao.tables.references.AGENTS
+import net.barrage.llmao.tables.references.CHATS
+import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.SESSIONS
+import net.barrage.llmao.tables.references.USERS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
@@ -84,11 +101,11 @@ class TestPostgres {
 
   fun testAgent(
     context: String = "Test",
-    llmProvider: String = "ollama",
-    model: String = "mistral:latest",
+    llmProvider: String = "openai",
+    model: String = "gpt-4",
     vectorProvider: String = "weaviate",
-    embeddingProvider: String = "fembed",
-    embeddingModel: String = "Xenova/bge-large-en-v1.5",
+    embeddingProvider: String = "azure",
+    embeddingModel: String = "text-embeddings-ada-002",
     active: Boolean = true,
   ): Agent {
     return dslContext

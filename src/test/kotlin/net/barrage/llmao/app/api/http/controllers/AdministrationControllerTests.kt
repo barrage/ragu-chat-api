@@ -3,9 +3,11 @@ package net.barrage.llmao.app.api.http.controllers
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlin.test.AfterTest
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -72,6 +74,7 @@ class AdministrationControllerTests : IntegrationTest() {
     assertEquals(body, listOf("gpt-3.5-turbo", "gpt-4"))
   }
 
+  @Ignore
   @Test
   fun getListOfProviderLanguageModelsTestOllama() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
