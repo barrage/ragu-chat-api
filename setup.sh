@@ -17,16 +17,7 @@ cat ./config/application.yaml &> /dev/null
 
 if [ $? -eq 0 ]; then
   echo "application.yaml already exists, skipping"
-else
-  cp ./config/application.example.yaml ./config/application.yaml
-fi
-
-# Set up the liquibase properties
-cat liquibase.properties &> /dev/null
-
-if [ $? -eq 0 ]; then
-  echo "liquibase.properties already exists, skipping"
   exit 0;
 else
-  cp liquibase.example.properties liquibase.properties
+  cp ./config/application.example.yaml ./config/application.yaml
 fi
