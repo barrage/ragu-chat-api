@@ -5,7 +5,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -17,15 +16,10 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 
 class AgentControllerTests : IntegrationTest() {
-  private val agentOne: Agent = postgres!!.testAgent()
-  private val agentTwo: Agent = postgres!!.testAgent(active = false)
-  private val user: User = postgres!!.testUser(admin = false)
-  private val userSession: Session = postgres!!.testSession(user.id)
-
-  @AfterTest
-  fun cleanup() {
-    postgres!!.container.stop()
-  }
+  private val agentOne: Agent = postgres.testAgent()
+  private val agentTwo: Agent = postgres.testAgent(active = false)
+  private val user: User = postgres.testUser(admin = false)
+  private val userSession: Session = postgres.testSession(user.id)
 
   @Test
   fun listingAgentsWorksDefaultPagination() = test {

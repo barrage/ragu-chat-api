@@ -49,6 +49,8 @@ class TestPostgres {
 
   val dslContext: DSLContext
 
+  private lateinit var liquibase: Liquibase
+
   init {
     container.start()
 
@@ -60,14 +62,22 @@ class TestPostgres {
         databaseName = "test"
       }
 
-    Liquibase(
+    dslContext = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+    liquibase =
+      Liquibase(
         "db/changelog.yaml",
         ClassLoaderResourceAccessor(),
         JdbcConnection(dataSource.connection),
       )
-      .update("main")
+    liquibase.update()
+  }
 
-    dslContext = DSL.using(dataSource, SQLDialect.POSTGRES)
+  fun resetPgDatabase() {
+    dslContext.execute("DROP SCHEMA public CASCADE")
+    dslContext.execute("CREATE SCHEMA public")
+
+    liquibase.update("main")
   }
 
   fun testUser(email: String = "test@user.me", admin: Boolean, active: Boolean = true): User {

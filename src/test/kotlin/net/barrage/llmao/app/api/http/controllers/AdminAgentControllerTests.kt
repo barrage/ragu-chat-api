@@ -5,7 +5,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
@@ -22,20 +21,14 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-class AdminAgentControllerTests : IntegrationTest(usePostgres = true, useWeaviate = true) {
-  val agentOne: Agent = postgres!!.testAgent()
-  val agentTwo: Agent = postgres!!.testAgent(active = false)
-  val adminUser: User = postgres!!.testUser("foo@bar.com", admin = true)
-  val peasantUser: User = postgres!!.testUser("bar@foo.com", admin = false)
-  val adminSession: Session = postgres!!.testSession(adminUser.id)
-  val peasantSession: Session = postgres!!.testSession(peasantUser.id)
-  val testCollection = weaviate!!.insertTestCollection("kusturica")
-
-  @AfterTest
-  fun cleanup() {
-    postgres!!.container.stop()
-    weaviate!!.container.stop()
-  }
+class AdminAgentControllerTests : IntegrationTest() {
+  val agentOne: Agent = postgres.testAgent()
+  val agentTwo: Agent = postgres.testAgent(active = false)
+  val adminUser: User = postgres.testUser("foo@bar.com", admin = true)
+  val peasantUser: User = postgres.testUser("bar@foo.com", admin = false)
+  val adminSession: Session = postgres.testSession(adminUser.id)
+  val peasantSession: Session = postgres.testSession(peasantUser.id)
+  val testCollection = weaviate.insertTestCollection("kusturica")
 
   @Test
   fun listingAgentsWorksDefaultPagination() = test {
