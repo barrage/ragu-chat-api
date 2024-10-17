@@ -4,7 +4,8 @@ import io.ktor.client.request.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class HealthCheckTest : IntegrationTest(usePostgres = false) {
+class HealthCheckTest : IntegrationTest() {
+
   @Test
   fun testHealthCheck() = test {
     val res = client.get("__health")

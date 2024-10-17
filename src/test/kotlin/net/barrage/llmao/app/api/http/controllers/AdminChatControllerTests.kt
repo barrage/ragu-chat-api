@@ -5,7 +5,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -16,21 +15,15 @@ import net.barrage.llmao.core.models.*
 import net.barrage.llmao.core.models.common.CountedList
 
 class AdminChatControllerTests : IntegrationTest() {
-  private val user: User = postgres!!.testUser(email = "not@important.org", admin = false)
-  private val userAdmin: User = postgres!!.testUser(admin = true)
-  private val userSession: Session = postgres!!.testSession(user.id)
-  private val userAdminSession: Session = postgres!!.testSession(userAdmin.id)
-  private val agent: Agent = postgres!!.testAgent(active = true)
-  private val chatOne: Chat = postgres!!.testChat(user.id, agent.id)
-  private val chatTwo: Chat = postgres!!.testChat(user.id, agent.id)
-  private val messageOne: Message = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
-  private val messageTwo: Message =
-    postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
-
-  @AfterTest
-  fun cleanup() {
-    postgres!!.container.stop()
-  }
+  private val user: User = postgres.testUser(email = "not@important.org", admin = false)
+  private val userAdmin: User = postgres.testUser(admin = true)
+  private val userSession: Session = postgres.testSession(user.id)
+  private val userAdminSession: Session = postgres.testSession(userAdmin.id)
+  private val agent: Agent = postgres.testAgent(active = true)
+  private val chatOne: Chat = postgres.testChat(user.id, agent.id)
+  private val chatTwo: Chat = postgres.testChat(user.id, agent.id)
+  private val messageOne: Message = postgres.testChatMessage(chatOne.id, user.id, "First Message")
+  private val messageTwo: Message = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
 
   @Test
   fun shouldRetrieveAllChatsDefaultPagination() = test {

@@ -4,16 +4,37 @@ import io.ktor.server.config.*
 import io.ktor.server.config.yaml.*
 import io.ktor.server.testing.*
 import java.util.*
+import kotlin.test.AfterTest
+import org.junit.AfterClass
+import org.junit.BeforeClass
 
-open class IntegrationTest(usePostgres: Boolean = true, useWeaviate: Boolean = false) {
-  val postgres: TestPostgres? = if (usePostgres) TestPostgres() else null
-  val weaviate: TestWeaviate? = if (useWeaviate) TestWeaviate() else null
-  var cfg = YamlConfigLoader().load("application.yaml")!!
-  val cookieName = cfg.property("session.cookieName").getString()
-
+open class IntegrationTest {
   fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
-    try {
-      postgres?.let {
+    environment { config = cfg }
+    block()
+  }
+
+  fun sessionCookie(sessionId: UUID): String = "$cookieName=id%3D%2523s$sessionId"
+
+  @AfterTest
+  fun resetDatabase() {
+    postgres.resetPgDatabase()
+  }
+
+  companion object {
+    lateinit var postgres: TestPostgres
+    lateinit var weaviate: TestWeaviate
+    var cfg = YamlConfigLoader().load("application.yaml")!!
+    val cookieName = cfg.property("session.cookieName").getString()
+
+    @BeforeClass
+    @JvmStatic
+    fun classSetup() {
+      postgres = TestPostgres()
+      weaviate = TestWeaviate()
+      postgres.container.start()
+      weaviate.container.start()
+      postgres.let {
         cfg =
           cfg.mergeWith(
             MapApplicationConfig(
@@ -23,7 +44,7 @@ open class IntegrationTest(usePostgres: Boolean = true, useWeaviate: Boolean = f
             )
           )
       }
-      weaviate?.let {
+      weaviate.let {
         cfg =
           cfg.mergeWith(
             MapApplicationConfig(
@@ -32,17 +53,13 @@ open class IntegrationTest(usePostgres: Boolean = true, useWeaviate: Boolean = f
             )
           )
       }
-      environment { config = cfg }
-    } catch (e: Exception) {
-      e.printStackTrace()
-      throw e
     }
-    block()
+
+    @AfterClass
+    @JvmStatic
+    fun testClassTeardown() {
+      postgres.container.stop()
+      weaviate.container.stop()
+    }
   }
-
-  fun sessionCookie(sessionId: UUID): String = "$cookieName=id%3D%2523s$sessionId"
 }
-
-// suspend fun HttpClient.getAuthenticated(url: String, sessionId: KUUID) {
-//  get(url) { header(HttpHeaders.Cookie, sessionCookie(sessionId)) }
-// }

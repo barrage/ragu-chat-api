@@ -6,28 +6,25 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import junit.framework.TestCase.assertEquals
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
-import net.barrage.llmao.core.models.*
+import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 
 class ChatControllerTests : IntegrationTest() {
-  private val user: User = postgres!!.testUser(admin = false)
-  private val userSession: Session = postgres!!.testSession(user.id)
-  private val agent: Agent = postgres!!.testAgent(active = true)
-  private val chatOne: Chat = postgres!!.testChat(user.id, agent.id)
-  private val chatTwo: Chat = postgres!!.testChat(user.id, agent.id)
-  private val messageOne: Message = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
-  private val messageTwo: Message =
-    postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
-
-  @AfterTest
-  fun cleanup() {
-    postgres!!.container.stop()
-  }
+  private val user: User = postgres.testUser(admin = false)
+  private val userSession: Session = postgres.testSession(user.id)
+  private val agent: Agent = postgres.testAgent(active = true)
+  private val chatOne: Chat = postgres.testChat(user.id, agent.id)
+  private val chatTwo: Chat = postgres.testChat(user.id, agent.id)
+  private val messageOne: Message = postgres.testChatMessage(chatOne.id, user.id, "First Message")
+  private val messageTwo: Message = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
 
   @Test
   fun shouldRetrieveAllChatsDefaultPagination() = test {
