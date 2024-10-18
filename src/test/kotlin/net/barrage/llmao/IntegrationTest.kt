@@ -47,6 +47,8 @@ open class IntegrationTest(
           )
         )
     }
+
+    cfg = cfg.mergeWith(MapApplicationConfig("db.runMigrations" to "false"))
   }
 
   fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {

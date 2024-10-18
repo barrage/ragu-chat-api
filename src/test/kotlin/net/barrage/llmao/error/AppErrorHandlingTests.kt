@@ -10,8 +10,8 @@ import io.ktor.server.plugins.requestvalidation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.testing.*
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.utils.NotBlank
@@ -21,19 +21,19 @@ import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class AppErrorHandlingTests {
+class AppErrorHandlingTests : IntegrationTest(false, false) {
 
   @Serializable data class TestJson(val foo: String, val bar: Int)
 
   @Test
-  fun invalidHttpMethod() = testApplication {
+  fun invalidHttpMethod() = test {
     routing { put("/error-test") { call.receive<TestJson>() } }
     val response = client.post("/error-test")
     assertEquals(405, response.status.value)
   }
 
   @Test
-  fun invalidJsonFieldType() = testApplication {
+  fun invalidJsonFieldType() = test {
     routing { put("/error-test") { call.receive<TestJson>() } }
     val invalidJson = "{ \"foo\": \"four\", \"bar\": \"twenty\" }"
 
@@ -53,7 +53,7 @@ class AppErrorHandlingTests {
   }
 
   @Test
-  fun invalidJsonFieldTypeUuid() = testApplication {
+  fun invalidJsonFieldTypeUuid() = test {
     @Serializable data class TestJsonUuid(val foo: KUUID)
     routing { put("/error-test") { call.receive<TestJsonUuid>() } }
     val invalidJson = "{ \"foo\": \"goofd\", \"bar\": \"twenty\" }"
@@ -73,7 +73,7 @@ class AppErrorHandlingTests {
   }
 
   @Test
-  fun missingJsonField() = testApplication {
+  fun missingJsonField() = test {
     routing { put("/error-test") { call.receive<TestJson>() } }
     val invalidJson = "{ \"foo\": \"John\" }"
 
@@ -92,7 +92,7 @@ class AppErrorHandlingTests {
   }
 
   @Test
-  fun invalidUuidInPath() = testApplication {
+  fun invalidUuidInPath() = test {
     routing { put("/error/{id}") { KUUID.fromString(call.parameters["id"]) } }
     val client = createClient { install(ContentNegotiation) { json() } }
     val response = client.put("/error/foo") { contentType(ContentType.Application.Json) }
@@ -102,7 +102,7 @@ class AppErrorHandlingTests {
   }
 
   @Test
-  fun notBlankValidationFailure() = testApplication {
+  fun notBlankValidationFailure() = test {
     @Serializable
     data class ValidationTestJson(@NotBlank(message = "You done goof'd") val foo: String) :
       Validation
@@ -140,7 +140,7 @@ class AppErrorHandlingTests {
   }
 
   @Test
-  fun rangeValidationFailure() = testApplication {
+  fun rangeValidationFailure() = test {
     @Serializable
     data class ValidationTestJson(@Range(min = 0.0, max = 1.0) val foo: Double) : Validation
 
@@ -173,7 +173,7 @@ class AppErrorHandlingTests {
   }
 
   @Test
-  fun happyPathUuid() = testApplication {
+  fun happyPathUuid() = test {
     routing {
       get("/happy/{path}") {
         call.pathUuid("path")
@@ -189,7 +189,7 @@ class AppErrorHandlingTests {
   }
 
   @Test
-  fun sadPathUuid() = testApplication {
+  fun sadPathUuid() = test {
     routing {
       get("/sad/{path}") {
         call.pathUuid("path")
