@@ -5,8 +5,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
@@ -20,15 +18,28 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
-class AdminAgentControllerTests : IntegrationTest() {
-  val agentOne: Agent = postgres.testAgent()
-  val agentTwo: Agent = postgres.testAgent(active = false)
-  val adminUser: User = postgres.testUser("foo@bar.com", admin = true)
-  val peasantUser: User = postgres.testUser("bar@foo.com", admin = false)
-  val adminSession: Session = postgres.testSession(adminUser.id)
-  val peasantSession: Session = postgres.testSession(peasantUser.id)
-  val testCollection = weaviate.insertTestCollection("kusturica")
+class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
+  private lateinit var agentOne: Agent
+  private lateinit var agentTwo: Agent
+  private lateinit var adminUser: User
+  private lateinit var peasantUser: User
+  private lateinit var adminSession: Session
+  private lateinit var peasantSession: Session
+
+  @BeforeAll
+  fun setup() {
+    agentOne = postgres!!.testAgent()
+    agentTwo = postgres!!.testAgent(active = false)
+    adminUser = postgres!!.testUser("foo@bar.com", admin = true)
+    peasantUser = postgres!!.testUser("bar@foo.com", admin = false)
+    adminSession = postgres!!.testSession(adminUser.id)
+    peasantSession = postgres!!.testSession(peasantUser.id)
+    weaviate!!.insertTestCollection("kusturica")
+  }
 
   @Test
   fun listingAgentsWorksDefaultPagination() = test {
@@ -102,6 +113,8 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals("weaviate", body.vectorProvider)
     assertEquals("azure", body.embeddingProvider)
     assertEquals("text-embedding-ada-002", body.embeddingModel)
+
+    postgres!!.deleteTestAgent(body.id)
   }
 
   @Test

@@ -5,15 +5,24 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.Ignore
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.User
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 class AdministrationControllerTests : IntegrationTest() {
-  private val user = postgres.testUser(admin = true)
-  private val userSession = postgres.testSession(user.id)
+  private lateinit var user: User
+  private lateinit var userSession: Session
+
+  @BeforeAll
+  fun setup() {
+    user = postgres!!.testUser(admin = true)
+    userSession = postgres!!.testSession(user.id)
+  }
 
   @Test
   fun getProvidersTest() = test {
@@ -67,7 +76,7 @@ class AdministrationControllerTests : IntegrationTest() {
     assertEquals(body, listOf("gpt-3.5-turbo", "gpt-4"))
   }
 
-  @Ignore
+  @Disabled
   @Test
   fun getListOfProviderLanguageModelsTestOllama() = test {
     val client = createClient { install(ContentNegotiation) { json() } }

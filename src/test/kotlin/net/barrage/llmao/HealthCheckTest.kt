@@ -1,13 +1,14 @@
 package net.barrage.llmao
 
 import io.ktor.client.request.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import io.ktor.server.testing.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
-class HealthCheckTest : IntegrationTest() {
+class HealthCheckTest {
 
   @Test
-  fun testHealthCheck() = test {
+  fun testHealthCheck() = testApplication {
     val res = client.get("__health")
     assertEquals(200, res.status.value)
   }

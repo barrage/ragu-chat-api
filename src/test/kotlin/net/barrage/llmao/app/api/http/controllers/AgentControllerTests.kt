@@ -5,21 +5,28 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class AgentControllerTests : IntegrationTest() {
-  private val agentOne: Agent = postgres.testAgent()
-  private val agentTwo: Agent = postgres.testAgent(active = false)
-  private val user: User = postgres.testUser(admin = false)
-  private val userSession: Session = postgres.testSession(user.id)
+  private lateinit var agent: Agent
+  private lateinit var user: User
+  private lateinit var userSession: Session
+
+  @BeforeAll
+  fun setup() {
+    agent = postgres!!.testAgent()
+    user = postgres!!.testUser(admin = false)
+    userSession = postgres!!.testSession(user.id)
+  }
 
   @Test
   fun listingAgentsWorksDefaultPagination() = test {
@@ -36,12 +43,12 @@ class AgentControllerTests : IntegrationTest() {
   fun getAgentById() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/agents/${agentOne.id}") {
+      client.get("/agents/${agent.id}") {
         header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
       }
     assertEquals(200, response.status.value)
     val body = response.body<AgentFull>()
     assertNotNull(body)
-    assertEquals(agentOne.id, body.agent.id)
+    assertEquals(agent.id, body.agent.id)
   }
 }

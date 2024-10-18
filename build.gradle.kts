@@ -77,9 +77,11 @@ dependencies {
   testImplementation("org.testcontainers:postgresql:1.20.2")
   testImplementation("org.testcontainers:weaviate:1.20.2")
   testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
-  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
+  testImplementation("io.ktor:ktor-server-tests:$ktorVersion")
   testImplementation("org.liquibase:liquibase-core:4.29.2")
   testImplementation("org.postgresql:postgresql:$postgresVersion")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
 
   // Error handling
   implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
@@ -195,7 +197,10 @@ jooq {
 
 ktfmt { googleStyle() }
 
-tasks.test { testLogging { showStandardStreams = true } }
+tasks.test {
+  useJUnitPlatform() // This is essential for JUnit 5
+  testLogging { showStandardStreams = env == "local" }
+}
 
 tasks.named("build") { dependsOn("generateJooq") }
 

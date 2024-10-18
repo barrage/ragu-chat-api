@@ -5,20 +5,29 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.utils.ValidationError
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class AdminUserControllerTests : IntegrationTest() {
-  private val adminUser = postgres.testUser("foo@bar.com", admin = true)
-  private val peasantUser = postgres.testUser("bar@foo.com", admin = false)
-  private val adminSession = postgres.testSession(adminUser.id)
+  private lateinit var adminUser: User
+  private lateinit var peasantUser: User
+  private lateinit var adminSession: Session
+
+  @BeforeAll
+  fun setup() {
+    adminUser = postgres!!.testUser("foo@bar.com", admin = true)
+    peasantUser = postgres!!.testUser("bar@foo.com", admin = false)
+    adminSession = postgres!!.testSession(adminUser.id)
+  }
 
   @Test
   fun listAllUsersDefaultPagination() = test {
@@ -182,7 +191,7 @@ class AdminUserControllerTests : IntegrationTest() {
     assertEquals("USER", result.role)
     assertTrue(result.active)
 
-    postgres.deleteTestUser(testUser.id)
+    postgres!!.deleteTestUser(testUser.id)
   }
 
   @Test
