@@ -64,6 +64,7 @@ dependencies {
 
   implementation("ch.qos.logback:logback-classic:$logbackVersion")
   implementation("org.postgresql:postgresql:$postgresVersion")
+  implementation("org.liquibase:liquibase-core:4.29.2")
   implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
   implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
   implementation("com.auth0:java-jwt:4.4.0")

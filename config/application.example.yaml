@@ -11,6 +11,7 @@ db:
   user: "postgres"
   password: "postgres"
   driver: "org.postgresql.Driver"
+  runMigrations: true
 
 cors:
   origins: [ "http://localhost:3000", "http://localhost:3001" ]

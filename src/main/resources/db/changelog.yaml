@@ -1,4 +1,5 @@
 databaseChangeLog:
+  - logicalFilePath: src/main/resources/db/changelog.yaml
   - changeSet:
       id: 1
       author: barrage
