@@ -14,5 +14,6 @@ fun Application.configureCors() {
     this.allowOrigins { origins.contains(it) }
     this.methods.addAll(methods)
     this.headers.addAll(headers)
+    this.allowNonSimpleContentTypes = true
   }
 }
