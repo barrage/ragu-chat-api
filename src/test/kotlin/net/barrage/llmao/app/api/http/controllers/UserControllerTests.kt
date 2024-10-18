@@ -5,16 +5,23 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.User
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class UserControllerTests : IntegrationTest() {
-  private val user: User = postgres.testUser(admin = false)
-  private val userSession: Session = postgres.testSession(user.id)
+  private lateinit var user: User
+  private lateinit var userSession: Session
+
+  @BeforeAll
+  fun setup() {
+    user = postgres!!.testUser(admin = false)
+    userSession = postgres!!.testSession(user.id)
+  }
 
   @Test
   fun shouldRetrieveCurrentUser() = test {

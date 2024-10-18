@@ -5,25 +5,39 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.models.*
 import net.barrage.llmao.core.models.common.CountedList
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class AdminChatControllerTests : IntegrationTest() {
-  private val user: User = postgres.testUser(email = "not@important.org", admin = false)
-  private val userAdmin: User = postgres.testUser(admin = true)
-  private val userSession: Session = postgres.testSession(user.id)
-  private val userAdminSession: Session = postgres.testSession(userAdmin.id)
-  private val agent: Agent = postgres.testAgent(active = true)
-  private val chatOne: Chat = postgres.testChat(user.id, agent.id)
-  private val chatTwo: Chat = postgres.testChat(user.id, agent.id)
-  private val messageOne: Message = postgres.testChatMessage(chatOne.id, user.id, "First Message")
-  private val messageTwo: Message = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
+  private lateinit var user: User
+  private lateinit var userAdmin: User
+  private lateinit var userSession: Session
+  private lateinit var userAdminSession: Session
+  private lateinit var agent: Agent
+  private lateinit var chatOne: Chat
+  private lateinit var chatTwo: Chat
+  private lateinit var messageOne: Message
+  private lateinit var messageTwo: Message
+
+  @BeforeAll
+  fun setup() {
+    user = postgres!!.testUser(email = "not@important.org", admin = false)
+    userAdmin = postgres!!.testUser(admin = true)
+    userSession = postgres!!.testSession(user.id)
+    userAdminSession = postgres!!.testSession(userAdmin.id)
+    agent = postgres!!.testAgent(active = true)
+    chatOne = postgres!!.testChat(user.id, agent.id)
+    chatTwo = postgres!!.testChat(user.id, agent.id)
+    messageOne = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
+    messageTwo = postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
+  }
 
   @Test
   fun shouldRetrieveAllChatsDefaultPagination() = test {

@@ -96,6 +96,10 @@ class TestPostgres {
       .fetchOne(UsersRecord::toUser)!!
   }
 
+  fun deleteTestAgent(id: UUID) {
+    dslContext.deleteFrom(AGENTS).where(AGENTS.ID.eq(id)).execute()
+  }
+
   fun deleteTestUser(id: UUID) {
     dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).execute()
   }

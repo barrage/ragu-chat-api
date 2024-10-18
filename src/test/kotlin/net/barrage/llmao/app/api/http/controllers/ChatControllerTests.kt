@@ -5,8 +5,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import junit.framework.TestCase.assertEquals
-import kotlin.test.Test
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
@@ -16,15 +14,29 @@ import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class ChatControllerTests : IntegrationTest() {
-  private val user: User = postgres.testUser(admin = false)
-  private val userSession: Session = postgres.testSession(user.id)
-  private val agent: Agent = postgres.testAgent(active = true)
-  private val chatOne: Chat = postgres.testChat(user.id, agent.id)
-  private val chatTwo: Chat = postgres.testChat(user.id, agent.id)
-  private val messageOne: Message = postgres.testChatMessage(chatOne.id, user.id, "First Message")
-  private val messageTwo: Message = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
+  private lateinit var user: User
+  private lateinit var userSession: Session
+  private lateinit var agent: Agent
+  private lateinit var chatOne: Chat
+  private lateinit var chatTwo: Chat
+  private lateinit var messageOne: Message
+  private lateinit var messageTwo: Message
+
+  @BeforeAll
+  fun setup() {
+    user = postgres!!.testUser(admin = false)
+    userSession = postgres!!.testSession(user.id)
+    agent = postgres!!.testAgent(active = true)
+    chatOne = postgres!!.testChat(user.id, agent.id)
+    chatTwo = postgres!!.testChat(user.id, agent.id)
+    messageOne = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
+    messageTwo = postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
+  }
 
   @Test
   fun shouldRetrieveAllChatsDefaultPagination() = test {
@@ -71,9 +83,10 @@ class ChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldDeleteChat() = test {
+    val chatDelete = postgres!!.testChat(user.id, agent.id)
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.delete("/chats/${chatTwo.id}") {
+      client.delete("/chats/${chatDelete.id}") {
         header("Cookie", sessionCookie(userSession.sessionId))
       }
 
@@ -81,11 +94,12 @@ class ChatControllerTests : IntegrationTest() {
     val body = response.body<String>()
     assertEquals("", body)
 
-    val check = client.get("/chats") { header("Cookie", sessionCookie(userSession.sessionId)) }
+    val check =
+      client.get("/chats/${chatDelete.id}") {
+        header("Cookie", sessionCookie(userSession.sessionId))
+      }
 
-    assertEquals(200, check.status.value)
-    val checkBody = check.body<CountedList<Chat>>()
-    assertEquals(1, checkBody.total)
+    assertEquals(404, check.status.value)
   }
 
   @Test

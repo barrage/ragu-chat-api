@@ -7,21 +7,32 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.websocket.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNotNull
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class WebsocketServerTests : IntegrationTest() {
-  private val agent = postgres.testAgent()
-  private val user = postgres.testUser(email = "not@important.org", admin = false)
-  private val session = postgres.testSession(user.id)
+  private lateinit var agent: Agent
+  private lateinit var user: User
+  private lateinit var session: Session
+
+  @BeforeAll
+  fun setup() {
+    agent = postgres!!.testAgent()
+    user = postgres!!.testUser(email = "not@important.org", admin = false)
+    session = postgres!!.testSession(user.id)
+  }
 
   @Test
   fun rejectsRequestNoSession() = test {
