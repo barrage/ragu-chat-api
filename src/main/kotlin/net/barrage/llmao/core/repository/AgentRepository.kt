@@ -223,6 +223,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         "llmProvider" -> AGENTS.LLM_PROVIDER
         "createdAt" -> AGENTS.CREATED_AT
         "updatedAt" -> AGENTS.UPDATED_AT
+        "active" -> AGENTS.ACTIVE
         else -> AGENTS.NAME
       }
 
