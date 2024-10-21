@@ -1,5 +1,7 @@
 package net.barrage.llmao.app.api.ws
 
+import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.server.application.*
@@ -8,6 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import java.util.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -30,7 +33,7 @@ fun Application.websocketServer(server: Server) {
     // Protected WS route for one time tokens.
     authenticate("auth-session") {
       route("/ws") {
-        get {
+        get(websocketGenerateToken()) {
           val user = call.user()
           val token = server.registerToken(user.id)
           call.respond(HttpStatusCode.OK, "$token")
@@ -102,5 +105,29 @@ fun Application.websocketServer(server: Server) {
         }
       }
     }
+  }
+}
+
+private fun websocketGenerateToken(): OpenApiRoute.() -> Unit = {
+  tags("ws")
+  description = "Generate a one-time token for WebSocket connection"
+  summary = "Generate WebSocket token"
+  response {
+    HttpStatusCode.OK to
+      {
+        this.body<UUID> { description = "Token for WebSocket connection" }
+        description = "Token for WebSocket connection"
+        body<KUUID> { example("example") { value = KUUID.randomUUID() } }
+      }
+    HttpStatusCode.Unauthorized to
+      {
+        description = "Unauthorized"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while generating token"
+        body<List<AppError>> {}
+      }
   }
 }

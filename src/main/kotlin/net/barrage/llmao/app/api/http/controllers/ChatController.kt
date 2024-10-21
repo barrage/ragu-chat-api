@@ -77,9 +77,8 @@ private fun getAllChats(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<CountedList<Chat>> {
-          description = "A list of Chat objects representing all the chats"
-        }
+        description = "A list of Chat objects representing all the chats"
+        body<CountedList<Chat>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -93,7 +92,7 @@ private fun getMessages(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Retrieve chat messages"
   request {
-    pathParameter<String>("id") {
+    pathParameter<String>("chatId") {
       description = "The ID of the chat to retrieve messages from"
       required = true
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
@@ -102,9 +101,8 @@ private fun getMessages(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<List<Message>> {
-          description = "A list of Message objects representing all the messages from a chat"
-        }
+        description = "A list of Message objects representing all the messages from a chat"
+        body<List<Message>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -118,7 +116,7 @@ private fun updateTitle(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Update chat title"
   request {
-    pathParameter<String>("id") {
+    pathParameter<String>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -142,7 +140,7 @@ private fun evaluate(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Evaluate chat message"
   request {
-    pathParameter<String>("id") {
+    pathParameter<String>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -170,7 +168,7 @@ private fun deleteChat(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Delete chat"
   request {
-    pathParameter<String>("id") {
+    pathParameter<String>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
