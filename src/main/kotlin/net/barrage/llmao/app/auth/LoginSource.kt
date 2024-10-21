@@ -11,6 +11,10 @@ enum class LoginSource {
   @SerialName("ios") IOS,
   @SerialName("web") WEB;
 
+  override fun toString(): String {
+    return super.name.lowercase()
+  }
+
   companion object {
     fun tryFromString(value: String?): LoginSource {
       return when (value) {

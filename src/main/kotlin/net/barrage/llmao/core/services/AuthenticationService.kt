@@ -52,7 +52,7 @@ class AuthenticationService(
 
     val user = userRepo.get(serverSession.userId) ?: return null
 
-    if (!user.active || user.role != Role.ADMIN.name) {
+    if (!user.active || user.role != Role.ADMIN) {
       return null
     }
 

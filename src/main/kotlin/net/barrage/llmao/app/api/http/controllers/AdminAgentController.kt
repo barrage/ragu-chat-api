@@ -79,9 +79,8 @@ private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<CountedList<Agent>> {
-          description = "A list of Agent objects representing all the agents"
-        }
+        description = "A list of Agent objects representing all the agents"
+        body<CountedList<Agent>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -103,7 +102,8 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<AgentFull> { description = "An Agent object with its collections" }
+        description = "An Agent object with its collections"
+        body<AgentFull> {}
       }
     HttpStatusCode.NotFound to
       {
@@ -130,7 +130,8 @@ private fun createAgent(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.Created to
       {
-        body<Agent> { description = "An Agent object representing the new agent" }
+        description = "An Agent object representing the new agent"
+        body<Agent> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -153,7 +154,8 @@ private fun updateAgent(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<Agent> { description = "An Agent object representing the updated agent" }
+        description = "An Agent object representing the updated agent"
+        body<Agent> {}
       }
     HttpStatusCode.InternalServerError to
       {

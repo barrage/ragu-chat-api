@@ -9,6 +9,7 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.utils.ValidationError
@@ -66,7 +67,7 @@ class AdminUserControllerTests : IntegrationTest() {
     assertEquals("Create User", body.fullName)
     assertEquals("Create", body.firstName)
     assertEquals("User", body.lastName)
-    assertEquals("USER", body.role)
+    assertEquals(Role.USER, body.role)
     postgres!!.deleteTestUser(body.id)
   }
 
@@ -188,7 +189,7 @@ class AdminUserControllerTests : IntegrationTest() {
     assertEquals("Updated User", result.fullName)
     assertEquals("Updated", result.firstName)
     assertEquals("User", result.lastName)
-    assertEquals("USER", result.role)
+    assertEquals(Role.USER, result.role)
     assertTrue(result.active)
 
     postgres!!.deleteTestUser(testUser.id)

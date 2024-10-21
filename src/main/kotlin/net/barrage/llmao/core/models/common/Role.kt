@@ -6,5 +6,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class Role {
   @SerialName("admin") ADMIN,
-  @SerialName("user") USER,
+  @SerialName("user") USER;
+
+  override fun toString(): String {
+    return super.name.lowercase()
+  }
 }

@@ -1,6 +1,7 @@
 package net.barrage.llmao.app
 
 import io.ktor.server.application.*
+import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
@@ -36,18 +37,13 @@ class ProviderState(env: ApplicationEnvironment) {
   val vector: VectorDatabaseProviderFactory = VectorDatabaseProviderFactory(env)
   val embedding: EmbeddingProviderFactory = EmbeddingProviderFactory(env)
 
-  fun list(): Map<String, List<String>> {
+  fun list(): ProvidersResponse {
     val authProviders = auth.listProviders()
     val llmProviders = llm.listProviders()
     val vectorProviders = vector.listProviders()
     val embeddingProviders = embedding.listProviders()
 
-    return mapOf(
-      "auth" to authProviders,
-      "llm" to llmProviders,
-      "vector" to vectorProviders,
-      "embedding" to embeddingProviders,
-    )
+    return ProvidersResponse(authProviders, llmProviders, vectorProviders, embeddingProviders)
   }
 }
 
@@ -59,3 +55,11 @@ class ServiceState(state: ApplicationState) {
     AuthenticationService(state.providers.auth, state.repository.session, state.repository.user)
   val admin = AdministrationService(state.providers)
 }
+
+@Serializable
+data class ProvidersResponse(
+  val auth: List<String>,
+  val llm: List<String>,
+  val vector: List<String>,
+  val embedding: List<String>,
+)

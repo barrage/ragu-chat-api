@@ -1,5 +1,6 @@
 package net.barrage.llmao.plugins
 
+import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -23,7 +24,7 @@ import net.barrage.llmao.error.ErrorReason
 fun Application.configureRouting(services: ServiceState) {
   routing {
     // K8S specific route
-    get("__health") { call.respond(HttpStatusCode.OK) }
+    route("/__health") { get(health()) { call.respond(HttpStatusCode.OK) } }
 
     authRoutes(services.auth)
     openApiRoutes()
@@ -58,4 +59,11 @@ fun ApplicationCall.pathUuid(param: String): KUUID {
   } catch (e: IllegalArgumentException) {
     throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID")
   }
+}
+
+private fun health(): OpenApiRoute.() -> Unit = {
+  description = "Health check for server"
+  summary = "Health check"
+  securitySchemeNames = null
+  response { HttpStatusCode.OK to { description = "Server is healthy" } }
 }

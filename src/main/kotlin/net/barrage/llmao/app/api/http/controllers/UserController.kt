@@ -2,6 +2,7 @@ package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.put
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -15,7 +16,7 @@ import net.barrage.llmao.plugins.user
 
 fun Route.userRoutes(userService: UserService) {
   get("/users/current", getUser()) { call.respond(call.user()) }
-  put("/users") {
+  put("/users", userUpdate()) {
     val user = call.user()
     val updateUser = call.receive<UpdateUser>()
     val userUpdated = userService.updateUser(user.id, updateUser)
@@ -37,6 +38,24 @@ private fun getUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving user"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun userUpdate(): OpenApiRoute.() -> Unit = {
+  tags("users")
+  description = "Update user"
+  request { body<UpdateUser> {} }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "User updated"
+        body<User> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while updating user"
         body<List<AppError>> {}
       }
   }

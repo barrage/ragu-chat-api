@@ -6,6 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.app.ProvidersResponse
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -33,19 +34,15 @@ class AdministrationControllerTests : IntegrationTest() {
       }
 
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<Map<String, List<String>>>()
+    val body = response.body<ProvidersResponse>()
 
-    assertTrue(body.containsKey("auth"))
-    assertEquals(body["auth"]!!, listOf("google"))
+    assertEquals(body.auth, listOf("google"))
 
-    assertTrue(body.containsKey("llm"))
-    assertEquals(body["llm"]!!, listOf("openai", "azure", "ollama"))
+    assertEquals(body.llm, listOf("openai", "azure", "ollama"))
 
-    assertTrue(body.containsKey("vector"))
-    assertEquals(body["vector"]!!, listOf("weaviate"))
+    assertEquals(body.vector, listOf("weaviate"))
 
-    assertTrue(body.containsKey("embedding"))
-    assertEquals(body["embedding"]!!, listOf("azure", "fembed"))
+    assertEquals(body.embedding, listOf("azure", "fembed"))
   }
 
   @Test

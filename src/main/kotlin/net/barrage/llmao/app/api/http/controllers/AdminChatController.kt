@@ -65,9 +65,8 @@ private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<CountedList<Chat>> {
-          description = "A list of Chat objects representing all the chats"
-        }
+        description = "A list of Chat objects representing all the chats"
+        body<CountedList<Chat>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -81,7 +80,7 @@ private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve chat messages"
   request {
-    pathParameter<String>("id") {
+    pathParameter<String>("chatId") {
       description = "The ID of the chat to retrieve messages from"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -89,9 +88,8 @@ private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<List<Message>> {
-          description = "A list of Message objects representing all the messages from a chat"
-        }
+        description = "A list of Message objects representing all the messages from a chat"
+        body<List<Message>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -105,7 +103,7 @@ private fun adminUpdateTitle(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Update chat title"
   request {
-    pathParameter<KUUID>("id") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -129,7 +127,7 @@ private fun adminEvaluate(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Evaluate chat message"
   request {
-    pathParameter<KUUID>("id") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }

@@ -23,7 +23,11 @@ data class Pagination(
 @Serializable
 enum class SortOrder {
   @SerialName("asc") ASC,
-  @SerialName("desc") DESC,
+  @SerialName("desc") DESC;
+
+  override fun toString(): String {
+    return super.name.lowercase()
+  }
 }
 
 /** Pagination parameters with sorting options. */

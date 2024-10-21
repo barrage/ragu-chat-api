@@ -41,9 +41,8 @@ private fun getAllAgents(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<CountedList<Agent>> {
-          description = "A list of Agent objects representing all the agents"
-        }
+        description = "A list of Agent objects representing all the agents"
+        body<CountedList<Agent>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -65,7 +64,8 @@ private fun getAgent(): OpenApiRoute.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        body<AgentFull> { description = "An Agent object representing the agent" }
+        description = "An Agent object representing the agent"
+        body<AgentFull> {}
       }
     HttpStatusCode.InternalServerError to
       {

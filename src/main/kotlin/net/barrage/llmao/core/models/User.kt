@@ -17,8 +17,7 @@ data class User(
   @NotBlank val firstName: String?,
   @NotBlank val lastName: String?,
   val active: Boolean,
-  // TODO: Enum
-  val role: String,
+  val role: Role,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
@@ -30,7 +29,7 @@ fun UsersRecord.toUser() =
     fullName = this.fullName!!,
     firstName = this.firstName,
     lastName = this.lastName,
-    role = this.role!!,
+    role = Role.valueOf(this.role!!),
     active = this.active!!,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,

@@ -65,7 +65,11 @@ dependencies {
   implementation("ch.qos.logback:logback-classic:$logbackVersion")
   implementation("org.postgresql:postgresql:$postgresVersion")
   implementation("org.liquibase:liquibase-core:4.29.2")
-  implementation("io.github.smiley4:ktor-swagger-ui:3.3.1")
+
+  implementation("io.github.smiley4:ktor-swagger-ui:3.5.1")
+  implementation("io.github.smiley4:schema-kenerator-core:1.5.0")
+  implementation("io.github.smiley4:schema-kenerator-reflection:1.5.0")
+  implementation("io.github.smiley4:schema-kenerator-swagger:1.5.0")
   implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
   implementation("com.auth0:java-jwt:4.4.0")
 
