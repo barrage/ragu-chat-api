@@ -19,10 +19,10 @@ data class FailedMessage(
 fun FailedMessagesRecord.toFailedMessage(): FailedMessage {
   return FailedMessage(
     id = this.id!!,
-    failReason = this.failReason!!,
-    userId = this.userId!!,
-    content = this.content!!,
-    chatId = this.chatId!!,
+    failReason = this.failReason,
+    userId = this.userId,
+    content = this.content,
+    chatId = this.chatId,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
