@@ -29,7 +29,7 @@ sealed class SystemMessage {
   @SerialName("chat_open_existing")
   data class OpenExistingChat(val chatId: KUUID) : SystemMessage()
 
-  @Serializable @SerialName("chat_close") data class CloseChat(val chatId: KUUID) : SystemMessage()
+  @Serializable @SerialName("chat_close") data object CloseChat : SystemMessage()
 
   @Serializable @SerialName("chat_stop_stream") data object StopStream : SystemMessage()
 }
@@ -37,13 +37,18 @@ sealed class SystemMessage {
 /** Outgoing WS messages. */
 @Serializable
 sealed class ServerMessage {
-  @Serializable data class ChatOpen(val chatId: KUUID) : ServerMessage()
+  @SerialName("chat_open") @Serializable data class ChatOpen(val chatId: KUUID) : ServerMessage()
 
-  @Serializable data class ChatTitle(val chatId: KUUID, val title: String) : ServerMessage()
+  @SerialName("chat_title")
+  @Serializable
+  data class ChatTitle(val chatId: KUUID, val title: String) : ServerMessage()
 
-  @Serializable data class ChatClosed(val chatId: KUUID) : ServerMessage()
+  @SerialName("chat_closed")
+  @Serializable
+  data class ChatClosed(val chatId: KUUID) : ServerMessage()
 
-  /** Event sent when a chats gets a response from an LLM. */
+  /** Event sent when a chats gets a response fro m an LLM. */
+  @SerialName("finish_event")
   @Serializable
   data class FinishEvent(
     /** The streaming chat ID */

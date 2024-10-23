@@ -62,6 +62,7 @@ class Chat(
       val response = collectStream(proompt, stream, emitter)
       streamActive = false
       println("Chat '$id' got response: $response")
+      emitter.emitStop()
       processResponse(proompt, response, true, emitter)
     } catch (e: InvalidRequestException) {
       streamActive = false
