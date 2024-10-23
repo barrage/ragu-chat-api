@@ -21,10 +21,10 @@ data class Message(
 fun MessagesRecord.toMessage() =
   Message(
     id = this.id!!,
-    sender = this.sender!!,
-    senderType = this.senderType!!,
-    content = this.content!!,
-    chatId = this.chatId!!,
+    sender = this.sender,
+    senderType = this.senderType,
+    content = this.content,
+    chatId = this.chatId,
     responseTo = this.responseTo,
     evaluation = this.evaluation,
     createdAt = this.createdAt!!,

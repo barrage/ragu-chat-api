@@ -21,8 +21,8 @@ data class Session(
 fun SessionsRecord.toSessionData() =
   Session(
     sessionId = this.id!!,
-    userId = this.userId!!,
+    userId = this.userId,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
-    expiresAt = this.expiresAt!!,
+    expiresAt = this.expiresAt,
   )

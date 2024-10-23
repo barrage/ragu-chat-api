@@ -25,11 +25,11 @@ data class User(
 fun UsersRecord.toUser() =
   User(
     id = this.id!!,
-    email = this.email!!,
-    fullName = this.fullName!!,
+    email = this.email,
+    fullName = this.fullName,
     firstName = this.firstName,
     lastName = this.lastName,
-    role = Role.valueOf(this.role!!),
+    role = Role.valueOf(this.role),
     active = this.active!!,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,

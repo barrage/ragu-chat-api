@@ -22,8 +22,8 @@ data class Chat(
 fun ChatsRecord.toChat() =
   Chat(
     id = this.id!!,
-    userId = this.userId!!,
-    agentId = this.agentId!!,
+    userId = this.userId,
+    agentId = this.agentId,
     title = this.title,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,

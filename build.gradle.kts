@@ -186,6 +186,7 @@ jooq {
             isDeprecated = false
             isKotlinSetterJvmNameAnnotationsOnIsPrefix = true
             isPojosAsKotlinDataClasses = true
+            isKotlinNotNullRecordAttributes = true
             isFluentSetters = true
             isRoutines = false
           }
