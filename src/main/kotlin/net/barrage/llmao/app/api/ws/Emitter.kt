@@ -18,6 +18,10 @@ class Emitter(private val messageResponseFlow: MutableSharedFlow<String>) {
   suspend fun emitServer(message: ServerMessage) {
     messageResponseFlow.emitJson(message)
   }
+
+  suspend fun emitStop() {
+    messageResponseFlow.emit("##STOP##")
+  }
 }
 
 private suspend inline fun <reified T> MutableSharedFlow<String>.emitJson(input: T) {
