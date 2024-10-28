@@ -23,6 +23,8 @@ open class AppError(val type: String, val reason: ErrorReason, val description: 
   fun code(): HttpStatusCode {
     return when (reason) {
       ErrorReason.Authentication -> HttpStatusCode.Unauthorized
+      ErrorReason.CannotDeleteSelf -> HttpStatusCode.Conflict
+      ErrorReason.CannotUpdateSelf -> HttpStatusCode.Conflict
       ErrorReason.EntityDoesNotExist -> HttpStatusCode.NotFound
       ErrorReason.EntityAlreadyExists -> HttpStatusCode.Conflict
       ErrorReason.InvalidProvider -> HttpStatusCode.BadRequest
@@ -35,6 +37,8 @@ open class AppError(val type: String, val reason: ErrorReason, val description: 
 @Serializable
 enum class ErrorReason(val reason: String) {
   Authentication("Unauthorized"),
+  CannotDeleteSelf("Cannot delete self"),
+  CannotUpdateSelf("Cannot update self"),
   EntityDoesNotExist("Entity does not exist"),
   EntityAlreadyExists("Entity already exists"),
   InvalidParameter("Invalid parameter"),

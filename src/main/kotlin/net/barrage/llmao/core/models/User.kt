@@ -20,6 +20,7 @@ data class User(
   val role: Role,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
+  val deletedAt: KOffsetDateTime? = null,
 )
 
 fun UsersRecord.toUser() =
@@ -33,6 +34,7 @@ fun UsersRecord.toUser() =
     active = this.active!!,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
+    deletedAt = this.deletedAt,
   )
 
 @Serializable

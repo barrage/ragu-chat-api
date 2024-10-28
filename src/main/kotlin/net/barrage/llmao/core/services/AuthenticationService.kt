@@ -33,6 +33,13 @@ class AuthenticationService(
           "User '${userInfo.email}' does not exist",
         )
 
+    if (!user.active || user.deletedAt != null) {
+      throw AppError.api(
+        ErrorReason.EntityDoesNotExist,
+        "User '${userInfo.email}' is not active or deleted",
+      )
+    }
+
     return sessionRepo.create(sessionId, user.id)
   }
 
