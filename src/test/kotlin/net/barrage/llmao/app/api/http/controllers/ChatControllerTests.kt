@@ -10,6 +10,7 @@ import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
@@ -132,5 +133,17 @@ class ChatControllerTests : IntegrationTest() {
     val body = response.body<Message>()
     assertEquals(messageOne.id, body.id)
     assertEquals(true, body.evaluation)
+  }
+
+  @Test
+  fun shouldRetrieveChatWithAgent() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/chats/${chatOne.id}") { header("Cookie", sessionCookie(userSession.sessionId)) }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<ChatWithAgent>()
+    assertEquals(chatOne.id, body.chat.id)
+    assertEquals(agent.id, body.agent.id)
   }
 }

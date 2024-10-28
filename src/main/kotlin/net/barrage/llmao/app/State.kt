@@ -48,7 +48,13 @@ class ProviderState(env: ApplicationEnvironment) {
 }
 
 class ServiceState(state: ApplicationState) {
-  val chat = ChatService(state.providers, state.repository.chat, state.repository.agent)
+  val chat =
+    ChatService(
+      state.providers,
+      state.repository.chat,
+      state.repository.agent,
+      state.repository.user,
+    )
   val agent = AgentService(state.providers, state.repository.agent)
   val user = UserService(state.repository.user)
   val auth =

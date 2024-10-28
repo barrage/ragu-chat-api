@@ -8,7 +8,12 @@ import io.ktor.serialization.kotlinx.json.*
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
-import net.barrage.llmao.core.models.*
+import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithUserAndAgent
+import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -111,5 +116,19 @@ class AdminChatControllerTests : IntegrationTest() {
     assertNotNull(body)
     assertEquals(messageOne.id, body.id)
     assertEquals(true, body.evaluation)
+  }
+
+  @Test
+  fun shouldGetChatWithUserAndAgent() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/admin/chats/${chatOne.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<ChatWithUserAndAgent>()
+    assertEquals(chatOne.id, body.chat.id)
+    assertEquals(user.id, body.user.id)
+    assertEquals(agent.id, body.agent.id)
   }
 }

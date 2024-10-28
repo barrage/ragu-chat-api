@@ -14,10 +14,12 @@ import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
@@ -33,6 +35,13 @@ fun Route.chatsRoutes(service: ChatService) {
     }
 
     route("/{chatId}") {
+      get(getChatWithAgent()) {
+        val user = call.user()
+        val chatId = call.pathUuid("chatId")
+        val chat = service.getChatWithAgent(chatId, user.id)
+        call.respond(HttpStatusCode.OK, chat)
+      }
+
       put(updateTitle()) {
         val user = call.user()
         val chatId = call.pathUuid("chatId")
@@ -88,11 +97,39 @@ private fun getAllChats(): OpenApiRoute.() -> Unit = {
   }
 }
 
+private fun getChatWithAgent(): OpenApiRoute.() -> Unit = {
+  tags("chats")
+  description = "Retrieve chat by ID"
+  request {
+    pathParameter<KUUID>("chatId") {
+      description = "Chat ID"
+      required = true
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Chat retrieved successfully"
+        body<ChatWithAgent>()
+      }
+    HttpStatusCode.NotFound to
+      {
+        description = "Chat not found"
+        body<List<AppError>>()
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving chat"
+        body<List<AppError>> {}
+      }
+  }
+}
+
 private fun getMessages(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Retrieve chat messages"
   request {
-    pathParameter<String>("chatId") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat to retrieve messages from"
       required = true
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
@@ -116,7 +153,7 @@ private fun updateTitle(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Update chat title"
   request {
-    pathParameter<String>("chatId") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -140,11 +177,11 @@ private fun evaluate(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Evaluate chat message"
   request {
-    pathParameter<String>("chatId") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    pathParameter<String>("messageId") {
+    pathParameter<KUUID>("messageId") {
       description = "The ID of the message"
       example("default") { value = "eb771f1a-cd4a-4288-9eb4-bd2b33c58d48" }
     }
@@ -168,7 +205,7 @@ private fun deleteChat(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Delete chat"
   request {
-    pathParameter<String>("chatId") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }

@@ -12,12 +12,15 @@ import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.ChatWithMessages
+import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
+import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.AppError
@@ -29,6 +32,7 @@ class ChatService(
   private val providers: ProviderState,
   private val chatRepo: ChatRepository,
   private val agentRepository: AgentRepository,
+  private val userRepository: UserRepository,
 ) {
   fun listChats(pagination: PaginationSort): CountedList<Chat> {
     return chatRepo.getAll(pagination)
@@ -36,6 +40,30 @@ class ChatService(
 
   fun listChats(pagination: PaginationSort, userId: KUUID): CountedList<Chat> {
     return chatRepo.getAll(pagination, userId)
+  }
+
+  fun getChatWithAgent(id: KUUID, userId: KUUID): ChatWithAgent {
+    val chat =
+      chatRepo.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+
+    if (userId != chat.userId) {
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+    }
+
+    val agent = agentRepository.get(chat.agentId)
+
+    return ChatWithAgent(chat, agent.agent)
+  }
+
+  fun getChatWithUserAndAgent(id: KUUID): ChatWithUserAndAgent {
+    val chat =
+      chatRepo.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+
+    val agent = agentRepository.get(chat.agentId)
+
+    val user = userRepository.get(chat.userId)!!
+
+    return ChatWithUserAndAgent(chat, user, agent.agent)
   }
 
   fun getChat(chatId: KUUID): ChatWithMessages? {
