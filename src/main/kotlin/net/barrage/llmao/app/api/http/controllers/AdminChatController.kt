@@ -13,6 +13,7 @@ import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -31,6 +32,12 @@ fun Route.adminChatsRoutes(service: ChatService) {
     }
 
     route("/{chatId}") {
+      get(adminGetChatWithUserAndAgent()) {
+        val chatId = call.pathUuid("chatId")
+        val chat = service.getChatWithUserAndAgent(chatId)
+        call.respond(HttpStatusCode.OK, chat)
+      }
+
       put(adminUpdateTitle()) {
         val chatId = call.pathUuid("chatId")
         val input: UpdateChatTitleDTO = call.receive()
@@ -76,11 +83,40 @@ private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   }
 }
 
+// OpenAPI documentation
+private fun adminGetChatWithUserAndAgent(): OpenApiRoute.() -> Unit = {
+  tags("admin/chats")
+  description = "Get single chat"
+  request {
+    pathParameter<KUUID>("chatId") {
+      description = "Chat ID"
+      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Single chat"
+        body<ChatWithUserAndAgent> {}
+      }
+    HttpStatusCode.NotFound to
+      {
+        description = "Chat not found"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving chats"
+        body<List<AppError>> {}
+      }
+  }
+}
+
 private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve chat messages"
   request {
-    pathParameter<String>("chatId") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat to retrieve messages from"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }

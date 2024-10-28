@@ -19,6 +19,10 @@ data class Chat(
 /** Base model with its messages. */
 @Serializable data class ChatWithMessages(val chat: Chat, val messages: List<Message>)
 
+@Serializable data class ChatWithUserAndAgent(val chat: Chat, val user: User, val agent: Agent)
+
+@Serializable data class ChatWithAgent(val chat: Chat, val agent: Agent)
+
 fun ChatsRecord.toChat() =
   Chat(
     id = this.id!!,

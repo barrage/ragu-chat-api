@@ -94,7 +94,7 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve an agent by ID"
   request {
-    pathParameter<UUID>("id") {
+    pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
@@ -145,7 +145,7 @@ private fun updateAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent"
   request {
-    pathParameter<UUID>("id") {
+    pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
