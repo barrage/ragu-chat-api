@@ -196,6 +196,56 @@ class AdminUserControllerTests : IntegrationTest() {
   }
 
   @Test
+  fun updateUserFailsUpdateRoleOnSelf() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.put("admin/users/${adminSession.userId}") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "application/json")
+        setBody(
+          """{
+            "fullName": "Updated User",
+            "firstName": "Updated",
+            "lastName": "User",
+            "email": "updated@user.com",
+            "role": "user",
+            "active": true
+          }"""
+        )
+      }
+
+    assertEquals(409, response.status.value)
+    val body: AppError = response.body()!!
+    assertEquals(ErrorReason.CannotUpdateSelf, body.reason)
+    assertEquals("Cannot update Role on self", body.description)
+  }
+
+  @Test
+  fun updateUserFailsUpdateActiveOnSelf() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.put("admin/users/${adminSession.userId}") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "application/json")
+        setBody(
+          """{
+            "fullName": "Updated User",
+            "firstName": "Updated",
+            "lastName": "User",
+            "email": "updated@user.com",
+            "role": "admin",
+            "active": false
+          }"""
+        )
+      }
+
+    assertEquals(409, response.status.value)
+    val body: AppError = response.body()!!
+    assertEquals(ErrorReason.CannotUpdateSelf, body.reason)
+    assertEquals("Cannot update Active on self", body.description)
+  }
+
+  @Test
   fun updateUserFailsUserNotFound() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
@@ -222,7 +272,7 @@ class AdminUserControllerTests : IntegrationTest() {
   @Test
   fun updateUserFailsValidation() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val reponse =
+    val response =
       client.put("admin/users/${UUID.randomUUID()}") {
         header("Cookie", sessionCookie(adminSession.sessionId))
         header("Content-Type", "application/json")
@@ -238,8 +288,8 @@ class AdminUserControllerTests : IntegrationTest() {
         )
       }
 
-    assertEquals(422, reponse.status.value)
-    val body: List<ValidationError> = reponse.body()!!
+    assertEquals(422, response.status.value)
+    val body: List<ValidationError> = response.body()!!
     assertEquals(4, body.size)
     body.forEach {
       when (it.fieldName) {
@@ -267,6 +317,19 @@ class AdminUserControllerTests : IntegrationTest() {
       }
 
     assertEquals(204, response.status.value)
+  }
+
+  @Test
+  fun deleteUserFailsDeleteSelf() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.delete("admin/users/${adminSession.userId}") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(409, response.status.value)
+    val body: AppError = response.body()!!
+    assertEquals(ErrorReason.CannotDeleteSelf, body.reason)
   }
 
   @Test

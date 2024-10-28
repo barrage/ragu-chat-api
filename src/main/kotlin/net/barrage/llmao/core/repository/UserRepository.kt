@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.repository
 
+import java.time.OffsetDateTime
 import java.util.*
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateUser
@@ -19,11 +20,17 @@ class UserRepository(private val dslContext: DSLContext) {
   fun getAll(pagination: PaginationSort): CountedList<User> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()
-    val total = dslContext.selectCount().from(USERS).fetchOne(0, Int::class.java)!!
+    val total =
+      dslContext
+        .selectCount()
+        .from(USERS)
+        .where(USERS.DELETED_AT.isNull)
+        .fetchOne(0, Int::class.java)!!
 
     val users =
       dslContext
         .selectFrom(USERS)
+        .where(USERS.DELETED_AT.isNull)
         .orderBy(order)
         .limit(limit)
         .offset(offset)
@@ -85,6 +92,14 @@ class UserRepository(private val dslContext: DSLContext) {
       .where(USERS.ID.eq(id))
       .returning()
       .execute()
+  }
+
+  fun softDelete(id: UUID): Boolean {
+    return dslContext
+      .update(USERS)
+      .set(USERS.DELETED_AT, OffsetDateTime.now())
+      .where(USERS.ID.eq(id))
+      .execute() == 1
   }
 
   fun delete(id: UUID): Boolean {

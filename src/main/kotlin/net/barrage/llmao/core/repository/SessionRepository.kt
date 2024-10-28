@@ -47,6 +47,13 @@ class SessionRepository(private val dslContext: DSLContext) {
       .fetchOne(SessionsRecord::toSessionData)
   }
 
+  fun getActiveByUserId(id: KUUID): List<Session?> {
+    return dslContext
+      .selectFrom(SESSIONS)
+      .where(SESSIONS.USER_ID.eq(id).and(SESSIONS.EXPIRES_AT.gt(OffsetDateTime.now())))
+      .fetch(SessionsRecord::toSessionData)
+  }
+
   fun extend(id: KUUID) {
     dslContext
       .update(SESSIONS)

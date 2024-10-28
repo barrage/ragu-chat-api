@@ -21,6 +21,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
+import net.barrage.llmao.plugins.user
 
 fun Route.adminUserRoutes(userService: UserService) {
   route("/admin/users") {
@@ -46,13 +47,15 @@ fun Route.adminUserRoutes(userService: UserService) {
       put(adminUpdateUser()) {
         val userId = call.pathUuid("id")
         val updateUser = call.receive<UpdateUserAdmin>()
-        val user = userService.updateAdmin(userId, updateUser)
+        val loggedInUser = call.user()
+        val user = userService.updateAdmin(userId, updateUser, loggedInUser.id)
         call.respond(HttpStatusCode.OK, user)
       }
 
       delete(deleteUser()) {
         val userId = call.pathUuid("id")
-        userService.delete(userId)
+        val loggedInUser = call.user()
+        userService.delete(userId, loggedInUser.id)
         call.respond(HttpStatusCode.NoContent)
       }
     }
