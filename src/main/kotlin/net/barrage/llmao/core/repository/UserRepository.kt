@@ -6,6 +6,7 @@ import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.UserCounts
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
@@ -124,5 +125,34 @@ class UserRepository(private val dslContext: DSLContext) {
       }
 
     return order
+  }
+
+  fun getUserCounts(): UserCounts {
+    val total: Int =
+      dslContext
+        .selectCount()
+        .from(USERS)
+        .where(USERS.DELETED_AT.isNull)
+        .fetchOne(0, Int::class.java)!!
+
+    val active: Int =
+      dslContext
+        .selectCount()
+        .from(USERS)
+        .where(USERS.DELETED_AT.isNull.and(USERS.ACTIVE.isTrue))
+        .fetchOne(0, Int::class.java)!!
+
+    val inactive: Int = total - active
+
+    val admin: Int =
+      dslContext
+        .selectCount()
+        .from(USERS)
+        .where(USERS.DELETED_AT.isNull.and(USERS.ACTIVE.isTrue).and(USERS.ROLE.eq("ADMIN")))
+        .fetchOne(0, Int::class.java)!!
+
+    val user: Int = active - admin
+
+    return UserCounts(total, active, inactive, admin, user)
   }
 }

@@ -59,7 +59,13 @@ class ServiceState(state: ApplicationState) {
   val user = UserService(state.repository.user, state.repository.session)
   val auth =
     AuthenticationService(state.providers.auth, state.repository.session, state.repository.user)
-  val admin = AdministrationService(state.providers)
+  val admin =
+    AdministrationService(
+      state.providers,
+      state.repository.agent,
+      state.repository.chat,
+      state.repository.user,
+    )
 }
 
 @Serializable

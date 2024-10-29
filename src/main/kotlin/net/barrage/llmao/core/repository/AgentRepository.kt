@@ -2,9 +2,11 @@ package net.barrage.llmao.core.repository
 
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentCollection
+import net.barrage.llmao.core.models.AgentCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.models.CreateAgent
+import net.barrage.llmao.core.models.GraphData
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
@@ -61,7 +63,6 @@ class AgentRepository(private val dslContext: DSLContext) {
       .on(AGENTS.ID.eq(AGENT_INSTRUCTIONS.AGENT_ID))
       .where(AGENTS.ID.eq(id))
       .fetchOne { record ->
-        println(record)
         val agent = record.into(AGENTS).toAgent()
         val titleInstruction = record.get(AGENT_INSTRUCTIONS.TITLE_INSTRUCTION)
         val languageInstruction = record.get(AGENT_INSTRUCTIONS.LANGUAGE_INSTRUCTION)
@@ -235,5 +236,30 @@ class AgentRepository(private val dslContext: DSLContext) {
       }
 
     return order
+  }
+
+  fun getAgentCounts(): AgentCounts {
+    val total: Int = dslContext.selectCount().from(AGENTS).fetchOne(0, Int::class.java)!!
+
+    val active: Int =
+      dslContext
+        .selectCount()
+        .from(AGENTS)
+        .where(AGENTS.ACTIVE.isTrue)
+        .groupBy(AGENTS.ACTIVE)
+        .fetchOne(0, Int::class.java)!!
+
+    val inactive: Int = total - active
+
+    val providerCounts: List<GraphData> =
+      dslContext
+        .select(AGENTS.LLM_PROVIDER, DSL.count())
+        .from(AGENTS)
+        .where(AGENTS.ACTIVE.isTrue)
+        .groupBy(AGENTS.LLM_PROVIDER)
+        .fetch()
+        .map { GraphData(it.value1()!!, it.value2()!!) }
+
+    return AgentCounts(total, active, inactive, providerCounts)
   }
 }
