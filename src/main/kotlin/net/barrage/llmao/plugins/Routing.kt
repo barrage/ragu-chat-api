@@ -27,7 +27,9 @@ fun Application.configureRouting(services: ServiceState) {
     route("/__health") { get(health()) { call.respond(HttpStatusCode.OK) } }
 
     authRoutes(services.auth)
-    openApiRoutes()
+    if (application.environment.config.property("ktor.environment").getString() != "production") {
+      openApiRoutes()
+    }
 
     authenticate("auth-session-admin") {
       adminAgentsRoutes(services.agent)
