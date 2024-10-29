@@ -114,6 +114,7 @@ class TestPostgres {
   }
 
   fun testAgent(
+    name: String = "Test",
     context: String = "Test",
     llmProvider: String = "openai",
     model: String = "gpt-4",
@@ -137,7 +138,7 @@ class TestPostgres {
         AGENTS.ACTIVE,
       )
       .values(
-        "Test",
+        name,
         context,
         "Test",
         llmProvider,

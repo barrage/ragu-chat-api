@@ -1,20 +1,27 @@
 package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
+import java.util.*
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatCounts
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.FailedMessage
+import net.barrage.llmao.core.models.GraphData
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.models.common.Period
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toFailedMessage
 import net.barrage.llmao.core.models.toMessage
+import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.FailedMessagesRecord
 import net.barrage.llmao.tables.records.MessagesRecord
+import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.FAILED_MESSAGES
 import net.barrage.llmao.tables.references.MESSAGES
@@ -247,5 +254,66 @@ class ChatRepository(private val dslContext: DSLContext) {
       }
 
     return order
+  }
+
+  fun getChatCounts(): ChatCounts {
+    return ChatCounts(
+      dslContext.selectCount().from(CHATS).fetchOne(0, Int::class.java)!!,
+      dslContext
+        .select(CHATS.AGENT_ID, AGENTS.NAME, DSL.count())
+        .from(CHATS)
+        .join(AGENTS)
+        .on(CHATS.AGENT_ID.eq(AGENTS.ID))
+        .groupBy(CHATS.AGENT_ID, AGENTS.NAME)
+        .fetch()
+        .map { GraphData(it.value2()!!, it.value3()!!) },
+    )
+  }
+
+  fun agentsChatHistoryCounts(period: Period): Map<String, Map<String, Int>> {
+    // start date based on period
+    val startDate =
+      when (period) {
+        Period.WEEK -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(7)
+        Period.MONTH -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusMonths(1)
+        Period.YEAR ->
+          KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusYears(1).withDayOfMonth(1)
+      }
+
+    // Generate a subquery that counts the number of chats for each agent and date.
+    val chatDateCount =
+      dslContext
+        .select(
+          CHATS.AGENT_ID.`as`("agent_id"), // Agent ID
+          DSL.trunc(CHATS.CREATED_AT, period.datePart).`as`("date"), // Date
+          DSL.count().`as`("count"), // Count
+        )
+        .from(CHATS)
+        .where(CHATS.CREATED_AT.ge(startDate))
+        .groupBy(CHATS.AGENT_ID, DSL.trunc(CHATS.CREATED_AT, period.datePart))
+        .asTable("chat_date_counts")
+
+    // Join the date series table with the recent chats subquery to get the count for each date.
+    return dslContext
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME, // Agent name
+        chatDateCount.field("date", KOffsetDateTime::class.java), // Date
+        DSL.coalesce(chatDateCount.field("count", Int::class.java), 0).`as`("count"), // Count
+      )
+      .from(AGENTS)
+      .leftJoin(chatDateCount)
+      .on(AGENTS.ID.eq(chatDateCount.field("agent_id", UUID::class.java)))
+      .where(AGENTS.ACTIVE.isTrue)
+      .orderBy(AGENTS.NAME.asc(), chatDateCount.field("date", KOffsetDateTime::class.java)!!.asc())
+      .fetch()
+      .groupBy { it.value2()!! }
+      .map { agent ->
+        Pair(
+          agent.key,
+          agent.value.associate { Pair(it.value3()?.toLocalDate().toString(), it.value4()) },
+        )
+      }
+      .toMap()
   }
 }
