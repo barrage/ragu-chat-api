@@ -10,5 +10,5 @@ data class GoogleUserInfo(
   @SerialName("given_name") val givenName: String,
   @SerialName("family_name") val familyName: String,
   val picture: String,
-  val hd: String,
+  val hd: String? = null,
 )
