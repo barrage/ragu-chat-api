@@ -35,7 +35,9 @@ VALUES
 ('2ab61554-d108-4ce2-978a-a1d3f6e40fe6', 'dino@barrage.net', 'Bayram', 'Dino', 'B', 'ADMIN', TRUE),
 ('8c15a8c8-1dba-434d-b30b-cb352dc7c347', 'hrvoje.kuzmanovic@barrage.net', 'Hrvoje Kuzmanovic', 'Hrvoje', 'K', 'ADMIN', TRUE),
 ('9029ee9a-f443-489a-8aae-ead857991408', 'stefani.majic@barrage.net', 'Stefani Majic', 'Stefani', 'M', 'ADMIN', TRUE),
-('f348812f-a17b-4076-8fc4-958d9157a9f6', 'bruno.spajic@barrage.net', 'Bruno Spajic', 'Bruno', 'S', 'ADMIN', TRUE)
+('f348812f-a17b-4076-8fc4-958d9157a9f6', 'bruno.spajic@barrage.net', 'Bruno Spajic', 'Bruno', 'S', 'ADMIN', TRUE),
+('3926263d-044c-469d-8490-d4b331e192ad', 'ivan.pistingli@barrage.net', 'Ivan Pistingli', 'Ivan', 'P', 'ADMIN', TRUE),
+('1ade1b2e-9edd-44e9-b40d-38cb0fd37285', 'marko.pavicic@barrage.net', 'Marko Pavicic', 'Marko', 'P', 'ADMIN', TRUE)
 ON CONFLICT DO NOTHING;
 
 SELECT id, email, full_name FROM users;
