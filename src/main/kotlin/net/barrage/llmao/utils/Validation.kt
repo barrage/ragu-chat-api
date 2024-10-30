@@ -41,6 +41,15 @@ annotation class Range(
   val message: String = "",
 )
 
+/** Valid only on `String` fields. Validate that it's a number. */
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.RUNTIME)
+@Repeatable
+annotation class Number(
+  val code: String = "number",
+  val message: String = "Value is not valid number",
+)
+
 /**
  * Valid on `String` fields. Validate that the character length falls within the specified range.
  */
@@ -134,6 +143,13 @@ private fun validateInternal(
         listOf(ValidationError(annotation.code, annotation.message, fieldName))
       }
     }
+    is Number -> {
+      return if (validateNumber(value as String)) {
+        null
+      } else {
+        listOf(ValidationError(annotation.code, annotation.message, fieldName))
+      }
+    }
     is Range -> {
       return if (validateRange(value, annotation.min, annotation.max)) {
         null
@@ -180,6 +196,10 @@ fun MutableList<ValidationError>.addSchemaErr(code: String = "schema", message: 
 
 private fun validateEmail(email: String): Boolean {
   return email.isNotBlank() && email.matches(Regex("^[\\w\\-.]+@([\\w-]+\\.)+[\\w-]{2,4}$"))
+}
+
+private fun validateNumber(number: String): Boolean {
+  return number.isNotBlank() && number.matches(Regex("^[0-9]+$"))
 }
 
 private fun validateNotBlank(param: String): Boolean {

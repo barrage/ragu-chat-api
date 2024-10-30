@@ -1,0 +1,16 @@
+{
+  "messages": [
+    {
+      "to": "385981234567",
+      "messageCount": 1,
+      "messageId": "1759524e-e7b1-49cf-96fa-f4cba7dbb391",
+      "status": {
+        "groupId": 1,
+        "groupName": "PENDING",
+        "id": 7,
+        "name": "PENDING_ENROUTE",
+        "description": "Message sent to next instance"
+      }
+    }
+  ]
+}

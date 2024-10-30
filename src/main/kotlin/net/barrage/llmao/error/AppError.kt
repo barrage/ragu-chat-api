@@ -29,6 +29,7 @@ open class AppError(val type: String, val reason: ErrorReason, val description: 
       ErrorReason.EntityAlreadyExists -> HttpStatusCode.Conflict
       ErrorReason.InvalidProvider -> HttpStatusCode.BadRequest
       ErrorReason.InvalidParameter -> HttpStatusCode.BadRequest
+      ErrorReason.InvalidOperation -> HttpStatusCode.BadRequest
       else -> HttpStatusCode.InternalServerError
     }
   }
@@ -44,6 +45,7 @@ enum class ErrorReason(val reason: String) {
   InvalidParameter("Invalid parameter"),
   InvalidProvider("Unsupported provider"),
   VectorDatabase("Vector database error"),
+  InvalidOperation("Invalid operation"),
 
   // Websocket errors
   Websocket("Unprocessable message"),

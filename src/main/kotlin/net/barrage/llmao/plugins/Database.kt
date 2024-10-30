@@ -1,6 +1,5 @@
 package net.barrage.llmao.plugins
 
-import io.ktor.server.application.*
 import io.ktor.server.config.*
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection

@@ -70,8 +70,11 @@ fun Application.configureErrorHandling() {
     }
 
     exception<Exception> { call, err ->
-      LOG.error("${err::class} | ${err.localizedMessage} | ${err.cause} | ${err.cause?.cause}")
-      call.respond(HttpStatusCode.InternalServerError, err.localizedMessage)
+      LOG.error("${err::class} | ${err.message} | ${err.cause} | ${err.cause?.cause}")
+      call.respond(
+        HttpStatusCode.InternalServerError,
+        err.message ?: "An unexpected error occurred.",
+      )
     }
   }
 }

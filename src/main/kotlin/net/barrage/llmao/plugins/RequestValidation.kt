@@ -2,6 +2,7 @@ package net.barrage.llmao.plugins
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*
+import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.CreateUser
@@ -26,5 +27,8 @@ fun Application.configureRequestValidation() {
 
     // Chat DTOs validations
     validate<UpdateChatTitleDTO>(UpdateChatTitleDTO::validate)
+
+    // WhatsApp DTOs validations
+    validate<PhoneNumber>(PhoneNumber::validate)
   }
 }

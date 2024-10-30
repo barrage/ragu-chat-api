@@ -73,6 +73,9 @@ dependencies {
   implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
   implementation("com.auth0:java-jwt:4.4.0")
 
+  // Infobip
+  implementation("com.infobip:infobip-api-java-client:4.4.0")
+
   // AI
   implementation("com.aallam.openai:openai-client:3.8.2")
   implementation("io.ktor:ktor-client-okhttp")
