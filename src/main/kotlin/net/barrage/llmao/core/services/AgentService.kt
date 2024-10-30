@@ -53,7 +53,7 @@ class AgentService(
   }
 
   suspend fun create(create: CreateAgent): AgentWithConfiguration {
-    validateAgentConfigurationParams(
+    providers.validateSupportedConfigurationParams(
       llmProvider = create.configuration.llmProvider,
       model = create.configuration.model,
       vectorProvider = create.vectorProvider,
@@ -65,7 +65,7 @@ class AgentService(
   }
 
   suspend fun update(id: KUUID, update: UpdateAgent): Any {
-    validateAgentConfigurationParams(
+    providers.validateSupportedConfigurationParams(
       llmProvider = update.configuration?.llmProvider,
       model = update.configuration?.model,
       embeddingProvider = update.embeddingProvider,
@@ -127,44 +127,6 @@ class AgentService(
 
     agentRepository.updateCollections(agentId, update)
     return UpdateCollectionsResult(verifiedCollections, update.remove.orEmpty(), failedCollections)
-  }
-
-  /**
-   * Checks whether the providers and their respective models are supported. Data passed to this
-   * function should come from already validated DTOs.
-   */
-  private suspend fun validateAgentConfigurationParams(
-    llmProvider: String? = null,
-    model: String? = null,
-    vectorProvider: String? = null,
-    embeddingProvider: String? = null,
-    embeddingModel: String? = null,
-  ) {
-    if (llmProvider != null && model != null) {
-      // Throws if invalid provider
-      val llm = providers.llm.getProvider(llmProvider)
-      if (!llm.supportsModel(model)) {
-        throw AppError.api(
-          ErrorReason.InvalidParameter,
-          "Provider '${llm.id()}' does not support model '${model}'",
-        )
-      }
-    }
-
-    if (vectorProvider != null) {
-      // Throws if invalid provider
-      providers.vector.getProvider(vectorProvider)
-    }
-
-    if (embeddingProvider != null && embeddingModel != null) {
-      val embedder = providers.embedding.getProvider(embeddingProvider)
-      if (!embedder.supportsModel(embeddingModel)) {
-        throw AppError.api(
-          ErrorReason.InvalidParameter,
-          "Provider '${embedder.id()}' does not support model '${embeddingModel}'",
-        )
-      }
-    }
   }
 
   fun getAgentConfigurationVersions(

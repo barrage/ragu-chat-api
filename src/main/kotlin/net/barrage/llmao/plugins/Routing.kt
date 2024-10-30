@@ -12,6 +12,10 @@ import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.adapters.chonkit.chonkitAuthRouter
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.ServiceState
+import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
+import net.barrage.llmao.app.adapters.whatsapp.api.adminWhatsAppRoutes
+import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppHookRoutes
+import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppRoutes
 import net.barrage.llmao.app.api.http.controllers.adminAgentsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminUserRoutes
@@ -57,6 +61,13 @@ fun Application.configureRouting(state: ApplicationState) {
       agentsRoutes(services.agent)
       userRoutes(services.user)
       chatsRoutes(services.chat)
+    }
+
+    // WhatsApp API routes
+    state.adapters.runIfEnabled<WhatsAppAdapter, Unit> { whatsAppAdapter ->
+      whatsAppHookRoutes(whatsAppAdapter)
+      authenticate("auth-session-admin") { adminWhatsAppRoutes(whatsAppAdapter) }
+      authenticate("auth-session") { whatsAppRoutes(whatsAppAdapter) }
     }
 
     if (application.environment.config.property("ktor.environment").getString() == "development") {

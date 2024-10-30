@@ -6,6 +6,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationRepository
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
+import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
+import net.barrage.llmao.app.adapters.whatsapp.WhatsAppChatService
+import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
@@ -20,11 +23,14 @@ import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.initDatabase
 import net.barrage.llmao.string
 import org.jooq.DSLContext
 
 private const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
+private const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
 
 class ApplicationState(config: ApplicationConfig) {
   val providers = ProviderState(config)
@@ -35,7 +41,7 @@ class ApplicationState(config: ApplicationConfig) {
     CookieFactory.init(config)
     val database = initDatabase(config)
     repository = RepositoryState(database)
-    adapters = AdapterState(config, database)
+    adapters = AdapterState(config, database, providers)
   }
 }
 
@@ -50,7 +56,7 @@ class RepositoryState(database: DSLContext) {
  * Keeps the state of optional modules. Modules are configured via the `ktor.features` flags.
  * Whenever a flag is enabled, the corresponding adapter is enabled for use.
  */
-class AdapterState(config: ApplicationConfig, database: DSLContext) {
+class AdapterState(config: ApplicationConfig, database: DSLContext, providers: ProviderState) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 
   init {
@@ -59,6 +65,13 @@ class AdapterState(config: ApplicationConfig, database: DSLContext) {
       adapters[ChonkitAuthenticationService::class] = runBlocking {
         ChonkitAuthenticationService.init(chonkitAuthRepo, config)
       }
+    }
+    if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
+      val whatsAppRepo = WhatsAppRepository(database)
+      val whatsAppChatService = WhatsAppChatService(providers, whatsAppRepo)
+      WhatsAppAdapter(config, providers, whatsAppChatService, whatsAppRepo)
+      adapters[WhatsAppAdapter::class] =
+        WhatsAppAdapter(config, providers, whatsAppChatService, whatsAppRepo)
     }
   }
 
@@ -95,6 +108,44 @@ class ProviderState(config: ApplicationConfig) {
     val embeddingProviders = embedding.listProviders()
 
     return ProvidersResponse(authProviders, llmProviders, vectorProviders, embeddingProviders)
+  }
+
+  /**
+   * Checks whether the providers and their respective models are supported. Data passed to this
+   * function should come from already validated DTOs.
+   */
+  suspend fun validateSupportedConfigurationParams(
+    llmProvider: String? = null,
+    model: String? = null,
+    vectorProvider: String? = null,
+    embeddingProvider: String? = null,
+    embeddingModel: String? = null,
+  ) {
+    if (llmProvider != null && model != null) {
+      // Throws if invalid provider
+      val llm = llm.getProvider(llmProvider)
+      if (!llm.supportsModel(model)) {
+        throw AppError.api(
+          ErrorReason.InvalidParameter,
+          "Provider '${llm.id()}' does not support model '${model}'",
+        )
+      }
+    }
+
+    if (vectorProvider != null) {
+      // Throws if invalid provider
+      vector.getProvider(vectorProvider)
+    }
+
+    if (embeddingProvider != null && embeddingModel != null) {
+      val embedder = embedding.getProvider(embeddingProvider)
+      if (!embedder.supportsModel(embeddingModel)) {
+        throw AppError.api(
+          ErrorReason.InvalidParameter,
+          "Provider '${embedder.id()}' does not support model '${embeddingModel}'",
+        )
+      }
+    }
   }
 }
 

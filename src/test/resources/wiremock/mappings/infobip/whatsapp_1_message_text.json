@@ -1,0 +1,37 @@
+{
+  "id": "55eed198-81ef-4027-a32b-f3875c00b95b",
+  "name": "whatsapp_1_message_text",
+  "request": {
+    "url": "/whatsapp/1/message/text",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.from"
+      },
+      {
+        "matchesJsonPath": "$.to"
+      },
+      {
+        "matchesJsonPath": "$.content.text"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "whatsapp_1_message_text_response.json",
+    "headers": {
+      "x-request-id": "1732792596120965226",
+      "date": "Thu, 28 Nov 2024 11:16:36 GMT",
+      "server": "SMS API",
+      "vary": [
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers"
+      ],
+      "content-type": "application/json",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload;"
+    }
+  },
+  "uuid": "55eed198-81ef-4027-a32b-f3875c00b95b",
+  "persistent": true
+}

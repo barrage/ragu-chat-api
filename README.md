@@ -19,6 +19,7 @@
     - [WS Diagrams](#ws-diagrams)
         - [Chatting](#chatting)
         - [Changing chats](#changing-chats)
+- [WhatsApp](#whatsapp)
 
 ## Overview
 
@@ -368,3 +369,46 @@ Sequence diagram explaining the process of changing chats.
 State diagram explaining assignment of users current chat.
 
 <img title="Changing chats" src="md/changing_chats_state.svg" alt="Changing chats">
+
+## WhatsApp
+
+WhatsApp is a messaging platform that allows users to send and receive messages through their phone numbers.
+It is used as a chat provider for Kappi.
+
+### Setup
+
+Before you can use WhatsApp, you need to create an account on [Infobip](https://www.infobip.com/).
+You will need to create an API key, a WhatsApp sender number, a WhatsApp template, and an inbound configuration. The
+template will be used to send a welcome message to users, so that the users know the number of the chat provider.
+
+#### Api Key
+
+You can create an API key from the Infobip dashboard by navigating to https://portal.infobip.com/dev/api-keys.
+There you will see your API Base URL. You will need to set the `infobip.endpoint` and `infobip.apiKey`
+configuration values to the API Base URL and API key respectively.
+When creating a new API key, make sure to grant it the General API scopes ("inbound-message:read", "message:send").
+
+#### Sender Number
+
+You can create a new WhatsApp sender number from the Infobip dashboard by navigating to
+https://portal.infobip.com/channels-and-numbers/numbers. There you will see your WhatsApp sender number. You will need
+to set the `infobip.sender` configuration value to the WhatsApp sender number.
+More info can be found [here](https://www.infobip.com/docs/numbers).
+
+#### Inbound configuration
+
+You can configure the inbound configuration from the Infobip dashboard by navigating to your WhatsApp sender number:
+https://portal.infobip.com/channels-and-numbers/channels/whatsapp/senders. Click on the 3 dots at the right of your
+sender number and select "Edit configuration". Under "Inbound configuration" edit the "Default configuration". Set
+Forwarding action to "Forward to HTTP" and set URL to "https://your-kappi-url/chats/whatsapp".
+
+#### Template
+
+You can create a new WhatsApp template from the Infobip dashboard by navigating to
+https://portal.infobip.com/channels-and-numbers/channels/whatsapp/templates. There you will see your WhatsApp templates.
+You will need to set the `infobip.template` configuration value to the WhatsApp template name.
+More info can be found [here](https://www.infobip.com/docs/whatsapp/message-types#template-registration).
+
+### Activation
+
+To use WhatsApp as a chat provider, you need to set the `ktor.features.whatsApp` configuration to `true`.

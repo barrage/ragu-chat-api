@@ -11,10 +11,20 @@
     },
     "bodyPatterns": [
       {
-        "matchesJsonPath": {
-          "expression": "$.messages[1].content",
-          "contains": "v1_chat_completions_completion"
-        }
+        "or": [
+          {
+            "matchesJsonPath": {
+              "expression": "$.messages[1].content",
+              "contains": "v1_chat_completions_completion"
+            }
+          },
+          {
+            "matchesJsonPath": {
+              "expression": "$.messages[0].content",
+              "contains": "WhatsApp Test Agent Context"
+            }
+          }
+        ]
       }
     ]
   },

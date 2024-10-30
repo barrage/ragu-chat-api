@@ -129,6 +129,9 @@ open class IntegrationTest(
             // Has to match the URL from the Azure OpenAI SDK.
             "embeddings.azure.endpoint" to "wiremockUrlOverride/openai/deployments",
             "vault.endpoint" to wiremockUrlOverride,
+
+            // Has to match the URL from the Infobip SDK.
+            "infobip.endpoint" to wiremockUrlOverride,
           )
         )
       return
@@ -148,6 +151,8 @@ open class IntegrationTest(
           "embeddings.azure.apiKey" to "super-duper-secret-azure-api-key",
           "embeddings.fembed.endpoint" to "$url/$FEMBED_WM",
           "vault.endpoint" to "$url/$VAULT_WM",
+          "infobip.endpoint" to url,
+          "infobip.apiKey" to "super-duper-secret-infobip-api-key",
         )
       )
   }

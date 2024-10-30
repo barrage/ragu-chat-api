@@ -12,6 +12,14 @@ import java.util.*
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
+import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
+import net.barrage.llmao.app.adapters.whatsapp.dto.toWhatsAppAgentDTO
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppChat
+import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppMessage
+import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -33,6 +41,10 @@ import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.MessagesRecord
 import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.records.UsersRecord
+import net.barrage.llmao.tables.records.WhatsAppAgentsRecord
+import net.barrage.llmao.tables.records.WhatsAppChatsRecord
+import net.barrage.llmao.tables.records.WhatsAppMessagesRecord
+import net.barrage.llmao.tables.records.WhatsAppNumbersRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
@@ -40,6 +52,10 @@ import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.SESSIONS
 import net.barrage.llmao.tables.references.USERS
+import net.barrage.llmao.tables.references.WHATS_APP_AGENTS
+import net.barrage.llmao.tables.references.WHATS_APP_CHATS
+import net.barrage.llmao.tables.references.WHATS_APP_MESSAGES
+import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
@@ -222,10 +238,14 @@ class TestPostgres {
       .fetchOne(ChatsRecord::toChat)!!
   }
 
+  fun deleteTestChat(id: UUID) {
+    dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).execute()
+  }
+
   fun testChatMessage(
     chatId: UUID,
     userId: UUID,
-    content: String,
+    content: String = "Test message",
     senderType: String = "user",
     responseTo: UUID? = null,
     evaluation: Boolean? = null,
@@ -242,8 +262,94 @@ class TestPostgres {
       .fetchOne(MessagesRecord::toMessage)!!
   }
 
-  fun deleteTestChat(id: UUID) {
-    dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).execute()
+  fun testWhatsAppNumber(userId: UUID, phoneNumber: String): WhatsAppNumber {
+    return dslContext
+      .insertInto(WHATS_APP_NUMBERS)
+      .set(WHATS_APP_NUMBERS.USER_ID, userId)
+      .set(WHATS_APP_NUMBERS.PHONE_NUMBER, phoneNumber)
+      .returning()
+      .fetchOne(WhatsAppNumbersRecord::toWhatsAppNumber)!!
+  }
+
+  fun deleteTestWhatsAppNumber(id: UUID) {
+    dslContext.deleteFrom(WHATS_APP_NUMBERS).where(WHATS_APP_NUMBERS.ID.eq(id)).execute()
+  }
+
+  fun testWhatsAppAgent(
+    name: String = "Test WhatsApp Agent",
+    active: Boolean = true,
+    vectorProvider: String = "weaviate",
+    embeddingProvider: String = "openai",
+    embeddingModel: String = "text-embedding-ada-002",
+  ): WhatsAppAgentDTO {
+    val agent =
+      dslContext
+        .insertInto(WHATS_APP_AGENTS)
+        .columns(
+          WHATS_APP_AGENTS.NAME,
+          WHATS_APP_AGENTS.DESCRIPTION,
+          WHATS_APP_AGENTS.CONTEXT,
+          WHATS_APP_AGENTS.LLM_PROVIDER,
+          WHATS_APP_AGENTS.MODEL,
+          WHATS_APP_AGENTS.TEMPERATURE,
+          WHATS_APP_AGENTS.VECTOR_PROVIDER,
+          WHATS_APP_AGENTS.LANGUAGE,
+          WHATS_APP_AGENTS.ACTIVE,
+          WHATS_APP_AGENTS.EMBEDDING_PROVIDER,
+          WHATS_APP_AGENTS.EMBEDDING_MODEL,
+        )
+        .values(
+          name,
+          "Test Description",
+          "WhatsApp Test Agent Context",
+          "openai",
+          "gpt-4",
+          0.4,
+          vectorProvider,
+          "croatian",
+          active,
+          embeddingProvider,
+          embeddingModel,
+        )
+        .returning()
+        .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgentDTO)!!
+
+    return agent
+  }
+
+  fun deleteTestWhatsAppAgent(id: UUID) {
+    dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(id)).execute()
+  }
+
+  fun testWhatsAppChat(userId: UUID, agentId: UUID): WhatsAppChat {
+    return dslContext
+      .insertInto(WHATS_APP_CHATS)
+      .set(WHATS_APP_CHATS.ID, UUID.randomUUID())
+      .set(WHATS_APP_CHATS.USER_ID, userId)
+      .returning()
+      .fetchOne(WhatsAppChatsRecord::toWhatsAppChat)!!
+  }
+
+  fun deleteTestWhatsAppChat(id: UUID) {
+    dslContext.deleteFrom(WHATS_APP_CHATS).where(WHATS_APP_CHATS.ID.eq(id)).execute()
+  }
+
+  fun testWhatsAppMessage(
+    chatId: UUID,
+    userId: UUID,
+    content: String = "Test message",
+    senderType: String = "user",
+    responseTo: UUID? = null,
+  ): WhatsAppMessage {
+    return dslContext
+      .insertInto(WHATS_APP_MESSAGES)
+      .set(WHATS_APP_MESSAGES.CHAT_ID, chatId)
+      .set(WHATS_APP_MESSAGES.SENDER, userId)
+      .set(WHATS_APP_MESSAGES.SENDER_TYPE, senderType)
+      .set(WHATS_APP_MESSAGES.CONTENT, content)
+      .set(WHATS_APP_MESSAGES.RESPONSE_TO, responseTo)
+      .returning()
+      .fetchOne(WhatsAppMessagesRecord::toWhatsAppMessage)!!
   }
 }
 
@@ -350,6 +456,10 @@ class Wiremock {
       .response("vault", "v1_transit_sign_response.json")
       .map("vault/v1_transit_keys_key")
       .response("vault", "v1_transit_keys_key_response.json")
+      .map("infobip/whatsapp_1_message_template")
+      .response("infobip", "whatsapp_1_message_template_response.json")
+      .map("infobip/whatsapp_1_message_text")
+      .response("infobip", "whatsapp_1_message_text_response.json")
 
   init {
     container.start()
