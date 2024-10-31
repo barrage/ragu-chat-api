@@ -24,8 +24,6 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
     val results = mutableListOf<String>()
 
-    val collection = toWeaviateClassName(collection)
-
     val query =
       client
         .graphQL()
@@ -81,12 +79,12 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
   }
 
   override fun validateCollection(name: String): Boolean {
-    val result = client.schema().exists().withClassName(toWeaviateClassName(name)).run()
-    return result.result
-  }
-
-  /** Necessary because weaviate capitalizes all class names. */
-  private fun toWeaviateClassName(name: String): String {
-    return name.replaceFirstChar { it.uppercaseChar() }
+    try {
+      val result = client.schema().exists().withClassName(name).run()
+      return result.result ?: false
+    } catch (e: Exception) {
+      LOG.error("Error validating collection '$name': ${e.message}")
+      return false
+    }
   }
 }
