@@ -202,7 +202,7 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         provider = "weaviate",
         add =
           listOf(
-            CollectionItem(name = "kusturica", amount = 10, instruction = "you pass the butter")
+            CollectionItem(name = "Kusturica", amount = 10, instruction = "you pass the butter")
           ),
         remove = null,
       )
