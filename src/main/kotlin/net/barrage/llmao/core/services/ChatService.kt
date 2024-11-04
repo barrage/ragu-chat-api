@@ -30,21 +30,21 @@ internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.services.ChatService
 
 class ChatService(
   private val providers: ProviderState,
-  private val chatRepo: ChatRepository,
+  private val chatRepository: ChatRepository,
   private val agentRepository: AgentRepository,
   private val userRepository: UserRepository,
 ) {
   fun listChats(pagination: PaginationSort): CountedList<Chat> {
-    return chatRepo.getAll(pagination)
+    return chatRepository.getAll(pagination)
   }
 
   fun listChats(pagination: PaginationSort, userId: KUUID): CountedList<Chat> {
-    return chatRepo.getAll(pagination, userId)
+    return chatRepository.getAll(pagination, userId)
   }
 
   fun getChatWithAgent(id: KUUID, userId: KUUID): ChatWithAgent {
     val chat =
-      chatRepo.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+      chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     if (userId != chat.userId) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
@@ -57,7 +57,7 @@ class ChatService(
 
   fun getChatWithUserAndAgent(id: KUUID): ChatWithUserAndAgent {
     val chat =
-      chatRepo.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+      chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     val agent = agentRepository.get(chat.agentId)
 
@@ -67,15 +67,15 @@ class ChatService(
   }
 
   fun getChat(chatId: KUUID): ChatWithMessages? {
-    return chatRepo.getWithMessages(chatId)
+    return chatRepository.getWithMessages(chatId)
   }
 
   fun getMessages(chatId: KUUID): List<Message> {
-    return chatRepo.getMessages(chatId)
+    return chatRepository.getMessages(chatId)
   }
 
   fun storeChat(id: KUUID, userId: KUUID, agentId: KUUID, title: String?) {
-    chatRepo.insert(id, userId, agentId, title)
+    chatRepository.insert(id, userId, agentId, title)
   }
 
   suspend fun generateTitle(chatId: KUUID, prompt: String, agentId: KUUID): String {
@@ -94,17 +94,17 @@ class ChatService(
         .trim()
 
     LOG.trace("Title generated: {}", title)
-    chatRepo.updateTitle(chatId, title) ?: throw NotFoundException("Chat not found")
+    chatRepository.updateTitle(chatId, title) ?: throw NotFoundException("Chat not found")
 
     return title
   }
 
   fun updateTitle(chatId: KUUID, title: String) {
-    chatRepo.updateTitle(chatId, title)
+    chatRepository.updateTitle(chatId, title)
   }
 
   fun updateTitle(chatId: KUUID, userId: KUUID, title: String) {
-    chatRepo.updateTitle(chatId, userId, title)
+    chatRepository.updateTitle(chatId, userId, title)
   }
 
   suspend fun chatCompletionStream(
@@ -143,15 +143,15 @@ class ChatService(
     userPrompt: String,
     llmResponse: String,
   ): Pair<Message, Message> {
-    val userMessage = chatRepo.insertUserMessage(chatId, userId, userPrompt)
+    val userMessage = chatRepository.insertUserMessage(chatId, userId, userPrompt)
     val assistantMessage =
-      chatRepo.insertAssistantMessage(chatId, agentId, llmResponse, userMessage.id)
+      chatRepository.insertAssistantMessage(chatId, agentId, llmResponse, userMessage.id)
 
     return Pair(userMessage, assistantMessage)
   }
 
   fun processFailedMessage(chatId: KUUID, userId: KUUID, prompt: String, reason: String) {
-    chatRepo.insertFailedMessage(chatId, userId, prompt, reason)
+    chatRepository.insertFailedMessage(chatId, userId, prompt, reason)
   }
 
   suspend fun summarizeConversation(
@@ -183,9 +183,48 @@ class ChatService(
         LlmConfig(agentFull.agent.model, agentFull.agent.temperature),
       )
 
-    chatRepo.insertSystemMessage(chatId, summary)
+    chatRepository.insertSystemMessage(chatId, summary)
 
     return summary
+  }
+
+  fun deleteChat(id: KUUID) {
+    chatRepository.delete(id)
+  }
+
+  fun deleteChat(id: KUUID, userId: KUUID) {
+    chatRepository.delete(id, userId)
+  }
+
+  fun evaluateMessage(chatId: KUUID, messageId: KUUID, evaluation: Boolean): Message {
+    chatRepository.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
+    return chatRepository.evaluateMessage(messageId, evaluation)
+      ?: throw NotFoundException("Message not found")
+  }
+
+  fun evaluateMessage(
+    chatId: KUUID,
+    messageId: KUUID,
+    userId: KUUID,
+    evaluation: Boolean,
+  ): Message {
+    chatRepository.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
+    return chatRepository.evaluateMessage(messageId, userId, evaluation)
+      ?: throw NotFoundException("Message not found")
+  }
+
+  fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
+    return if (userId != null) {
+      chatRepository.getMessagesForUser(id, userId)
+    } else {
+      chatRepository.getMessages(id)
+    }
+  }
+
+  fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
+    val agentFull = agentRepository.get(agentId)
+    val text = history.joinToString("\n") { it.content }
+    return getEncoder(agentFull.agent.model).encode(text).size()
   }
 
   private suspend fun prepareChatPrompt(
@@ -240,45 +279,6 @@ class ChatService(
     """
         .trimIndent()
     return ChatMessage.user(message)
-  }
-
-  fun deleteChat(id: KUUID) {
-    chatRepo.delete(id)
-  }
-
-  fun deleteChat(id: KUUID, userId: KUUID) {
-    chatRepo.delete(id, userId)
-  }
-
-  fun evaluateMessage(chatId: KUUID, messageId: KUUID, evaluation: Boolean): Message {
-    chatRepo.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
-    return chatRepo.evaluateMessage(messageId, evaluation)
-      ?: throw NotFoundException("Message not found")
-  }
-
-  fun evaluateMessage(
-    chatId: KUUID,
-    messageId: KUUID,
-    userId: KUUID,
-    evaluation: Boolean,
-  ): Message {
-    chatRepo.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
-    return chatRepo.evaluateMessage(messageId, userId, evaluation)
-      ?: throw NotFoundException("Message not found")
-  }
-
-  fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
-    return if (userId != null) {
-      chatRepo.getMessagesForUser(id, userId)
-    } else {
-      chatRepo.getMessages(id)
-    }
-  }
-
-  fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
-    val agentFull = agentRepository.get(agentId)
-    val text = history.joinToString("\n") { it.content }
-    return getEncoder(agentFull.agent.model).encode(text).size()
   }
 
   private fun getEncoder(llm: String): Encoding {

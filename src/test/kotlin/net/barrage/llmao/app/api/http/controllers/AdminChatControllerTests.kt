@@ -15,8 +15,10 @@ import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.repository.ChatRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
@@ -30,6 +32,7 @@ class AdminChatControllerTests : IntegrationTest() {
   private lateinit var chatTwo: Chat
   private lateinit var messageOne: Message
   private lateinit var messageTwo: Message
+  private lateinit var chatRepository: ChatRepository
 
   @BeforeAll
   fun setup() {
@@ -42,6 +45,7 @@ class AdminChatControllerTests : IntegrationTest() {
     chatTwo = postgres!!.testChat(user.id, agent.id)
     messageOne = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
     messageTwo = postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
+    chatRepository = ChatRepository(postgres!!.dslContext)
   }
 
   @Test
@@ -130,5 +134,31 @@ class AdminChatControllerTests : IntegrationTest() {
     assertEquals(chatOne.id, body.chat.id)
     assertEquals(user.id, body.user.id)
     assertEquals(agent.id, body.agent.id)
+  }
+
+  @Test
+  fun shouldDeleteChatWithExistingMessages() = test {
+    val newChat = postgres!!.testChat(user.id, agent.id)
+    val chat = chatRepository.get(newChat.id)!!
+    val userMessage = chatRepository.insertUserMessage(chat.id, user.id, "Test Message")
+    val agentMessage =
+      chatRepository.insertAssistantMessage(chat.id, agent.id, "Test Message", userMessage.id)
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.delete("/admin/chats/${chat.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+      }
+
+    assertEquals(HttpStatusCode.NoContent, response.status)
+
+    val deletedChat = chatRepository.get(chat.id)
+
+    assertNull(deletedChat)
+
+    val deletedUserMessage = chatRepository.getMessage(chat.id, userMessage.id)
+    val deletedAgentMessage = chatRepository.getMessage(chat.id, agentMessage.id)
+
+    assertNull(deletedUserMessage)
+    assertNull(deletedAgentMessage)
   }
 }
