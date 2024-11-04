@@ -48,17 +48,17 @@ data class CreateUser(
 
 @Serializable
 data class UpdateUser(
-  @NotBlank val fullName: String?,
-  @NotBlank val firstName: String?,
-  @NotBlank val lastName: String?,
+  @NotBlank val fullName: String? = null,
+  @NotBlank val firstName: String? = null,
+  @NotBlank val lastName: String? = null,
 ) : Validation
 
 @Serializable
 data class UpdateUserAdmin(
-  @NotBlank val fullName: String?,
-  @NotBlank val firstName: String?,
-  @NotBlank val lastName: String?,
-  @Email val email: String?,
-  val role: Role?,
-  val active: Boolean?,
+  @NotBlank val fullName: String? = null,
+  @NotBlank val firstName: String? = null,
+  @NotBlank val lastName: String? = null,
+  @Email val email: String? = null,
+  val role: Role? = null,
+  val active: Boolean? = null,
 ) : Validation

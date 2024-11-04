@@ -78,7 +78,7 @@ class UserService(
       throw AppError.api(ErrorReason.CannotDeleteSelf, "Cannot delete self")
     }
 
-    if (usersRepository.softDelete(id)) {
+    if (usersRepository.delete(id)) {
       val activeSessions = sessionsRepository.getActiveByUserId(id)
       activeSessions.forEach { session ->
         session?.let { sessionsRepository.expire(session.sessionId) }
