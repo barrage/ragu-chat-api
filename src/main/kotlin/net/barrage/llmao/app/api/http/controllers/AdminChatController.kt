@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.patch
 import io.github.smiley4.ktorswaggerui.dsl.routing.put
@@ -43,6 +44,12 @@ fun Route.adminChatsRoutes(service: ChatService) {
         val input: UpdateChatTitleDTO = call.receive()
         service.updateTitle(chatId, input.title)
         call.respond(HttpStatusCode.OK, "Chat title successfully updated")
+      }
+
+      delete(adminDeleteChat()) {
+        val chatId = call.pathUuid("chatId")
+        service.deleteChat(chatId)
+        call.respond(HttpStatusCode.NoContent)
       }
 
       route("/messages") {
@@ -182,6 +189,25 @@ private fun adminEvaluate(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving message"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun adminDeleteChat(): OpenApiRoute.() -> Unit = {
+  tags("admin/chats")
+  description = "Delete chat"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "The ID of the chat"
+      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Chat deleted successfully" }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while deleting chat"
         body<List<AppError>> {}
       }
   }
