@@ -10,8 +10,11 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Role
+import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.tables.records.UsersRecord
+import net.barrage.llmao.tables.references.USERS
 import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -317,6 +320,18 @@ class AdminUserControllerTests : IntegrationTest() {
       }
 
     assertEquals(204, response.status.value)
+    val deletedUser =
+      postgres!!
+        .dslContext
+        .selectFrom(USERS)
+        .where(USERS.ID.eq(testUser.id))
+        .fetchOne(UsersRecord::toUser)!!
+    assertEquals(testUser.id, deletedUser.id)
+    assertTrue(deletedUser.deletedAt != null)
+    assertEquals("${testUser.id}@deleted.net", deletedUser.email)
+    assertEquals("deleted", deletedUser.fullName)
+    assertEquals("deleted", deletedUser.firstName)
+    assertEquals("deleted", deletedUser.lastName)
   }
 
   @Test
