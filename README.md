@@ -188,7 +188,7 @@ WebSocket server expects two types of messages from client: `system` and `chat`.
 
 System messages are used to send system commands to the server. The following system messages are supported:
 
-- `open_chat_new`
+- `chat_open_new`
 
 Opens a new chat with the specified agent. The agent UUID must be provided in the payload.
 Server will always respond with a `chat_open` message of newly generated chat.
@@ -197,13 +197,13 @@ Server will always respond with a `chat_open` message of newly generated chat.
 {
   "type": "system",
   "payload": {
-    "type": "open_chat_new",
+    "type": "chat_open_new",
     "agentId": "agent_uuid"
   }
 }
 ```
 
-- `open_chat_existing`
+- `chat_open_existing`
 
 Opens an existing chat with the specified chat UUID. If no chat is found with the provided UUID, the server will respond
 by throwing an error. If the chat is found, the server will respond with a `chat_open` message, but if user is already
@@ -213,7 +213,7 @@ found to have an opened chat, the server will respond with a `chat_open` message
 {
   "type": "system",
   "payload": {
-    "type": "open_chat_existing",
+    "type": "chat_open_existing",
     "chatId": "chat_uuid"
   }
 }
