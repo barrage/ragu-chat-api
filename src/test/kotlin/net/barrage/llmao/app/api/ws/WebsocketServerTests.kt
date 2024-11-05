@@ -29,7 +29,11 @@ class WebsocketServerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    agent = postgres!!.testAgent()
+    agent =
+      postgres!!.testAgent(
+        embeddingProvider = "fembed",
+        embeddingModel = "Xenova/bge-large-en-v1.5",
+      )
     user = postgres!!.testUser(email = "not@important.org", admin = false)
     session = postgres!!.testSession(user.id)
   }
@@ -273,6 +277,40 @@ class WebsocketServerTests : IntegrationTest() {
       val error = receiveJson<AppError>(message)
       assertEquals("API", error.type)
       assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
+      asserted = true
+    }
+
+    assert(asserted)
+  }
+
+  @Test
+  fun stoppingStreamWorks() = test {
+    val client = createClient {
+      install(WebSockets) {
+        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+      }
+    }
+
+    var asserted = false
+
+    val token = getWsToken(client, sessionCookie(session.sessionId))
+
+    client.webSocket("/?token=$token") {
+      val openChat = SystemMessage.OpenNewChat(agent.id)
+
+      sendClientSystem(openChat)
+
+      val chatOpen = (incoming.receive() as Frame.Text).readText()
+
+      receiveJson<ServerMessage.ChatOpen>(chatOpen)
+
+      val stopStream = SystemMessage.StopStream
+
+      sendClientSystem(stopStream)
+
+      val stopChunk = (incoming.receive() as Frame.Text).readText()
+
+      assertEquals("##STOP##", stopChunk)
       asserted = true
     }
 

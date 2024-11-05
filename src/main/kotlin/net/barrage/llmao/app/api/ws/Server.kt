@@ -51,7 +51,7 @@ class Server(private val factory: ChatFactory) {
     }
   }
 
-  private suspend fun handleChatMessage(emitter: Emitter, userId: KUUID, message: String) {
+  private fun handleChatMessage(emitter: Emitter, userId: KUUID, message: String) {
     val chat =
       chats[userId] ?: throw AppError.api(ErrorReason.Websocket, "Chat not open for user '$userId'")
 
@@ -59,7 +59,7 @@ class Server(private val factory: ChatFactory) {
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
-    chat.stream(message, emitter)
+    chat.startStreaming(message, emitter)
   }
 
   private suspend fun handleSystemMessage(emitter: Emitter, userId: KUUID, message: SystemMessage) {
@@ -78,17 +78,19 @@ class Server(private val factory: ChatFactory) {
         val existingChat = factory.fromExisting(message.chatId)
         chats[userId] = existingChat
         emitter.emitServer(ServerMessage.ChatOpen(message.chatId))
+        LOG.debug("Opened chat ({}) for user '{}'", existingChat.id, userId)
       }
       is SystemMessage.CloseChat -> {
         val chat = chats.remove(userId)
         chat?.let {
           emitter.emitServer(ServerMessage.ChatClosed(it.id))
           it.closeStream()
+          LOG.debug("Closed chat for user '{}'", userId)
         }
       }
       is SystemMessage.StopStream -> {
         val chat = chats[userId]
-        chat?.closeStream()
+        chat?.stopStream(emitter)
       }
     }
   }
