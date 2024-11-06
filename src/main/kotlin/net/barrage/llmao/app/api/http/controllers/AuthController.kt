@@ -42,10 +42,18 @@ fun Route.authRoutes(service: AuthenticationService) {
 
 fun loginUser(): OpenApiRoute.() -> Unit = {
   summary = "Login user"
-  description = "Login a user with data gotten from oAuth service."
+  description = "Login a user via OAuth."
   tags("auth")
   securitySchemeNames = listOf()
-  request { body<LoginPayload>() }
+  request {
+    multipartBody {
+      part<String>("code") {}
+      part<String>("grant_type") {}
+      part<String>("redirect_uri") {}
+      part<String>("provider") {}
+      part<String>("source") {}
+    }
+  }
   response {
     HttpStatusCode.OK to { description = "User logged in." }
     HttpStatusCode.BadRequest to
