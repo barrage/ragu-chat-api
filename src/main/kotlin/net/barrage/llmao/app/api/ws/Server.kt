@@ -90,7 +90,7 @@ class Server(private val factory: ChatFactory) {
       }
       is SystemMessage.StopStream -> {
         val chat = chats[userId]
-        chat?.stopStream(emitter)
+        chat?.closeStream()
       }
     }
   }

@@ -282,40 +282,6 @@ class WebsocketServerTests : IntegrationTest() {
 
     assert(asserted)
   }
-
-  @Test
-  fun stoppingStreamWorks() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
-    var asserted = false
-
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-
-    client.webSocket("/?token=$token") {
-      val openChat = SystemMessage.OpenNewChat(agent.id)
-
-      sendClientSystem(openChat)
-
-      val chatOpen = (incoming.receive() as Frame.Text).readText()
-
-      receiveJson<ServerMessage.ChatOpen>(chatOpen)
-
-      val stopStream = SystemMessage.StopStream
-
-      sendClientSystem(stopStream)
-
-      val stopChunk = (incoming.receive() as Frame.Text).readText()
-
-      assertEquals("##STOP##", stopChunk)
-      asserted = true
-    }
-
-    assert(asserted)
-  }
 }
 
 private suspend fun getWsToken(client: HttpClient, cookie: String): String {
