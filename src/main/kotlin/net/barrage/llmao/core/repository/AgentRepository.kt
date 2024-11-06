@@ -76,6 +76,14 @@ class AgentRepository(private val dslContext: DSLContext) {
       } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
   }
 
+  fun getActive(id: KUUID): Agent {
+    return dslContext
+      .selectFrom(AGENTS)
+      .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isTrue))
+      .fetchOne(AgentsRecord::toAgent)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
+  }
+
   fun create(create: CreateAgent): Agent? {
     val agent =
       dslContext.transactionResult { tx ->
