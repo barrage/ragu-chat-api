@@ -5,7 +5,6 @@ import com.aallam.openai.api.exception.InvalidRequestException
 import io.ktor.util.logging.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -55,9 +54,6 @@ class Chat(
   /** True if the chat is streaming, false otherwise. */
   private var streamActive: Boolean = false
 
-  /** The coroutine job for the stream. */
-  private var streamJob: Job? = null
-
   /**
    * Start streaming from an LLM and forward its generated chunks to the client via the emitter.
    * Creates a new coroutine to stream the response.
@@ -70,7 +66,7 @@ class Chat(
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
-    streamJob = CoroutineScope(Dispatchers.Default).launch { stream(message, emitter) }
+    CoroutineScope(Dispatchers.Default).launch { stream(message, emitter) }
   }
 
   /**
@@ -101,30 +97,8 @@ class Chat(
 
   /** Close the stream and cancel its job, if it exists. */
   fun closeStream() {
-    streamActive = false
-    streamJob?.cancel()
-  }
-
-  /**
-   * Stop the stream and send a stop message to the client.
-   *
-   * @param emitter The emitter to use to send the response.
-   */
-  suspend fun stopStream(emitter: Emitter) {
     LOG.debug("Closing stream for '{}'", id)
-
-    closeStream()
-
-    emitter.emitStop()
-
-    val emitPayload =
-      ServerMessage.FinishEvent(
-        id,
-        messageId = null, // We don't have a message ID for a stopped stream
-        reason = FinishReason.Stop,
-        content = null,
-      )
-    emitter.emitServer(emitPayload)
+    streamActive = false
   }
 
   private fun persist() {
@@ -149,10 +123,8 @@ class Chat(
       service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter.value)
     } catch (e: Exception) {
       e.printStackTrace()
-      emitter.emitError(AppError.internal())
     } finally {
       streamActive = false
-      streamJob = null
     }
   }
 
@@ -223,6 +195,11 @@ class Chat(
 
     stream.collect { tokens ->
       if (!streamActive) {
+        val finalResponse = buf.joinToString("")
+        if (finalResponse.isNotBlank()) {
+          processResponse(prompt, finalResponse, true, emitter)
+        }
+
         cancel()
         return@collect
       }
