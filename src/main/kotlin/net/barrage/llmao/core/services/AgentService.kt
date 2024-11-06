@@ -27,6 +27,10 @@ class AgentService(
     return agentRepository.get(id)
   }
 
+  fun getActive(id: KUUID): Agent {
+    return agentRepository.getActive(id)
+  }
+
   /**
    * Get an agent with full configuration, with its instructions populated with placeholders for
    * display purposes.

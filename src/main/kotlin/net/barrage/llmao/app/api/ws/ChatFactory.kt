@@ -12,7 +12,7 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
   fun new(userId: KUUID, agentId: KUUID): Chat {
     val id = KUUID.randomUUID()
     // Throws if the agent does not exist
-    agentService.get(agentId)
+    agentService.getActive(agentId)
     return Chat(chatService, id = id, userId = userId, agentId = agentId)
   }
 
@@ -20,6 +20,8 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
     val chat =
       chatService.getChat(id)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$id'")
+
+    agentService.getActive(chat.chat.agentId)
 
     val history = chat.messages.map(ChatMessage::fromModel)
 

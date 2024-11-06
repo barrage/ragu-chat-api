@@ -143,7 +143,7 @@ class TestPostgres {
         "Test",
         llmProvider,
         model,
-        "cro",
+        "croatian",
         vectorProvider,
         embeddingProvider,
         embeddingModel,
