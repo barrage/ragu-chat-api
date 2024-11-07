@@ -8,6 +8,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.services.AuthenticationService
@@ -37,6 +41,44 @@ fun Route.authRoutes(service: AuthenticationService) {
     call.sessions.clear<SessionCookie>()
 
     call.respond(HttpStatusCode.OK)
+  }
+
+  get("/apple-app-site-association") {
+    val appleAppSiteAssociation =
+      AppleAppSiteAssociation(
+        applinks =
+          AppLinks(
+            details =
+              listOf(
+                AppDetail(
+                  appID = application.environment.config.property("apple.appID").getString(),
+                  paths = listOf("/oauthredirect"),
+                )
+              )
+          )
+      )
+
+    val jsonString = Json.encodeToString(appleAppSiteAssociation)
+    call.respond(HttpStatusCode.OK, jsonString)
+  }
+
+  get("/.well-known/assetlinks.json") {
+    val assetLinks =
+      listOf(
+        AssetLink(
+          relation = listOf("delegate_permission/common.handle_all_urls"),
+          target =
+            AssetLinkTarget(
+              namespace = application.environment.config.property("android.namespace").getString(),
+              packageName =
+                application.environment.config.property("android.packageName").getString(),
+              sha256CertFingerprints =
+                application.environment.config.property("android.sha256CertFingerprints").getList(),
+            ),
+        )
+      )
+
+    call.respond(HttpStatusCode.OK, Json.encodeToString(assetLinks))
   }
 }
 
@@ -92,3 +134,19 @@ fun logoutUser(): OpenApiRoute.() -> Unit = {
       }
   }
 }
+
+@Serializable data class AppleAppSiteAssociation(val applinks: AppLinks)
+
+@Serializable
+data class AppLinks(val apps: List<String> = emptyList(), val details: List<AppDetail>)
+
+@Serializable data class AppDetail(val appID: String, val paths: List<String>)
+
+@Serializable data class AssetLink(val relation: List<String>, val target: AssetLinkTarget)
+
+@Serializable
+data class AssetLinkTarget(
+  val namespace: String,
+  val packageName: String,
+  @SerialName("sha256_cert_fingerprints") val sha256CertFingerprints: List<String>,
+)

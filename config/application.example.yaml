@@ -57,3 +57,12 @@ session:
 infobip:
   api_key: "apiKey"
   endpoint: "endpoint.infobip.com"
+
+apple:
+  appID: "appID"
+
+android:
+  namespace: "namespace"
+  packageName: "packageName"
+  sha256CertFingerprints:
+    - "sha256CertFingerprint"
