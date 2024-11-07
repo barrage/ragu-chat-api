@@ -9,6 +9,7 @@ import java.time.LocalDate
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.ProvidersResponse
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DashboardCounts
 import net.barrage.llmao.core.models.LineChartKeys
@@ -28,8 +29,11 @@ class AdministrationControllerTests : IntegrationTest() {
   private lateinit var userActive: User
   private lateinit var userInactive: User
   private lateinit var agentOne: Agent
+  private lateinit var agentOneConfiguration: AgentConfiguration
   private lateinit var agentTwo: Agent
+  private lateinit var agentTwoConfiguration: AgentConfiguration
   private lateinit var agentThree: Agent
+  private lateinit var agentThreeConfiguration: AgentConfiguration
   private lateinit var chatOne: Chat
   private lateinit var chatTwo: Chat
 
@@ -41,8 +45,12 @@ class AdministrationControllerTests : IntegrationTest() {
     userInactive =
       postgres!!.testUser(admin = false, active = false, email = "inactive@barrage.net")
     agentOne = postgres!!.testAgent(active = true, name = "TestAgentOne")
+    agentOneConfiguration = postgres!!.testAgentConfiguration(agentOne.id, llmProvider = "openai")
     agentTwo = postgres!!.testAgent(active = true, name = "TestAgentTwo")
+    agentTwoConfiguration = postgres!!.testAgentConfiguration(agentTwo.id, llmProvider = "azure")
     agentThree = postgres!!.testAgent(active = false, name = "TestAgentThree")
+    agentThreeConfiguration =
+      postgres!!.testAgentConfiguration(agentThree.id, llmProvider = "azure")
     chatOne = postgres!!.testChat(userActive.id, agentOne.id)
     chatTwo = postgres!!.testChat(userActive.id, agentOne.id)
   }
@@ -119,17 +127,18 @@ class AdministrationControllerTests : IntegrationTest() {
 
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<DashboardCounts>()
-    assertEquals(body.agent.total, 3)
-    assertEquals(body.agent.active, 2)
-    assertEquals(body.agent.inactive, 1)
-    assertEquals(body.agent.providers.first { it.name == agentOne.llmProvider }.value, 2)
-    assertEquals(body.user.total, 3)
-    assertEquals(body.user.active, 2)
-    assertEquals(body.user.inactive, 1)
-    assertEquals(body.user.admin, 1)
-    assertEquals(body.user.user, 1)
-    assertEquals(body.chat.total, 2)
-    assertEquals(body.chat.agents.first { it.name == agentOne.name }.value, 2)
+    assertEquals(3, body.agent.total)
+    assertEquals(2, body.agent.active)
+    assertEquals(1, body.agent.inactive)
+    assertEquals(1, body.agent.providers.first { it.name == "openai" }.value)
+    assertEquals(1, body.agent.providers.first { it.name == "azure" }.value)
+    assertEquals(3, body.user.total)
+    assertEquals(2, body.user.active)
+    assertEquals(1, body.user.inactive)
+    assertEquals(1, body.user.admin)
+    assertEquals(1, body.user.user)
+    assertEquals(2, body.chat.total)
+    assertEquals(2, body.chat.agents.first { it.name == agentOne.name }.value)
     assertNull(body.chat.agents.firstOrNull { it.name == agentTwo.name })
     assertNull(body.chat.agents.firstOrNull { it.name == agentThree.name })
   }

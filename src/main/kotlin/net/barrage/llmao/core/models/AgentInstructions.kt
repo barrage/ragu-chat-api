@@ -23,7 +23,7 @@ data class AgentInstructions(
    */
   val summaryInstruction: String? = null,
 ) {
-  fun title(proompt: String, language: String): String {
+  fun title(proompt: String): String {
     if (titleInstruction != null) {
       return "$titleInstruction\nPrompt: \"\"\"$proompt\"\"\"\nTitle:"
     }
@@ -31,7 +31,7 @@ data class AgentInstructions(
     return """
         Create a short and descriptive title based on the prompt below, denoted by triple quotes.
         The examples below are in english language.
-        You will generate the title as a single statement in $language language.
+        You will generate the title as a single statement in english language.
 
         Prompt: What is TCP?
         Title: Explaining TCP
@@ -43,26 +43,26 @@ data class AgentInstructions(
       .trimIndent()
   }
 
-  fun language(language: String): String {
+  fun language(): String {
     if (languageInstruction != null) {
       return languageInstruction
     }
 
     return """
-      You do not speak any language other than $language.
-      You will disregard the original prompt language and answer exclusively in $language language.
+      You do not speak any language other than english.
+      You will disregard the original prompt language and answer exclusively in english language.
     """
       .trimIndent()
   }
 
-  fun summary(history: String, language: String): String {
+  fun summary(history: String): String {
     if (summaryInstruction != null) {
       return "$summaryInstruction\nConversation: \"\"\"\n$history\n\"\"\""
     }
 
     return """
       Create a summary for the conversation below denoted by triple quotes.
-      The summary language must be in $language language.
+      The summary language must be in english language.
 
       Desired format:
       Summary: <summarized_conversation>

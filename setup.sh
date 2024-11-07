@@ -17,7 +17,12 @@ cat ./config/application.yaml &> /dev/null
 
 if [ $? -eq 0 ]; then
   echo "application.yaml already exists, skipping"
-  exit 0;
 else
   cp ./config/application.example.yaml ./config/application.yaml
 fi
+
+./gradlew generateJooq
+
+psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/initial.sql
+
+exit 0

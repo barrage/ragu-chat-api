@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.models
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.MessagesRecord
@@ -30,3 +31,11 @@ fun MessagesRecord.toMessage() =
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
+
+@Serializable
+data class AgentConfigurationEvaluatedMessages(
+  val total: Int,
+  val positive: Int,
+  val negative: Int,
+  val evaluatedMessages: CountedList<Message>,
+)

@@ -23,22 +23,34 @@ CREATE TABLE agents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     description TEXT,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    vector_provider TEXT NOT NULL,
+    embedding_provider TEXT NOT NULL,
+    embedding_model TEXT NOT NULL,
+    active_configuration_id UUID NULL,
+    language TEXT NOT NULL DEFAULT 'english',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE agent_configurations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4() NOT NULL,
+    agent_id UUID REFERENCES agents(id) ON DELETE CASCADE NOT NULL,
+    version INTEGER NOT NULL,
     context TEXT NOT NULL,
     llm_provider TEXT NOT NULL,
     model TEXT NOT NULL,
     temperature FLOAT NOT NULL DEFAULT 0.1,
-    vector_provider TEXT NOT NULL,
-    language TEXT NOT NULL DEFAULT 'english',
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    embedding_provider TEXT NOT NULL,
-    embedding_model TEXT NOT NULL,
+    title_instruction TEXT,
+    language_instruction TEXT,
+    summary_instruction TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE agent_collections(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
 
     -- Specifies what the agent should do with the data obtained from this collection.
     instruction TEXT NOT NULL,
@@ -52,15 +64,6 @@ CREATE TABLE agent_collections(
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT unique_agent_collection UNIQUE(agent_id, collection)
-);
-
-CREATE TABLE agent_instructions(
-    agent_id UUID UNIQUE REFERENCES agents(id) ON DELETE CASCADE,
-    title_instruction TEXT,
-    language_instruction TEXT,
-    summary_instruction TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE chats (
@@ -98,7 +101,6 @@ SELECT manage_updated_at('users');
 SELECT manage_updated_at('sessions');
 SELECT manage_updated_at('agents');
 SELECT manage_updated_at('agent_collections');
-SELECT manage_updated_at('agent_instructions');
 SELECT manage_updated_at('chats');
 SELECT manage_updated_at('messages');
 SELECT manage_updated_at('failed_messages');

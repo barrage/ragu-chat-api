@@ -3,6 +3,7 @@ package net.barrage.llmao.core.repository
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
+import net.barrage.llmao.core.models.AgentConfigurationEvaluatedMessageCounts
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatCounts
 import net.barrage.llmao.core.models.ChatWithMessages
@@ -199,14 +200,14 @@ class ChatRepository(private val dslContext: DSLContext) {
 
   fun insertAssistantMessage(
     id: KUUID,
-    agentId: KUUID,
+    agentConfigurationId: KUUID,
     response: String,
     messageId: KUUID,
   ): Message {
     return dslContext
       .insertInto(MESSAGES)
       .set(MESSAGES.CHAT_ID, id)
-      .set(MESSAGES.SENDER, agentId)
+      .set(MESSAGES.SENDER, agentConfigurationId)
       .set(MESSAGES.SENDER_TYPE, "assistant")
       .set(MESSAGES.CONTENT, response)
       .set(MESSAGES.RESPONSE_TO, messageId)
@@ -315,5 +316,95 @@ class ChatRepository(private val dslContext: DSLContext) {
         )
       }
       .toMap()
+  }
+
+  fun getAgentConfigurationMessageCounts(
+    versionId: KUUID
+  ): AgentConfigurationEvaluatedMessageCounts {
+    val total =
+      dslContext
+        .selectCount()
+        .from(MESSAGES)
+        .where(MESSAGES.SENDER.eq(versionId))
+        .fetchOne(0, Int::class.java)!!
+
+    val positive =
+      dslContext
+        .selectCount()
+        .from(MESSAGES)
+        .where(MESSAGES.SENDER.eq(versionId).and(MESSAGES.EVALUATION.isTrue))
+        .fetchOne(0, Int::class.java)!!
+
+    val negative = total - positive
+
+    return AgentConfigurationEvaluatedMessageCounts(total, positive, negative)
+  }
+
+  /** List all evaluated messages for a given agent configuration version. */
+  fun getAgentConfigurationEvaluatedMessages(
+    versionId: KUUID,
+    evaluation: Boolean? = null,
+    pagination: PaginationSort,
+  ): CountedList<Message> {
+    val order = getSortOrderEvaluatedMessages(pagination)
+    val (limit, offset) = pagination.limitOffset()
+
+    val count =
+      dslContext
+        .selectCount()
+        .from(MESSAGES)
+        .where(
+          MESSAGES.SENDER.eq(versionId)
+            .and(MESSAGES.EVALUATION.isNotNull)
+            .and(
+              if (evaluation == null) {
+                DSL.noCondition()
+              } else {
+                MESSAGES.EVALUATION.eq(evaluation)
+              }
+            )
+        )
+        .fetchOne(0, Int::class.java)!!
+
+    val messages =
+      dslContext
+        .selectFrom(MESSAGES)
+        .where(
+          MESSAGES.SENDER.eq(versionId)
+            .and(MESSAGES.EVALUATION.isNotNull)
+            .and(
+              if (evaluation == null) {
+                DSL.noCondition()
+              } else {
+                MESSAGES.EVALUATION.eq(evaluation)
+              }
+            )
+        )
+        .orderBy(order)
+        .limit(limit)
+        .offset(offset)
+        .fetch(MessagesRecord::toMessage)
+
+    return CountedList(count, messages)
+  }
+
+  private fun getSortOrderEvaluatedMessages(pagination: PaginationSort): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "createdAt" -> MESSAGES.CREATED_AT
+        "updatedAt" -> MESSAGES.UPDATED_AT
+        "evaluation" -> MESSAGES.EVALUATION
+        else -> MESSAGES.CREATED_AT
+      }
+
+    val order =
+      if (sortOrder == SortOrder.DESC) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return order
   }
 }
