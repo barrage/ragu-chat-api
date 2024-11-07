@@ -55,7 +55,7 @@ class ServiceState(state: ApplicationState) {
       state.repository.agent,
       state.repository.user,
     )
-  val agent = AgentService(state.providers, state.repository.agent)
+  val agent = AgentService(state.providers, state.repository.agent, state.repository.chat)
   val user = UserService(state.repository.user, state.repository.session)
   val auth =
     AuthenticationService(state.providers.auth, state.repository.session, state.repository.user)

@@ -21,7 +21,7 @@ data class AgentCollection(
 fun AgentCollectionsRecord.toCollection(): AgentCollection {
   return AgentCollection(
     id = id!!,
-    agentId = agentId!!,
+    agentId = agentId,
     instruction = instruction,
     collection = collection,
     amount = amount,

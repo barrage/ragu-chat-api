@@ -9,6 +9,7 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.Message
@@ -23,6 +24,7 @@ class ChatControllerTests : IntegrationTest() {
   private lateinit var user: User
   private lateinit var userSession: Session
   private lateinit var agent: Agent
+  private lateinit var agentConfiguration: AgentConfiguration
   private lateinit var chatOne: Chat
   private lateinit var chatTwo: Chat
   private lateinit var messageOne: Message
@@ -33,6 +35,7 @@ class ChatControllerTests : IntegrationTest() {
     user = postgres!!.testUser(admin = false)
     userSession = postgres!!.testSession(user.id)
     agent = postgres!!.testAgent(active = true)
+    agentConfiguration = postgres!!.testAgentConfiguration(agent.id)
     chatOne = postgres!!.testChat(user.id, agent.id)
     chatTwo = postgres!!.testChat(user.id, agent.id)
     messageOne = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")

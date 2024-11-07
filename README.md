@@ -149,7 +149,7 @@ To rollback migrations to the tag, run the following command:
 To seed the database with the initial agent and users, run
 
 ```bash
-psql -h localhost -p 5454 -U postgres -f src/main/resources/db/seed/initial.sql -d kappi 
+psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/initial.sql 
 ```
 
 ### Building and running

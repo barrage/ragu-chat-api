@@ -1,16 +1,19 @@
 package net.barrage.llmao.core.services
 
-import io.ktor.server.plugins.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentConfiguration
+import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
-import net.barrage.llmao.core.models.AgentInstructions
+import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CreateAgent
+import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
+import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -18,9 +21,17 @@ import net.barrage.llmao.error.ErrorReason
 class AgentService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
+  private val chatRepository: ChatRepository,
 ) {
   fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
     return agentRepository.getAll(pagination, showDeactivated)
+  }
+
+  fun getAllAdmin(
+    pagination: PaginationSort,
+    showDeactivated: Boolean,
+  ): CountedList<AgentWithConfiguration> {
+    return agentRepository.getAllAdmin(pagination, showDeactivated)
   }
 
   fun get(id: KUUID): AgentFull {
@@ -36,36 +47,27 @@ class AgentService(
    * display purposes.
    */
   fun getDisplay(id: KUUID): AgentFull {
-    val agent = agentRepository.get(id)
-    val instructions =
-      AgentInstructions(
-        agent.instructions.title("<PROMPT>", agent.agent.language),
-        agent.instructions.language(agent.agent.language),
-        agent.instructions.summary("<HISTORY>", agent.agent.language),
-      )
-    return AgentFull(agent.agent, instructions, agent.collections)
+    return agentRepository.get(id)
   }
 
-  suspend fun create(create: CreateAgent): Agent {
-    validateAgentParams(
-      create.llmProvider,
-      create.model,
-      create.vectorProvider,
-      create.embeddingProvider,
-      create.embeddingModel,
+  suspend fun create(create: CreateAgent): AgentWithConfiguration {
+    validateAgentConfigurationParams(
+      llmProvider = create.configuration.llmProvider,
+      model = create.configuration.model,
+      vectorProvider = create.vectorProvider,
+      embeddingProvider = create.embeddingProvider,
+      embeddingModel = create.embeddingModel,
     )
+
     return agentRepository.create(create) ?: throw IllegalStateException("Something went wrong")
   }
 
-  suspend fun update(id: KUUID, update: UpdateAgent): Agent {
-    validateAgentParams(
-      update.llmProvider,
-      update.model,
-      update.vectorProvider,
-      update.embeddingProvider,
-      update.embeddingModel,
-    )
-    return agentRepository.update(id, update) ?: throw NotFoundException("Agent not found")
+  suspend fun update(id: KUUID, update: UpdateAgent): Any {
+    update.configuration?.let {
+      validateAgentConfigurationParams(llmProvider = it.llmProvider, model = it.model)
+    }
+
+    return agentRepository.update(id, update)
   }
 
   fun updateCollections(agentId: KUUID, update: UpdateCollections) {
@@ -90,12 +92,12 @@ class AgentService(
    * Checks whether the providers and their respective models are supported. Data passed to this
    * function should come from already validated DTOs.
    */
-  private suspend fun validateAgentParams(
-    llmProvider: String?,
-    model: String?,
-    vectorProvider: String?,
-    embeddingProvider: String?,
-    embeddingModel: String?,
+  private suspend fun validateAgentConfigurationParams(
+    llmProvider: String? = null,
+    model: String? = null,
+    vectorProvider: String? = null,
+    embeddingProvider: String? = null,
+    embeddingModel: String? = null,
   ) {
     if (llmProvider != null && model != null) {
       // Throws if invalid provider
@@ -122,5 +124,42 @@ class AgentService(
         )
       }
     }
+  }
+
+  fun getAgentConfigurationVersions(
+    agentId: KUUID,
+    pagination: PaginationSort,
+  ): CountedList<AgentConfiguration> {
+    return agentRepository.getAgentConfigurationVersions(agentId, pagination)
+  }
+
+  fun getAgentConfigurationWithEvaluationCounts(
+    agentId: KUUID,
+    versionId: KUUID,
+  ): AgentConfigurationWithEvaluationCounts {
+    val agentConfiguration = agentRepository.getAgentConfiguration(agentId, versionId)
+    val configurationMessageCounts = chatRepository.getAgentConfigurationMessageCounts(versionId)
+    return AgentConfigurationWithEvaluationCounts(agentConfiguration, configurationMessageCounts)
+  }
+
+  fun getAgentConfigurationEvaluatedMessages(
+    agentId: KUUID,
+    versionId: KUUID,
+    evaluation: Boolean? = null,
+    pagination: PaginationSort,
+  ): CountedList<Message> {
+    agentRepository.getAgentConfiguration(agentId, versionId)
+
+    return chatRepository.getAgentConfigurationEvaluatedMessages(versionId, evaluation, pagination)
+  }
+
+  fun rollbackVersion(agentId: KUUID, versionId: KUUID): AgentWithConfiguration {
+    agentRepository.getAgentConfiguration(agentId, versionId)
+
+    return agentRepository.rollbackVersion(agentId, versionId)
+  }
+
+  fun getAgent(agentId: KUUID): Agent {
+    return agentRepository.getAgent(agentId)
   }
 }

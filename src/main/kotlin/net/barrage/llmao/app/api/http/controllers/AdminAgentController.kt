@@ -9,11 +9,13 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.util.*
 import net.barrage.llmao.app.api.http.queryPagination
-import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentConfiguration
+import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
+import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CreateAgent
+import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
@@ -30,7 +32,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() ?: false
-      val agents = agentService.getAll(pagination, showDeactivated)
+      val agents = agentService.getAllAdmin(pagination, showDeactivated)
       call.respond(HttpStatusCode.OK, agents)
     }
 
@@ -60,6 +62,46 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
         agentService.updateCollections(agentId, update)
         call.respond(HttpStatusCode.OK)
       }
+
+      route("/versions") {
+        get(getAgentVersions()) {
+          val agentId = call.pathUuid("id")
+          val pagination = call.query(PaginationSort::class)
+          val versions = agentService.getAgentConfigurationVersions(agentId, pagination)
+          call.respond(HttpStatusCode.OK, versions)
+        }
+
+        route("/{versionId}") {
+          get(getAgentConfigurationWithEvaluationCounts()) {
+            val agentId = call.pathUuid("id")
+            val versionId = call.pathUuid("versionId")
+            val version = agentService.getAgentConfigurationWithEvaluationCounts(agentId, versionId)
+            call.respond(HttpStatusCode.OK, version)
+          }
+
+          get("/messages", getAgentConfigurationEvaluatedMessages()) {
+            val agentId = call.pathUuid("id")
+            val versionId = call.pathUuid("versionId")
+            val evaluation: Boolean? = call.queryParam("evaluation")?.toBoolean()
+            val pagination = call.query(PaginationSort::class)
+            val version =
+              agentService.getAgentConfigurationEvaluatedMessages(
+                agentId,
+                versionId,
+                evaluation,
+                pagination,
+              )
+            call.respond(HttpStatusCode.OK, version)
+          }
+
+          put("/rollback", rollbackAgentVersion()) {
+            val agentId = call.pathUuid("id")
+            val versionId = call.pathUuid("versionId")
+            val version = agentService.rollbackVersion(agentId, versionId)
+            call.respond(HttpStatusCode.OK, version)
+          }
+        }
+      }
     }
   }
 }
@@ -80,7 +122,7 @@ private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "A list of Agent objects representing all the agents"
-        body<CountedList<Agent>> {}
+        body<CountedList<AgentWithConfiguration>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -121,17 +163,12 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
 private fun createAgent(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Create a new agent"
-  request {
-    body<CreateAgent> {
-      description = "New agent object"
-      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-  }
+  request { body<CreateAgent> { description = "New agent object" } }
   response {
     HttpStatusCode.Created to
       {
         description = "An Agent object representing the new agent"
-        body<Agent> {}
+        body<AgentWithConfiguration> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -155,7 +192,7 @@ private fun updateAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "An Agent object representing the updated agent"
-        body<Agent> {}
+        body<AgentWithConfiguration> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -190,6 +227,135 @@ private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating collections"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun getAgentVersions(): OpenApiRoute.() -> Unit = {
+  summary = "Get agent versions"
+  description = "Gets counted list of agent configuration versions."
+  tags("admin/agents/versions")
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "A list of AgentConfiguration objects representing all the agent versions"
+        body<CountedList<AgentConfiguration>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving agent versions"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun getAgentConfigurationWithEvaluationCounts(): OpenApiRoute.() -> Unit = {
+  summary = "Get agent version with evaluation counts"
+  description = "Gets agent current version of agent configuration with evaluation counts."
+  tags("admin/agents/versions")
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    pathParameter<KUUID>("versionId") {
+      description = "Agent version ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "An AgentConfiguration object representing the agent version"
+        body<AgentConfigurationWithEvaluationCounts> {}
+      }
+    HttpStatusCode.NotFound to
+      {
+        description = "Requested agent version not found"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving agent version"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun getAgentConfigurationEvaluatedMessages(): OpenApiRoute.() -> Unit = {
+  summary = "Get evaluated messages"
+  description = "Gets evaluated messages for a given agent version of agent configuration."
+  tags("admin/agents/versions")
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    pathParameter<KUUID>("versionId") {
+      description = "Agent version ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    queryParameter<Boolean>("evaluation") {
+      description = "Filter by evaluation"
+      required = false
+      example("default") { value = true }
+    }
+    queryPagination()
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "An AgentConfiguration object representing the agent version"
+        body<CountedList<Message>> {}
+      }
+    HttpStatusCode.NotFound to
+      {
+        description = "Requested agent version not found"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving agent version"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun rollbackAgentVersion(): OpenApiRoute.() -> Unit = {
+  summary = "Rollback agent version"
+  description = "Rollbacks agent to a given version of agent configuration."
+  tags("admin/agents/versions")
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    pathParameter<KUUID>("versionId") {
+      description = "Agent version ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "An AgentConfiguration object representing the agent version"
+        body<AgentConfiguration> {}
+      }
+    HttpStatusCode.NotFound to
+      {
+        description = "Requested agent version not found"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving agent version"
         body<List<AppError>> {}
       }
   }

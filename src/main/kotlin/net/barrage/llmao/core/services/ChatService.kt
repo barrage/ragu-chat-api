@@ -81,15 +81,15 @@ class ChatService(
   suspend fun generateTitle(chatId: KUUID, prompt: String, agentId: KUUID): String {
     val agentFull = agentRepository.get(agentId)
 
-    val titlePrompt = agentFull.instructions.title(prompt, agentFull.agent.language)
+    val titlePrompt = agentFull.configuration.agentInstructions.title(prompt)
     LOG.trace("Created title prompt:\n{}", titlePrompt)
 
-    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
+    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
     val title =
       llm
         .generateChatTitle(
           titlePrompt,
-          LlmConfig(agentFull.agent.model, agentFull.agent.temperature),
+          LlmConfig(agentFull.configuration.model, agentFull.configuration.temperature),
         )
         .trim()
 
@@ -115,13 +115,13 @@ class ChatService(
     val agentFull = agentRepository.get(agentId)
 
     val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
-    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
+    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
 
     val query = prepareChatPrompt(prompt, agentFull, history, vectorDb)
 
     return llm.completionStream(
       query,
-      LlmConfig(agentFull.agent.model, agentFull.agent.temperature),
+      LlmConfig(agentFull.configuration.model, agentFull.configuration.temperature),
     )
   }
 
@@ -129,11 +129,14 @@ class ChatService(
     val agentFull = agentRepository.get(agentId)
 
     val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
-    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
+    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
 
     val query = prepareChatPrompt(prompt, agentFull, history, vectorDb)
 
-    return llm.chatCompletion(query, LlmConfig(agentFull.agent.model, agentFull.agent.temperature))
+    return llm.chatCompletion(
+      query,
+      LlmConfig(agentFull.configuration.model, agentFull.configuration.temperature),
+    )
   }
 
   fun processMessagePair(
@@ -144,8 +147,15 @@ class ChatService(
     llmResponse: String,
   ): Pair<Message, Message> {
     val userMessage = chatRepository.insertUserMessage(chatId, userId, userPrompt)
+
+    val agentFull = agentRepository.get(agentId)
     val assistantMessage =
-      chatRepository.insertAssistantMessage(chatId, agentId, llmResponse, userMessage.id)
+      chatRepository.insertAssistantMessage(
+        chatId,
+        agentFull.configuration.id,
+        llmResponse,
+        userMessage.id,
+      )
 
     return Pair(userMessage, assistantMessage)
   }
@@ -161,7 +171,7 @@ class ChatService(
   ): String {
     val agentFull = agentRepository.get(agentId)
 
-    val llm = providers.llm.getProvider(agentFull.agent.llmProvider)
+    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
 
     val conversation =
       history.joinToString("\n") {
@@ -175,12 +185,12 @@ class ChatService(
         return@joinToString "$s: ${it.content}"
       }
 
-    val summaryPrompt = agentFull.instructions.summary(conversation, agentFull.agent.language)
+    val summaryPrompt = agentFull.configuration.agentInstructions.summary(conversation)
 
     val summary =
       llm.summarizeConversation(
         summaryPrompt,
-        LlmConfig(agentFull.agent.model, agentFull.agent.temperature),
+        LlmConfig(agentFull.configuration.model, agentFull.configuration.temperature),
       )
 
     chatRepository.insertSystemMessage(chatId, summary)
@@ -224,7 +234,7 @@ class ChatService(
   fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
     val agentFull = agentRepository.get(agentId)
     val text = history.joinToString("\n") { it.content }
-    return getEncoder(agentFull.agent.model).encode(text).size()
+    return getEncoder(agentFull.configuration.model).encode(text).size()
   }
 
   private suspend fun prepareChatPrompt(
@@ -234,7 +244,9 @@ class ChatService(
     vectorDb: VectorDatabase,
   ): List<ChatMessage> {
     val systemMessage =
-      systemMessage("${agent.agent.context}\n${agent.instructions.language(agent.agent.language)}")
+      systemMessage(
+        "${agent.configuration.context}\n${agent.configuration.agentInstructions.language()}"
+      )
 
     LOG.trace("Created system message {}", systemMessage)
 

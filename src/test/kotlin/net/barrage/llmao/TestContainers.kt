@@ -10,21 +10,25 @@ import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.toAgent
+import net.barrage.llmao.core.models.toAgentConfiguration
 import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
+import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.records.ChatsRecord
 import net.barrage.llmao.tables.records.MessagesRecord
 import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.AGENTS
+import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.SESSIONS
@@ -115,42 +119,68 @@ class TestPostgres {
 
   fun testAgent(
     name: String = "Test",
+    active: Boolean = true,
+    vectorProvider: String = "weaviate",
+    embeddingProvider: String = "azure",
+    embeddingModel: String = "text-embedding-ada-002",
+  ): Agent {
+    val agent =
+      dslContext
+        .insertInto(AGENTS)
+        .columns(
+          AGENTS.NAME,
+          AGENTS.DESCRIPTION,
+          AGENTS.ACTIVE,
+          AGENTS.VECTOR_PROVIDER,
+          AGENTS.EMBEDDING_PROVIDER,
+          AGENTS.EMBEDDING_MODEL,
+          AGENTS.ACTIVE,
+          AGENTS.LANGUAGE,
+        )
+        .values(
+          name,
+          "Test",
+          active,
+          vectorProvider,
+          embeddingProvider,
+          embeddingModel,
+          active,
+          "croatian",
+        )
+        .returning()
+        .fetchOne(AgentsRecord::toAgent)!!
+
+    return agent
+  }
+
+  fun testAgentConfiguration(
+    agentId: UUID,
+    version: Int = 1,
     context: String = "Test",
     llmProvider: String = "openai",
     model: String = "gpt-4",
-    vectorProvider: String = "weaviate",
-    embeddingProvider: String = "azure",
-    embeddingModel: String = "text-embeddings-ada-002",
-    active: Boolean = true,
-  ): Agent {
-    return dslContext
-      .insertInto(AGENTS)
-      .columns(
-        AGENTS.NAME,
-        AGENTS.DESCRIPTION,
-        AGENTS.CONTEXT,
-        AGENTS.LLM_PROVIDER,
-        AGENTS.MODEL,
-        AGENTS.LANGUAGE,
-        AGENTS.VECTOR_PROVIDER,
-        AGENTS.EMBEDDING_PROVIDER,
-        AGENTS.EMBEDDING_MODEL,
-        AGENTS.ACTIVE,
-      )
-      .values(
-        name,
-        context,
-        "Test",
-        llmProvider,
-        model,
-        "croatian",
-        vectorProvider,
-        embeddingProvider,
-        embeddingModel,
-        active,
-      )
-      .returning()
-      .fetchOne(AgentsRecord::toAgent)!!
+  ): AgentConfiguration {
+    val configuration =
+      dslContext
+        .insertInto(AGENT_CONFIGURATIONS)
+        .columns(
+          AGENT_CONFIGURATIONS.AGENT_ID,
+          AGENT_CONFIGURATIONS.VERSION,
+          AGENT_CONFIGURATIONS.CONTEXT,
+          AGENT_CONFIGURATIONS.LLM_PROVIDER,
+          AGENT_CONFIGURATIONS.MODEL,
+        )
+        .values(agentId, version, context, llmProvider, model)
+        .returning()
+        .fetchOne(AgentConfigurationsRecord::toAgentConfiguration)!!
+
+    dslContext
+      .update(AGENTS)
+      .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
+      .where(AGENTS.ID.eq(agentId))
+      .execute()
+
+    return configuration
   }
 
   fun testChat(userId: UUID, agentId: UUID, title: String = "Test Chat Title"): Chat {
@@ -164,13 +194,22 @@ class TestPostgres {
       .fetchOne(ChatsRecord::toChat)!!
   }
 
-  fun testChatMessage(chatId: UUID, userId: UUID, content: String): Message {
+  fun testChatMessage(
+    chatId: UUID,
+    userId: UUID,
+    content: String,
+    senderType: String = "user",
+    responseTo: UUID? = null,
+    evaluation: Boolean? = null,
+  ): Message {
     return dslContext
       .insertInto(MESSAGES)
       .set(MESSAGES.CHAT_ID, chatId)
       .set(MESSAGES.SENDER, userId)
       .set(MESSAGES.SENDER_TYPE, "user")
-      .set(MESSAGES.CONTENT, "Test message")
+      .set(MESSAGES.CONTENT, content)
+      .set(MESSAGES.RESPONSE_TO, responseTo)
+      .set(MESSAGES.EVALUATION, evaluation)
       .returning()
       .fetchOne(MessagesRecord::toMessage)!!
   }
