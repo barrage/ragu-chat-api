@@ -9,7 +9,9 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
+import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
+import java.time.Duration
 import java.util.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -27,6 +29,7 @@ fun Application.websocketServer(server: Server) {
     maxFrameSize = Long.MAX_VALUE
     masking = false
     contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+    pingPeriod = Duration.ofSeconds(5)
   }
 
   routing {
@@ -81,14 +84,16 @@ fun Application.websocketServer(server: Server) {
               message = Json.decodeFromString(frame.readText())
             } catch (e: Throwable) {
               e.printStackTrace()
-              sendSerialized(AppError.api(ErrorReason.InvalidParameter, "Message format malformed"))
+              emitter.emitError(
+                AppError.api(ErrorReason.InvalidParameter, "Message format malformed")
+              )
               continue
             }
 
             try {
               server.handleMessage(userId, message, emitter)
             } catch (error: AppError) {
-              sendSerialized(error)
+              emitter.emitError(error)
             }
           }
 
