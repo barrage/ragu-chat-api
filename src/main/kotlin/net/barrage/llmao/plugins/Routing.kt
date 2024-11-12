@@ -7,6 +7,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.adapters.chonkit.api.chonkitAuthRouter
 import net.barrage.llmao.app.ServiceState
 import net.barrage.llmao.app.api.http.controllers.adminAgentsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
@@ -36,6 +37,7 @@ fun Application.configureRouting(services: ServiceState) {
       adminUserRoutes(services.user)
       adminChatsRoutes(services.chat)
       administrationRouter(services.admin)
+      chonkitAuthRouter(services.chonkitAuth)
     }
 
     authenticate("auth-session") {
@@ -45,7 +47,7 @@ fun Application.configureRouting(services: ServiceState) {
     }
 
     if (application.environment.config.property("ktor.environment").getString() == "development") {
-      devController(services.auth, services.user)
+      devController(services.auth, services.user, services.chonkitAuth)
     }
   }
 }

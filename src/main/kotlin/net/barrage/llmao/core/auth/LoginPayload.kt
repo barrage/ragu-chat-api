@@ -1,7 +1,6 @@
 package net.barrage.llmao.core.auth
 
 import io.ktor.http.*
-import net.barrage.llmao.app.auth.LoginSource
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 

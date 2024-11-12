@@ -26,14 +26,14 @@ fun Route.authRoutes(service: AuthenticationService) {
     val session = service.authenticateUser(loginPayload)
     call.sessions.set(SessionCookie(session.sessionId))
 
-    call.respond(HttpStatusCode.OK)
+    call.respond(HttpStatusCode.NoContent)
   }
 
   post("/auth/logout", logoutUser()) {
     val userSession = call.sessions.get<SessionCookie>()
 
     if (userSession == null) {
-      call.respond(HttpStatusCode.OK)
+      call.respond(HttpStatusCode.NoContent)
       return@post
     }
 
@@ -41,7 +41,7 @@ fun Route.authRoutes(service: AuthenticationService) {
 
     call.sessions.clear<SessionCookie>()
 
-    call.respond(HttpStatusCode.OK)
+    call.respond(HttpStatusCode.NoContent)
   }
 
   post("/auth/apple/callback-web", callbackWeb()) {
