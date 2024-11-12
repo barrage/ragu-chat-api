@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.auth
+package net.barrage.llmao.core.auth
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

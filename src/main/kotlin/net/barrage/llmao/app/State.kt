@@ -2,7 +2,10 @@ package net.barrage.llmao.app
 
 import io.ktor.server.application.*
 import io.ktor.server.config.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationRepository
+import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
@@ -19,18 +22,38 @@ import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.plugins.initDatabase
 import org.jooq.DSLContext
 
-class ApplicationState(config: ApplicationConfig) {
-  val repository = RepositoryState(initDatabase(config))
-  val providers = ProviderState(config)
+class ApplicationState(env: ApplicationEnvironment) {
+  val repository: RepositoryState
+  val adapterRepository: AdapterRepositoryState
+  val providers = ProviderState(env)
+  val adapters: AdapterState
+
+  init {
+    val database = initDatabase(env)
+    repository = RepositoryState(database)
+    adapterRepository = AdapterRepositoryState(database)
+    adapters = AdapterState(env, adapterRepository)
+  }
 }
 
-class RepositoryState(
-  client: DSLContext,
-  val user: UserRepository = UserRepository(client),
-  val session: SessionRepository = SessionRepository(client),
-  val agent: AgentRepository = AgentRepository(client),
-  val chat: ChatRepository = ChatRepository(client),
-)
+class AdapterState(env: ApplicationEnvironment, repositoryState: AdapterRepositoryState) {
+  // TODO: Module flag
+  val chonkitAuth: ChonkitAuthenticationService = runBlocking {
+    ChonkitAuthenticationService.init(repositoryState.chonkit, env)
+  }
+}
+
+class AdapterRepositoryState(client: DSLContext) {
+  // TODO: Module flag
+  val chonkit = ChonkitAuthenticationRepository(client)
+}
+
+class RepositoryState(client: DSLContext) {
+  val user: UserRepository = UserRepository(client)
+  val session: SessionRepository = SessionRepository(client)
+  val agent: AgentRepository = AgentRepository(client)
+  val chat: ChatRepository = ChatRepository(client)
+}
 
 class ProviderState(config: ApplicationConfig) {
   val auth: AuthenticationProviderFactory = AuthenticationProviderFactory(config)
@@ -67,6 +90,7 @@ class ServiceState(state: ApplicationState) {
       state.repository.chat,
       state.repository.user,
     )
+  val chonkitAuth = state.adapters.chonkitAuth
 }
 
 @Serializable

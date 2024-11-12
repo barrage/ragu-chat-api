@@ -73,6 +73,34 @@ infobip:
   apiKey: "apiKey"
   endpoint: "endpoint.infobip.com"
 
+vault:
+  # Endpoint is specified without the scheme
+  endpoint: ""
+  roleId: ""
+  secretId: ""
+  keyName: "llmao_v1"
+
+chonkit:
+  jwt:
+    issuer: "llmao"
+    audience: "chonkit"
+    accessTokenDurationSeconds: 600 # 10 minutes
+    refreshTokenDurationSeconds: 31536000 # 1 year
+    cookie:
+      access:
+        name: "chonkit_access_token"
+        secure: false
+        # The domain must match Chonkit's domain only.
+        domain: "localhost"
+        sameSite: "Lax"
+      refresh:
+        name: "chonkit_refresh_token"
+        secure: false
+        # The domain must match Kappi's domain only.
+        domain: "localhost"
+        sameSite: "Lax"
+
+
 apple:
   appID: "appID"
 

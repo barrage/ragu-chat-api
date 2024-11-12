@@ -8,6 +8,9 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import kotlinx.serialization.Serializable
+import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
+import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.User
@@ -16,7 +19,11 @@ import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.plugins.pathUuid
 
-fun Route.devController(authService: AuthenticationService, userService: UserService) {
+fun Route.devController(
+  authService: AuthenticationService,
+  userService: UserService,
+  chonkitAuthService: ChonkitAuthenticationService,
+) {
   route("/dev") {
     post("/users", devCreateUser()) {
       val newUser = call.receive<CreateUser>()
@@ -27,11 +34,15 @@ fun Route.devController(authService: AuthenticationService, userService: UserSer
     post("/auth/login/{id}", devLoginUser()) {
       val sessionId = KUUID.randomUUID()
       val userId = call.pathUuid("id")
+
       authService.store(sessionId, userId)
+
+      val user = userService.get(userId)
+      val chonkitJwt = chonkitAuthService.authenticate(user)
 
       call.sessions.set(SessionCookie(sessionId))
 
-      call.respond("$sessionId")
+      call.respond(DevLoginResponse(sessionId, chonkitJwt))
     }
   }
 }
@@ -63,3 +74,7 @@ fun devLoginUser(): OpenApiRoute.() -> Unit = {
       }
   }
 }
+
+/** Necessary because of KUUID treachery. */
+@Serializable
+data class DevLoginResponse(val sessionId: KUUID, val chonkit: ChonkitAuthentication?)
