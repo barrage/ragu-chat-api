@@ -64,13 +64,12 @@ class CreateAgentConfiguration(
 ) : Validation
 
 @Serializable
-@SchemaValidation("valiateCombinations")
+@SchemaValidation("validateCombinations")
 class UpdateAgentConfiguration(
   @NotBlank val context: String? = null,
   @NotBlank val llmProvider: String? = null,
   @NotBlank val model: String? = null,
   @Range(min = 0.0, max = 1.0) val temperature: Double? = null,
-  @NotBlank val language: String? = null,
   val instructions: AgentInstructions? = null,
 ) : Validation {
   fun validateCombinations(): List<ValidationError> {

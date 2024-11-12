@@ -219,13 +219,13 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         name = "TestAgentUpdated",
         description = "description",
         active = true,
+        language = "english",
         configuration =
           UpdateAgentConfiguration(
             context = "context",
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.5,
-            language = "eng",
             instructions = null,
           ),
       )

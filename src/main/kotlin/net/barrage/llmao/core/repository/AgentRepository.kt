@@ -227,6 +227,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.DESCRIPTION, DSL.coalesce(DSL.`val`(update.description), AGENTS.DESCRIPTION))
           .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
           .set(AGENTS.ACTIVE, DSL.coalesce(DSL.`val`(update.active), AGENTS.ACTIVE))
+          .set(AGENTS.LANGUAGE, DSL.coalesce(DSL.`val`(update.language), AGENTS.LANGUAGE))
           .where(AGENTS.ID.eq(id))
           .returning()
           .fetchOne(AgentsRecord::toAgent)!!
