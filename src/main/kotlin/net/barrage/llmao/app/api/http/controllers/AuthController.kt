@@ -53,7 +53,12 @@ fun Route.authRoutes(service: AuthenticationService) {
                 AppDetail(
                   appID = application.environment.config.property("apple.appID").getString(),
                   paths = listOf("/oauthredirect"),
-                )
+                ),
+                AppDetail(
+                  appID =
+                    application.environment.config.property("multiplatform.ios.appID").getString(),
+                  paths = listOf("/oauthredirect"),
+                ),
               )
           )
       )

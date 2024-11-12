@@ -55,7 +55,7 @@ session:
   sameSite: "Lax"
 
 infobip:
-  api_key: "apiKey"
+  apiKey: "apiKey"
   endpoint: "endpoint.infobip.com"
 
 apple:
@@ -66,3 +66,7 @@ android:
   packageName: "packageName"
   sha256CertFingerprints:
     - "sha256CertFingerprint"
+
+multiplatform:
+  ios:
+    appID: "appID"
