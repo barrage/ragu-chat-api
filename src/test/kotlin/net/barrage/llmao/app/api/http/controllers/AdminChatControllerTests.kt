@@ -59,7 +59,7 @@ class AdminChatControllerTests : IntegrationTest() {
         header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
       }
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<CountedList<Chat>>()
+    val body = response.body<CountedList<ChatWithUserAndAgent>>()
     assertNotNull(body)
     assertEquals(2, body.total)
   }
