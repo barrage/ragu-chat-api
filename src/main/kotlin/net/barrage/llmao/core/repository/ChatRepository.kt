@@ -7,6 +7,7 @@ import net.barrage.llmao.core.models.AgentConfigurationEvaluatedMessageCounts
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatCounts
 import net.barrage.llmao.core.models.ChatWithMessages
+import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.FailedMessage
 import net.barrage.llmao.core.models.GraphData
 import net.barrage.llmao.core.models.Message
@@ -14,9 +15,11 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.Period
 import net.barrage.llmao.core.models.common.SortOrder
+import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toFailedMessage
 import net.barrage.llmao.core.models.toMessage
+import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.ChatsRecord
@@ -26,6 +29,7 @@ import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.FAILED_MESSAGES
 import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.USERS
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
@@ -52,6 +56,43 @@ class ChatRepository(private val dslContext: DSLContext) {
         .offset(offset)
         .fetchInto(ChatsRecord::class.java)
         .map { it.toChat() }
+
+    return CountedList(total!!, chats)
+  }
+
+  fun getAllAdmin(
+    pagination: PaginationSort,
+    userId: KUUID? = null,
+  ): CountedList<ChatWithUserAndAgent> {
+    val order = getSortOrder(pagination)
+    val (limit, offset) = pagination.limitOffset()
+
+    val total =
+      dslContext
+        .selectCount()
+        .from(CHATS)
+        .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+        .fetchOne(0, Int::class.java)
+
+    val chats =
+      dslContext
+        .select()
+        .from(CHATS)
+        .leftJoin(AGENTS)
+        .on(CHATS.AGENT_ID.eq(AGENTS.ID))
+        .leftJoin(USERS)
+        .on(CHATS.USER_ID.eq(USERS.ID))
+        .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+        .orderBy(order)
+        .limit(limit)
+        .offset(offset)
+        .map {
+          ChatWithUserAndAgent(
+            it.into(CHATS).toChat(),
+            it.into(USERS).toUser(),
+            it.into(AGENTS).toAgent(),
+          )
+        }
 
     return CountedList(total!!, chats)
   }

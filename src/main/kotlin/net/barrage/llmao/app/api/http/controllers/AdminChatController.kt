@@ -28,7 +28,7 @@ fun Route.adminChatsRoutes(service: ChatService) {
   route("/admin/chats") {
     get(adminGetAllChats()) {
       val pagination = call.query(PaginationSort::class)
-      val chats = service.listChats(pagination)
+      val chats = service.listChatsAdmin(pagination)
       call.respond(HttpStatusCode.OK, chats)
     }
 

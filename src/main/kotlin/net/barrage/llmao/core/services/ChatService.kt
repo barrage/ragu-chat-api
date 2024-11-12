@@ -34,8 +34,8 @@ class ChatService(
   private val agentRepository: AgentRepository,
   private val userRepository: UserRepository,
 ) {
-  fun listChats(pagination: PaginationSort): CountedList<Chat> {
-    return chatRepository.getAll(pagination)
+  fun listChatsAdmin(pagination: PaginationSort): CountedList<ChatWithUserAndAgent> {
+    return chatRepository.getAllAdmin(pagination)
   }
 
   fun listChats(pagination: PaginationSort, userId: KUUID): CountedList<Chat> {
