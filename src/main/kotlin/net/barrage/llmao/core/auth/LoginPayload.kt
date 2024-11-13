@@ -11,6 +11,7 @@ class LoginPayload(
   val redirectUri: String,
   val provider: String,
   val source: LoginSource,
+  val codeVerifier: String,
 ) {
   companion object {
     fun fromForm(form: Parameters): LoginPayload {
@@ -19,6 +20,7 @@ class LoginPayload(
       val code = form["code"]
       val grantType = form["grant_type"]
       val redirectUri = form["redirect_uri"]
+      val codeVerifier = form["code_verifier"]
 
       if (code.isNullOrBlank()) {
         throw AppError.api(ErrorReason.InvalidParameter, "Missing authorization code")
@@ -40,7 +42,18 @@ class LoginPayload(
         throw AppError.api(ErrorReason.InvalidParameter, "Missing login source")
       }
 
-      return LoginPayload(code, grantType, redirectUri, provider, LoginSource.tryFromString(source))
+      if (codeVerifier.isNullOrBlank()) {
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing code verifier")
+      }
+
+      return LoginPayload(
+        code,
+        grantType,
+        redirectUri,
+        provider,
+        LoginSource.tryFromString(source),
+        codeVerifier,
+      )
     }
   }
 }

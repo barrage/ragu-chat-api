@@ -35,6 +35,7 @@ class GoogleAuthenticationProvider(
         append("grant_type", payload.grantType)
         append("client_id", clientId)
         append("client_secret", clientSecret)
+        append("code_verifier", payload.codeVerifier)
       }
 
     val res = client.submitForm(url = tokenEndpoint, params, encodeInQuery = false)
