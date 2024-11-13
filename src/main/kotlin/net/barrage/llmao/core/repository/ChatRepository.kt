@@ -112,22 +112,24 @@ class ChatRepository(private val dslContext: DSLContext) {
     return ChatWithMessages(chat, messages)
   }
 
-  fun getMessages(id: KUUID): List<Message> {
+  fun getMessages(chatId: KUUID): List<Message> {
     return dslContext
       .select()
       .from(MESSAGES)
-      .where(MESSAGES.CHAT_ID.eq(id))
+      .where(MESSAGES.CHAT_ID.eq(chatId))
+      .orderBy(MESSAGES.CREATED_AT.desc())
       .fetchInto(MessagesRecord::class.java)
       .map { it.toMessage() }
   }
 
-  fun getMessagesForUser(id: KUUID, userId: KUUID): List<Message> {
+  fun getMessagesForUser(chatId: KUUID, userId: KUUID): List<Message> {
     return dslContext
       .select()
       .from(MESSAGES)
       .join(CHATS)
       .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
-      .where(MESSAGES.CHAT_ID.eq(id).and(CHATS.USER_ID.eq(userId)))
+      .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
+      .orderBy(MESSAGES.CREATED_AT.desc())
       .fetchInto(MessagesRecord::class.java)
       .map { it.toMessage() }
   }

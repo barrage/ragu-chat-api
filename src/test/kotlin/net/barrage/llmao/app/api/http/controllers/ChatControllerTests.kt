@@ -117,8 +117,9 @@ class ChatControllerTests : IntegrationTest() {
     assertEquals(200, response.status.value)
     val body = response.body<List<Message>>()
     assertEquals(2, body.size)
-    assertEquals(messageOne.id, body[0].id)
-    assertEquals(messageTwo.id, body[1].id)
+    // Messages are sorted by createdAt DESC
+    assertEquals(messageOne.id, body[1].id)
+    assertEquals(messageTwo.id, body[0].id)
   }
 
   @Test
