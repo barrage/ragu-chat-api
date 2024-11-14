@@ -9,7 +9,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
-import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import java.time.Duration
 import java.util.*
@@ -75,40 +74,48 @@ fun Application.websocketServer(server: Server) {
 
       val emitter = Emitter(messageResponseFlow)
 
-      for (frame in incoming) {
-        when (frame) {
-          is Frame.Text -> {
-            val message: ClientMessage
+      runCatching {
+          for (frame in incoming) {
+            when (frame) {
+              is Frame.Text -> {
+                val message: ClientMessage
 
-            try {
-              message = Json.decodeFromString(frame.readText())
-            } catch (e: Throwable) {
-              e.printStackTrace()
-              emitter.emitError(
-                AppError.api(ErrorReason.InvalidParameter, "Message format malformed")
-              )
-              continue
+                try {
+                  message = Json.decodeFromString(frame.readText())
+                } catch (e: Throwable) {
+                  e.printStackTrace()
+                  emitter.emitError(
+                    AppError.api(ErrorReason.InvalidParameter, "Message format malformed")
+                  )
+                  continue
+                }
+
+                try {
+                  server.handleMessage(userId, message, emitter)
+                } catch (error: AppError) {
+                  emitter.emitError(error)
+                }
+              }
+
+              is Frame.Close -> {
+                job.cancel()
+                server.removeChat(userId)
+              }
+
+              else -> {
+                emitter.emitError(
+                  AppError.api(ErrorReason.InvalidParameter, "Only text messages are allowed")
+                )
+              }
             }
-
-            try {
-              server.handleMessage(userId, message, emitter)
-            } catch (error: AppError) {
-              emitter.emitError(error)
-            }
-          }
-
-          is Frame.Close -> {
-            job.cancel()
-            server.removeChat(userId)
-          }
-
-          else -> {
-            sendSerialized(
-              AppError.api(ErrorReason.InvalidParameter, "Only text messages are allowed")
-            )
           }
         }
-      }
+        .onFailure { e ->
+          e.printStackTrace()
+          LOG.error("Websocket exception occurred: ${e.localizedMessage}")
+          server.removeChat(userId)
+          return@webSocket
+        }
     }
   }
 }
