@@ -260,6 +260,7 @@ class ChatService(
     for (collection in agent.collections) {
       val relatedChunks =
         vectorDb.query(embedded, collection.collection, collection.amount).joinToString("\n")
+
       val instruction = collection.instruction
       documentation += "$instruction\n$relatedChunks"
     }

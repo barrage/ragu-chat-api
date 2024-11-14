@@ -14,6 +14,7 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentWithConfiguration
+import net.barrage.llmao.core.models.CollectionItem
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
@@ -59,8 +60,8 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
       put("/collections", updateAgentCollections()) {
         val agentId = call.pathUuid("id")
         val update: UpdateCollections = call.receive()
-        agentService.updateCollections(agentId, update)
-        call.respond(HttpStatusCode.OK)
+        val failedCollections = agentService.updateCollections(agentId, update)
+        call.respond(HttpStatusCode.OK, failedCollections)
       }
 
       route("/versions") {
@@ -218,7 +219,14 @@ private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
   }
 
   response {
-    HttpStatusCode.OK to { description = "Collections updated successfully" }
+    HttpStatusCode.OK to
+      {
+        description = "Collection"
+        body<List<CollectionItem>> {
+          description =
+            "A list of CollectionItem objects representing the collections that failed to be added"
+        }
+      }
     HttpStatusCode.BadRequest to
       {
         description = "Invalid input or agent ID"

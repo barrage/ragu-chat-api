@@ -47,7 +47,8 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
   fun setup() {
     adminUser = postgres!!.testUser("foo@bar.com", admin = true)
     peasantUser = postgres!!.testUser("bar@foo.com", admin = false)
-    agentOne = postgres!!.testAgent()
+    agentOne =
+      postgres!!.testAgent(embeddingProvider = "azure", embeddingModel = "text-embedding-ada-002")
     agentOneConfigurationV1 = postgres!!.testAgentConfiguration(agentOne.id, version = 1)
     agentOneConfigurationV2 = postgres!!.testAgentConfiguration(agentOne.id, version = 2)
     agentOneChat = postgres!!.testChat(peasantUser.id, agentOne.id)
@@ -77,7 +78,9 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     agentTwoConfiguration = postgres!!.testAgentConfiguration(agentTwo.id)
     adminSession = postgres!!.testSession(adminUser.id)
     peasantSession = postgres!!.testSession(peasantUser.id)
-    weaviate!!.insertTestCollection("kusturica")
+    weaviate!!.insertTestCollection("Kusturica", 1536)
+    weaviate!!.insertTestCollection("Kusturica_small", 1536)
+    weaviate!!.insertTestCollection("Kusturica_big", 3072)
   }
 
   @Test
@@ -251,7 +254,11 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         provider = "weaviate",
         add =
           listOf(
-            CollectionItem(name = "Kusturica", amount = 10, instruction = "you pass the butter")
+            CollectionItem(
+              name = "Kusturica_small",
+              amount = 10,
+              instruction = "you pass the butter",
+            )
           ),
         remove = null,
       )
@@ -264,6 +271,34 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
       }
 
     assertEquals(200, response.status.value)
+    val body = response.body<List<CollectionItem>>()
+    assertEquals(0, body.size)
+  }
+
+  @Test
+  fun updateAgentCollectionsFails() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val updateCollections =
+      UpdateCollections(
+        provider = "weaviate",
+        add =
+          listOf(
+            CollectionItem(name = "Kusturica_big", amount = 10, instruction = "you pass the butter")
+          ),
+        remove = null,
+      )
+
+    val response =
+      client.put("/admin/agents/${agentOne.id}/collections") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(updateCollections)
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<List<CollectionItem>>()
+    assertEquals(1, body.size)
+    assertEquals("Kusturica_big", body[0].name)
   }
 
   @Test

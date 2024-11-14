@@ -13,5 +13,5 @@ interface VectorDatabase {
    * Used by services to reason about the existence of collections. Returns `true` if the collection
    * exists and can be used by an agent, `false` otherwise.
    */
-  fun validateCollection(name: String): Boolean
+  fun validateCollection(name: String, vectorSize: Int): Boolean
 }

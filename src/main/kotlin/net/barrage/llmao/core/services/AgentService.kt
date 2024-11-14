@@ -6,6 +6,7 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentWithConfiguration
+import net.barrage.llmao.core.models.CollectionItem
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
@@ -70,22 +71,40 @@ class AgentService(
     return agentRepository.update(id, update)
   }
 
-  fun updateCollections(agentId: KUUID, update: UpdateCollections) {
+  suspend fun updateCollections(agentId: KUUID, update: UpdateCollections): List<CollectionItem> {
     val vectorDb = providers.vector.getProvider(update.provider)
 
-    // Ensure the collections being added exist
-    update.add?.let {
-      for (collectionItem in it) {
-        if (!vectorDb.validateCollection(collectionItem.name)) {
-          throw AppError.api(
-            ErrorReason.EntityDoesNotExist,
-            "Collection with name '${collectionItem.name}'",
-          )
-        }
-      }
-    }
+    val agent = agentRepository.get(agentId)
+    val vectorSize =
+      providers.embedding
+        .getProvider(agent.agent.embeddingProvider)
+        .vectorSize(agent.agent.embeddingModel)
 
-    return agentRepository.updateCollections(agentId, update)
+    val verifiedCollections = mutableListOf<CollectionItem>()
+    val failedCollections = mutableListOf<CollectionItem>()
+
+    // Ensure the collections being added exist
+    val filteredUpdate: UpdateCollections =
+      if (update.add != null) {
+        for (collectionItem in update.add) {
+          if (vectorDb.validateCollection(collectionItem.name, vectorSize)) {
+            verifiedCollections.add(collectionItem)
+          } else {
+            failedCollections.add(collectionItem)
+          }
+        }
+
+        UpdateCollections(
+          provider = update.provider,
+          add = verifiedCollections,
+          remove = update.remove,
+        )
+      } else {
+        update
+      }
+
+    agentRepository.updateCollections(agentId, update)
+    return failedCollections
   }
 
   /**

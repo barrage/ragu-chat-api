@@ -10,10 +10,10 @@ import net.barrage.llmao.error.AppError
 
 private const val DEPLOYMENT_ID = "gipitty-text-embedding-ada-002"
 
-private enum class OpenAiModel(val value: String) {
-  TextEmbedding3Large("text-embedding-3-large"),
-  TextEmbedding3Small("text-embedding-3-small"),
-  TextEmbeddingAda002("text-embedding-ada-002");
+private enum class OpenAiModel(val value: String, val vectorSize: Int) {
+  TextEmbedding3Large("text-embedding-3-large", 3072),
+  TextEmbedding3Small("text-embedding-3-small", 1536),
+  TextEmbeddingAda002("text-embedding-ada-002", 1536);
 
   companion object {
     fun tryFromString(value: String): OpenAiModel? {
@@ -63,5 +63,10 @@ class AzureEmbedder(apiVersion: String, endpoint: String, apiKey: String) : Embe
     // We always get embeddings in a 1:1 manner relative to the input
     // Above check ensures we are always in bounds
     return response.embeddings.map { it.embedding }[0]
+  }
+
+  override suspend fun vectorSize(model: String): Int {
+    return OpenAiModel.tryFromString(model)?.vectorSize
+      ?: throw IllegalArgumentException("Model $model not found")
   }
 }
