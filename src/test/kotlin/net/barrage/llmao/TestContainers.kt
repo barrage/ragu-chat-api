@@ -229,7 +229,7 @@ class TestWeaviate {
     client = WeaviateClient(Config("http", container.httpHostAddress))
   }
 
-  fun insertTestCollection(name: String = "TestClass") {
+  fun insertTestCollection(name: String = "TestClass", size: Int = 1536) {
     val contentProperty =
       Property.builder()
         .name("content")
@@ -237,11 +237,14 @@ class TestWeaviate {
         .dataType(listOf("text"))
         .build()
 
+    val sizeProperty =
+      Property.builder().name("size").description(size.toString()).dataType(listOf("text")).build()
+
     val newClass =
       WeaviateClass.builder()
         .className(name)
         .description("Test vector collection")
-        .properties(listOf(contentProperty))
+        .properties(listOf(contentProperty, sizeProperty))
         .build()
 
     client.schema().classCreator().withClass(newClass).run()

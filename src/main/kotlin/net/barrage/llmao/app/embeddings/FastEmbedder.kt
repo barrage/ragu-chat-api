@@ -15,10 +15,14 @@ class FastEmbedder(private val endpoint: String) : Embedder {
     return "fembed"
   }
 
-  override suspend fun supportsModel(model: String): Boolean {
+  private suspend fun getModels(): Map<String, Int> {
     val response = client.get("$endpoint/list")
-    val body: Map<String, Int> = response.body()
-    return body.keys.contains(model)
+    return response.body()
+  }
+
+  override suspend fun supportsModel(model: String): Boolean {
+    val models = getModels()
+    return models.keys.contains(model)
   }
 
   override suspend fun embed(input: String, model: String): List<Double> {
@@ -29,6 +33,11 @@ class FastEmbedder(private val endpoint: String) : Embedder {
         setBody(request)
       }
     return response.body<EmbeddingResponse>().embeddings[0]
+  }
+
+  override suspend fun vectorSize(model: String): Int {
+    val models = getModels()
+    return models[model] ?: throw IllegalArgumentException("Model $model not found")
   }
 }
 

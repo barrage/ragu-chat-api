@@ -76,12 +76,17 @@ class Chat(
    * @param emitter The emitter to use to send the response.
    */
   suspend fun respond(proompt: String, emitter: Emitter) {
+    val response =
+      try {
+        service.chatCompletion(proompt, history, agentId)
+      } catch (e: AppError) {
+        return handleError(emitter, e, false)
+      }
+
     if (!messageReceived) {
       persist()
       messageReceived = true
     }
-
-    val response = service.chatCompletion(proompt, history, agentId)
 
     processResponse(proompt, response, false, emitter)
   }
@@ -108,12 +113,17 @@ class Chat(
   private suspend fun stream(proompt: String, emitter: Emitter) = coroutineScope {
     streamActive = true
 
+    val stream =
+      try {
+        service.chatCompletionStream(proompt, history, agentId)
+      } catch (e: AppError) {
+        return@coroutineScope handleError(emitter, e, true)
+      }
+
     if (!messageReceived) {
       persist()
       messageReceived = true
     }
-
-    val stream = service.chatCompletionStream(proompt, history, agentId)
 
     try {
       val response = collectStream(proompt, stream, emitter)
@@ -121,8 +131,8 @@ class Chat(
     } catch (e: InvalidRequestException) {
       // TODO: Failure
       service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter.value)
-    } catch (e: Exception) {
-      e.printStackTrace()
+    } catch (e: Throwable) {
+      handleError(emitter, e, true)
     } finally {
       streamActive = false
     }
@@ -228,5 +238,17 @@ class Chat(
     }
 
     finalResponse
+  }
+
+  suspend fun handleError(emitter: Emitter, e: Throwable, streaming: Boolean) {
+    if (streaming) {
+      emitter.emitStop()
+    }
+
+    if (e is AppError) {
+      emitter.emitError(e)
+    } else {
+      emitter.emitError(AppError.internal())
+    }
   }
 }
