@@ -44,7 +44,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(CHATS)
         .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-        .fetchOne(0, Int::class.java)
+        .fetchOne(0, Int::class.java) ?: 0
 
     val chats =
       dslContext
@@ -57,7 +57,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         .fetchInto(ChatsRecord::class.java)
         .map { it.toChat() }
 
-    return CountedList(total!!, chats)
+    return CountedList(total, chats)
   }
 
   fun getAllAdmin(
@@ -72,7 +72,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(CHATS)
         .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-        .fetchOne(0, Int::class.java)
+        .fetchOne(0, Int::class.java) ?: 0
 
     val chats =
       dslContext
@@ -94,7 +94,7 @@ class ChatRepository(private val dslContext: DSLContext) {
           )
         }
 
-    return CountedList(total!!, chats)
+    return CountedList(total, chats)
   }
 
   fun get(id: KUUID): Chat? {
@@ -302,7 +302,7 @@ class ChatRepository(private val dslContext: DSLContext) {
 
   fun getChatCounts(): ChatCounts {
     return ChatCounts(
-      dslContext.selectCount().from(CHATS).fetchOne(0, Int::class.java)!!,
+      dslContext.selectCount().from(CHATS).fetchOne(0, Int::class.java) ?: 0,
       dslContext
         .select(CHATS.AGENT_ID, AGENTS.NAME, DSL.count())
         .from(CHATS)
@@ -369,14 +369,14 @@ class ChatRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(MESSAGES)
         .where(MESSAGES.SENDER.eq(versionId))
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val positive =
       dslContext
         .selectCount()
         .from(MESSAGES)
         .where(MESSAGES.SENDER.eq(versionId).and(MESSAGES.EVALUATION.isTrue))
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val negative = total - positive
 
@@ -407,7 +407,7 @@ class ChatRepository(private val dslContext: DSLContext) {
               }
             )
         )
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val messages =
       dslContext

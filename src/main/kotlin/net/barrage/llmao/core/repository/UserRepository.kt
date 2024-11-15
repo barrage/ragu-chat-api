@@ -26,7 +26,7 @@ class UserRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(USERS)
         .where(USERS.DELETED_AT.isNull)
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val users =
       dslContext
@@ -133,14 +133,14 @@ class UserRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(USERS)
         .where(USERS.DELETED_AT.isNull)
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val active: Int =
       dslContext
         .selectCount()
         .from(USERS)
         .where(USERS.DELETED_AT.isNull.and(USERS.ACTIVE.isTrue))
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val inactive: Int = total - active
 
@@ -149,7 +149,7 @@ class UserRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(USERS)
         .where(USERS.DELETED_AT.isNull.and(USERS.ACTIVE.isTrue).and(USERS.ROLE.eq("ADMIN")))
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val user: Int = active - admin
 

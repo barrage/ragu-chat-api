@@ -39,7 +39,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(AGENTS)
         .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val agents =
       dslContext
@@ -65,7 +65,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(AGENTS)
         .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val agents =
       dslContext
@@ -189,7 +189,7 @@ class AgentRepository(private val dslContext: DSLContext) {
               .selectCount()
               .from(AGENT_CONFIGURATIONS)
               .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(id))
-              .fetchOne(0, Int::class.java)!!
+              .fetchOne(0, Int::class.java) ?: 0
 
           dslContext
             .insertInto(AGENT_CONFIGURATIONS)
@@ -299,7 +299,7 @@ class AgentRepository(private val dslContext: DSLContext) {
   }
 
   fun getAgentCounts(): AgentCounts {
-    val total: Int = dslContext.selectCount().from(AGENTS).fetchOne(0, Int::class.java)!!
+    val total: Int = dslContext.selectCount().from(AGENTS).fetchOne(0, Int::class.java) ?: 0
 
     val active: Int =
       dslContext
@@ -307,9 +307,9 @@ class AgentRepository(private val dslContext: DSLContext) {
         .from(AGENTS)
         .where(AGENTS.ACTIVE.isTrue)
         .groupBy(AGENTS.ACTIVE)
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
-    val inactive: Int = total - active
+    val inactive = total - active
 
     val providerCounts: List<GraphData> =
       dslContext
@@ -343,7 +343,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(AGENT_CONFIGURATIONS)
         .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(agentId))
-        .fetchOne(0, Int::class.java)!!
+        .fetchOne(0, Int::class.java) ?: 0
 
     val configurations =
       dslContext
