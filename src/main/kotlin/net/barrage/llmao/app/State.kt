@@ -1,6 +1,7 @@
 package net.barrage.llmao.app
 
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
@@ -18,9 +19,9 @@ import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.plugins.initDatabase
 import org.jooq.DSLContext
 
-class ApplicationState(env: ApplicationEnvironment) {
-  val repository = RepositoryState(initDatabase(env))
-  val providers = ProviderState(env)
+class ApplicationState(config: ApplicationConfig) {
+  val repository = RepositoryState(initDatabase(config))
+  val providers = ProviderState(config)
 }
 
 class RepositoryState(
@@ -31,11 +32,11 @@ class RepositoryState(
   val chat: ChatRepository = ChatRepository(client),
 )
 
-class ProviderState(env: ApplicationEnvironment) {
-  val auth: AuthenticationProviderFactory = AuthenticationProviderFactory(env)
-  val llm: LlmProviderFactory = LlmProviderFactory(env)
-  val vector: VectorDatabaseProviderFactory = VectorDatabaseProviderFactory(env)
-  val embedding: EmbeddingProviderFactory = EmbeddingProviderFactory(env)
+class ProviderState(config: ApplicationConfig) {
+  val auth: AuthenticationProviderFactory = AuthenticationProviderFactory(config)
+  val llm: LlmProviderFactory = LlmProviderFactory(config)
+  val vector: VectorDatabaseProviderFactory = VectorDatabaseProviderFactory(config)
+  val embedding: EmbeddingProviderFactory = EmbeddingProviderFactory(config)
 
   fun list(): ProvidersResponse {
     val authProviders = auth.listProviders()

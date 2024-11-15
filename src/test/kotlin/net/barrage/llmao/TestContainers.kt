@@ -39,7 +39,9 @@ import org.jooq.impl.DSL
 import org.postgresql.ds.PGSimpleDataSource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
+import org.testcontainers.utility.MountableFile
 import org.testcontainers.weaviate.WeaviateContainer
+import org.wiremock.integrations.testcontainers.WireMockContainer
 
 class TestPostgres {
   val container: PostgreSQLContainer<*> =
@@ -74,6 +76,7 @@ class TestPostgres {
         ClassLoaderResourceAccessor(),
         JdbcConnection(dataSource.connection),
       )
+
     liquibase.update()
   }
 
@@ -183,7 +186,7 @@ class TestPostgres {
     return configuration
   }
 
-  fun testChat(userId: UUID, agentId: UUID, title: String = "Test Chat Title"): Chat {
+  fun testChat(userId: UUID, agentId: UUID, title: String? = "Test Chat Title"): Chat {
     return dslContext
       .insertInto(CHATS)
       .set(CHATS.ID, UUID.randomUUID())
@@ -206,7 +209,7 @@ class TestPostgres {
       .insertInto(MESSAGES)
       .set(MESSAGES.CHAT_ID, chatId)
       .set(MESSAGES.SENDER, userId)
-      .set(MESSAGES.SENDER_TYPE, "user")
+      .set(MESSAGES.SENDER_TYPE, senderType)
       .set(MESSAGES.CONTENT, content)
       .set(MESSAGES.RESPONSE_TO, responseTo)
       .set(MESSAGES.EVALUATION, evaluation)
@@ -248,5 +251,19 @@ class TestWeaviate {
         .build()
 
     client.schema().classCreator().withClass(newClass).run()
+  }
+}
+
+class OpenAiWiremock {
+  val container: WireMockContainer =
+    WireMockContainer("wiremock/wiremock:3.9.2")
+      .withMappingFromResource("v1_chat_completions", "wiremock/mappings/v1_chat_completions.json")
+      .withCopyFileToContainer(
+        MountableFile.forClasspathResource("wiremock/responses/v1_chat_completions_response.json"),
+        "/home/wiremock/__files/v1_chat_completions_response.json",
+      )
+
+  init {
+    container.start()
   }
 }
