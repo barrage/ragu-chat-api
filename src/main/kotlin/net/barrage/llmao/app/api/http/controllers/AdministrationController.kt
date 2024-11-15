@@ -7,8 +7,8 @@ import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.ProvidersResponse
+import net.barrage.llmao.core.models.AgentChatTimeSeries
 import net.barrage.llmao.core.models.DashboardCounts
-import net.barrage.llmao.core.models.LineChartKeys
 import net.barrage.llmao.core.models.common.Period
 import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.error.AppError
@@ -34,7 +34,9 @@ fun Route.administrationRouter(service: AdministrationService) {
 
   get("/admin/dashboard/chat/history", chatHistory()) {
     val period = call.queryParam("period")?.let(Period::valueOf) ?: Period.WEEK
-    val history = service.getChatHistoryCountsByAgent(period)
+
+    val history: AgentChatTimeSeries = service.getChatHistoryCountsByAgent(period)
+
     call.respond(HttpStatusCode.OK, history)
   }
 }
@@ -109,12 +111,12 @@ fun chatHistory(): OpenApiRoute.() -> Unit = {
   summary = "Get chat history"
   description = "Get chat history for the application dashboard."
   tags("admin/dashboard")
-  request { queryParameter<Period>("period") }
+  request { queryParameter<Period>("period") { description = "Period (default week)" } }
   response {
     HttpStatusCode.OK to
       {
         description = "Chat history"
-        body<List<LineChartKeys>> {}
+        body<AgentChatTimeSeries> {}
       }
     HttpStatusCode.InternalServerError to
       {

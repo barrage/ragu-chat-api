@@ -7,7 +7,6 @@ import net.barrage.llmao.core.models.AgentCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CreateAgent
-import net.barrage.llmao.core.models.GraphData
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
@@ -311,7 +310,7 @@ class AgentRepository(private val dslContext: DSLContext) {
 
     val inactive = total - active
 
-    val providerCounts: List<GraphData> =
+    val counts =
       dslContext
         .select(AGENT_CONFIGURATIONS.LLM_PROVIDER, DSL.count())
         .from(AGENTS)
@@ -319,10 +318,15 @@ class AgentRepository(private val dslContext: DSLContext) {
         .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
         .where(AGENTS.ACTIVE.isTrue)
         .groupBy(AGENT_CONFIGURATIONS.LLM_PROVIDER)
-        .fetch()
-        .map { GraphData(it.value1()!!, it.value2()!!) }
+        .fetch { it }
 
-    return AgentCounts(total, active, inactive, providerCounts)
+    val out = mutableMapOf<String, Int>()
+
+    for ((agent, count) in counts) {
+      out[agent!!] = count
+    }
+
+    return AgentCounts(total, active, inactive, out)
   }
 
   fun getAgentConfigurationVersions(
