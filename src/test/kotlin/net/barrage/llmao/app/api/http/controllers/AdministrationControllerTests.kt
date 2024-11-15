@@ -9,10 +9,10 @@ import java.time.LocalDate
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.ProvidersResponse
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentChatTimeSeries
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DashboardCounts
-import net.barrage.llmao.core.models.LineChartKeys
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 class AdministrationControllerTests : IntegrationTest() {
   private lateinit var admin: User
@@ -41,16 +40,21 @@ class AdministrationControllerTests : IntegrationTest() {
   fun setup() {
     admin = postgres!!.testUser(admin = true, active = true, email = "admin@barrage.net")
     adminSession = postgres!!.testSession(admin.id)
+
     userActive = postgres!!.testUser(admin = false, active = true, email = "user@barrage.net")
     userInactive =
       postgres!!.testUser(admin = false, active = false, email = "inactive@barrage.net")
+
     agentOne = postgres!!.testAgent(active = true, name = "TestAgentOne")
     agentOneConfiguration = postgres!!.testAgentConfiguration(agentOne.id, llmProvider = "openai")
+
     agentTwo = postgres!!.testAgent(active = true, name = "TestAgentTwo")
     agentTwoConfiguration = postgres!!.testAgentConfiguration(agentTwo.id, llmProvider = "azure")
+
     agentThree = postgres!!.testAgent(active = false, name = "TestAgentThree")
     agentThreeConfiguration =
       postgres!!.testAgentConfiguration(agentThree.id, llmProvider = "azure")
+
     chatOne = postgres!!.testChat(userActive.id, agentOne.id)
     chatTwo = postgres!!.testChat(userActive.id, agentOne.id)
   }
@@ -126,21 +130,27 @@ class AdministrationControllerTests : IntegrationTest() {
       }
 
     assertEquals(HttpStatusCode.OK, response.status)
+
     val body = response.body<DashboardCounts>()
+
     assertEquals(3, body.agent.total)
     assertEquals(2, body.agent.active)
     assertEquals(1, body.agent.inactive)
-    assertEquals(1, body.agent.providers.first { it.name == "openai" }.value)
-    assertEquals(1, body.agent.providers.first { it.name == "azure" }.value)
+    assertEquals(1, body.agent.providers["openai"])
+    assertEquals(1, body.agent.providers["azure"])
+
     assertEquals(3, body.user.total)
     assertEquals(2, body.user.active)
     assertEquals(1, body.user.inactive)
     assertEquals(1, body.user.admin)
     assertEquals(1, body.user.user)
+
     assertEquals(2, body.chat.total)
-    assertEquals(2, body.chat.agents.first { it.name == agentOne.name }.value)
-    assertNull(body.chat.agents.firstOrNull { it.name == agentTwo.name })
-    assertNull(body.chat.agents.firstOrNull { it.name == agentThree.name })
+    assertEquals(1, body.chat.chats.size)
+
+    assertEquals(2, body.chat.chats.find { it.agentId == agentOne.id }!!.count)
+    assertNull(body.chat.chats.find { it.agentId == agentTwo.id })
+    assertNull(body.chat.chats.find { it.agentId == agentThree.id })
   }
 
   @Test
@@ -150,39 +160,23 @@ class AdministrationControllerTests : IntegrationTest() {
       client.get("/admin/dashboard/chat/history?period=WEEK") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
+    val body = response.body<AgentChatTimeSeries>()
 
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<List<LineChartKeys>>()
 
-    assertEquals(3, body.size)
+    assertEquals(3, body.series.size)
 
-    assertEquals(7, body.first { it.name == agentOne.name }.data.size)
-    assertEquals(
-      2,
-      body
-        .first { it.name == agentOne.name }
-        .data
-        .first { it.name == LocalDate.now().toString() }
-        .value,
-    )
-    assertEquals(7, body.first { it.name == agentTwo.name }.data.size)
+    assertEquals(7, body.series[agentOne.id.toString()]!!.data.size)
+    assertEquals(2, body.series[agentOne.id.toString()]!!.data[LocalDate.now().toString()])
 
-    assertEquals(
-      0,
-      body
-        .first { it.name == agentTwo.name }
-        .data
-        .first { it.name == LocalDate.now().toString() }
-        .value,
-    )
-    assertEquals(7, body.first { it.name == "Total" }.data.size)
+    assertEquals(7, body.series[agentTwo.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentTwo.id.toString()]!!.data[LocalDate.now().toString()])
 
-    assertEquals(
-      2,
-      body.first { it.name == "Total" }.data.first { it.name == LocalDate.now().toString() }.value,
-    )
+    assertEquals(7, body.series[agentThree.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentThree.id.toString()]!!.data[LocalDate.now().toString()])
 
-    assertThrows<NoSuchElementException> { body.first { it.name == agentThree.name } }
+    assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
+    assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
   }
 
   @Test
@@ -192,12 +186,23 @@ class AdministrationControllerTests : IntegrationTest() {
       client.get("/admin/dashboard/chat/history?period=MONTH") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
+    val body = response.body<AgentChatTimeSeries>()
 
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<List<LineChartKeys>>()
 
-    assertEquals(3, body.size)
-    assertEquals(30, body.first { it.name == agentOne.name }.data.size)
+    assertEquals(3, body.series.size)
+
+    assertEquals(30, body.series[agentOne.id.toString()]!!.data.size)
+    assertEquals(2, body.series[agentOne.id.toString()]!!.data[LocalDate.now().toString()])
+
+    assertEquals(30, body.series[agentTwo.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentTwo.id.toString()]!!.data[LocalDate.now().toString()])
+
+    assertEquals(30, body.series[agentThree.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentThree.id.toString()]!!.data[LocalDate.now().toString()])
+
+    assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
+    assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
   }
 
   @Test
@@ -207,11 +212,19 @@ class AdministrationControllerTests : IntegrationTest() {
       client.get("/admin/dashboard/chat/history?period=YEAR") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
+    val body = response.body<AgentChatTimeSeries>()
 
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<List<LineChartKeys>>()
 
-    assertEquals(3, body.size)
-    assertEquals(12, body.first { it.name == agentOne.name }.data.size)
+    assertEquals(3, body.series.size)
+
+    assertEquals(12, body.series[agentOne.id.toString()]!!.data.size)
+
+    assertEquals(12, body.series[agentTwo.id.toString()]!!.data.size)
+
+    assertEquals(12, body.series[agentThree.id.toString()]!!.data.size)
+
+    assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
+    assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
   }
 }

@@ -1,6 +1,8 @@
 package net.barrage.llmao.core.models
 
+import java.time.LocalDate
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.models.common.TimeSeries
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentsRecord
@@ -55,6 +57,11 @@ fun AgentsRecord.toAgent() =
     updatedAt = this.updatedAt!!,
   )
 
+/** DTO holding an agent with its configuration. */
+@Serializable
+data class AgentWithConfiguration(val agent: Agent, val configuration: AgentConfiguration)
+
+/** DTO holding an agent with its configuration and collections. */
 @Serializable
 data class AgentFull(
   val agent: Agent,
@@ -62,6 +69,7 @@ data class AgentFull(
   val collections: List<AgentCollection>,
 )
 
+/** DTO for creating an agent. */
 @Serializable
 data class CreateAgent(
   @NotBlank val name: String,
@@ -74,6 +82,7 @@ data class CreateAgent(
   val configuration: CreateAgentConfiguration,
 ) : Validation
 
+/** DTO for updating an agent. */
 @Serializable
 data class UpdateAgent(
   @NotBlank val name: String? = null,
@@ -83,5 +92,21 @@ data class UpdateAgent(
   val configuration: UpdateAgentConfiguration? = null,
 ) : Validation
 
-@Serializable
-data class AgentWithConfiguration(val agent: Agent, val configuration: AgentConfiguration)
+/** Holds data representing the amount of chats opened for an agent on a given date. */
+data class AgentChatsOnDate(
+  /** Agent ID. */
+  val agentId: KUUID,
+  /** Agent name. */
+  val agentName: String,
+  /** Date. */
+  val date: LocalDate?,
+  /** Amount of chats opened. */
+  val amount: Long,
+)
+
+/**
+ * Used to create time series data for the amount of chats an agents has had in a given period.
+ *
+ * Here * `Long` represents the amount of chats and `String` represents the agent name.
+ */
+typealias AgentChatTimeSeries = @Serializable TimeSeries<Long, String>

@@ -2,14 +2,14 @@ package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
-import java.util.*
+import net.barrage.llmao.core.models.AgentChatsOnDate
 import net.barrage.llmao.core.models.AgentConfigurationEvaluatedMessageCounts
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatCount
 import net.barrage.llmao.core.models.ChatCounts
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.FailedMessage
-import net.barrage.llmao.core.models.GraphData
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -301,21 +301,35 @@ class ChatRepository(private val dslContext: DSLContext) {
   }
 
   fun getChatCounts(): ChatCounts {
-    return ChatCounts(
-      dslContext.selectCount().from(CHATS).fetchOne(0, Int::class.java) ?: 0,
+    val total = dslContext.selectCount().from(CHATS).fetchOne(0, Int::class.java) ?: 0
+
+    val rows =
       dslContext
-        .select(CHATS.AGENT_ID, AGENTS.NAME, DSL.count())
+        .select(CHATS.AGENT_ID, DSL.count(), AGENTS.NAME)
         .from(CHATS)
         .join(AGENTS)
         .on(CHATS.AGENT_ID.eq(AGENTS.ID))
         .groupBy(CHATS.AGENT_ID, AGENTS.NAME)
-        .fetch()
-        .map { GraphData(it.value2()!!, it.value3()!!) },
-    )
+        .fetch { it }
+
+    val chats = mutableListOf<ChatCount>()
+
+    for (row in rows) {
+      // Safe to yell because of non-null constraints
+      val id = row.value1()!!
+      val count = row.value2()
+      val name = row.value3()!!
+      chats.add(ChatCount(id, name, count))
+    }
+
+    return ChatCounts(total, chats)
   }
 
-  fun agentsChatHistoryCounts(period: Period): Map<String, Map<String, Int>> {
-    // start date based on period
+  /**
+   * Returns a map of agent names to a map of dates to chat counts for the given period. The map is
+   * { Agent -> { Date -> Count }}.
+   */
+  fun agentsChatHistoryCounts(period: Period): List<AgentChatsOnDate> {
     val startDate =
       when (period) {
         Period.WEEK -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(7)
@@ -324,41 +338,39 @@ class ChatRepository(private val dslContext: DSLContext) {
           KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusYears(1).withDayOfMonth(1)
       }
 
-    // Generate a subquery that counts the number of chats for each agent and date.
-    val chatDateCount =
-      dslContext
-        .select(
-          CHATS.AGENT_ID.`as`("agent_id"), // Agent ID
-          DSL.trunc(CHATS.CREATED_AT, period.datePart).`as`("date"), // Date
-          DSL.count().`as`("count"), // Count
-        )
-        .from(CHATS)
-        .where(CHATS.CREATED_AT.ge(startDate))
-        .groupBy(CHATS.AGENT_ID, DSL.trunc(CHATS.CREATED_AT, period.datePart))
-        .asTable("chat_date_counts")
-
-    // Join the date series table with the recent chats subquery to get the count for each date.
     return dslContext
-      .select(
-        AGENTS.ID,
-        AGENTS.NAME, // Agent name
-        chatDateCount.field("date", KOffsetDateTime::class.java), // Date
-        DSL.coalesce(chatDateCount.field("count", Int::class.java), 0).`as`("count"), // Count
+      .fetch(
+        """
+          WITH chat_date_count AS (
+              SELECT 
+                  agent_id,
+                  DATE_TRUNC('${period.datePart}', created_at) AS date,
+                  COUNT(*) AS count
+              FROM chats 
+              WHERE chats.created_at >= '$startDate'
+              GROUP BY agent_id, date
+              ORDER BY date
+          ) 
+          SELECT 
+              agents.id,
+              agents.name,
+              chat_date_count.date,
+              COALESCE(chat_date_count.count, 0) AS count
+          FROM agents
+          LEFT JOIN chat_date_count ON agents.id = chat_date_count.agent_id
+          ORDER BY chat_date_count.agent_id, chat_date_count.date
+        """
       )
-      .from(AGENTS)
-      .leftJoin(chatDateCount)
-      .on(AGENTS.ID.eq(chatDateCount.field("agent_id", UUID::class.java)))
-      .where(AGENTS.ACTIVE.isTrue)
-      .orderBy(AGENTS.NAME.asc(), chatDateCount.field("date", KOffsetDateTime::class.java)!!.asc())
-      .fetch()
-      .groupBy { it.value2()!! }
-      .map { agent ->
-        Pair(
-          agent.key,
-          agent.value.associate { Pair(it.value3()?.toLocalDate().toString(), it.value4()) },
+      .map {
+        AgentChatsOnDate(
+          agentId = it.get("id", KUUID::class.java),
+          agentName = it.get("name", String::class.java),
+          // If no chats for a given date, this will be null and we can skip the whole entry
+          date = it.get("date", KOffsetDateTime::class.java)?.toLocalDate(),
+          amount = it.get("count", Long::class.java),
         )
       }
-      .toMap()
+      .filterNotNull()
   }
 
   fun getAgentConfigurationMessageCounts(
