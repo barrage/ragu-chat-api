@@ -213,6 +213,10 @@ class TestPostgres {
       .returning()
       .fetchOne(MessagesRecord::toMessage)!!
   }
+
+  fun deleteTestChat(id: UUID) {
+    dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).execute()
+  }
 }
 
 class TestWeaviate {
