@@ -1,18 +1,19 @@
 package net.barrage.llmao.app.embeddings
 
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-class EmbeddingProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Embedder>() {
+class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embedder>() {
   private val azure: AzureEmbedder
   private val fembed: FastEmbedder
 
   init {
-    azure = initAzureEmbedder(env)
-    fembed = initFastEmbedder(env)
+    azure = initAzureEmbedder(config)
+    fembed = initFastEmbedder(config)
   }
 
   override fun getProvider(providerId: String): Embedder {
@@ -31,16 +32,16 @@ class EmbeddingProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Em
     return listOf(azure.id(), fembed.id())
   }
 
-  private fun initAzureEmbedder(env: ApplicationEnvironment): AzureEmbedder {
-    val apiVersion = env.config.property("embeddings.azure.apiVersion").getString()
-    val endpoint = env.config.property("embeddings.azure.endpoint").getString()
-    val apiKey = env.config.property("embeddings.azure.apiKey").getString()
+  private fun initAzureEmbedder(config: ApplicationConfig): AzureEmbedder {
+    val apiVersion = config.property("embeddings.azure.apiVersion").getString()
+    val endpoint = config.property("embeddings.azure.endpoint").getString()
+    val apiKey = config.property("embeddings.azure.apiKey").getString()
 
     return AzureEmbedder(apiVersion, endpoint, apiKey)
   }
 
-  private fun initFastEmbedder(env: ApplicationEnvironment): FastEmbedder {
-    val endpoint = env.config.property("embeddings.fembed.endpoint").getString()
+  private fun initFastEmbedder(config: ApplicationConfig): FastEmbedder {
+    val endpoint = config.property("embeddings.fembed.endpoint").getString()
 
     return FastEmbedder(endpoint)
   }

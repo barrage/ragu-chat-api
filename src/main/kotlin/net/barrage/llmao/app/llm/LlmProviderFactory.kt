@@ -1,21 +1,21 @@
 package net.barrage.llmao.app.llm
 
-import io.ktor.server.application.*
+import io.ktor.server.config.*
+import net.barrage.llmao.configString
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.llm.ConversationLlm
-import net.barrage.llmao.env
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-class LlmProviderFactory(env: ApplicationEnvironment) : ProviderFactory<ConversationLlm>() {
+class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<ConversationLlm>() {
   private val openai: OpenAI
   private val azure: AzureAI
   private val ollama: Ollama
 
   init {
-    openai = initOpenAi(env)
-    azure = initAzure(env)
-    ollama = initOllama(env)
+    openai = initOpenAi(config)
+    azure = initAzure(config)
+    ollama = initOllama(config)
   }
 
   override fun getProvider(providerId: String): ConversationLlm {
@@ -32,22 +32,23 @@ class LlmProviderFactory(env: ApplicationEnvironment) : ProviderFactory<Conversa
     return listOf(openai.id(), azure.id(), ollama.id())
   }
 
-  private fun initOpenAi(env: ApplicationEnvironment): OpenAI {
-    val apiKey = env(env, "llm.openAi.apiKey")
+  private fun initOpenAi(config: ApplicationConfig): OpenAI {
+    val endpoint = configString(config, "llm.openAi.endpoint")
+    val apiKey = configString(config, "llm.openAi.apiKey")
 
-    return OpenAI(apiKey)
+    return OpenAI(endpoint, apiKey)
   }
 
-  private fun initAzure(env: ApplicationEnvironment): AzureAI {
-    val apiKey = env(env, "llm.azure.apiKey")
-    val endpoint = env(env, "llm.azure.endpoint")
-    val version = env(env, "llm.azure.apiVersion")
+  private fun initAzure(config: ApplicationConfig): AzureAI {
+    val endpoint = configString(config, "llm.azure.endpoint")
+    val apiKey = configString(config, "llm.azure.apiKey")
+    val version = configString(config, "llm.azure.apiVersion")
 
-    return AzureAI(apiKey, endpoint, version)
+    return AzureAI(endpoint, apiKey, version)
   }
 
-  private fun initOllama(env: ApplicationEnvironment): Ollama {
-    val endpoint = env(env, "llm.ollama.endpoint")
+  private fun initOllama(config: ApplicationConfig): Ollama {
+    val endpoint = configString(config, "llm.ollama.endpoint")
 
     return Ollama(endpoint)
   }

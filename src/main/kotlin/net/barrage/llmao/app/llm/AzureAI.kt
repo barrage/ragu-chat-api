@@ -17,44 +17,48 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
 class AzureAI(
-  private val apiKey: String,
+  /** The `resourceId` identifying the Azure resource. */
   private val endpoint: String,
+
+  /** Authorization token. */
+  private val apiKey: String,
+
+  /** Which version of the API to use. */
   private val apiVersion: String,
 ) : ConversationLlm {
-  private var modelMap = mapOf("gpt-3.5-turbo" to "gpt-35-turbo", "gpt-4" to "gpt-4")
+  /** Maps LLM identifiers to Azure deployment names. */
+  private var deploymentMap =
+    mapOf("gpt-3.5-turbo" to "gpt-35-turbo", "gpt-4" to "gpt-4", "gpt-4o" to "gpt-4o")
 
   override fun id(): String {
     return "azure"
   }
 
   override suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String {
-    val client = getClient(config.model)
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(modelMap[config.model]!!),
+        model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
         temperature = config.temperature,
       )
 
     // TODO: Remove yelling
-    return client.chatCompletion(chatRequest).choices[0].message.content!!
+    return client(config.model).chatCompletion(chatRequest).choices[0].message.content!!
   }
 
   override suspend fun completionStream(
     messages: List<ChatMessage>,
     config: LlmConfig,
   ): Flow<List<TokenChunk>> {
-    val client = getClient(config.model)
-
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(modelMap[config.model]!!),
+        model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
         temperature = config.temperature,
         streamOptions = StreamOptions(true),
       )
 
-    return client.chatCompletions(chatRequest).map {
+    return client(config.model).chatCompletions(chatRequest).map {
       listOf(
         TokenChunk(
           it.id,
@@ -67,16 +71,14 @@ class AzureAI(
   }
 
   override suspend fun generateChatTitle(proompt: String, config: LlmConfig): String {
-    val client = getClient(config.model)
-
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(modelMap[config.model]!!),
+        model = ModelId(config.model),
         messages = listOf(OpenAIChatMessage.User(proompt)),
         temperature = config.temperature,
       )
 
-    val response = client.chatCompletion(chatRequest)
+    val response = client(config.model).chatCompletion(chatRequest)
 
     // TODO: Remove yelling
     return response.choices[0].message.content!!
@@ -87,50 +89,45 @@ class AzureAI(
     config: LlmConfig,
     maxTokens: Int?,
   ): String {
-    val client = getClient(config.model)
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(modelMap[config.model]!!),
+        model = ModelId(config.model),
         messages = listOf(OpenAIChatMessage.User(proompt)),
         maxTokens = maxTokens,
         temperature = config.temperature,
       )
 
     // TODO: Remove yelling
-    return client.chatCompletion(chatRequest).choices[0].message.content!!
+    return client(config.model).chatCompletion(chatRequest).choices[0].message.content!!
   }
 
   override suspend fun supportsModel(model: String): Boolean {
-    return when (model) {
-      "gpt-3.5-turbo" -> true
-      "gpt-4" -> true
-      else -> false
-    }
+    return deploymentMap[model] != null
   }
 
   override suspend fun listModels(): List<String> {
-    return listOf("gpt-3.5-turbo", "gpt-4")
+    return deploymentMap.keys.toList()
   }
 
-  private fun getClient(model: String): OpenAI {
-    if (!modelMap.containsKey(model)) {
-      throw AppError.api(
+  private fun getModel(model: String): String {
+    return deploymentMap[model]
+      ?: throw AppError.api(
         ErrorReason.InvalidParameter,
         "LLM provider ${id()} does not support model '$model'",
       )
-    }
+  }
 
-    return OpenAI(
-      OpenAIConfig(
-        host =
-          OpenAIHost.azure(
-            resourceName = endpoint,
-            deploymentId = modelMap[model]!!,
-            apiVersion = apiVersion,
-          ),
-        headers = mapOf("api-key" to apiKey),
-        token = apiKey,
+  /**
+   * Deployment IDs are tied to models which means we have to instantiate a new client per model
+   * inference.
+   */
+  private fun client(model: String): OpenAI {
+    val deploymentId = getModel(model)
+    val host =
+      OpenAIHost(
+        baseUrl = "https://$endpoint.openai.azure.com/openai/deployments/$deploymentId/",
+        queryParams = mapOf("api-version" to apiVersion),
       )
-    )
+    return OpenAI(OpenAIConfig(host = host, headers = mapOf("api-key" to apiKey), token = apiKey))
   }
 }

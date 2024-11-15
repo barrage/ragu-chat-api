@@ -5,6 +5,7 @@ import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
+import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.core.llm.ChatMessage
@@ -14,8 +15,8 @@ import net.barrage.llmao.core.llm.TokenChunk
 
 private const val TITLE_GENERATION_MODEL = "gpt-4"
 
-class OpenAI(apiKey: String) : ConversationLlm {
-  private val client: OpenAI = OpenAI(token = apiKey)
+class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
+  private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
 
   override fun id(): String {
     return "openai"

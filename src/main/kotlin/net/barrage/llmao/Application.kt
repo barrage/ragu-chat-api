@@ -1,6 +1,7 @@
 package net.barrage.llmao
 
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.ServiceState
 import net.barrage.llmao.app.api.ws.ChatFactory
@@ -13,7 +14,7 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-  val state = ApplicationState(environment)
+  val state = ApplicationState(environment.config)
   val services = ServiceState(state)
 
   val chatFactory = ChatFactory(services.agent, services.chat)
@@ -30,6 +31,6 @@ fun Application.module() {
   configureCors()
 }
 
-fun env(env: ApplicationEnvironment, key: String): String {
-  return env.config.property(key).getString()
+fun configString(config: ApplicationConfig, key: String): String {
+  return config.property(key).getString()
 }

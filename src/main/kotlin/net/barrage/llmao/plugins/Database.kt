@@ -1,6 +1,7 @@
 package net.barrage.llmao.plugins
 
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -9,10 +10,10 @@ import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.postgresql.ds.PGSimpleDataSource
 
-fun initDatabase(env: ApplicationEnvironment): DSLContext {
-  val url = env.config.property("db.url").getString()
-  val user = env.config.property("db.user").getString()
-  val pw = env.config.property("db.password").getString()
+fun initDatabase(config: ApplicationConfig): DSLContext {
+  val url = config.property("db.url").getString()
+  val user = config.property("db.user").getString()
+  val pw = config.property("db.password").getString()
   val dataSource =
     PGSimpleDataSource().apply {
       setURL(url)
@@ -21,17 +22,17 @@ fun initDatabase(env: ApplicationEnvironment): DSLContext {
     }
   val dslContext = DSL.using(dataSource, SQLDialect.POSTGRES)
 
-  if (env.config.property("db.runMigrations").getString().toBoolean()) {
-    runLiquibaseMigration(env)
+  if (config.property("db.runMigrations").getString().toBoolean()) {
+    runLiquibaseMigration(config)
   }
 
   return dslContext
 }
 
-fun runLiquibaseMigration(env: ApplicationEnvironment) {
-  val url = env.config.property("db.url").getString()
-  val user = env.config.property("db.user").getString()
-  val pw = env.config.property("db.password").getString()
+fun runLiquibaseMigration(config: ApplicationConfig) {
+  val url = config.property("db.url").getString()
+  val user = config.property("db.user").getString()
+  val pw = config.property("db.password").getString()
   val changeLogFile = "db/changelog.yaml"
   val dataSource =
     PGSimpleDataSource().apply {

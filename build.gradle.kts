@@ -81,6 +81,10 @@ dependencies {
   // Tests
   testImplementation("org.testcontainers:postgresql:1.20.2")
   testImplementation("org.testcontainers:weaviate:1.20.2")
+  // https://mvnrepository.com/artifact/org.wiremock.integrations.testcontainers/wiremock-testcontainers-module
+  testImplementation(
+    "org.wiremock.integrations.testcontainers:wiremock-testcontainers-module:1.0-alpha-14"
+  )
   testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
   testImplementation("io.ktor:ktor-server-tests:$ktorVersion")
   testImplementation("org.liquibase:liquibase-core:4.29.2")
