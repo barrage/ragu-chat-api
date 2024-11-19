@@ -1,0 +1,1 @@
+DROP TABLE chonkit_sessions;

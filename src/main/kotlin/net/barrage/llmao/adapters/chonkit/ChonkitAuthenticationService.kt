@@ -99,10 +99,10 @@ private constructor(
         throw Exception("Failed to log in to Vault")
       }
 
-      LOG.info("Successfully logged in to Vault")
-
       val body = response.body<VaultAuthResponse>()
       val token = body.auth.clientToken
+
+      LOG.info("Successfully logged in to Vault")
 
       val client =
         HttpClient(Apache) {
