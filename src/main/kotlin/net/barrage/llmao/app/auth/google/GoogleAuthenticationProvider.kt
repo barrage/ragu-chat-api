@@ -53,9 +53,9 @@ class GoogleAuthenticationProvider(
     val idToken = JWT.decode(response.idToken)
 
     val googleId = idToken.subject
-    val isVerified = idToken.getClaim("email_verified")?.asBoolean()
+    val isVerified = idToken.getClaim("email_verified")?.asBoolean() ?: false
 
-    if (isVerified == null || !isVerified) {
+    if (!isVerified) {
       throw AppError.api(ErrorReason.Authentication, "Email not verified")
     }
 

@@ -4,18 +4,19 @@ import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.string
 
 fun Route.authRoutes(service: AuthenticationService) {
   post("/auth/login", loginUser()) {
@@ -43,47 +44,15 @@ fun Route.authRoutes(service: AuthenticationService) {
     call.respond(HttpStatusCode.OK)
   }
 
-  get("/apple-app-site-association") {
-    val appleAppSiteAssociation =
-      AppleAppSiteAssociation(
-        applinks =
-          AppLinks(
-            details =
-              listOf(
-                AppDetail(
-                  appID = application.environment.config.property("apple.appID").getString(),
-                  paths = listOf("/oauthredirect"),
-                ),
-                AppDetail(
-                  appID =
-                    application.environment.config.property("multiplatform.ios.appID").getString(),
-                  paths = listOf("/oauthredirect"),
-                ),
-              )
-          )
-      )
+  post("/auth/apple/callback-web", callbackWeb()) {
+    val code =
+      call.receiveParameters()["code"]
+        ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing code")
 
-    val jsonString = Json.encodeToString(appleAppSiteAssociation)
-    call.respond(HttpStatusCode.OK, jsonString)
-  }
-
-  get("/.well-known/assetlinks.json") {
-    val assetLinks =
-      listOf(
-        AssetLink(
-          relation = listOf("delegate_permission/common.handle_all_urls"),
-          target =
-            AssetLinkTarget(
-              namespace = application.environment.config.property("android.namespace").getString(),
-              packageName =
-                application.environment.config.property("android.packageName").getString(),
-              sha256CertFingerprints =
-                application.environment.config.property("android.sha256CertFingerprints").getList(),
-            ),
-        )
-      )
-
-    call.respond(HttpStatusCode.OK, Json.encodeToString(assetLinks))
+    call.respondRedirect(
+      url = "${application.environment.config.string("frontend.url")}/auth/apple?code=$code",
+      permanent = true,
+    )
   }
 }
 
@@ -135,6 +104,31 @@ fun logoutUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Error logging out user."
+        body<List<AppError>>()
+      }
+  }
+}
+
+private fun callbackWeb(): OpenApiRoute.() -> Unit = {
+  summary = "Apple OAuth callback for web"
+  description = "Apple OAuth callback for web."
+  tags("auth")
+  request { multipartBody { part<String>("code") {} } }
+  response {
+    HttpStatusCode.OK to { description = "User logged in." }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid login data."
+        body<List<AppError>>()
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Error logging in user."
+        body<List<AppError>>()
+      }
+    HttpStatusCode.Unauthorized to
+      {
+        description = "Unauthorized."
         body<List<AppError>>()
       }
   }

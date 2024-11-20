@@ -8,12 +8,12 @@ data class UserInfo(
   /** User email. */
   val email: String,
 
-  /** Mandatory username. */
-  val fullName: String,
+  /** Optional username. */
+  val fullName: String? = null,
 
   /** Optional first name. */
-  val firstName: String?,
+  val firstName: String? = null,
 
   /** Optional last name. */
-  val lastName: String?,
+  val lastName: String? = null,
 )
