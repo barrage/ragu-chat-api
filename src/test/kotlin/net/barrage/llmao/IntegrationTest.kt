@@ -6,6 +6,10 @@ import io.ktor.serialization.kotlinx.*
 import io.ktor.server.config.*
 import io.ktor.server.config.yaml.*
 import io.ktor.server.testing.*
+import java.security.KeyPairGenerator
+import java.security.PrivateKey
+import java.security.spec.ECGenParameterSpec
+import java.security.spec.PKCS8EncodedKeySpec
 import java.util.*
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.ServiceState
@@ -45,6 +49,7 @@ open class IntegrationTest(
           "db.user" to postgres.container.username,
           "db.password" to postgres.container.password,
           "db.runMigrations" to "false", // We migrate manually on PG container initialization
+          "oauth.apple.clientSecret" to generateP8PrivateKey(),
         )
       )
   }
@@ -177,3 +182,16 @@ const val COMPLETIONS_STREAM_WHITESPACE_RESPONSE =
   "v1_chat_completions_stream_response\nwith whitespace"
 
 val COMPLETIONS_STREAM_LONG_RESPONSE = COMPLETIONS_STREAM_RESPONSE.repeat(4)
+
+private fun generateP8PrivateKey(): String {
+  val keyPairGen = KeyPairGenerator.getInstance("EC")
+  val ecSpec = ECGenParameterSpec("secp256r1")
+  keyPairGen.initialize(ecSpec)
+  val keyPair = keyPairGen.generateKeyPair()
+
+  val privateKey: PrivateKey = keyPair.private
+
+  val pkcs8EncodedKeySpec = PKCS8EncodedKeySpec(privateKey.encoded)
+
+  return Base64.getEncoder().encodeToString(pkcs8EncodedKeySpec.encoded)
+}

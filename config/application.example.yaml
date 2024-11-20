@@ -6,6 +6,9 @@ ktor:
     port: 42069
   environment: "development"
 
+frontend:
+  url: "http://localhost:3000"
+
 db:
   url: "jdbc:postgresql://localhost:5454/kappi"
   user: "postgres"
@@ -14,7 +17,7 @@ db:
   runMigrations: true
 
 cors:
-  origins: [ "http://localhost:3000", "http://localhost:3001" ]
+  origins: [ "http://localhost:3000", "http://localhost:3001", "https://appleid.apple.com" ]
   methods: [ "GET","HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS" ]
   headers: [ ]
 
@@ -51,6 +54,13 @@ oauth:
     accountEndpoint: "https://openidconnect.googleapis.com/v1/userinfo"
     clientId: "clientId"
     clientSecret: "clientSecret"
+  apple:
+    endpoint: "https://appleid.apple.com"
+    clientId: ""
+    serviceId: ""
+    clientSecret: ""
+    keyId: ""
+    teamId: ""
 
 session:
   cookieName: "kappi"
