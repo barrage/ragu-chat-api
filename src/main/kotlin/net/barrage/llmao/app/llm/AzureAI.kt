@@ -63,7 +63,7 @@ class AzureAI(
         TokenChunk(
           it.id,
           it.created.toLong(),
-          it.choices.firstOrNull()?.delta?.content ?: " ",
+          it.choices.firstOrNull()?.delta?.content,
           it.choices.firstOrNull()?.finishReason,
         )
       )

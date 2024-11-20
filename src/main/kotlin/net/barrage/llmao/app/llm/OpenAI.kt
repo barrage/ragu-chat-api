@@ -18,6 +18,8 @@ private const val TITLE_GENERATION_MODEL = "gpt-4"
 class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
   private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
 
+  internal val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
+
   override fun id(): String {
     return "openai"
   }
@@ -51,7 +53,7 @@ class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
         TokenChunk(
           it.id,
           it.created.toLong(),
-          it.choices.firstOrNull()?.delta?.content ?: " ",
+          it.choices.firstOrNull()?.delta?.content,
           it.choices.firstOrNull()?.finishReason,
         )
       )
@@ -90,14 +92,10 @@ class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
   }
 
   override suspend fun supportsModel(model: String): Boolean {
-    return when (model) {
-      "gpt-3.5-turbo" -> true
-      "gpt-4" -> true
-      else -> false
-    }
+    return SUPPORTED_MODELS.contains(model)
   }
 
   override suspend fun listModels(): List<String> {
-    return listOf("gpt-3.5-turbo", "gpt-4")
+    return SUPPORTED_MODELS
   }
 }

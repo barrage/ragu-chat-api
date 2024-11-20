@@ -8,7 +8,7 @@
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "v1_chat_completions_response",
+        "content": "v1_chat_completions_title_response",
         "refusal": null
       },
       "logprobs": null,

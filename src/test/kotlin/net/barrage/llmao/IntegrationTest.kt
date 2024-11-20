@@ -1,16 +1,7 @@
 package net.barrage.llmao
 
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.apache.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.config.yaml.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import java.util.*
@@ -28,7 +19,18 @@ open class IntegrationTest(
 
   /** If `true`, initialize the weaviate container and the weaviate client. */
   private val useWeaviate: Boolean = false,
+
+  /**
+   * If `true`, start a wiremock container for the OpenAI API. All requests to the OpenAI API will
+   * be sent to the mock instance instead.
+   */
   private val useWiremockOpenAi: Boolean = false,
+
+  /**
+   * If given and `useWiremockOpenAi` is `true`, an existing wiremock container will be used
+   * instead, located on the URL. Useful for recording responses from test suites.
+   */
+  private val wiremockUrlOverride: String? = null,
 ) {
   var postgres: TestPostgres? = null
   var weaviate: TestWeaviate? = null
@@ -82,13 +84,21 @@ open class IntegrationTest(
 
   private fun loadOpenAiApi() {
     openAiApi = OpenAiWiremock()
+    val url = wiremockUrlOverride ?: openAiApi!!.container.baseUrl
     cfg =
       cfg.mergeWith(
         MapApplicationConfig(
-          "llm.openAi.endpoint" to "${openAiApi!!.container.baseUrl}/v1/",
-          "llm.openAi.apiKey" to "my-super-duper-secret-openai-api-key",
+          // Has to match the URL from the OpenAI SDK
+          "llm.openAi.endpoint" to "${url}/v1/"
         )
       )
+
+    if (wiremockUrlOverride == null) {
+      cfg =
+        cfg.mergeWith(
+          MapApplicationConfig("llm.openAi.apiKey" to "super-duper-secret-openai-api-key")
+        )
+    }
   }
 
   /**
