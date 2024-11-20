@@ -43,6 +43,7 @@ enum class ErrorReason(val reason: String) {
   EntityAlreadyExists("Entity already exists"),
   InvalidParameter("Invalid parameter"),
   InvalidProvider("Unsupported provider"),
+  VectorDatabase("Vector database error"),
 
   // Websocket errors
   Websocket("Unprocessable message"),

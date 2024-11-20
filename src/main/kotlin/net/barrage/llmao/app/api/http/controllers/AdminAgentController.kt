@@ -14,11 +14,11 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentWithConfiguration
-import net.barrage.llmao.core.models.CollectionItem
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
+import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
@@ -60,8 +60,8 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
       put("/collections", updateAgentCollections()) {
         val agentId = call.pathUuid("id")
         val update: UpdateCollections = call.receive()
-        val failedCollections = agentService.updateCollections(agentId, update)
-        call.respond(HttpStatusCode.OK, failedCollections)
+        val updateResult = agentService.updateCollections(agentId, update)
+        call.respond(HttpStatusCode.OK, updateResult)
       }
 
       route("/versions") {
@@ -222,10 +222,7 @@ private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "Collection"
-        body<List<CollectionItem>> {
-          description =
-            "A list of CollectionItem objects representing the collections that failed to be added"
-        }
+        body<UpdateCollectionsResult> { description = "Result of the update" }
       }
     HttpStatusCode.BadRequest to
       {

@@ -3,13 +3,16 @@ package net.barrage.llmao.app.vector
 import io.ktor.util.logging.*
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
+import io.weaviate.client.v1.graphql.model.GraphQLError
 import io.weaviate.client.v1.graphql.query.argument.NearVectorArgument
 import io.weaviate.client.v1.graphql.query.fields.Field
 import net.barrage.llmao.core.vector.VectorDatabase
-import net.barrage.llmao.error.WeaviateError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.vector.Weaviate")
 
+// TODO: ADD WEAVIATE DATA CLASSES
 class Weaviate(scheme: String, host: String) : VectorDatabase {
   private val client: WeaviateClient = WeaviateClient(Config(scheme, host))
 
@@ -17,7 +20,12 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     return "weaviate"
   }
 
-  @Suppress("NAME_SHADOWING")
+  /**
+   * Query Weaviate based on `searchVector` and return `amount` most similar results.
+   *
+   * This method does not throw in case the query returns no results. Only internal errors and
+   * errors obtained from the GraphQL API are thrown.
+   */
   override fun query(searchVector: List<Double>, collection: String, amount: Int): List<String> {
     val fields = Field.builder().name("content").build()
 
@@ -36,35 +44,32 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
         )
         .withLimit(amount)
 
-    val queryResult = query.run()
+    val graphQLResult = query.run()
 
-    if (queryResult.hasErrors()) {
-      throw WeaviateError.requestError(queryResult.error)
+    if (graphQLResult.hasErrors()) {
+      throw graphQlError(graphQLResult.error)
     }
 
-    val result = queryResult.result
+    // Actual result of the query.
+    val result = graphQLResult.result
 
-    if (result == null) {
-      throw WeaviateError.queryError("No result")
-    } else if (result.errors != null) {
-      throw WeaviateError.queryError(result.errors)
+    if (result.errors != null) {
+      throw queryError(result.errors)
     } else if (result.data == null) {
-      throw WeaviateError.queryError("No data")
+      LOG.warn("Weaviate did not return any data; Result: {}", result)
+      return listOf()
     }
 
     val data =
-      queryResult.result.data as? Map<*, *>
-        ?: throw WeaviateError.mappingError("Cannot cast ${queryResult.result.data} to Map")
+      graphQLResult.result.data as? Map<*, *>
+        ?: throw mappingError("Cannot cast ${graphQLResult.result.data} to Map")
 
     val mappedData =
-      data["Get"] as? Map<*, *>
-        ?: throw WeaviateError.mappingError("Cannot cast ${data["Get"]} to Map")
+      data["Get"] as? Map<*, *> ?: throw mappingError("Cannot cast ${data["Get"]} to Map")
 
     val collectionData =
       mappedData[collection] as? List<*>
-        ?: throw WeaviateError.mappingError(
-          "Cannot cast ${mappedData[collection]} to List, skipping"
-        )
+        ?: throw mappingError("Cannot cast ${mappedData[collection]} to List, skipping")
 
     for (item in collectionData) {
       (item as? Map<*, *>)?.let {
@@ -73,7 +78,7 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
       }
     }
 
-    LOG.debug("Successful query in '$collection' (target ${results.size}/$amount results)")
+    LOG.debug("Successful query in '$collection' (${results.size}/$amount results)")
 
     return results
   }
@@ -82,10 +87,14 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     val response = client.schema().classGetter().withClassName(name).run()
 
     if (response.hasErrors()) {
-      WeaviateError.requestErrorValidateCollection(response.error)
+      LOG.error(
+        "Weaviate request error: {}, with status: {}",
+        response.error.messages.first().message,
+        response.error.statusCode,
+      )
       return false
     } else if (response.result == null) {
-      WeaviateError.schemaError("Collection '$name' does not exist")
+      LOG.error("Weaviate schema error: Collection '{}' not found", name)
       return false
     }
 
@@ -93,10 +102,37 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     val size = properties.first { it.name == "size" }.description.toInt()
 
     if (size != vectorSize) {
-      WeaviateError.vectorSizeError("Collection '$name' has size $size, expected $vectorSize")
+      LOG.error(
+        "Weaviate vector size mismatch: Collection '$name' has size $size, expected $vectorSize"
+      )
       return false
     }
 
     return true
+  }
+
+  /** Error in transport to Weaviate. */
+  private fun graphQlError(weaviateError: io.weaviate.client.base.WeaviateError): AppError {
+    LOG.error("Weaviate GraphQL error: $weaviateError")
+    return AppError.api(ErrorReason.VectorDatabase, "Weaviate GraphQL error: $weaviateError")
+  }
+
+  /** Internal error when remapping GraphQL data. We do not expose our n00bery to clients. */
+  private fun mappingError(weaviateError: String): AppError {
+    LOG.error("Weaviate mapping error: $weaviateError")
+    return AppError.internal()
+  }
+
+  private fun queryError(errors: Array<GraphQLError>): AppError {
+    LOG.error("Weaviate query error")
+
+    var message = ""
+
+    for (error in errors) {
+      LOG.error(" - ${error.message}")
+      message += "${error.message}\n"
+    }
+
+    return AppError.api(ErrorReason.VectorDatabase, message)
   }
 }

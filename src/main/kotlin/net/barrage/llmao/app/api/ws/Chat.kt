@@ -16,7 +16,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.Chat")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws")
 
 class Chat(
   private val service: ChatService,
@@ -240,14 +240,16 @@ class Chat(
     finalResponse
   }
 
-  suspend fun handleError(emitter: Emitter, e: Throwable, streaming: Boolean) {
+  private suspend fun handleError(emitter: Emitter, e: Throwable, streaming: Boolean) {
     if (streaming) {
+      streamActive = false
       emitter.emitStop()
     }
 
     if (e is AppError) {
       emitter.emitError(e)
     } else {
+      LOG.error("Error in chat", e)
       emitter.emitError(AppError.internal())
     }
   }

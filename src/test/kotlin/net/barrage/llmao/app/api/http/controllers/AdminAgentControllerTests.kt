@@ -21,6 +21,7 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateAgentConfiguration
 import net.barrage.llmao.core.models.UpdateCollections
+import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
@@ -271,8 +272,11 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<List<CollectionItem>>()
-    assertEquals(0, body.size)
+    val body = response.body<UpdateCollectionsResult>()
+    assertEquals(1, body.added.size)
+    assertEquals("Kusturica_small", body.added[0].name)
+    assertEquals(0, body.removed.size)
+    assertEquals(0, body.failed.size)
   }
 
   @Test
@@ -296,9 +300,11 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<List<CollectionItem>>()
-    assertEquals(1, body.size)
-    assertEquals("Kusturica_big", body[0].name)
+    val body = response.body<UpdateCollectionsResult>()
+    assertEquals(0, body.added.size)
+    assertEquals(0, body.removed.size)
+    assertEquals(1, body.failed.size)
+    assertEquals("Kusturica_big", body.failed[0].name)
   }
 
   @Test

@@ -112,7 +112,7 @@ fun Application.websocketServer(server: Server) {
         }
         .onFailure { e ->
           e.printStackTrace()
-          LOG.error("Websocket exception occurred: ${e.localizedMessage}")
+          LOG.error("Websocket exception occurred", e)
           server.removeChat(userId)
           return@webSocket
         }
