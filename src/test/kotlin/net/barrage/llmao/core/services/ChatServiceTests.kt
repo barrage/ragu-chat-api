@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.services
 
+import kotlinx.coroutines.flow.toList
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.Chat
@@ -27,7 +28,20 @@ class ChatServiceTests : IntegrationTest(useWiremockOpenAi = true) {
 
   @Test
   fun successfullyGeneratesChatTitle() = test {
-    val title = chatService.generateTitle(chat.id, "Test prompt", agent.id)
-    assertEquals("v1_chat_completions_response", title)
+    val title = chatService.generateTitle(chat.id, "Test prompt - title", agent.id)
+    assertEquals("v1_chat_completions_title_response", title)
+  }
+
+  @Test
+  fun successfullyStreamsChat() = test {
+    val stream = chatService.chatCompletionStream("Test prompt - stream", listOf(), agent.id)
+    val chunks = stream.toList()
+    println(chunks)
+  }
+
+  @Test
+  fun successfullyCompletesChat() = test {
+    val response = chatService.chatCompletion("Test prompt - completion", listOf(), agent.id)
+    println(response)
   }
 }

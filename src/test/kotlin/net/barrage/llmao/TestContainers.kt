@@ -257,13 +257,26 @@ class TestWeaviate {
 class OpenAiWiremock {
   val container: WireMockContainer =
     WireMockContainer("wiremock/wiremock:3.9.2")
-      .withMappingFromResource("v1_chat_completions", "wiremock/mappings/v1_chat_completions.json")
+      .map("v1_chat_completions_title")
+      .map("v1_chat_completions_stream")
       .withCopyFileToContainer(
-        MountableFile.forClasspathResource("wiremock/responses/v1_chat_completions_response.json"),
-        "/home/wiremock/__files/v1_chat_completions_response.json",
+        file("v1_chat_completions_title_response"),
+        target("v1_chat_completions_title_response"),
       )
 
   init {
     container.start()
   }
+
+  private fun file(name: String): MountableFile {
+    return MountableFile.forClasspathResource("wiremock/responses/$name.json")
+  }
+
+  private fun target(name: String): String {
+    return "/home/wiremock/__files/$name.json"
+  }
+}
+
+private fun WireMockContainer.map(name: String): WireMockContainer {
+  return withMappingFromResource(name, "wiremock/mappings/$name.json")
 }
