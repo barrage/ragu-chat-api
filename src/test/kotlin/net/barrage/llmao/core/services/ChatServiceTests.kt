@@ -28,20 +28,21 @@ class ChatServiceTests : IntegrationTest(useWiremockOpenAi = true) {
 
   @Test
   fun successfullyGeneratesChatTitle() = test {
-    val title = chatService.generateTitle(chat.id, "Test prompt - title", agent.id)
-    assertEquals("v1_chat_completions_title_response", title)
+    val response = chatService.generateTitle(chat.id, "Test prompt - title", agent.id)
+    assertEquals("v1_chat_completions_title_response", response)
   }
 
   @Test
   fun successfullyStreamsChat() = test {
     val stream = chatService.chatCompletionStream("Test prompt - stream", listOf(), agent.id)
-    val chunks = stream.toList()
-    println(chunks)
+    val response =
+      stream.toList().joinToString("") { chunk -> chunk.joinToString { it.content ?: "" } }
+    assertEquals("v1_chat_completions_stream_response", response)
   }
 
   @Test
   fun successfullyCompletesChat() = test {
     val response = chatService.chatCompletion("Test prompt - completion", listOf(), agent.id)
-    println(response)
+    assertEquals("v1_chat_completions_completion_response", response)
   }
 }

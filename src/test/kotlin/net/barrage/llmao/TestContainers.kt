@@ -259,24 +259,28 @@ class OpenAiWiremock {
     WireMockContainer("wiremock/wiremock:3.9.2")
       .map("v1_chat_completions_title")
       .map("v1_chat_completions_stream")
-      .withCopyFileToContainer(
-        file("v1_chat_completions_title_response"),
-        target("v1_chat_completions_title_response"),
-      )
+      .map("v1_chat_completions_completion")
+      .withFile("v1_chat_completions_title_response.json")
+      .withFile("v1_chat_completions_completion_response.json")
+      .withFile("v1_chat_completions_stream_response.txt")
 
   init {
     container.start()
-  }
-
-  private fun file(name: String): MountableFile {
-    return MountableFile.forClasspathResource("wiremock/responses/$name.json")
-  }
-
-  private fun target(name: String): String {
-    return "/home/wiremock/__files/$name.json"
   }
 }
 
 private fun WireMockContainer.map(name: String): WireMockContainer {
   return withMappingFromResource(name, "wiremock/mappings/$name.json")
+}
+
+private fun WireMockContainer.withFile(name: String): WireMockContainer {
+  return withCopyFileToContainer(file(name), target(name))
+}
+
+private fun file(name: String): MountableFile {
+  return MountableFile.forClasspathResource("wiremock/responses/$name")
+}
+
+private fun target(name: String): String {
+  return "/home/wiremock/__files/$name"
 }

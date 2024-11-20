@@ -2,7 +2,6 @@ package net.barrage.llmao
 
 import io.ktor.server.config.*
 import io.ktor.server.config.yaml.*
-import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import java.util.*
 import net.barrage.llmao.app.ApplicationState
@@ -39,6 +38,15 @@ open class IntegrationTest(
 
   private var cfg = YamlConfigLoader().load("application.yaml")!!
   private val cookieName = cfg.property("session.cookieName").getString()
+
+  /**
+   * The main test execution function that uses configuration obtained from the test containers as
+   * the application environment.
+   */
+  fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
+    environment { config = cfg }
+    block()
+  }
 
   @BeforeAll
   fun beforeAll() {
@@ -83,36 +91,33 @@ open class IntegrationTest(
   }
 
   private fun loadOpenAiApi() {
+    if (wiremockUrlOverride != null) {
+      cfg =
+        cfg.mergeWith(
+          MapApplicationConfig(
+            // Has to match the URL from the OpenAI SDK. We are not overriding the API key
+            // since we need a real one for the real deal.
+            "llm.openAi.endpoint" to "${wiremockUrlOverride}/v1/"
+          )
+        )
+      return
+    }
+
     openAiApi = OpenAiWiremock()
-    val url = wiremockUrlOverride ?: openAiApi!!.container.baseUrl
+    val url = openAiApi!!.container.baseUrl
+
+    println("$$$$$$$$$#$$$$$$$")
+    println(url)
+    println("$$$$$$$$$#$$$$$$$")
+
     cfg =
       cfg.mergeWith(
         MapApplicationConfig(
           // Has to match the URL from the OpenAI SDK
-          "llm.openAi.endpoint" to "${url}/v1/"
+          "llm.openAi.endpoint" to "${url}/v1/",
+          "llm.openAi.apiKey" to "super-duper-secret-openai-api-key",
         )
       )
-
-    if (wiremockUrlOverride == null) {
-      cfg =
-        cfg.mergeWith(
-          MapApplicationConfig("llm.openAi.apiKey" to "super-duper-secret-openai-api-key")
-        )
-    }
-  }
-
-  /**
-   * The main test execution function that uses configuration obtained from the test containers as
-   * the application environment.
-   */
-  fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
-    val azureEndpoint = cfg.property("llm.azure.endpoint").getString()
-
-    environment { config = cfg }
-
-    externalServices { hosts("https://$azureEndpoint.openai.azure.com") { routing {} } }
-
-    block()
   }
 
   fun sessionCookie(sessionId: UUID): String = "$cookieName=id%3D%2523s$sessionId"
