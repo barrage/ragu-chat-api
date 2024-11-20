@@ -11,6 +11,7 @@ import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
+import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
@@ -71,7 +72,10 @@ class AgentService(
     return agentRepository.update(id, update)
   }
 
-  suspend fun updateCollections(agentId: KUUID, update: UpdateCollections): List<CollectionItem> {
+  suspend fun updateCollections(
+    agentId: KUUID,
+    update: UpdateCollections,
+  ): UpdateCollectionsResult {
     val vectorDb = providers.vector.getProvider(update.provider)
 
     val agent = agentRepository.get(agentId)
@@ -104,7 +108,7 @@ class AgentService(
       }
 
     agentRepository.updateCollections(agentId, update)
-    return failedCollections
+    return UpdateCollectionsResult(verifiedCollections, update.remove.orEmpty(), failedCollections)
   }
 
   /**

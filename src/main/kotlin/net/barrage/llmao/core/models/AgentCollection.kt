@@ -50,3 +50,10 @@ data class UpdateCollections(
 @Serializable
 data class CollectionItem(@NotBlank val name: String, val amount: Int, val instruction: String) :
   Validation
+
+@Serializable
+data class UpdateCollectionsResult(
+  val added: List<CollectionItem>,
+  val removed: List<String>,
+  val failed: List<CollectionItem>,
+)
