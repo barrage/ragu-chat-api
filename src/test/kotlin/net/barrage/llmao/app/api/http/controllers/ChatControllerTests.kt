@@ -5,6 +5,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import java.util.*
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
@@ -120,6 +121,17 @@ class ChatControllerTests : IntegrationTest() {
     // Messages are sorted by createdAt DESC
     assertEquals(messageOne.id, body[1].id)
     assertEquals(messageTwo.id, body[0].id)
+  }
+
+  @Test
+  fun shouldThrowErrorWhenRetrievingMessagesForNonExistingChat() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/chats/${UUID.randomUUID()}/messages") {
+        header("Cookie", sessionCookie(userSession.sessionId))
+      }
+
+    assertEquals(404, response.status.value)
   }
 
   @Test
