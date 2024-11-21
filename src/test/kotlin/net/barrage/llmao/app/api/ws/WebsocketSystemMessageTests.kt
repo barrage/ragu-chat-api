@@ -7,9 +7,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.websocket.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.chatSession
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
@@ -17,6 +16,8 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.receiveJson
+import net.barrage.llmao.sendClientSystem
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -42,13 +43,7 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun rejectsRequestNoSession() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun rejectsRequestNoSession() = wsTest { client ->
     var asserted = false
 
     client.webSocket("/") {
@@ -63,13 +58,7 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun rejectsRequestMalformedToken() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun rejectsRequestMalformedToken() = wsTest { client ->
     var asserted = false
 
     client.webSocket("/?token=foo") {
@@ -84,16 +73,11 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun rejectsRequestInvalidToken() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun rejectsRequestInvalidToken() = wsTest { client ->
     var asserted = false
 
     val token = KUUID.randomUUID()
+
     client.webSocket("/?token=$token") {
       val result = incoming.receiveCatching()
       assert(result.isClosed)
@@ -106,17 +90,10 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun rejectsMessageInvalidJson() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun rejectsMessageInvalidJson() = wsTest { client ->
     var asserted = false
 
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-    client.webSocket("/?token=$token") {
+    client.chatSession(session.sessionId) {
       send("asdf")
       val response = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(response)
@@ -129,19 +106,11 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun openingNewChatWorks() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun openingNewChatWorks() = wsTest { client ->
     var asserted = false
 
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-    client.webSocket("/?token=$token") {
-      val openChat = SystemMessage.OpenNewChat(agent.id)
-      sendClientSystem(openChat)
+    client.chatSession(session.sessionId) {
+      sendClientSystem(SystemMessage.OpenNewChat(agent.id))
       val response = (incoming.receive() as Frame.Text).readText()
       val message = receiveJson<ServerMessage.ChatOpen>(response)
       assertNotNull(message.chatId)
@@ -152,17 +121,10 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun openingNewChatWorksWithAlreadyOpenChat() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun openingNewChatWorksWithAlreadyOpenChat() = wsTest { client ->
     var asserted = false
 
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-    client.webSocket("/?token=$token") {
+    client.chatSession(session.sessionId) {
       val openChat = SystemMessage.OpenNewChat(agent.id)
 
       sendClientSystem(openChat)
@@ -183,26 +145,17 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun openingExistingChatWorks() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun openingExistingChatWorks() = wsTest { client ->
     var asserted = false
 
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-    client.webSocket("/?token=$token") {
-      val openChat = SystemMessage.OpenNewChat(agent.id)
-      sendClientSystem(openChat)
+    client.chatSession(session.sessionId) {
+      sendClientSystem(SystemMessage.OpenNewChat(agent.id))
 
       val first = (incoming.receive() as Frame.Text).readText()
       val firstMessage = receiveJson<ServerMessage.ChatOpen>(first)
       assertNotNull(firstMessage.chatId)
 
-      val openExistingChat = SystemMessage.OpenExistingChat(firstMessage.chatId)
-      sendClientSystem(openExistingChat)
+      sendClientSystem(SystemMessage.OpenExistingChat(firstMessage.chatId))
 
       val second = (incoming.receive() as Frame.Text).readText()
       val secondMessage = receiveJson<ServerMessage.ChatOpen>(second)
@@ -216,17 +169,10 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun openingExistingChatFailsDoesNotExist() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun openingExistingChatFailsDoesNotExist() = wsTest { client ->
     var asserted = false
 
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-    client.webSocket("/?token=$token") {
+    client.chatSession(session.sessionId) {
       val openChat = SystemMessage.OpenExistingChat(KUUID.randomUUID())
       sendClientSystem(openChat)
 
@@ -241,17 +187,10 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun closesChatOnCloseFrame() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun closesChannelOnCloseFrame() = wsTest { client ->
     var asserted = false
 
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-    client.webSocket("/?token=$token") {
+    client.chatSession(session.sessionId) {
       send(Frame.Close())
       val result = incoming.receiveCatching()
       assert(result.isClosed)
@@ -262,17 +201,10 @@ class WebsocketServerTests : IntegrationTest() {
   }
 
   @Test
-  fun openingChatFailsAgentDoesNotExist() = test {
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
-      }
-    }
-
+  fun openingChatFailsAgentDoesNotExist() = wsTest { client ->
     var asserted = false
 
-    val token = getWsToken(client, sessionCookie(session.sessionId))
-    client.webSocket("/?token=$token") {
+    client.chatSession(session.sessionId) {
       val openChat = SystemMessage.OpenNewChat(KUUID.randomUUID())
       sendClientSystem(openChat)
 
@@ -285,20 +217,4 @@ class WebsocketServerTests : IntegrationTest() {
 
     assert(asserted)
   }
-}
-
-private suspend fun getWsToken(client: HttpClient, cookie: String): String {
-  val res = client.get("/ws") { header(HttpHeaders.Cookie, cookie) }
-  return res.bodyAsText()
-}
-
-private suspend fun ClientWebSocketSession.sendClientSystem(message: SystemMessage) {
-  val jsonMessage = Json.encodeToString(message)
-  val msg = "{ \"type\": \"system\", \"payload\": $jsonMessage }"
-  send(Frame.Text(msg))
-}
-
-private inline fun <reified T> receiveJson(message: String): T {
-  val json = Json { ignoreUnknownKeys = true }
-  return json.decodeFromString(message)
 }
