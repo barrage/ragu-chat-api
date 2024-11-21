@@ -3,7 +3,6 @@ package net.barrage.llmao.core.services
 import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.Encoding
 import com.knuddels.jtokkit.api.ModelType
-import io.ktor.server.plugins.*
 import io.ktor.util.logging.*
 import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.app.ProviderState
@@ -94,17 +93,20 @@ class ChatService(
         .trim()
 
     LOG.trace("Title generated: {}", title)
-    chatRepository.updateTitle(chatId, title) ?: throw NotFoundException("Chat not found")
+    chatRepository.updateTitle(chatId, title)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     return title
   }
 
   fun updateTitle(chatId: KUUID, title: String) {
     chatRepository.updateTitle(chatId, title)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 
   fun updateTitle(chatId: KUUID, userId: KUUID, title: String) {
     chatRepository.updateTitle(chatId, userId, title)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 
   suspend fun chatCompletionStream(
@@ -207,9 +209,10 @@ class ChatService(
   }
 
   fun evaluateMessage(chatId: KUUID, messageId: KUUID, evaluation: Boolean): Message {
-    chatRepository.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
+    chatRepository.getMessage(chatId, messageId)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
     return chatRepository.evaluateMessage(messageId, evaluation)
-      ?: throw NotFoundException("Message not found")
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
   }
 
   fun evaluateMessage(
@@ -218,9 +221,10 @@ class ChatService(
     userId: KUUID,
     evaluation: Boolean,
   ): Message {
-    chatRepository.getMessage(chatId, messageId) ?: throw NotFoundException("Message not found")
+    chatRepository.getMessage(chatId, messageId)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
     return chatRepository.evaluateMessage(messageId, userId, evaluation)
-      ?: throw NotFoundException("Message not found")
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
   }
 
   fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {

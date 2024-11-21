@@ -1,6 +1,6 @@
 package net.barrage.llmao.app.api.http.dto
 
-import io.ktor.server.plugins.requestvalidation.*
+import io.ktor.server.plugins.requestvalidation.ValidationResult
 import kotlinx.serialization.Serializable
 
 @Serializable
