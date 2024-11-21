@@ -24,9 +24,9 @@ open class IntegrationTest(
   private val useWiremock: Boolean = false,
 
   /**
-   * If given and `useWiremockOpenAi` is `true`, an existing wiremock container will be used
-   * instead, located on the URL. Useful for recording responses from test suites. Ideally this
-   * would be an environment variable, but we do not live in an ideal world.
+   * If given and `useWiremock` is `true`, an existing wiremock container will be used instead,
+   * located on the URL. Useful for recording responses from test suites. Ideally this would be an
+   * environment variable, but we do not live in an ideal world.
    */
   private val wiremockUrlOverride: String? = null,
 ) {
@@ -67,7 +67,7 @@ open class IntegrationTest(
     }
 
     if (useWiremock) {
-      loadOpenAiApi()
+      loadWiremock()
     }
 
     val applicationState = ApplicationState(cfg)
@@ -98,7 +98,7 @@ open class IntegrationTest(
       )
   }
 
-  private fun loadOpenAiApi() {
+  private fun loadWiremock() {
     if (wiremockUrlOverride != null) {
       cfg =
         cfg.mergeWith(
@@ -133,11 +133,21 @@ open class IntegrationTest(
 /** Has to be the same name as `session.cookieName`. */
 fun sessionCookie(sessionId: UUID): String = "kappi=id%3D%2523s$sessionId"
 
-// Wiremock message content
+// Wiremock response triggers
 
-/** Prompt configured to make wiremock return a stream response */
+/** Prompt configured to make wiremock return a completion response without a stream. */
+const val COMPLETIONS_COMPLETION_RESPONSE_PROMPT = "v1_chat_completions_completion"
+
+/** Prompt configured to make wiremock return a stream response. */
 const val COMPLETIONS_STREAM_RESPONSE_PROMPT = "v1_chat_completions_stream"
 
+// Wiremock message content
+
+/** Wiremock response for a completion response without a stream. */
 const val COMPLETIONS_RESPONSE = "v1_chat_completions_completion_response"
+
+/** Wiremock response for a stream response. */
 const val COMPLETIONS_TITLE_RESPONSE = "v1_chat_completions_title_response"
+
+/** Wiremock response for a stream response when the stream is collected. */
 const val COMPLETIONS_STREAM_RESPONSE = "v1_chat_completions_stream_response"

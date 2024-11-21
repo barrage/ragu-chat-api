@@ -262,16 +262,17 @@ class ChatService(
 
     val embedded = embedQuery(agent.agent.embeddingProvider, agent.agent.embeddingModel, prompt)
 
-    var documentation = ""
+    var collectionInstructions = ""
+
     for (collection in agent.collections) {
+      val instruction = collection.instruction
       val relatedChunks =
         vectorDb.query(embedded, collection.collection, collection.amount).joinToString("\n\t")
 
-      val instruction = collection.instruction
-      documentation += "$instruction\n\"\"\n\t$relatedChunks\n\"\""
+      collectionInstructions += "$instruction\n\"\"\n\t$relatedChunks\n\"\""
     }
 
-    val message = userMessage(prompt, documentation)
+    val message = userMessage(prompt, collectionInstructions)
 
     LOG.trace("Created user message {}", message)
 
