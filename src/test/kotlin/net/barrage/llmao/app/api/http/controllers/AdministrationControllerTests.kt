@@ -15,6 +15,7 @@ import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DashboardCounts
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue

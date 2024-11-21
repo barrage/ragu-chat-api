@@ -21,7 +21,7 @@ import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class AppErrorHandlingTests : IntegrationTest(false, false) {
+class AppErrorHandlingTests : IntegrationTest() {
 
   @Serializable data class TestJson(val foo: String, val bar: Int)
 

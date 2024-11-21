@@ -1,6 +1,6 @@
 {
   "id": "cebad4f7-17fc-426e-b15a-f57955181c12",
-  "name": "v1_chat_completions_completion",
+  "name": "openai_v1_chat_completions_completion",
   "request": {
     "url": "/v1/chat/completions",
     "method": "POST",
@@ -18,7 +18,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "v1_chat_completions_completion_response.json",
+    "bodyFileName": "openai_v1_chat_completions_completion_response.json",
     "headers": {
       "x-request-id": "req_b80e2a9f31d149a68830d1a40a748c9a",
       "x-ratelimit-limit-tokens": "2000000",

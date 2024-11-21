@@ -242,7 +242,6 @@ class Chat(
   private suspend fun handleError(emitter: Emitter, e: Throwable, streaming: Boolean) {
     if (streaming) {
       streamActive = false
-      emitter.emitStop()
     }
 
     if (e is AppError) {

@@ -7,6 +7,7 @@ import io.ktor.serialization.kotlinx.json.*
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

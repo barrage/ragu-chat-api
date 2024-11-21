@@ -5,8 +5,10 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
+import io.ktor.server.auth.*
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 /**
  * @param endpoint The Azure endpoint to use. Should include the resource identifier.
@@ -54,21 +56,21 @@ class AzureEmbedder(endpoint: String, deployment: String, apiVersion: String, ap
 
   override suspend fun vectorSize(model: String): Int {
     return OpenAiModel.tryFromString(model)?.vectorSize
-      ?: throw IllegalArgumentException("Model $model not found")
+      ?: throw AppError.api(ErrorReason.InvalidParameter, "Model $model not found")
   }
 }
 
-private enum class OpenAiModel(val value: String) {
-  TextEmbedding3Large("text-embedding-3-large"),
-  TextEmbedding3Small("text-embedding-3-small"),
-  TextEmbeddingAda002("text-embedding-ada-002");
+private enum class OpenAiModel(val model: String, val vectorSize: Int) {
+  TextEmbedding3Large(model = "text-embedding-3-large", vectorSize = 3072),
+  TextEmbedding3Small("text-embedding-3-small", 1536),
+  TextEmbeddingAda002("text-embedding-ada-002", 1536);
 
   companion object {
     fun tryFromString(value: String): OpenAiModel? {
       return when (value) {
-        TextEmbedding3Large.value -> TextEmbedding3Large
-        TextEmbedding3Small.value -> TextEmbedding3Small
-        TextEmbeddingAda002.value -> TextEmbeddingAda002
+        TextEmbedding3Large.model -> TextEmbedding3Large
+        TextEmbedding3Small.model -> TextEmbedding3Small
+        TextEmbeddingAda002.model -> TextEmbeddingAda002
         else -> null
       }
     }

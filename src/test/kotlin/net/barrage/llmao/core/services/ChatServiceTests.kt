@@ -1,6 +1,9 @@
 package net.barrage.llmao.core.services
 
 import kotlinx.coroutines.flow.toList
+import net.barrage.llmao.COMPLETIONS_RESPONSE
+import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
+import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.Chat
@@ -9,7 +12,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class ChatServiceTests : IntegrationTest(useWiremockOpenAi = true) {
+class ChatServiceTests : IntegrationTest(useWiremock = true) {
   private lateinit var chatService: ChatService
 
   private lateinit var admin: User
@@ -29,20 +32,20 @@ class ChatServiceTests : IntegrationTest(useWiremockOpenAi = true) {
   @Test
   fun successfullyGeneratesChatTitle() = test {
     val response = chatService.generateTitle(chat.id, "Test prompt - title", agent.id)
-    assertEquals("v1_chat_completions_title_response", response)
+    assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
   }
 
   @Test
   fun successfullyStreamsChat() = test {
-    val stream = chatService.chatCompletionStream("Test prompt - stream", listOf(), agent.id)
+    val stream = chatService.chatCompletionStream("v1_chat_completions_stream", listOf(), agent.id)
     val response =
       stream.toList().joinToString("") { chunk -> chunk.joinToString { it.content ?: "" } }
-    assertEquals("v1_chat_completions_stream_response", response)
+    assertEquals(COMPLETIONS_STREAM_RESPONSE, response)
   }
 
   @Test
   fun successfullyCompletesChat() = test {
     val response = chatService.chatCompletion("Test prompt - completion", listOf(), agent.id)
-    assertEquals("v1_chat_completions_completion_response", response)
+    assertEquals(COMPLETIONS_RESPONSE, response)
   }
 }
