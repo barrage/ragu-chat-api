@@ -8,7 +8,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -51,34 +50,31 @@ suspend fun ClientWebSocketSession.sendMessage(text: String): String {
 
   var buffer = ""
 
-  withTimeout(10000) {
-    while (true) {
-      val response = (incoming.receive() as Frame.Text).readText()
-
-      try {
-        when (val finishEvent = json.decodeFromString<ServerMessage>(response)) {
-          is ServerMessage.FinishEvent -> {
-            assert(finishEvent.reason == FinishReason.Stop)
-            assertNull(finishEvent.content)
-            break
-          }
-
-          is ServerMessage.ChatTitle -> {
-            assertEquals(COMPLETIONS_TITLE_RESPONSE, finishEvent.title.isNotBlank())
-          }
-
-          else -> {}
+  for (frame in incoming) {
+    val response = (frame as Frame.Text).readText()
+    try {
+      when (val finishEvent = json.decodeFromString<ServerMessage>(response)) {
+        is ServerMessage.FinishEvent -> {
+          assert(finishEvent.reason == FinishReason.Stop)
+          assertNull(finishEvent.content)
+          break
         }
-      } catch (e: SerializationException) {
-        val errMessage = e.message ?: throw e
-        if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-          throw e
+
+        is ServerMessage.ChatTitle -> {
+          assertEquals(COMPLETIONS_TITLE_RESPONSE, finishEvent.title.isNotBlank())
         }
-        buffer += response
-      } catch (e: Throwable) {
-        e.printStackTrace()
-        break
+
+        else -> {}
       }
+    } catch (e: SerializationException) {
+      val errMessage = e.message ?: throw e
+      if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
+        throw e
+      }
+      buffer += response
+    } catch (e: Throwable) {
+      e.printStackTrace()
+      break
     }
   }
 

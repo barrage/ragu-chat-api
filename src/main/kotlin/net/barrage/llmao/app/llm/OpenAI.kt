@@ -18,7 +18,7 @@ private const val TITLE_GENERATION_MODEL = "gpt-4"
 class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
   private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
 
-  internal val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
+  private val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
 
   override fun id(): String {
     return "openai"
