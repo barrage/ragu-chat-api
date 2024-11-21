@@ -32,6 +32,7 @@ class AdminChatControllerTests : IntegrationTest() {
   private lateinit var agentConfiguration: AgentConfiguration
   private lateinit var chatOne: Chat
   private lateinit var chatTwo: Chat
+  private lateinit var chatThree: Chat
   private lateinit var messageOne: Message
   private lateinit var messageTwo: Message
   private lateinit var chatRepository: ChatRepository
@@ -46,6 +47,7 @@ class AdminChatControllerTests : IntegrationTest() {
     agentConfiguration = postgres!!.testAgentConfiguration(agent.id)
     chatOne = postgres!!.testChat(user.id, agent.id)
     chatTwo = postgres!!.testChat(user.id, agent.id)
+    chatThree = postgres!!.testChat(userAdmin.id, agent.id)
     messageOne = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
     messageTwo = postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
     chatRepository = ChatRepository(postgres!!.dslContext)
@@ -57,6 +59,20 @@ class AdminChatControllerTests : IntegrationTest() {
     val response =
       client.get("/admin/chats") {
         header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<CountedList<ChatWithUserAndAgent>>()
+    assertNotNull(body)
+    assertEquals(3, body.total)
+  }
+
+  @Test
+  fun shouldRetrieveAllChatsFilterByUserId() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/admin/chats") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        parameter("userId", user.id)
       }
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<CountedList<ChatWithUserAndAgent>>()
