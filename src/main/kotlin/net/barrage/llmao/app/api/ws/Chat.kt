@@ -164,7 +164,6 @@ class Chat(
           },
       )
 
-    emitter.emitStop()
     emitter.emitServer(emitPayload)
 
     if (title.isNullOrBlank()) {
