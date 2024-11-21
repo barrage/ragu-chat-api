@@ -265,10 +265,10 @@ class ChatService(
     var documentation = ""
     for (collection in agent.collections) {
       val relatedChunks =
-        vectorDb.query(embedded, collection.collection, collection.amount).joinToString("\n")
+        vectorDb.query(embedded, collection.collection, collection.amount).joinToString("\n\t")
 
       val instruction = collection.instruction
-      documentation += "$instruction\n$relatedChunks"
+      documentation += "$instruction\n\"\"\n\t$relatedChunks\n\"\""
     }
 
     val message = userMessage(prompt, documentation)
@@ -284,23 +284,17 @@ class ChatService(
     return ChatMessage.system(context)
   }
 
-  private fun userMessage(prompt: String, documentation: String): ChatMessage {
-    val message =
+  private fun userMessage(prompt: String, instructions: String): ChatMessage {
+    val base =
       """
-      Use the relevant information below, as well as the information from the current conversation to answer
-      the prompt below. If there is enough information from the current conversation to answer the prompt,
-      do so without referring to the relevant information. The user is not aware of the relevant information.
-      Do not refer to the relevant information unless explicitly asked.
-      
-      Relevant information: ${"\"\"\""}
-        $documentation
-      ${"\"\"\""}
-      
-      Prompt: ${"\"\"\""}
-        $prompt
-      ${"\"\"\""}
-    """
+        Use the instructions surrounded by triple quotes to respond to the prompt surrounded by triple quotes.
+        Also use the information from the current conversation to respond if it is relevant.
+        If you do not know something, admit so."""
         .trimIndent()
+
+    val message =
+      "$base\nInstructions: ${"\"\"\""}\n$instructions\n${"\"\"\""}\nPrompt: ${"\"\"\""}\n$prompt\n${"\"\"\""}"
+
     return ChatMessage.user(message)
   }
 

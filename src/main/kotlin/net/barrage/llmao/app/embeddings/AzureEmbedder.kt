@@ -61,7 +61,7 @@ class AzureEmbedder(endpoint: String, deployment: String, apiVersion: String, ap
 }
 
 private enum class OpenAiModel(val model: String, val vectorSize: Int) {
-  TextEmbedding3Large(model = "text-embedding-3-large", vectorSize = 3072),
+  TextEmbedding3Large("text-embedding-3-large", 3072),
   TextEmbedding3Small("text-embedding-3-small", 1536),
   TextEmbeddingAda002("text-embedding-ada-002", 1536);
 
