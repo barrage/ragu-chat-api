@@ -135,6 +135,9 @@ fun sessionCookie(sessionId: UUID): String = "kappi=id%3D%2523s$sessionId"
 
 // Wiremock message content
 
+/** Prompt configured to make wiremock return a stream response */
+const val COMPLETIONS_STREAM_RESPONSE_PROMPT = "v1_chat_completions_stream"
+
 const val COMPLETIONS_RESPONSE = "v1_chat_completions_completion_response"
 const val COMPLETIONS_TITLE_RESPONSE = "v1_chat_completions_title_response"
 const val COMPLETIONS_STREAM_RESPONSE = "v1_chat_completions_stream_response"
