@@ -72,10 +72,6 @@ class ChatService(
     return chatRepository.getWithMessages(chatId)
   }
 
-  fun getMessages(chatId: KUUID): List<Message> {
-    return chatRepository.getMessages(chatId)
-  }
-
   fun storeChat(id: KUUID, userId: KUUID, agentId: KUUID, title: String?) {
     chatRepository.insert(id, userId, agentId, title)
   }
@@ -231,11 +227,18 @@ class ChatService(
   }
 
   fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
-    return if (userId != null) {
-      chatRepository.getMessagesForUser(id, userId)
-    } else {
-      chatRepository.getMessages(id)
+    val messages =
+      if (userId != null) {
+        chatRepository.getMessagesForUser(id, userId)
+      } else {
+        chatRepository.getMessages(id)
+      }
+
+    if (messages.isEmpty()) {
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
     }
+
+    return messages
   }
 
   fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
