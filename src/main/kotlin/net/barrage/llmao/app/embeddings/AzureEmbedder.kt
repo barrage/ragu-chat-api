@@ -8,39 +8,26 @@ import com.aallam.openai.client.OpenAIHost
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.error.AppError
 
-private const val DEPLOYMENT_ID = "gipitty-text-embedding-ada-002"
+/**
+ * @param endpoint The Azure endpoint to use. Should include the resource identifier.
+ * @param deployment The Azure deployment to use. TODO: Figure out if this is always 1:1 with
+ *   models.
+ * @param apiVersion The Azure API version to use.
+ * @param apiKey The Azure API key to use.
+ */
+class AzureEmbedder(endpoint: String, deployment: String, apiVersion: String, apiKey: String) :
+  Embedder {
+  private val client: OpenAI
 
-private enum class OpenAiModel(val value: String, val vectorSize: Int) {
-  TextEmbedding3Large("text-embedding-3-large", 3072),
-  TextEmbedding3Small("text-embedding-3-small", 1536),
-  TextEmbeddingAda002("text-embedding-ada-002", 1536);
-
-  companion object {
-    fun tryFromString(value: String): OpenAiModel? {
-      return when (value) {
-        TextEmbedding3Large.value -> TextEmbedding3Large
-        TextEmbedding3Small.value -> TextEmbedding3Small
-        TextEmbeddingAda002.value -> TextEmbeddingAda002
-        else -> null
-      }
-    }
-  }
-}
-
-class AzureEmbedder(apiVersion: String, endpoint: String, apiKey: String) : Embedder {
-  private val client =
-    OpenAI(
-      OpenAIConfig(
-        host =
-          OpenAIHost.azure(
-            resourceName = endpoint,
-            deploymentId = DEPLOYMENT_ID,
-            apiVersion = apiVersion,
-          ),
-        headers = mapOf("api-key" to apiKey),
-        token = apiKey,
+  init {
+    val host =
+      OpenAIHost(
+        baseUrl = "$endpoint/$deployment/",
+        queryParams = mapOf("api-version" to apiVersion),
       )
-    )
+
+    client = OpenAI(OpenAIConfig(host = host, headers = mapOf("api-key" to apiKey), token = apiKey))
+  }
 
   override fun id(): String {
     return "azure"
@@ -68,5 +55,22 @@ class AzureEmbedder(apiVersion: String, endpoint: String, apiKey: String) : Embe
   override suspend fun vectorSize(model: String): Int {
     return OpenAiModel.tryFromString(model)?.vectorSize
       ?: throw IllegalArgumentException("Model $model not found")
+  }
+}
+
+private enum class OpenAiModel(val value: String) {
+  TextEmbedding3Large("text-embedding-3-large"),
+  TextEmbedding3Small("text-embedding-3-small"),
+  TextEmbeddingAda002("text-embedding-ada-002");
+
+  companion object {
+    fun tryFromString(value: String): OpenAiModel? {
+      return when (value) {
+        TextEmbedding3Large.value -> TextEmbedding3Large
+        TextEmbedding3Small.value -> TextEmbedding3Small
+        TextEmbeddingAda002.value -> TextEmbeddingAda002
+        else -> null
+      }
+    }
   }
 }
