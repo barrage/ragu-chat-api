@@ -33,11 +33,12 @@ class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embe
   }
 
   private fun initAzureEmbedder(config: ApplicationConfig): AzureEmbedder {
-    val apiVersion = config.property("embeddings.azure.apiVersion").getString()
     val endpoint = config.property("embeddings.azure.endpoint").getString()
+    val deployment = config.property("embeddings.azure.deployment").getString()
+    val apiVersion = config.property("embeddings.azure.apiVersion").getString()
     val apiKey = config.property("embeddings.azure.apiKey").getString()
 
-    return AzureEmbedder(apiVersion, endpoint, apiKey)
+    return AzureEmbedder(endpoint, deployment, apiVersion, apiKey)
   }
 
   private fun initFastEmbedder(config: ApplicationConfig): FastEmbedder {
