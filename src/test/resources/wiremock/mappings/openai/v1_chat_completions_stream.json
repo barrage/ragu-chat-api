@@ -1,6 +1,6 @@
 {
   "id": "55392cc8-84fa-440b-a3d1-f4457058c777",
-  "name": "v1_chat_completions_stream",
+  "name": "openai_v1_chat_completions_stream",
   "request": {
     "url": "/v1/chat/completions",
     "headers": {
@@ -11,14 +11,16 @@
     "method": "POST",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$.messages[1].content",
-        "contains": "Test prompt - stream"
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "v1_chat_completions_stream"
+        }
       }
     ]
   },
   "response": {
     "status": 200,
-    "bodyFileName": "v1_chat_completions_stream_response.txt",
+    "bodyFileName": "openai_v1_chat_completions_stream_response.txt",
     "headers": {
       "x-request-id": "req_610203e780db60ebd99fd9c962d8b1a8",
       "x-ratelimit-limit-tokens": "2000000",

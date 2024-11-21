@@ -11,6 +11,7 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll

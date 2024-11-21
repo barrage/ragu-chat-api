@@ -1,19 +1,21 @@
 {
   "id": "ff6edea8-22bc-4bfe-8296-f08d2d060cdf",
-  "name": "v1_chat_completions_title",
+  "name": "openai_v1_chat_completions_title",
   "request": {
     "url": "/v1/chat/completions",
     "method": "POST",
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$.messages[0].content",
-        "contains": "Test prompt - title"
+        "matchesJsonPath": {
+          "expression": "$.messages[0].role",
+          "equalTo": "user"
+        }
       }
     ]
   },
   "response": {
     "status": 200,
-    "bodyFileName": "v1_chat_completions_title_response.json",
+    "bodyFileName": "openai_v1_chat_completions_title_response.json",
     "headers": {
       "x-request-id": "req_5bc00f1e823e781b9f2270a2cd01b575",
       "x-ratelimit-limit-tokens": "2000000",

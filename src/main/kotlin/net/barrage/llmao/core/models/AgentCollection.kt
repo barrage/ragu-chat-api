@@ -18,7 +18,7 @@ data class AgentCollection(
   val updatedAt: KOffsetDateTime,
 )
 
-fun AgentCollectionsRecord.toCollection(): AgentCollection {
+fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
   return AgentCollection(
     id = id!!,
     agentId = agentId,

@@ -4,7 +4,7 @@ import io.ktor.client.request.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class HealthCheckTest : IntegrationTest(false, false) {
+class HealthCheckTest : IntegrationTest() {
 
   @Test
   fun testHealthCheck() = test {

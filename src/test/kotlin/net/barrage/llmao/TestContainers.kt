@@ -2,6 +2,7 @@ package net.barrage.llmao
 
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
+import io.weaviate.client.v1.data.model.WeaviateObject
 import io.weaviate.client.v1.schema.model.Property
 import io.weaviate.client.v1.schema.model.WeaviateClass
 import java.time.OffsetDateTime
@@ -10,17 +11,20 @@ import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.toAgent
+import net.barrage.llmao.core.models.toAgentCollection
 import net.barrage.llmao.core.models.toAgentConfiguration
 import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
+import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.records.ChatsRecord
@@ -28,6 +32,7 @@ import net.barrage.llmao.tables.records.MessagesRecord
 import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.AGENTS
+import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
@@ -55,7 +60,7 @@ class TestPostgres {
 
   val dslContext: DSLContext
 
-  private lateinit var liquibase: Liquibase
+  private val liquibase: Liquibase
 
   init {
     container.start()
@@ -186,6 +191,24 @@ class TestPostgres {
     return configuration
   }
 
+  fun testAgentCollection(
+    agentId: UUID,
+    collection: String,
+    amount: Int,
+    instruction: String,
+  ): AgentCollection {
+    return dslContext
+      .insertInto(AGENT_COLLECTIONS)
+      .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
+      .set(AGENT_COLLECTIONS.COLLECTION, collection)
+      .set(AGENT_COLLECTIONS.AMOUNT, amount)
+      .set(AGENT_COLLECTIONS.INSTRUCTION, instruction)
+      .returning()
+      .fetchInto(AgentCollectionsRecord::class.java)
+      .map { it.toAgentCollection() }
+      .first()
+  }
+
   fun testChat(userId: UUID, agentId: UUID, title: String? = "Test Chat Title"): Chat {
     return dslContext
       .insertInto(CHATS)
@@ -252,17 +275,54 @@ class TestWeaviate {
 
     client.schema().classCreator().withClass(newClass).run()
   }
+
+  fun insertVectors(collection: String, vectors: List<Pair<String, List<Float>>>) {
+    val batcher = client.batch().objectsBatcher()
+
+    vectors.forEach { (content, vector) ->
+      val properties = HashMap<String, Any>()
+      properties["content"] = content
+
+      val obj =
+        WeaviateObject.builder()
+          .className(collection)
+          .properties(properties)
+          .vector(vector.toTypedArray())
+          .build()
+
+      batcher.withObject(obj)
+    }
+
+    val result = batcher.run()
+
+    if (result.hasErrors()) {
+      throw RuntimeException("Error inserting vectors: ${result.error}")
+    }
+  }
 }
 
-class OpenAiWiremock {
+/**
+ * Holds the Wiremock test container.
+ *
+ * The `mappings` directory contains the definition for responses we mock.
+ *
+ * Each response will have a `bodyFileName` in the response designating the body for it. When the
+ * container is started it will copy all files from the `responses` directory to the
+ * `/home/wiremock/__files` directory in the container and the directory will be flat, containing
+ * only files. The `bodyFileName` must be equal to the file name in the container directory, which
+ * is also why every response must have a unique name, regardless of the directory.
+ */
+class Wiremock {
   val container: WireMockContainer =
     WireMockContainer("wiremock/wiremock:3.9.2")
-      .map("v1_chat_completions_title")
-      .map("v1_chat_completions_stream")
-      .map("v1_chat_completions_completion")
-      .withFile("v1_chat_completions_title_response.json")
-      .withFile("v1_chat_completions_completion_response.json")
-      .withFile("v1_chat_completions_stream_response.txt")
+      .map("openai/v1_chat_completions_title")
+      .toResponse("openai", "openai_v1_chat_completions_title_response.json")
+      .map("openai/v1_chat_completions_stream")
+      .toResponse("openai", "openai_v1_chat_completions_completion_response.json")
+      .map("openai/v1_chat_completions_completion")
+      .toResponse("openai", "openai_v1_chat_completions_stream_response.txt")
+      .map("azure/embeddings_ada-002")
+      .toResponse("azure", "azure_embeddings_ada-002_response.json")
 
   init {
     container.start()
@@ -273,14 +333,9 @@ private fun WireMockContainer.map(name: String): WireMockContainer {
   return withMappingFromResource(name, "wiremock/mappings/$name.json")
 }
 
-private fun WireMockContainer.withFile(name: String): WireMockContainer {
-  return withCopyFileToContainer(file(name), target(name))
-}
-
-private fun file(name: String): MountableFile {
-  return MountableFile.forClasspathResource("wiremock/responses/$name")
-}
-
-private fun target(name: String): String {
-  return "/home/wiremock/__files/$name"
+private fun WireMockContainer.toResponse(dir: String, name: String): WireMockContainer {
+  return withCopyFileToContainer(
+    MountableFile.forClasspathResource("wiremock/responses/$dir/$name"),
+    "/home/wiremock/__files/$name",
+  )
 }

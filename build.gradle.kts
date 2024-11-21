@@ -38,6 +38,7 @@ repositories { mavenCentral() }
 
 sourceSets { main { resources { srcDir("config") } } }
 
+// We need these during the build step because of JOOQ class generation.
 buildscript {
   dependencies {
     classpath("org.testcontainers:postgresql:1.20.2")
@@ -129,6 +130,8 @@ val dbChangelog = "src/main/resources/db/changelog.yaml"
 
 var tempDb: PostgreSQLContainer<*>? = null
 
+// When running in the cloud (gitlab runner, etc) we need to use a temporary test container
+// where we'll run migrations so JOOQ can grab the schema and do the codegen.
 if (env != "local") {
   tempDb =
     PostgreSQLContainer<Nothing>("postgres:latest")

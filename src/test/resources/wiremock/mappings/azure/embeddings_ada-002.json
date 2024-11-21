@@ -1,0 +1,35 @@
+{
+  "id": "a6febda6-a28f-407b-9563-390a157769b3",
+  "name": "azure_embeddings_ada-002",
+  "request": {
+    "url": "/openai/deployments/gipitty-text-embedding-ada-002/embeddings?api-version=2023-05-15",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.model",
+        "equalTo": "text-embedding-ada-002"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "azure_embeddings_ada-002_response.json",
+    "headers": {
+      "x-request-id": "22d1330d-e023-4edf-a89b-33a1f2ff9d0c",
+      "access-control-allow-origin": "*",
+      "x-ms-region": "West Europe",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+      "x-content-type-options": "nosniff",
+      "apim-request-id": "f65717cf-73dd-4b56-99f9-1bd0c90a0075",
+      "x-ratelimit-remaining-tokens": "239995",
+      "x-ratelimit-remaining-requests": "239",
+      "Date": "Thu, 21 Nov 2024 10:11:17 GMT",
+      "x-ms-client-request-id": "f65717cf-73dd-4b56-99f9-1bd0c90a0075",
+      "azureml-model-session": "z2f2961e943cb",
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "a6febda6-a28f-407b-9563-390a157769b3",
+  "persistent": true,
+  "insertionIndex": 20
+}

@@ -13,8 +13,8 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toAgent
+import net.barrage.llmao.core.models.toAgentCollection
 import net.barrage.llmao.core.models.toAgentConfiguration
-import net.barrage.llmao.core.models.toCollection
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -262,12 +262,12 @@ class AgentRepository(private val dslContext: DSLContext) {
     }
   }
 
-  fun getCollections(id: KUUID): List<AgentCollection> {
+  private fun getCollections(id: KUUID): List<AgentCollection> {
     return dslContext
       .selectFrom(AGENT_COLLECTIONS)
       .where(AGENT_COLLECTIONS.AGENT_ID.eq(id))
       .fetchInto(AgentCollectionsRecord::class.java)
-      .map { it.toCollection() }
+      .map { it.toAgentCollection() }
   }
 
   private fun getSortOrderAgent(

@@ -1,11 +1,6 @@
 package net.barrage.llmao.app.api.ws
 
-import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.*
 import io.ktor.websocket.*
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.chatSession
@@ -24,7 +19,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class WebsocketServerTests : IntegrationTest() {
+class WebsocketSystemMessageTests : IntegrationTest() {
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
   private lateinit var user: User

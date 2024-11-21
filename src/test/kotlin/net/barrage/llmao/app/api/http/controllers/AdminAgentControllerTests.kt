@@ -26,6 +26,7 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

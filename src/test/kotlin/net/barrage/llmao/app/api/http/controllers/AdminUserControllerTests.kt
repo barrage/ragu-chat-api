@@ -13,6 +13,7 @@ import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.sessionCookie
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
 import net.barrage.llmao.utils.ValidationError
