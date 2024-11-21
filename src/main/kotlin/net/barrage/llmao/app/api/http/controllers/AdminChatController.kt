@@ -23,12 +23,14 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
+import net.barrage.llmao.plugins.queryParam
 
 fun Route.adminChatsRoutes(service: ChatService) {
   route("/admin/chats") {
     get(adminGetAllChats()) {
       val pagination = call.query(PaginationSort::class)
-      val chats = service.listChatsAdmin(pagination)
+      val userId = call.queryParam("userId")?.let(KUUID::fromString)
+      val chats = service.listChatsAdmin(pagination, userId)
       call.respond(HttpStatusCode.OK, chats)
     }
 
@@ -75,7 +77,14 @@ fun Route.adminChatsRoutes(service: ChatService) {
 private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve list of all chats"
-  request { queryPagination() }
+  request {
+    queryPagination()
+    queryParameter<KUUID>("userId") {
+      description = "Filter by user ID"
+      required = false
+      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
   response {
     HttpStatusCode.OK to
       {
