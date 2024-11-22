@@ -323,6 +323,10 @@ class Wiremock {
       .toResponse("openai", "openai_v1_chat_completions_stream_response.txt")
       .map("azure/embeddings_ada-002")
       .toResponse("azure", "azure_embeddings_ada-002_response.json")
+      .map("openai/v1_embeddings_ada-002")
+      .toResponse("openai", "openai_v1_embeddings_ada-002_response.json")
+      .map("openai/v1_embeddings_large-3")
+      .toResponse("openai", "openai_v1_embeddings_large-3_response.json")
 
   init {
     container.start()

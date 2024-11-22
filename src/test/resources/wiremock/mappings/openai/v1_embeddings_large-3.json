@@ -1,0 +1,50 @@
+{
+  "id": "857eb08a-66b5-4671-bdc9-25676465438b",
+  "name": "v1_embeddings_large-3",
+  "request": {
+    "url": "/v1/embeddings",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.model",
+          "equalTo": "text-embedding-3-large"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "openai_v1_embeddings_large-3_response.json",
+    "headers": {
+      "x-request-id": "req_d51fd286ed882d0f8b1549bb0bc2d1a5",
+      "x-ratelimit-limit-tokens": "5000000",
+      "openai-organization": "barrage",
+      "CF-RAY": "8e6794302c84ec28-ZAG",
+      "Server": "cloudflare",
+      "X-Content-Type-Options": "nosniff",
+      "x-ratelimit-reset-requests": "6ms",
+      "x-ratelimit-remaining-tokens": "4999991",
+      "x-ratelimit-remaining-requests": "9999",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+      "Date": "Fri, 22 Nov 2024 08:34:11 GMT",
+      "x-ratelimit-reset-tokens": "0s",
+      "access-control-expose-headers": "X-Request-ID",
+      "access-control-allow-origin": "*",
+      "CF-Cache-Status": "DYNAMIC",
+      "x-ratelimit-limit-requests": "10000",
+      "Set-Cookie": [
+        "__cf_bm=yqpNK5IefWvfHxrpFgHZe1MXJ7yTlRG55ZoClgCv1yw-1732264451-1.0.1.1-FC0eFo.3bVkEUGISCoJy_mQSfMisOFK_oE4qz72i6V03XCSjF7gIpdKGfvtitWBvjL4WYVjkOEyp8llsoedyXA; path=/; expires=Fri, 22-Nov-24 09:04:11 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None",
+        "_cfuvid=ZxS9ITrKhMElSVzC5hjPgKEVlJK3BQVQZJqRU7hCxPM-1732264451460-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None"
+      ],
+      "openai-version": "2020-10-01",
+      "openai-processing-ms": "159",
+      "openai-model": "text-embedding-3-large",
+      "alt-svc": "h3=\":443\"; ma=86400",
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "857eb08a-66b5-4671-bdc9-25676465438b",
+  "persistent": true,
+  "insertionIndex": 29
+}
