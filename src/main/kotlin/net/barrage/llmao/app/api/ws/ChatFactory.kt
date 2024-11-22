@@ -9,14 +9,20 @@ import net.barrage.llmao.error.ErrorReason
 
 class ChatFactory(private val agentService: AgentService, private val chatService: ChatService) {
 
-  fun new(userId: KUUID, agentId: KUUID): Chat {
+  fun new(userId: KUUID, agentId: KUUID, channel: Channel): Chat {
     val id = KUUID.randomUUID()
-    // Throws if the agent does not exist
+    // Throws if the agent does not exist or is inactive
     agentService.getActive(agentId)
-    return Chat(chatService, id = id, userId = userId, agentId = agentId)
+    return Chat(
+      id = id,
+      service = chatService,
+      userId = userId,
+      agentId = agentId,
+      channel = channel,
+    )
   }
 
-  fun fromExisting(id: KUUID): Chat {
+  fun fromExisting(id: KUUID, channel: Channel): Chat {
     val chat =
       chatService.getChat(id)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$id'")
@@ -26,13 +32,14 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
     val history = chat.messages.map(ChatMessage::fromModel)
 
     return Chat(
-      chatService,
       id = chat.chat.id,
+      service = chatService,
       userId = chat.chat.userId,
       agentId = chat.chat.agentId,
       title = chat.chat.title,
       messageReceived = history.isNotEmpty(),
       history = history as MutableList<ChatMessage>,
+      channel = channel,
     )
   }
 }
