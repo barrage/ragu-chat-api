@@ -1,97 +1,153 @@
 package net.barrage.llmao.app.api.ws
 
+import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
+import java.time.Duration
+import java.util.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.plugins.queryParam
+import net.barrage.llmao.plugins.user
 
-class Server(private val factory: ChatFactory) {
-  /** Maps user IDs to their chat instances. */
-  private val chats: MutableMap<KUUID, Chat> = mutableMapOf()
+fun Application.websocketServer(factory: ChatFactory) {
+  val messageHandler = MessageHandler(factory)
 
-  /** Maps one time tokens to user IDs. */
-  private val tokens: MutableMap<KUUID, KUUID> = mutableMapOf()
+  val tokenManager = TokenManager()
 
-  /** The reverse of `tokens`. Used to prevent overflowing the map. */
-  private val pendingTokens: MutableMap<KUUID, KUUID> = mutableMapOf()
-
-  /** Register a token and map it to the authenticating user's ID. */
-  fun registerToken(userId: KUUID): KUUID {
-    val existingToken = pendingTokens[userId]
-
-    if (existingToken != null) {
-      return existingToken
-    }
-
-    val token = KUUID.randomUUID()
-
-    tokens[token] = userId
-    pendingTokens[userId] = token
-
-    return token
+  install(WebSockets) {
+    // FIXME: Shrink
+    maxFrameSize = Long.MAX_VALUE
+    masking = false
+    contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+    pingPeriod = Duration.ofSeconds(5)
   }
 
-  /**
-   * Remove the token from the token map. If this returns a non-null value, the user is
-   * authenticated.
-   */
-  fun removeToken(token: KUUID): KUUID? {
-    val userId = tokens.remove(token) ?: return null
-    pendingTokens.remove(userId)
-    return userId
-  }
-
-  fun removeChat(userId: KUUID) {
-    chats.remove(userId)
-  }
-
-  suspend fun handleMessage(userId: KUUID, message: ClientMessage, emitter: Emitter) {
-    when (message) {
-      is ClientMessage.Chat -> handleChatMessage(emitter, userId, message.text)
-      is ClientMessage.System -> handleSystemMessage(emitter, userId, message.payload)
-    }
-  }
-
-  private fun handleChatMessage(emitter: Emitter, userId: KUUID, message: String) {
-    val chat =
-      chats[userId] ?: throw AppError.api(ErrorReason.Websocket, "Chat not open for user '$userId'")
-
-    if (chat.isStreaming()) {
-      throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
-    }
-
-    chat.startStreaming(message, emitter)
-  }
-
-  private suspend fun handleSystemMessage(emitter: Emitter, userId: KUUID, message: SystemMessage) {
-    when (message) {
-      is SystemMessage.OpenNewChat -> {
-        val chat = factory.new(userId, message.agentId)
-        this.chats[userId] = chat
-        emitter.emitServer(ServerMessage.ChatOpen(chat.id))
-      }
-      is SystemMessage.OpenExistingChat -> {
-        val chat = chats[userId]
-        if (chat != null) {
-          emitter.emitServer(ServerMessage.ChatOpen(chat.id))
-          return
-        }
-        val existingChat = factory.fromExisting(message.chatId)
-        chats[userId] = existingChat
-        emitter.emitServer(ServerMessage.ChatOpen(message.chatId))
-        LOG.debug("Opened chat ({}) for user '{}'", existingChat.id, userId)
-      }
-      is SystemMessage.CloseChat -> {
-        val chat = chats.remove(userId)
-        chat?.let {
-          emitter.emitServer(ServerMessage.ChatClosed(it.id))
-          it.closeStream()
-          LOG.debug("Closed chat for user '{}'", userId)
+  routing {
+    // Protected WS route for one time tokens.
+    authenticate("auth-session") {
+      route("/ws") {
+        get(websocketGenerateToken()) {
+          val user = call.user()
+          val token = tokenManager.registerToken(user.id)
+          call.respond(HttpStatusCode.OK, "$token")
         }
       }
-      is SystemMessage.StopStream -> {
-        val chat = chats[userId]
-        chat?.closeStream()
-      }
     }
+
+    // The websocket route is unprotected in regards to the regular HTTP auth mechanisms (read
+    // cookies). We protect it manually with the TokenManager.
+    webSocket {
+      // Validate session
+      val rawToken = call.queryParam("token")
+
+      if (rawToken == null) {
+        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
+        return@webSocket
+      }
+
+      val token: KUUID
+      try {
+        token = KUUID.fromString(rawToken)
+      } catch (e: IllegalArgumentException) {
+        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
+        return@webSocket
+      }
+
+      val userId = tokenManager.removeToken(token)
+
+      if (userId == null) {
+        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
+        return@webSocket
+      }
+
+      val channel = channel()
+
+      LOG.debug("Websocket connection opened for '{}'", userId)
+
+      runCatching {
+          for (frame in incoming) {
+            if (frame !is Frame.Text) {
+              LOG.warn("Unsupported frame received, {}", frame)
+              continue
+            }
+
+            val message =
+              try {
+                Json.decodeFromString<ClientMessage>(frame.readText())
+              } catch (e: Throwable) {
+                e.printStackTrace()
+                channel.emitError(
+                  AppError.api(ErrorReason.InvalidParameter, "Message format malformed")
+                )
+                continue
+              }
+
+            try {
+              messageHandler.handleMessage(userId, message, channel)
+            } catch (error: AppError) {
+              channel.emitError(error)
+            }
+          }
+        }
+        .onFailure { e ->
+          e.printStackTrace()
+          LOG.error("Websocket exception occurred", e)
+          messageHandler.removeChat(userId)
+          return@webSocket
+        }
+
+      // From this point on, the websocket connection is closed
+      LOG.debug("Websocket connection closed for '{}'", userId)
+      messageHandler.removeChat(userId)
+
+      // Has to be closed manually to stop the job from running
+      channel.close()
+    }
+  }
+}
+
+/** Open a new channel and start running it in a coroutine. */
+private fun DefaultWebSocketServerSession.channel(): Channel {
+  val flow = MutableSharedFlow<String>()
+  val job = launch {
+    flow.onCompletion { LOG.debug("Channel successfully closed") }.collect { send(it) }
+  }
+  return Channel(flow, job)
+}
+
+private fun websocketGenerateToken(): OpenApiRoute.() -> Unit = {
+  tags("ws")
+  description = "Generate a one-time token for WebSocket connection"
+  summary = "Generate WebSocket token"
+  response {
+    HttpStatusCode.OK to
+      {
+        this.body<UUID> { description = "Token for WebSocket connection" }
+        description = "Token for WebSocket connection"
+        body<KUUID> { example("example") { value = KUUID.randomUUID() } }
+      }
+    HttpStatusCode.Unauthorized to
+      {
+        description = "Unauthorized"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while generating token"
+        body<List<AppError>> {}
+      }
   }
 }

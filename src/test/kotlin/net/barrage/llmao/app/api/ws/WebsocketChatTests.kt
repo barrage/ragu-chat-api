@@ -19,7 +19,6 @@ import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -28,12 +27,7 @@ private const val TEST_COLLECTION = "KusturicaChatTests"
 
 private const val SIZE = 1536
 
-class WebsocketChatTests :
-  IntegrationTest(
-    useWiremock = true,
-    useWeaviate = true,
-    // wiremockUrlOverride = "http://localhost:8080",
-  ) {
+class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = true) {
   private lateinit var user: User
   private lateinit var session: Session
 
@@ -74,7 +68,6 @@ class WebsocketChatTests :
             // React only to finish events since titles can also get sent
             if (finishEvent is ServerMessage.FinishEvent) {
               assert(finishEvent.reason == FinishReason.Stop)
-              assertNull(finishEvent.content)
               asserted = true
               break
             }
@@ -125,7 +118,6 @@ class WebsocketChatTests :
             // React only to finish events since titles can also get sent
             if (finishEvent is ServerMessage.FinishEvent) {
               assert(finishEvent.reason == FinishReason.Stop)
-              assertNull(finishEvent.content)
               asserted = true
               break
             }

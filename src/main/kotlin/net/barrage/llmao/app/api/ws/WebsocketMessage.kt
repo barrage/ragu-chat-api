@@ -62,9 +62,6 @@ sealed class ServerMessage {
      * sent.
      */
     val messageId: KUUID? = null,
-
-    /** Response content sent only when the chat is not streaming. */
-    var content: String? = null,
   ) : ServerMessage()
 }
 

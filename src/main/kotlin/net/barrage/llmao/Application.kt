@@ -5,7 +5,6 @@ import io.ktor.server.config.*
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.ServiceState
 import net.barrage.llmao.app.api.ws.ChatFactory
-import net.barrage.llmao.app.api.ws.Server
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.plugins.*
 
@@ -17,14 +16,11 @@ fun Application.module() {
   val state = ApplicationState(environment.config)
   val services = ServiceState(state)
 
-  val chatFactory = ChatFactory(services.agent, services.chat)
-  val websocketServer = Server(chatFactory)
-
   configureSerialization()
   configureSession(services.auth)
   extendSession(services.auth)
   configureOpenApi()
-  websocketServer(websocketServer)
+  websocketServer(ChatFactory(services.agent, services.chat))
   configureRouting(services)
   configureRequestValidation()
   configureErrorHandling()

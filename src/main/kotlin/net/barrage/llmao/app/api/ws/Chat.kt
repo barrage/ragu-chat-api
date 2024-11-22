@@ -3,6 +3,7 @@ package net.barrage.llmao.app.api.ws
 import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.exception.InvalidRequestException
 import io.ktor.util.logging.*
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -19,10 +20,11 @@ import net.barrage.llmao.error.ErrorReason
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws")
 
 class Chat(
-  private val service: ChatService,
-
   /** Chat ID. */
   val id: KUUID,
+
+  /** The main business logic delegate. */
+  private val service: ChatService,
 
   /** The proompter. */
   private val userId: KUUID,
@@ -50,6 +52,9 @@ class Chat(
 
   /** Chat message history. */
   private val history: MutableList<ChatMessage> = mutableListOf(),
+
+  /** Websocket handle. */
+  private val channel: Channel,
 ) {
   /** True if the chat is streaming, false otherwise. */
   private var streamActive: Boolean = false
@@ -59,36 +64,13 @@ class Chat(
    * Creates a new coroutine to stream the response.
    *
    * @param message The proompt.
-   * @param emitter The emitter to use to send the response.
    */
-  fun startStreaming(message: String, emitter: Emitter) {
+  fun startStreaming(message: String) {
     if (isStreaming()) {
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
-    CoroutineScope(Dispatchers.Default).launch { stream(message, emitter) }
-  }
-
-  /**
-   * Respond to a message without streaming.
-   *
-   * @param proompt The message to respond to.
-   * @param emitter The emitter to use to send the response.
-   */
-  suspend fun respond(proompt: String, emitter: Emitter) {
-    val response =
-      try {
-        service.chatCompletion(proompt, history, agentId)
-      } catch (e: AppError) {
-        return handleError(emitter, e, false)
-      }
-
-    if (!messageReceived) {
-      persist()
-      messageReceived = true
-    }
-
-    processResponse(proompt, response, false, emitter)
+    CoroutineScope(Dispatchers.Default).launch { stream(message) }
   }
 
   /**
@@ -102,48 +84,43 @@ class Chat(
 
   /** Close the stream and cancel its job, if it exists. */
   fun closeStream() {
-    LOG.debug("Closing stream for '{}'", id)
+    if (streamActive) {
+      LOG.debug("Closing stream for '{}'", id)
+    }
     streamActive = false
   }
 
-  private fun persist() {
-    service.storeChat(id, userId, agentId, title)
-  }
-
-  private suspend fun stream(proompt: String, emitter: Emitter) = coroutineScope {
+  private suspend fun stream(proompt: String) = coroutineScope {
     streamActive = true
 
     val stream =
       try {
         service.chatCompletionStream(proompt, history, agentId)
       } catch (e: AppError) {
-        return@coroutineScope handleError(emitter, e, true)
+        handleError(e)
+        return@coroutineScope
       }
 
-    if (!messageReceived) {
-      persist()
-      messageReceived = true
-    }
-
     try {
-      val response = collectStream(proompt, stream, emitter)
+      val response = collectStream(proompt, stream, channel)
       LOG.debug("Chat '{}' got response: {}", id, response)
     } catch (e: InvalidRequestException) {
       // TODO: Failure
       service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter.value)
     } catch (e: Throwable) {
-      handleError(emitter, e, true)
+      handleError(e)
     } finally {
       streamActive = false
     }
   }
 
-  private suspend fun processResponse(
-    proompt: String,
-    response: String,
-    streaming: Boolean,
-    emitter: Emitter,
-  ) {
+  private suspend fun processResponse(proompt: String, response: String) {
+    if (!messageReceived) {
+      // TODO: Transaction for chat and initial message
+      service.storeChat(id, userId, agentId, title)
+      messageReceived = true
+    }
+
     val messages: List<ChatMessage> =
       listOf(ChatMessage.user(proompt), ChatMessage.assistant(response))
 
@@ -152,33 +129,23 @@ class Chat(
     val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, proompt, response)
 
     val emitPayload =
-      ServerMessage.FinishEvent(
-        id,
-        messageId = assistantMsg.id,
-        reason = FinishReason.Stop,
-        content =
-          if (!streaming) {
-            response
-          } else {
-            null
-          },
-      )
+      ServerMessage.FinishEvent(id, messageId = assistantMsg.id, reason = FinishReason.Stop)
 
-    emitter.emitServer(emitPayload)
+    channel.emitServer(emitPayload)
 
     if (title.isNullOrBlank()) {
-      this.generateTitle(proompt, emitter)
+      this.generateTitle(proompt)
     }
   }
 
-  private suspend fun generateTitle(prompt: String, emitter: Emitter) {
+  private suspend fun generateTitle(prompt: String) {
     val title = service.generateTitle(id, prompt, agentId)
-    emitter.emitServer(ServerMessage.ChatTitle(id, title))
+    channel.emitServer(ServerMessage.ChatTitle(id, title))
     this.title = title
   }
 
   private suspend fun addToHistory(messages: List<ChatMessage>) {
-    this.history.addAll(messages)
+    history.addAll(messages)
 
     summarizeAfterTokens?.let {
       val tokenCount = service.countHistoryTokens(history, agentId)
@@ -198,18 +165,19 @@ class Chat(
   private suspend fun collectStream(
     prompt: String,
     stream: Flow<List<TokenChunk>>,
-    emitter: Emitter,
+    channel: Channel,
   ): String = coroutineScope {
     val buf: MutableList<String> = mutableListOf()
 
     stream.collect { tokens ->
       if (!streamActive) {
         val finalResponse = buf.joinToString("")
+
         if (finalResponse.isNotBlank()) {
-          processResponse(prompt, finalResponse, true, emitter)
+          processResponse(prompt, finalResponse)
         }
 
-        cancel()
+        cancel("manual_cancel")
         return@collect
       }
 
@@ -220,7 +188,7 @@ class Chat(
 
         // Sometimes the first and last chunks are only one whitespace
         if (!chunk.content.isNullOrEmpty()) {
-          emitter.emitChunk(chunk)
+          channel.emitChunk(chunk)
           buf.add(chunk.content)
         }
 
@@ -233,22 +201,36 @@ class Chat(
     val finalResponse = buf.joinToString("")
 
     if (finalResponse.isNotBlank()) {
-      processResponse(prompt, finalResponse, true, emitter)
+      processResponse(prompt, finalResponse)
     }
 
     finalResponse
   }
 
-  private suspend fun handleError(emitter: Emitter, e: Throwable, streaming: Boolean) {
-    if (streaming) {
-      streamActive = false
-    }
-
-    if (e is AppError) {
-      emitter.emitError(e)
-    } else {
-      LOG.error("Error in chat", e)
-      emitter.emitError(AppError.internal())
+  /**
+   * Stops streaming and emits an error message.
+   *
+   * An API error will be sent if it is an application error.
+   *
+   * Internal otherwise.
+   */
+  private suspend fun handleError(e: Throwable) {
+    when (e) {
+      is AppError -> {
+        channel.emitError(e)
+      }
+      is CancellationException -> {
+        LOG.debug("Chat '{}' - stream cancelled", id)
+        if (e.message == "manual_cancel") {
+          return
+        }
+        e.printStackTrace()
+        channel.emitError(AppError.internal())
+      }
+      else -> {
+        LOG.error("Error in chat", e)
+        channel.emitError(AppError.internal())
+      }
     }
   }
 }
