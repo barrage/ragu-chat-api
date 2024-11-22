@@ -1,11 +1,11 @@
 package net.barrage.llmao.app.llm
 
 import io.ktor.server.config.*
-import net.barrage.llmao.configString
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.string
 
 class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<ConversationLlm>() {
   private val openai: OpenAI
@@ -33,22 +33,22 @@ class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<Conversati
   }
 
   private fun initOpenAi(config: ApplicationConfig): OpenAI {
-    val endpoint = configString(config, "llm.openai.endpoint")
-    val apiKey = configString(config, "llm.openai.apiKey")
+    val endpoint = config.string("llm.openai.endpoint")
+    val apiKey = config.string("llm.openai.apiKey")
 
     return OpenAI(endpoint, apiKey)
   }
 
   private fun initAzure(config: ApplicationConfig): AzureAI {
-    val endpoint = configString(config, "llm.azure.endpoint")
-    val apiKey = configString(config, "llm.azure.apiKey")
-    val version = configString(config, "llm.azure.apiVersion")
+    val endpoint = config.string("llm.azure.endpoint")
+    val apiKey = config.string("llm.azure.apiKey")
+    val version = config.string("llm.azure.apiVersion")
 
     return AzureAI(endpoint, apiKey, version)
   }
 
   private fun initOllama(config: ApplicationConfig): Ollama {
-    val endpoint = configString(config, "llm.ollama.endpoint")
+    val endpoint = config.string("llm.ollama.endpoint")
 
     return Ollama(endpoint)
   }
