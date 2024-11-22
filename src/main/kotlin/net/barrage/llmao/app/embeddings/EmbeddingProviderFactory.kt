@@ -1,23 +1,27 @@
 package net.barrage.llmao.app.embeddings
 
-import io.ktor.server.application.*
 import io.ktor.server.config.*
+import net.barrage.llmao.app.embeddings.openai.AzureEmbedder
+import net.barrage.llmao.app.embeddings.openai.OpenAIEmbedder
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
 class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embedder>() {
+  private val openai: OpenAIEmbedder
   private val azure: AzureEmbedder
   private val fembed: FastEmbedder
 
   init {
+    openai = initOpenAIEmbedder(config)
     azure = initAzureEmbedder(config)
     fembed = initFastEmbedder(config)
   }
 
   override fun getProvider(providerId: String): Embedder {
     return when (providerId) {
+      openai.id() -> openai
       azure.id() -> azure
       fembed.id() -> fembed
       else ->
@@ -29,7 +33,14 @@ class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embe
   }
 
   override fun listProviders(): List<String> {
-    return listOf(azure.id(), fembed.id())
+    return listOf(openai.id(), azure.id(), fembed.id())
+  }
+
+  private fun initOpenAIEmbedder(config: ApplicationConfig): OpenAIEmbedder {
+    val endpoint = config.property("embeddings.openai.endpoint").getString()
+    val apiKey = config.property("embeddings.openai.apiKey").getString()
+
+    return OpenAIEmbedder(endpoint, apiKey)
   }
 
   private fun initAzureEmbedder(config: ApplicationConfig): AzureEmbedder {

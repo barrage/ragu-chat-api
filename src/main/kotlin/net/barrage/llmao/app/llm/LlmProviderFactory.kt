@@ -33,8 +33,8 @@ class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<Conversati
   }
 
   private fun initOpenAi(config: ApplicationConfig): OpenAI {
-    val endpoint = configString(config, "llm.openAi.endpoint")
-    val apiKey = configString(config, "llm.openAi.apiKey")
+    val endpoint = configString(config, "llm.openai.endpoint")
+    val apiKey = configString(config, "llm.openai.apiKey")
 
     return OpenAI(endpoint, apiKey)
   }

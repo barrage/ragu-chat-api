@@ -1,11 +1,10 @@
-package net.barrage.llmao.app.embeddings
+package net.barrage.llmao.app.embeddings.openai
 
 import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
-import io.ktor.server.auth.*
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -36,7 +35,7 @@ class AzureEmbedder(endpoint: String, deployment: String, apiVersion: String, ap
   }
 
   override suspend fun supportsModel(model: String): Boolean {
-    return OpenAiModel.tryFromString(model) != null
+    return OpenAIEmbeddingModel.tryFromString(model) != null
   }
 
   override suspend fun embed(input: String, model: String): List<Double> {
@@ -55,24 +54,7 @@ class AzureEmbedder(endpoint: String, deployment: String, apiVersion: String, ap
   }
 
   override suspend fun vectorSize(model: String): Int {
-    return OpenAiModel.tryFromString(model)?.vectorSize
+    return OpenAIEmbeddingModel.tryFromString(model)?.vectorSize
       ?: throw AppError.api(ErrorReason.InvalidParameter, "Model $model not found")
-  }
-}
-
-private enum class OpenAiModel(val model: String, val vectorSize: Int) {
-  TextEmbedding3Large("text-embedding-3-large", 3072),
-  TextEmbedding3Small("text-embedding-3-small", 1536),
-  TextEmbeddingAda002("text-embedding-ada-002", 1536);
-
-  companion object {
-    fun tryFromString(value: String): OpenAiModel? {
-      return when (value) {
-        TextEmbedding3Large.model -> TextEmbedding3Large
-        TextEmbedding3Small.model -> TextEmbedding3Small
-        TextEmbeddingAda002.model -> TextEmbeddingAda002
-        else -> null
-      }
-    }
   }
 }
