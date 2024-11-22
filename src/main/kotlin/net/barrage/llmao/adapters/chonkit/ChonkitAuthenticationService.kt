@@ -9,6 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import java.security.SecureRandom
 import java.time.Instant
 import java.time.ZoneOffset
@@ -19,9 +20,9 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.env
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.string
 
 internal val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.auth.chonkit")
 
@@ -46,28 +47,28 @@ private constructor(
     /** Initialize an instance of `ChonkitAuthenticationService` and log in to Vault. */
     suspend fun init(
       repository: ChonkitAuthenticationRepository,
-      env: ApplicationEnvironment,
+      config: ApplicationConfig,
     ): ChonkitAuthenticationService {
       LOG.info("Attempting to log in to Vault")
 
       // The URL of the Vault server
-      val endpoint = env(env, "vault.endpoint")
+      val endpoint = config.string("vault.endpoint")
 
       // The AppRole Role ID for Vault authentication
-      val roleId = env(env, "vault.roleId")
+      val roleId = config.string("vault.roleId")
 
       // The AppRole Secret ID for Vault authentication
-      val secretId = env(env, "vault.secretId")
+      val secretId = config.string("vault.secretId")
 
       // The name of the encryption key to be used in Vault's Transit engine
-      val vaultKey = env(env, "vault.keyName")
+      val vaultKey = config.string("vault.keyName")
 
-      val jwtIssuer = env(env, "chonkit.jwt.issuer")
-      val jwtAudience = env(env, "chonkit.jwt.audience")
+      val jwtIssuer = config.string("chonkit.jwt.issuer")
+      val jwtAudience = config.string("chonkit.jwt.audience")
       val jwtAccessTokenDurationSeconds =
-        env(env, "chonkit.jwt.accessTokenDurationSeconds").toLong()
+        config.string("chonkit.jwt.accessTokenDurationSeconds").toLong()
       val jwtRefreshTokenDurationSeconds =
-        env(env, "chonkit.jwt.refreshTokenDurationSeconds").toLong()
+        config.string("chonkit.jwt.refreshTokenDurationSeconds").toLong()
 
       val jwtConfig =
         JwtConfig(

@@ -1,6 +1,5 @@
 package net.barrage.llmao.app
 
-import io.ktor.server.application.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -22,24 +21,24 @@ import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.plugins.initDatabase
 import org.jooq.DSLContext
 
-class ApplicationState(env: ApplicationEnvironment) {
+class ApplicationState(config: ApplicationConfig) {
   val repository: RepositoryState
   val adapterRepository: AdapterRepositoryState
-  val providers = ProviderState(env)
+  val providers = ProviderState(config)
   val adapters: AdapterState
 
   init {
-    val database = initDatabase(env)
+    val database = initDatabase(config)
     repository = RepositoryState(database)
     adapterRepository = AdapterRepositoryState(database)
-    adapters = AdapterState(env, adapterRepository)
+    adapters = AdapterState(config, adapterRepository)
   }
 }
 
-class AdapterState(env: ApplicationEnvironment, repositoryState: AdapterRepositoryState) {
+class AdapterState(config: ApplicationConfig, repositoryState: AdapterRepositoryState) {
   // TODO: Module flag
   val chonkitAuth: ChonkitAuthenticationService = runBlocking {
-    ChonkitAuthenticationService.init(repositoryState.chonkit, env)
+    ChonkitAuthenticationService.init(repositoryState.chonkit, config)
   }
 }
 

@@ -22,16 +22,20 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-fun Application.configureRouting(services: ServiceState) {
+fun Application.configureApiRoutes(services: ServiceState) {
   routing {
     // K8S specific route
     route("/__health") { get(health()) { call.respond(HttpStatusCode.OK) } }
 
+    // Unprotected authentication routes
     authRoutes(services.auth)
+
+    // Add swagger-ui only if we're not in production.
     if (application.environment.config.property("ktor.environment").getString() != "production") {
       openApiRoutes()
     }
 
+    // Admin API routes
     authenticate("auth-session-admin") {
       adminAgentsRoutes(services.agent)
       adminUserRoutes(services.user)
@@ -40,6 +44,7 @@ fun Application.configureRouting(services: ServiceState) {
       chonkitAuthRouter(services.chonkitAuth)
     }
 
+    // User API routes
     authenticate("auth-session") {
       agentsRoutes(services.agent)
       userRoutes(services.user)
