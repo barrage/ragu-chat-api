@@ -7,6 +7,7 @@ import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.string
 
 class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embedder>() {
   private val openai: OpenAIEmbedder
@@ -37,23 +38,23 @@ class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embe
   }
 
   private fun initOpenAIEmbedder(config: ApplicationConfig): OpenAIEmbedder {
-    val endpoint = config.property("embeddings.openai.endpoint").getString()
-    val apiKey = config.property("embeddings.openai.apiKey").getString()
+    val endpoint = config.string("embeddings.openai.endpoint")
+    val apiKey = config.string("embeddings.openai.apiKey")
 
     return OpenAIEmbedder(endpoint, apiKey)
   }
 
   private fun initAzureEmbedder(config: ApplicationConfig): AzureEmbedder {
-    val endpoint = config.property("embeddings.azure.endpoint").getString()
-    val deployment = config.property("embeddings.azure.deployment").getString()
-    val apiVersion = config.property("embeddings.azure.apiVersion").getString()
-    val apiKey = config.property("embeddings.azure.apiKey").getString()
+    val endpoint = config.string("embeddings.azure.endpoint")
+    val deployment = config.string("embeddings.azure.deployment")
+    val apiVersion = config.string("embeddings.azure.apiVersion")
+    val apiKey = config.string("embeddings.azure.apiKey")
 
     return AzureEmbedder(endpoint, deployment, apiVersion, apiKey)
   }
 
   private fun initFastEmbedder(config: ApplicationConfig): FastEmbedder {
-    val endpoint = config.property("embeddings.fembed.endpoint").getString()
+    val endpoint = config.string("embeddings.fembed.endpoint")
 
     return FastEmbedder(endpoint)
   }

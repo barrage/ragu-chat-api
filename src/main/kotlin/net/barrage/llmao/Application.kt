@@ -31,6 +31,7 @@ fun Application.module() {
   configureCors()
 }
 
-fun configString(config: ApplicationConfig, key: String): String {
-  return config.property(key).getString()
+/** Shorthand for `config.property(key).getString()` */
+fun ApplicationConfig.string(key: String): String {
+  return property(key).getString()
 }
