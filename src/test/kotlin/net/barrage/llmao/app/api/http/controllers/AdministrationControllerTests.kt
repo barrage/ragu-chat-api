@@ -77,7 +77,7 @@ class AdministrationControllerTests : IntegrationTest() {
 
     assertEquals(body.vector, listOf("weaviate"))
 
-    assertEquals(body.embedding, listOf("azure", "fembed"))
+    assertEquals(body.embedding, listOf("openai", "azure", "fembed"))
   }
 
   @Test

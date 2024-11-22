@@ -124,6 +124,8 @@ open class IntegrationTest(
         MapApplicationConfig(
           "llm.openai.endpoint" to "${url}/v1/",
           "llm.openai.apiKey" to "super-duper-secret-openai-api-key",
+          "embeddings.openai.endpoint" to "${url}/v1/",
+          "embeddings.openai.apiKey" to "super-duper-secret-openai-api-key",
           "embeddings.azure.endpoint" to "${url}/openai/deployments",
           "embeddings.azure.apiKey" to "super-duper-secret-azure-api-key",
         )
@@ -137,18 +139,28 @@ fun sessionCookie(sessionId: UUID): String = "kappi=id%3D%2523s$sessionId"
 // Wiremock response triggers
 
 /** Prompt configured to make wiremock return a completion response without a stream. */
-const val COMPLETIONS_COMPLETION_RESPONSE_PROMPT = "v1_chat_completions_completion"
+const val COMPLETIONS_COMPLETION_PROMPT = "v1_chat_completions_completion"
 
-/** Prompt configured to make wiremock return a stream response. */
-const val COMPLETIONS_STREAM_RESPONSE_PROMPT = "v1_chat_completions_stream"
+/** Prompt configured to make wiremock return the default stream response. */
+const val COMPLETIONS_STREAM_PROMPT = "v1_chat_completions_stream"
+
+/**
+ * Prompt configured to make wiremock return a stream response with additional whitespace for
+ * testing purposes.
+ */
+const val COMPLETIONS_STREAM_WHITESPACE_PROMPT = "v1_chat_completions_whitespace_stream"
 
 // Wiremock message content
 
-/** Wiremock response for a completion response without a stream. */
+/** Returned on [COMPLETIONS_COMPLETION_PROMPT]. */
 const val COMPLETIONS_RESPONSE = "v1_chat_completions_completion_response"
 
 /** Wiremock response for a stream response. */
 const val COMPLETIONS_TITLE_RESPONSE = "v1_chat_completions_title_response"
 
-/** Wiremock response for a stream response when the stream is collected. */
+/** Returned on [COMPLETIONS_STREAM_PROMPT]. */
 const val COMPLETIONS_STREAM_RESPONSE = "v1_chat_completions_stream_response"
+
+/** Returned on [COMPLETIONS_STREAM_WHITESPACE_PROMPT]. */
+const val COMPLETIONS_STREAM_WHITESPACE_RESPONSE =
+  "v1_chat_completions_stream_response\nwith whitespace"

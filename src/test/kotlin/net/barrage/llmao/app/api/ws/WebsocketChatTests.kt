@@ -4,13 +4,13 @@ import com.aallam.openai.api.core.FinishReason
 import io.ktor.websocket.*
 import kotlin.random.Random
 import kotlinx.serialization.SerializationException
+import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
-import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE_PROMPT
+import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_PROMPT
+import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.chatSession
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentCollection
-import net.barrage.llmao.core.models.AgentConfiguration
+import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.error.AppError
@@ -37,57 +37,10 @@ class WebsocketChatTests :
   private lateinit var user: User
   private lateinit var session: Session
 
-  private lateinit var validAgent: Agent
-  private lateinit var validAgentConfiguration: AgentConfiguration
-  private lateinit var validAgentCollection: AgentCollection
-
-  private lateinit var invalidAgent: Agent
-  private lateinit var invalidAgentConfiguration: AgentConfiguration
-  private lateinit var invalidAgentCollection: AgentCollection
-
   @BeforeAll
   fun setup() {
     user = postgres!!.testUser(email = "not@important.org", admin = false)
     session = postgres!!.testSession(user.id)
-
-    validAgent =
-      postgres!!.testAgent(
-        embeddingProvider = "openai",
-        embeddingModel = "text-embedding-ada-002", // 1536
-      )
-    validAgentConfiguration =
-      postgres!!.testAgentConfiguration(
-        agentId = validAgent.id,
-        llmProvider = "openai",
-        model = "gpt-4o",
-      )
-    validAgentCollection =
-      postgres!!.testAgentCollection(
-        agentId = validAgent.id,
-        collection = TEST_COLLECTION,
-        amount = 2,
-        instruction = "Use the valuable information below to solve the three body problem.",
-      )
-
-    invalidAgent =
-      postgres!!.testAgent(
-        embeddingProvider = "openai",
-        embeddingModel = "text-embedding-3-large", // 3072
-      )
-    invalidAgentConfiguration =
-      postgres!!.testAgentConfiguration(
-        agentId = invalidAgent.id,
-        llmProvider = "openai",
-        model = "gpt-4o",
-      )
-    invalidAgentCollection =
-      postgres!!.testAgentCollection(
-        invalidAgent.id,
-        TEST_COLLECTION,
-        2,
-        "Use the valuable information below to pass the butter.",
-      )
-    insertTestVectors()
   }
 
   /**
@@ -95,13 +48,21 @@ class WebsocketChatTests :
    *
    * A client connects via Websocket, opens a chat, sends a message and receives a response.
    * Beforehand, the agent is configured to the right collection.
+   *
+   * This also tests whether the right collection was queried, as the contents from it will have the
+   * necessary contents to trigger the right prompt.
    */
   @Test
   fun worksWhenAgentIsConfiguredProperly() = wsTest { client ->
-    client.chatSession(session.sessionId) {
-      openNewChat(validAgent.id)
+    var asserted = false
 
-      var asserted = false
+    insertVectors(COMPLETIONS_STREAM_PROMPT)
+
+    val validAgent = createValidAgent()
+
+    client.chatSession(session.sessionId) {
+      openNewChat(validAgent.agent.id)
+
       var buffer = ""
 
       sendMessage("Will this trigger a stream response?") { incoming ->
@@ -131,20 +92,89 @@ class WebsocketChatTests :
       }
 
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
-      assert(asserted)
     }
+
+    deleteVectors()
+
+    assert(asserted)
+  }
+
+  /**
+   * Tests for properly formatted whitespace messages in cases where LLMs send a single space or
+   * newline as a token.
+   */
+  @Test
+  fun properlySendsWhitespaceMessages() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_STREAM_WHITESPACE_PROMPT)
+
+    val validAgent = createValidAgent()
+
+    client.chatSession(session.sessionId) {
+      openNewChat(validAgent.agent.id)
+
+      var buffer = ""
+
+      sendMessage("Stream me whitespace") { incoming ->
+        for (frame in incoming) {
+          val response = (frame as Frame.Text).readText()
+          try {
+            val finishEvent = json.decodeFromString<ServerMessage>(response)
+
+            // React only to finish events since titles can also get sent
+            if (finishEvent is ServerMessage.FinishEvent) {
+              assert(finishEvent.reason == FinishReason.Stop)
+              assertNull(finishEvent.content)
+              asserted = true
+              break
+            }
+          } catch (e: SerializationException) {
+            val errMessage = e.message ?: throw e
+            if (
+              // Happens when strings are received
+              !errMessage.startsWith("Expected JsonObject, but had JsonLiteral") &&
+                // Happens when strings containing only whitespace are received
+                !errMessage.startsWith(
+                  "Cannot read Json element because of unexpected end of the input"
+                )
+            ) {
+              throw e
+            }
+            buffer += response
+          } catch (e: Throwable) {
+            e.printStackTrace()
+            break
+          }
+        }
+
+        assertEquals(COMPLETIONS_STREAM_WHITESPACE_RESPONSE, buffer)
+      }
+    }
+
+    deleteVectors()
+
+    assert(asserted)
   }
 
   /**
    * A client connects via Websocket, opens a chat, sends a message and receives an error.
-   * Beforehand, the agent is configured to the wrong collection (whose size is different than the
-   * embeddings created by the agent's model).
+   * Beforehand, the agent is configured to the wrong collection (whose embedding size is different
+   * than the embeddings created by the agent's model).
    */
   @Test
   fun sendsVectorDatabaseErrorWhenAgentEmbeddingModelIsNotConfiguredProperly() = wsTest { client ->
     var asserted = false
+
+    // We need to insert vectors here because Weaviate will not throw any errors
+    // if the collection does not contain vectors.
+    insertVectors(COMPLETIONS_STREAM_PROMPT)
+
+    val invalidAgent = createInvalidAgent()
+
     client.chatSession(session.sessionId) {
-      openNewChat(invalidAgent.id)
+      openNewChat(invalidAgent.agent.id)
+
       sendMessage("Will this trigger a stream response?") { incoming ->
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
@@ -156,13 +186,71 @@ class WebsocketChatTests :
         }
       }
     }
+
+    deleteVectors()
+
     assert(asserted)
   }
 
-  private fun insertTestVectors() {
-    val streamResponsePrompt =
-      Pair(COMPLETIONS_STREAM_RESPONSE_PROMPT, List(SIZE) { Random.nextFloat() })
+  // Valid and invalid here refer to configuration, not the actual models and objects.
 
+  private fun createValidAgent(): AgentFull {
+    val validAgent =
+      postgres!!.testAgent(
+        embeddingProvider = "openai",
+        embeddingModel = "text-embedding-ada-002", // 1536
+      )
+
+    val validAgentConfiguration =
+      postgres!!.testAgentConfiguration(
+        agentId = validAgent.id,
+        llmProvider = "openai",
+        model = "gpt-4o",
+      )
+
+    val validAgentCollection =
+      postgres!!.testAgentCollection(
+        agentId = validAgent.id,
+        collection = TEST_COLLECTION,
+        amount = 2,
+        instruction = "Use the valuable information below to solve the three body problem.",
+      )
+
+    return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection))
+  }
+
+  private fun createInvalidAgent(): AgentFull {
+    val invalidAgent =
+      postgres!!.testAgent(
+        embeddingProvider = "openai",
+        embeddingModel = "text-embedding-3-large", // 3072
+      )
+
+    val invalidAgentConfiguration =
+      postgres!!.testAgentConfiguration(
+        agentId = invalidAgent.id,
+        llmProvider = "openai",
+        model = "gpt-4o",
+      )
+
+    val invalidAgentCollection =
+      postgres!!.testAgentCollection(
+        invalidAgent.id,
+        TEST_COLLECTION,
+        2,
+        "Use the valuable information below to pass the butter.",
+      )
+
+    return AgentFull(invalidAgent, invalidAgentConfiguration, listOf(invalidAgentCollection))
+  }
+
+  private fun insertVectors(content: String) {
+    // Contains the necessary string to trigger the stream response from Wiremock.
+    val streamResponsePrompt = Pair(content, List(SIZE) { Random.nextFloat() })
     weaviate!!.insertVectors(TEST_COLLECTION, listOf(streamResponsePrompt))
+  }
+
+  private fun deleteVectors() {
+    weaviate!!.deleteVectors(TEST_COLLECTION)
   }
 }

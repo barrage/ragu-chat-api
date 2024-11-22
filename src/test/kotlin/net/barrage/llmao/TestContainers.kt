@@ -3,6 +3,8 @@ package net.barrage.llmao
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
 import io.weaviate.client.v1.data.model.WeaviateObject
+import io.weaviate.client.v1.filters.Operator
+import io.weaviate.client.v1.filters.WhereFilter
 import io.weaviate.client.v1.schema.model.Property
 import io.weaviate.client.v1.schema.model.WeaviateClass
 import java.time.OffsetDateTime
@@ -299,6 +301,15 @@ class TestWeaviate {
       throw RuntimeException("Error inserting vectors: ${result.error}")
     }
   }
+
+  fun deleteVectors(collection: String) {
+    client
+      .batch()
+      .objectsBatchDeleter()
+      .withClassName(collection)
+      .withWhere(WhereFilter.builder().operator(Operator.Like).path("id").valueString("*").build())
+      .run()
+  }
 }
 
 /**
@@ -315,18 +326,20 @@ class TestWeaviate {
 class Wiremock {
   val container: WireMockContainer =
     WireMockContainer("wiremock/wiremock:3.9.2")
-      .map("openai/v1_chat_completions_title")
-      .toResponse("openai", "openai_v1_chat_completions_title_response.json")
-      .map("openai/v1_chat_completions_stream")
-      .toResponse("openai", "openai_v1_chat_completions_completion_response.json")
       .map("openai/v1_chat_completions_completion")
-      .toResponse("openai", "openai_v1_chat_completions_stream_response.txt")
-      .map("azure/embeddings_ada-002")
-      .toResponse("azure", "azure_embeddings_ada-002_response.json")
+      .map("openai/v1_chat_completions_stream")
+      .map("openai/v1_chat_completions_title")
+      .map("openai/v1_chat_completions_whitespace_stream")
       .map("openai/v1_embeddings_ada-002")
-      .toResponse("openai", "openai_v1_embeddings_ada-002_response.json")
       .map("openai/v1_embeddings_large-3")
-      .toResponse("openai", "openai_v1_embeddings_large-3_response.json")
+      .response("openai", "openai_v1_chat_completions_completion_response.json")
+      .response("openai", "openai_v1_chat_completions_stream_response.txt")
+      .response("openai", "openai_v1_chat_completions_title_response.json")
+      .response("openai", "openai_v1_chat_completions_whitespace_stream_response.txt")
+      .response("openai", "openai_v1_embeddings_ada-002_response.json")
+      .response("openai", "openai_v1_embeddings_large-3_response.json")
+      .map("azure/embeddings_ada-002")
+      .response("azure", "azure_embeddings_ada-002_response.json")
 
   init {
     container.start()
@@ -337,7 +350,7 @@ private fun WireMockContainer.map(name: String): WireMockContainer {
   return withMappingFromResource(name, "wiremock/mappings/$name.json")
 }
 
-private fun WireMockContainer.toResponse(dir: String, name: String): WireMockContainer {
+private fun WireMockContainer.response(dir: String, name: String): WireMockContainer {
   return withCopyFileToContainer(
     MountableFile.forClasspathResource("wiremock/responses/$dir/$name"),
     "/home/wiremock/__files/$name",
