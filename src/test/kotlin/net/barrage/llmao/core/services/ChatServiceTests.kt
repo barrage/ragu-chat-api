@@ -25,10 +25,10 @@ class ChatServiceTests : IntegrationTest(useWiremock = true) {
   fun setup() {
     chatService = services!!.chat
 
-    admin = postgres!!.testUser(admin = true)
-    agent = postgres!!.testAgent()
-    postgres!!.testAgentConfiguration(agent.id, llmProvider = "openai", model = "gpt-4o")
-    chat = postgres!!.testChat(admin.id, agent.id, null)
+    admin = postgres.testUser(admin = true)
+    agent = postgres.testAgent()
+    postgres.testAgentConfiguration(agent.id, llmProvider = "openai", model = "gpt-4o")
+    chat = postgres.testChat(admin.id, agent.id, null)
   }
 
   @Test

@@ -25,10 +25,10 @@ class AgentControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    agent = postgres!!.testAgent()
-    agentConfiguration = postgres!!.testAgentConfiguration(agent.id)
-    user = postgres!!.testUser(admin = false)
-    userSession = postgres!!.testSession(user.id)
+    agent = postgres.testAgent()
+    agentConfiguration = postgres.testAgentConfiguration(agent.id)
+    user = postgres.testUser(admin = false)
+    userSession = postgres.testSession(user.id)
   }
 
   @Test

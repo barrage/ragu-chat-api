@@ -28,13 +28,10 @@ class WebsocketSystemMessageTests : IntegrationTest() {
   @BeforeAll
   fun setup() {
     agent =
-      postgres!!.testAgent(
-        embeddingProvider = "fembed",
-        embeddingModel = "Xenova/bge-large-en-v1.5",
-      )
-    agentConfiguration = postgres!!.testAgentConfiguration(agentId = agent.id)
-    user = postgres!!.testUser(email = "not@important.org", admin = false)
-    session = postgres!!.testSession(user.id)
+      postgres.testAgent(embeddingProvider = "fembed", embeddingModel = "Xenova/bge-large-en-v1.5")
+    agentConfiguration = postgres.testAgentConfiguration(agentId = agent.id)
+    user = postgres.testUser(email = "not@important.org", admin = false)
+    session = postgres.testSession(user.id)
   }
 
   @Test

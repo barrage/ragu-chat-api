@@ -39,8 +39,8 @@ class WebsocketChatTests :
 
   @BeforeAll
   fun setup() {
-    user = postgres!!.testUser(email = "not@important.org", admin = false)
-    session = postgres!!.testSession(user.id)
+    user = postgres.testUser(email = "not@important.org", admin = false)
+    session = postgres.testSession(user.id)
   }
 
   /**
@@ -196,20 +196,20 @@ class WebsocketChatTests :
 
   private fun createValidAgent(): AgentFull {
     val validAgent =
-      postgres!!.testAgent(
+      postgres.testAgent(
         embeddingProvider = "openai",
         embeddingModel = "text-embedding-ada-002", // 1536
       )
 
     val validAgentConfiguration =
-      postgres!!.testAgentConfiguration(
+      postgres.testAgentConfiguration(
         agentId = validAgent.id,
         llmProvider = "openai",
         model = "gpt-4o",
       )
 
     val validAgentCollection =
-      postgres!!.testAgentCollection(
+      postgres.testAgentCollection(
         agentId = validAgent.id,
         collection = TEST_COLLECTION,
         amount = 2,
@@ -221,20 +221,20 @@ class WebsocketChatTests :
 
   private fun createInvalidAgent(): AgentFull {
     val invalidAgent =
-      postgres!!.testAgent(
+      postgres.testAgent(
         embeddingProvider = "openai",
         embeddingModel = "text-embedding-3-large", // 3072
       )
 
     val invalidAgentConfiguration =
-      postgres!!.testAgentConfiguration(
+      postgres.testAgentConfiguration(
         agentId = invalidAgent.id,
         llmProvider = "openai",
         model = "gpt-4o",
       )
 
     val invalidAgentCollection =
-      postgres!!.testAgentCollection(
+      postgres.testAgentCollection(
         invalidAgent.id,
         TEST_COLLECTION,
         2,

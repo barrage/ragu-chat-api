@@ -20,8 +20,8 @@ class UserControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    user = postgres!!.testUser(admin = false)
-    userSession = postgres!!.testSession(user.id)
+    user = postgres.testUser(admin = false)
+    userSession = postgres.testSession(user.id)
   }
 
   @Test

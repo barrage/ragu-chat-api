@@ -29,9 +29,9 @@ class AdminUserControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    adminUser = postgres!!.testUser("foo@bar.com", admin = true)
-    peasantUser = postgres!!.testUser("bar@foo.com", admin = false)
-    adminSession = postgres!!.testSession(adminUser.id)
+    adminUser = postgres.testUser("foo@bar.com", admin = true)
+    peasantUser = postgres.testUser("bar@foo.com", admin = false)
+    adminSession = postgres.testSession(adminUser.id)
   }
 
   @Test
@@ -72,7 +72,7 @@ class AdminUserControllerTests : IntegrationTest() {
     assertEquals("Create", body.firstName)
     assertEquals("User", body.lastName)
     assertEquals(Role.USER, body.role)
-    postgres!!.deleteTestUser(body.id)
+    postgres.deleteTestUser(body.id)
   }
 
   @Test
@@ -168,7 +168,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
   @Test
   fun updateUserSuccess() = test {
-    val testUser = postgres!!.testUser("update@user.net", admin = true, active = false)
+    val testUser = postgres.testUser("update@user.net", admin = true, active = false)
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.put("admin/users/${peasantUser.id}") {
@@ -196,7 +196,7 @@ class AdminUserControllerTests : IntegrationTest() {
     assertEquals(Role.USER, result.role)
     assertTrue(result.active)
 
-    postgres!!.deleteTestUser(testUser.id)
+    postgres.deleteTestUser(testUser.id)
   }
 
   @Test
@@ -313,7 +313,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
   @Test
   fun deleteUserSuccess() = test {
-    val testUser = postgres!!.testUser(admin = false)
+    val testUser = postgres.testUser(admin = false)
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.delete("admin/users/${testUser.id}") {
@@ -322,8 +322,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(204, response.status.value)
     val deletedUser =
-      postgres!!
-        .dslContext
+      postgres.dslContext
         .selectFrom(USERS)
         .where(USERS.ID.eq(testUser.id))
         .fetchOne(UsersRecord::toUser)!!

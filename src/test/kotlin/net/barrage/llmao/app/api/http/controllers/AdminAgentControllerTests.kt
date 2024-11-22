@@ -47,17 +47,17 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
 
   @BeforeAll
   fun setup() {
-    adminUser = postgres!!.testUser("foo@bar.com", admin = true)
-    peasantUser = postgres!!.testUser("bar@foo.com", admin = false)
+    adminUser = postgres.testUser("foo@bar.com", admin = true)
+    peasantUser = postgres.testUser("bar@foo.com", admin = false)
     agentOne =
-      postgres!!.testAgent(embeddingProvider = "azure", embeddingModel = "text-embedding-ada-002")
-    agentOneConfigurationV1 = postgres!!.testAgentConfiguration(agentOne.id, version = 1)
-    agentOneConfigurationV2 = postgres!!.testAgentConfiguration(agentOne.id, version = 2)
-    agentOneChat = postgres!!.testChat(peasantUser.id, agentOne.id)
+      postgres.testAgent(embeddingProvider = "azure", embeddingModel = "text-embedding-ada-002")
+    agentOneConfigurationV1 = postgres.testAgentConfiguration(agentOne.id, version = 1)
+    agentOneConfigurationV2 = postgres.testAgentConfiguration(agentOne.id, version = 2)
+    agentOneChat = postgres.testChat(peasantUser.id, agentOne.id)
     val chatMessageOne =
-      postgres!!.testChatMessage(agentOneChat.id, peasantUser.id, "First Message", "user")
+      postgres.testChatMessage(agentOneChat.id, peasantUser.id, "First Message", "user")
     chatPositiveMessage =
-      postgres!!.testChatMessage(
+      postgres.testChatMessage(
         agentOneChat.id,
         agentOneConfigurationV1.id,
         "First Message",
@@ -66,9 +66,9 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         evaluation = true,
       )
     val chatMessageTwo =
-      postgres!!.testChatMessage(agentOneChat.id, peasantUser.id, "Second Message", "user")
+      postgres.testChatMessage(agentOneChat.id, peasantUser.id, "Second Message", "user")
     chatNegativeMessage =
-      postgres!!.testChatMessage(
+      postgres.testChatMessage(
         agentOneChat.id,
         agentOneConfigurationV1.id,
         "Second Message",
@@ -76,10 +76,10 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         responseTo = chatMessageTwo.id,
         evaluation = false,
       )
-    agentTwo = postgres!!.testAgent(active = false)
-    agentTwoConfiguration = postgres!!.testAgentConfiguration(agentTwo.id)
-    adminSession = postgres!!.testSession(adminUser.id)
-    peasantSession = postgres!!.testSession(peasantUser.id)
+    agentTwo = postgres.testAgent(active = false)
+    agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id)
+    adminSession = postgres.testSession(adminUser.id)
+    peasantSession = postgres.testSession(peasantUser.id)
     weaviate!!.insertTestCollection("Kusturica", 1536)
     weaviate!!.insertTestCollection("Kusturica_small", 1536)
     weaviate!!.insertTestCollection("Kusturica_big", 3072)
@@ -163,7 +163,7 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     assertEquals("azure", body.configuration.llmProvider)
     assertEquals("gpt-4", body.configuration.model)
 
-    postgres!!.deleteTestAgent(body.agent.id)
+    postgres.deleteTestAgent(body.agent.id)
   }
 
   @Test
