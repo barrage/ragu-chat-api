@@ -34,14 +34,14 @@ class ChatControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    user = postgres!!.testUser(admin = false)
-    userSession = postgres!!.testSession(user.id)
-    agent = postgres!!.testAgent(active = true)
-    agentConfiguration = postgres!!.testAgentConfiguration(agent.id)
-    chatOne = postgres!!.testChat(user.id, agent.id)
-    chatTwo = postgres!!.testChat(user.id, agent.id)
-    messageOne = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
-    messageTwo = postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
+    user = postgres.testUser(admin = false)
+    userSession = postgres.testSession(user.id)
+    agent = postgres.testAgent(active = true)
+    agentConfiguration = postgres.testAgentConfiguration(agent.id)
+    chatOne = postgres.testChat(user.id, agent.id)
+    chatTwo = postgres.testChat(user.id, agent.id)
+    messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
+    messageTwo = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
   }
 
   @Test
@@ -89,7 +89,7 @@ class ChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldDeleteChat() = test {
-    val chatDelete = postgres!!.testChat(user.id, agent.id)
+    val chatDelete = postgres.testChat(user.id, agent.id)
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.delete("/chats/${chatDelete.id}") {

@@ -41,18 +41,18 @@ class AdminChatControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    user = postgres!!.testUser(email = "not@important.org", admin = false)
-    userAdmin = postgres!!.testUser(admin = true)
-    userSession = postgres!!.testSession(user.id)
-    userAdminSession = postgres!!.testSession(userAdmin.id)
-    agent = postgres!!.testAgent(active = true)
-    agentConfiguration = postgres!!.testAgentConfiguration(agent.id)
-    chatOne = postgres!!.testChat(user.id, agent.id)
-    chatTwo = postgres!!.testChat(user.id, agent.id)
-    chatThree = postgres!!.testChat(userAdmin.id, agent.id)
-    messageOne = postgres!!.testChatMessage(chatOne.id, user.id, "First Message")
-    messageTwo = postgres!!.testChatMessage(chatOne.id, user.id, "Second Message")
-    chatRepository = ChatRepository(postgres!!.dslContext)
+    user = postgres.testUser(email = "not@important.org", admin = false)
+    userAdmin = postgres.testUser(admin = true)
+    userSession = postgres.testSession(user.id)
+    userAdminSession = postgres.testSession(userAdmin.id)
+    agent = postgres.testAgent(active = true)
+    agentConfiguration = postgres.testAgentConfiguration(agent.id)
+    chatOne = postgres.testChat(user.id, agent.id)
+    chatTwo = postgres.testChat(user.id, agent.id)
+    chatThree = postgres.testChat(userAdmin.id, agent.id)
+    messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
+    messageTwo = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
+    chatRepository = ChatRepository(postgres.dslContext)
   }
 
   @Test
@@ -171,7 +171,7 @@ class AdminChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldDeleteChatWithExistingMessages() = test {
-    val newChat = postgres!!.testChat(user.id, agent.id)
+    val newChat = postgres.testChat(user.id, agent.id)
     val chat = chatRepository.get(newChat.id)!!
     val userMessage = chatRepository.insertUserMessage(chat.id, user.id, "Test Message")
     val agentMessage =

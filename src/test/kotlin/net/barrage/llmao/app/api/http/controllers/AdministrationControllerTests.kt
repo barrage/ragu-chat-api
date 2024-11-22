@@ -39,25 +39,23 @@ class AdministrationControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    admin = postgres!!.testUser(admin = true, active = true, email = "admin@barrage.net")
-    adminSession = postgres!!.testSession(admin.id)
+    admin = postgres.testUser(admin = true, active = true, email = "admin@barrage.net")
+    adminSession = postgres.testSession(admin.id)
 
-    userActive = postgres!!.testUser(admin = false, active = true, email = "user@barrage.net")
-    userInactive =
-      postgres!!.testUser(admin = false, active = false, email = "inactive@barrage.net")
+    userActive = postgres.testUser(admin = false, active = true, email = "user@barrage.net")
+    userInactive = postgres.testUser(admin = false, active = false, email = "inactive@barrage.net")
 
-    agentOne = postgres!!.testAgent(active = true, name = "TestAgentOne")
-    agentOneConfiguration = postgres!!.testAgentConfiguration(agentOne.id, llmProvider = "openai")
+    agentOne = postgres.testAgent(active = true, name = "TestAgentOne")
+    agentOneConfiguration = postgres.testAgentConfiguration(agentOne.id, llmProvider = "openai")
 
-    agentTwo = postgres!!.testAgent(active = true, name = "TestAgentTwo")
-    agentTwoConfiguration = postgres!!.testAgentConfiguration(agentTwo.id, llmProvider = "azure")
+    agentTwo = postgres.testAgent(active = true, name = "TestAgentTwo")
+    agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id, llmProvider = "azure")
 
-    agentThree = postgres!!.testAgent(active = false, name = "TestAgentThree")
-    agentThreeConfiguration =
-      postgres!!.testAgentConfiguration(agentThree.id, llmProvider = "azure")
+    agentThree = postgres.testAgent(active = false, name = "TestAgentThree")
+    agentThreeConfiguration = postgres.testAgentConfiguration(agentThree.id, llmProvider = "azure")
 
-    chatOne = postgres!!.testChat(userActive.id, agentOne.id)
-    chatTwo = postgres!!.testChat(userActive.id, agentOne.id)
+    chatOne = postgres.testChat(userActive.id, agentOne.id)
+    chatTwo = postgres.testChat(userActive.id, agentOne.id)
   }
 
   @Test

@@ -30,12 +30,24 @@ open class IntegrationTest(
    */
   private val wiremockUrlOverride: String? = null,
 ) {
-  var postgres: TestPostgres? = null
+  val postgres: TestPostgres = TestPostgres()
   var weaviate: TestWeaviate? = null
   private var wiremock: Wiremock? = null
   var services: ServiceState? = null
 
   private var cfg = YamlConfigLoader().load("application.yaml")!!
+
+  init {
+    cfg =
+      cfg.mergeWith(
+        MapApplicationConfig(
+          "db.url" to postgres.container.jdbcUrl,
+          "db.user" to postgres.container.username,
+          "db.password" to postgres.container.password,
+          "db.runMigrations" to "false", // We migrate manually on PG container initialization
+        )
+      )
+  }
 
   /**
    * The main test execution function that uses configuration obtained from the test containers as
@@ -59,9 +71,6 @@ open class IntegrationTest(
 
   @BeforeAll
   fun beforeAll() {
-    // Always load postgres because life is easier that way
-    loadPostgres()
-
     if (useWeaviate) {
       loadWeaviate()
     }
@@ -72,19 +81,6 @@ open class IntegrationTest(
 
     val applicationState = ApplicationState(cfg)
     services = ServiceState(applicationState)
-  }
-
-  private fun loadPostgres() {
-    postgres = TestPostgres()
-    cfg =
-      cfg.mergeWith(
-        MapApplicationConfig(
-          "db.url" to postgres!!.container.jdbcUrl,
-          "db.user" to postgres!!.container.username,
-          "db.password" to postgres!!.container.password,
-          "db.runMigrations" to "false", // We migrate manually on PG container initialization
-        )
-      )
   }
 
   private fun loadWeaviate() {

@@ -18,8 +18,8 @@ class AdministrationControllerEmptyDBTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    admin = postgres!!.testUser(admin = true, active = true, email = "admin@barrage.net")
-    adminSession = postgres!!.testSession(admin.id)
+    admin = postgres.testUser(admin = true, active = true, email = "admin@barrage.net")
+    adminSession = postgres.testSession(admin.id)
   }
 
   @Test
