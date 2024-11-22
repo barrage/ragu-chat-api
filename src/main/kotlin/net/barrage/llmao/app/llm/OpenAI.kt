@@ -14,11 +14,10 @@ import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk
 
 private const val TITLE_GENERATION_MODEL = "gpt-4"
+private val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
 
 class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
   private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
-
-  private val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
 
   override fun id(): String {
     return "openai"

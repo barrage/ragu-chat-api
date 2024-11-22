@@ -106,7 +106,8 @@ open class IntegrationTest(
             // We are not overriding the API key since we need real ones.
 
             // Has to match the URL from the OpenAI SDK.
-            "llm.openAi.endpoint" to "${wiremockUrlOverride}/v1/",
+            "llm.openai.endpoint" to "${wiremockUrlOverride}/v1/",
+            "embeddings.openai.endpoint" to "${wiremockUrlOverride}/v1/",
 
             // Has to match the URL from the Azure OpenAI SDK.
             "embeddings.azure.endpoint" to "${wiremockUrlOverride}/openai/deployments",
@@ -121,8 +122,8 @@ open class IntegrationTest(
     cfg =
       cfg.mergeWith(
         MapApplicationConfig(
-          "llm.openAi.endpoint" to "${url}/v1/",
-          "llm.openAi.apiKey" to "super-duper-secret-openai-api-key",
+          "llm.openai.endpoint" to "${url}/v1/",
+          "llm.openai.apiKey" to "super-duper-secret-openai-api-key",
           "embeddings.azure.endpoint" to "${url}/openai/deployments",
           "embeddings.azure.apiKey" to "super-duper-secret-azure-api-key",
         )

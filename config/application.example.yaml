@@ -19,7 +19,7 @@ cors:
   headers: [ ]
 
 llm:
-  openAi:
+  openai:
     endpoint: "https://api.openai.com/v1/"
     apiKey: ""
   azure:
@@ -30,8 +30,11 @@ llm:
     endpoint: ""
 
 embeddings:
+  openai:
+    endpoint: "https://api.openai.com/v1/"
+    apiKey: ""
   azure:
-    endpoint: "https://<RESOURCE>.openai.azure.com/openai/deployments"
+    endpoint: "https://YOUR_RESOURCE.openai.azure.com/openai/deployments"
     deployment: "gipitty-text-embedding-ada-002"
     apiVersion: "2023-05-15"
     apiKey: "YOUR_EMBEDDINGS_KEY"
