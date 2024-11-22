@@ -1,10 +1,10 @@
 package net.barrage.llmao.core.services
 
 import kotlinx.coroutines.flow.toList
-import net.barrage.llmao.COMPLETIONS_COMPLETION_RESPONSE_PROMPT
+import net.barrage.llmao.COMPLETIONS_COMPLETION_PROMPT
 import net.barrage.llmao.COMPLETIONS_RESPONSE
+import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
-import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
@@ -41,8 +41,7 @@ class ChatServiceTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyStreamsChat() = test {
     // To trigger streams, the following prompt has to be somewhere the message
-    val stream =
-      chatService.chatCompletionStream(COMPLETIONS_STREAM_RESPONSE_PROMPT, listOf(), agent.id)
+    val stream = chatService.chatCompletionStream(COMPLETIONS_STREAM_PROMPT, listOf(), agent.id)
     val response =
       stream.toList().joinToString("") { chunk -> chunk.joinToString { it.content ?: "" } }
     assertEquals(COMPLETIONS_STREAM_RESPONSE, response)
@@ -51,8 +50,7 @@ class ChatServiceTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyCompletesChat() = test {
     // To trigger direct responses, the following prompt has to be somewhere the message
-    val response =
-      chatService.chatCompletion(COMPLETIONS_COMPLETION_RESPONSE_PROMPT, listOf(), agent.id)
+    val response = chatService.chatCompletion(COMPLETIONS_COMPLETION_PROMPT, listOf(), agent.id)
     assertEquals(COMPLETIONS_RESPONSE, response)
   }
 }

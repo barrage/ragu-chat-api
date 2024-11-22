@@ -214,12 +214,12 @@ class Chat(
       }
 
       for (chunk in tokens) {
-        if (chunk.content.isNullOrBlank() && chunk.stopReason != FinishReason.Stop) {
+        if (chunk.content.isNullOrEmpty() && chunk.stopReason != FinishReason.Stop) {
           continue
         }
 
         // Sometimes the first and last chunks are only one whitespace
-        if (!chunk.content.isNullOrBlank()) {
+        if (!chunk.content.isNullOrEmpty()) {
           emitter.emitChunk(chunk)
           buf.add(chunk.content)
         }
