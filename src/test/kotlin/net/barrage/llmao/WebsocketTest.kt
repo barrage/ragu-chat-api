@@ -31,12 +31,13 @@ suspend fun ClientWebSocketSession.sendClientSystem(message: SystemMessage) {
 }
 
 /** Send the `chat_open_new` system message and wait for the chat_open response. */
-suspend fun ClientWebSocketSession.openNewChat(agentId: KUUID) {
+suspend fun ClientWebSocketSession.openNewChat(agentId: KUUID): KUUID {
   // Open a chat and confirm it's open
   sendClientSystem(SystemMessage.OpenNewChat(agentId))
   val chatOpen = (incoming.receive() as Frame.Text).readText()
   val chatOpenMessage = json.decodeFromString<ServerMessage.ChatOpen>(chatOpen)
   assertNotNull(chatOpenMessage.chatId)
+  return chatOpenMessage.chatId
 }
 
 /** Send a chat message and wait for the response. */
