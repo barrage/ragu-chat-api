@@ -1,6 +1,5 @@
 package net.barrage.llmao.app.api.ws
 
-import com.aallam.openai.api.core.FinishReason
 import com.aallam.openai.api.exception.InvalidRequestException
 import io.ktor.util.logging.*
 import kotlin.coroutines.cancellation.CancellationException
@@ -12,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
@@ -102,11 +102,12 @@ class Chat(
       }
 
     try {
+      LOG.debug("Started stream for '{}'", id)
       val response = collectStream(proompt, stream, channel)
       LOG.debug("Chat '{}' got response: {}", id, response)
     } catch (e: InvalidRequestException) {
       // TODO: Failure
-      service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter.value)
+      service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter)
     } catch (e: Throwable) {
       handleError(e)
     } finally {
@@ -114,7 +115,11 @@ class Chat(
     }
   }
 
-  private suspend fun processResponse(proompt: String, response: String) {
+  private suspend fun processResponse(
+    proompt: String,
+    response: String,
+    finishReason: FinishReason,
+  ) {
     if (!messageReceived) {
       // TODO: Transaction for chat and initial message
       service.storeChat(id, userId, agentId, title)
@@ -129,7 +134,7 @@ class Chat(
     val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, proompt, response)
 
     val emitPayload =
-      ServerMessage.FinishEvent(id, messageId = assistantMsg.id, reason = FinishReason.Stop)
+      ServerMessage.FinishEvent(id, messageId = assistantMsg.id, reason = finishReason)
 
     channel.emitServer(emitPayload)
 
@@ -171,10 +176,16 @@ class Chat(
 
     stream.collect { tokens ->
       if (!streamActive) {
-        val finalResponse = buf.joinToString("")
+        val response = buf.joinToString("")
 
-        if (finalResponse.isNotBlank()) {
-          processResponse(prompt, finalResponse)
+        LOG.debug(
+          "Stream in '{}' cancelled, aborting | storing response: {}",
+          id,
+          response.isNotBlank(),
+        )
+
+        if (response.isNotBlank()) {
+          processResponse(prompt, response, FinishReason.ManualStop)
         }
 
         cancel("manual_cancel")
@@ -182,7 +193,7 @@ class Chat(
       }
 
       for (chunk in tokens) {
-        if (chunk.content.isNullOrEmpty() && chunk.stopReason != FinishReason.Stop) {
+        if (chunk.content.isNullOrEmpty() && chunk.stopReason?.value != FinishReason.Stop.value) {
           continue
         }
 
@@ -192,19 +203,21 @@ class Chat(
           buf.add(chunk.content)
         }
 
-        if (chunk.stopReason == FinishReason.Stop) {
+        if (chunk.stopReason?.value == FinishReason.Stop.value) {
           break
         }
       }
     }
 
-    val finalResponse = buf.joinToString("")
+    val response = buf.joinToString("")
 
-    if (finalResponse.isNotBlank()) {
-      processResponse(prompt, finalResponse)
+    LOG.debug("Stream in '{}' complete", id)
+
+    if (response.isNotBlank()) {
+      processResponse(prompt, response, FinishReason.Stop)
     }
 
-    finalResponse
+    response
   }
 
   /**

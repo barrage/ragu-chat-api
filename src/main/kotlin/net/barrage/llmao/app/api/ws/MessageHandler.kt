@@ -27,6 +27,7 @@ class MessageHandler(private val factory: ChatFactory) {
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
+    LOG.debug("Starting stream in '{}' for user '{}'", chat.id, userId)
     chat.startStreaming(message)
   }
 
@@ -63,6 +64,7 @@ class MessageHandler(private val factory: ChatFactory) {
         }
       }
       is SystemMessage.StopStream -> {
+        LOG.debug("Stopping stream for user '{}'", userId)
         chats[userId]?.closeStream()
       }
     }

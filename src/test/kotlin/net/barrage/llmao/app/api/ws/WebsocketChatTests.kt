@@ -1,9 +1,9 @@
 package net.barrage.llmao.app.api.ws
 
-import com.aallam.openai.api.core.FinishReason
 import io.ktor.websocket.*
 import kotlin.random.Random
 import kotlinx.serialization.SerializationException
+import net.barrage.llmao.COMPLETIONS_STREAM_LONG_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
 import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_PROMPT
@@ -11,17 +11,20 @@ import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.chatSession
 import net.barrage.llmao.core.models.AgentFull
+import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
+import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.sendMessage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 
@@ -177,6 +180,153 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
           break
         }
       }
+    }
+
+    deleteVectors()
+
+    assert(asserted)
+  }
+
+  @Test
+  fun storesChatOnlyAfterFirstMessagePair() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_STREAM_PROMPT)
+
+    val validAgent = createValidAgent()
+
+    client.chatSession(session.sessionId) {
+      val chatId = openNewChat(validAgent.agent.id)
+
+      val error = assertThrows<AppError> { services!!.chat.getChat(chatId) }
+      assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
+
+      var buffer = ""
+
+      sendMessage("Will this trigger a stream response?") { incoming ->
+        for (frame in incoming) {
+          val response = (frame as Frame.Text).readText()
+          try {
+            val finishEvent = json.decodeFromString<ServerMessage>(response)
+
+            // React only to finish events since titles can also get sent
+            if (finishEvent is ServerMessage.FinishEvent) {
+              assert(finishEvent.reason == FinishReason.Stop)
+              asserted = true
+              break
+            }
+          } catch (e: SerializationException) {
+            val errMessage = e.message ?: throw e
+            if (
+              // Happens when strings are received
+              !errMessage.startsWith("Expected JsonObject, but had JsonLiteral") &&
+                // Happens when strings containing only whitespace are received
+                !errMessage.startsWith(
+                  "Cannot read Json element because of unexpected end of the input"
+                )
+            ) {
+              throw e
+            }
+            buffer += response
+          } catch (e: Throwable) {
+            e.printStackTrace()
+            break
+          }
+        }
+      }
+
+      assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+      val chat = services!!.chat.getChat(chatId)
+      assertEquals(2, chat.messages.size)
+    }
+
+    deleteVectors()
+
+    assert(asserted)
+  }
+
+  @Test
+  fun doesNotStoreChatBeforeFirstMessagePair() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_STREAM_PROMPT)
+
+    val validAgent = createValidAgent()
+
+    client.chatSession(session.sessionId) {
+      val chatOne = openNewChat(validAgent.agent.id)
+      val errorOne = assertThrows<AppError> { services!!.chat.getChat(chatOne) }
+      assertEquals(ErrorReason.EntityDoesNotExist, errorOne.reason)
+
+      val chatTwo = openNewChat(validAgent.agent.id)
+      val errorTwo = assertThrows<AppError> { services!!.chat.getChat(chatTwo) }
+      assertEquals(ErrorReason.EntityDoesNotExist, errorTwo.reason)
+
+      asserted = true
+    }
+
+    deleteVectors()
+
+    assert(asserted)
+  }
+
+  @Test
+  fun storesChatAfterIncompleteFirstMessagePair() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_STREAM_LONG_PROMPT)
+
+    val validAgent = createValidAgent()
+
+    client.chatSession(session.sessionId) {
+      val chatId = openNewChat(validAgent.agent.id)
+
+      val error = assertThrows<AppError> { services!!.chat.getChat(chatId) }
+      assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
+
+      val message = "{ \"type\": \"chat\", \"text\": \"Will this trigger a stream response?\" }"
+
+      send(Frame.Text(message))
+
+      var cancelSent = false
+
+      for (frame in incoming) {
+        val response = (frame as Frame.Text).readText()
+        try {
+          val finishEvent = json.decodeFromString<ServerMessage>(response)
+
+          // React only to finish events since titles can also get sent
+          if (finishEvent is ServerMessage.FinishEvent) {
+            assert(finishEvent.reason == FinishReason.ManualStop)
+            asserted = true
+            break
+          }
+        } catch (e: SerializationException) {
+          val errMessage = e.message ?: throw e
+          if (
+            // Happens when strings are received
+            !errMessage.startsWith("Expected JsonObject, but had JsonLiteral") &&
+              // Happens when strings containing only whitespace are received
+              !errMessage.startsWith(
+                "Cannot read Json element because of unexpected end of the input"
+              )
+          ) {
+            throw e
+          }
+          // Send cancel immediately after first chunk
+          if (!cancelSent) {
+            cancelSent = true
+            sendClientSystem(SystemMessage.StopStream)
+          }
+        } catch (e: Throwable) {
+          e.printStackTrace()
+          break
+        }
+      }
+
+      val chat = services!!.chat.getChat(chatId)
+      assertEquals(2, chat.messages.size)
     }
 
     deleteVectors()

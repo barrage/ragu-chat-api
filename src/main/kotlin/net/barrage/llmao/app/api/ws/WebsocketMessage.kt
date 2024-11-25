@@ -1,11 +1,11 @@
 package net.barrage.llmao.app.api.ws
 
-import com.aallam.openai.api.core.FinishReason
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
+import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.types.KUUID
 
 /** Incoming WS messages. */

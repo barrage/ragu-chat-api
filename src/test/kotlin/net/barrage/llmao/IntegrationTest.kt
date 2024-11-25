@@ -146,6 +146,9 @@ const val COMPLETIONS_STREAM_PROMPT = "v1_chat_completions_stream"
  */
 const val COMPLETIONS_STREAM_WHITESPACE_PROMPT = "v1_chat_completions_whitespace_stream"
 
+/** Prompt configured to make wiremock return a stream response with a long response. */
+const val COMPLETIONS_STREAM_LONG_PROMPT = "v1_chat_completions_long_stream"
+
 // Wiremock message content
 
 /** Returned on [COMPLETIONS_COMPLETION_PROMPT]. */
@@ -160,3 +163,5 @@ const val COMPLETIONS_STREAM_RESPONSE = "v1_chat_completions_stream_response"
 /** Returned on [COMPLETIONS_STREAM_WHITESPACE_PROMPT]. */
 const val COMPLETIONS_STREAM_WHITESPACE_RESPONSE =
   "v1_chat_completions_stream_response\nwith whitespace"
+
+val COMPLETIONS_STREAM_LONG_RESPONSE = COMPLETIONS_STREAM_RESPONSE.repeat(4)

@@ -11,8 +11,10 @@
     },
     "bodyPatterns": [
       {
-        "matchesJsonPath": "$.messages[1].content",
-        "contains": "v1_chat_completions_completion"
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "contains": "v1_chat_completions_completion"
+        }
       }
     ]
   },

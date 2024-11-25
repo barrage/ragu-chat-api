@@ -14,6 +14,7 @@ import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
+import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -68,8 +69,9 @@ class ChatService(
     return ChatWithUserAndAgent(chat, user, agent.agent)
   }
 
-  fun getChat(chatId: KUUID): ChatWithMessages? {
+  fun getChat(chatId: KUUID): ChatWithMessages {
     return chatRepository.getWithMessages(chatId)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$chatId'")
   }
 
   fun storeChat(id: KUUID, userId: KUUID, agentId: KUUID, title: String?) {
@@ -161,8 +163,8 @@ class ChatService(
     return Pair(userMessage, assistantMessage)
   }
 
-  fun processFailedMessage(chatId: KUUID, userId: KUUID, prompt: String, reason: String) {
-    chatRepository.insertFailedMessage(chatId, userId, prompt, reason)
+  fun processFailedMessage(chatId: KUUID, userId: KUUID, prompt: String, reason: FinishReason) {
+    chatRepository.insertFailedMessage(chatId, userId, prompt, reason.value)
   }
 
   suspend fun summarizeConversation(
