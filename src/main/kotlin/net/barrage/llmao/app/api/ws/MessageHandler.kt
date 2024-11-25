@@ -43,10 +43,14 @@ class MessageHandler(private val factory: ChatFactory) {
       is SystemMessage.OpenExistingChat -> {
         val chat = chats[userId]
 
+        // Prevent loading the same chat
         if (chat != null && chat.id == message.chatId) {
+          LOG.debug("Existing chat has same ID as opened chat '{}'", chat.id)
           channel.emitServer(ServerMessage.ChatOpen(chat.id))
           return
         }
+
+        chat?.cancelStream()
 
         val existingChat = factory.fromExisting(message.chatId, channel)
 
@@ -59,13 +63,13 @@ class MessageHandler(private val factory: ChatFactory) {
       is SystemMessage.CloseChat -> {
         chats.remove(userId)?.let {
           channel.emitServer(ServerMessage.ChatClosed(it.id))
-          it.closeStream()
+          it.cancelStream()
           LOG.debug("Closed chat for user '{}'", userId)
         }
       }
       is SystemMessage.StopStream -> {
         LOG.debug("Stopping stream for user '{}'", userId)
-        chats[userId]?.closeStream()
+        chats[userId]?.cancelStream()
       }
     }
   }

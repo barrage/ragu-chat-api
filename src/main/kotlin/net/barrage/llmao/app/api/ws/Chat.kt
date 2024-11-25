@@ -83,7 +83,7 @@ class Chat(
   }
 
   /** Close the stream and cancel its job, if it exists. */
-  fun closeStream() {
+  fun cancelStream() {
     if (streamActive) {
       LOG.debug("Closing stream for '{}'", id)
     }
