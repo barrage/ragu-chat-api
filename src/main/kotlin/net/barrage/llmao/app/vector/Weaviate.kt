@@ -44,16 +44,21 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
         )
         .withLimit(amount)
 
-    val graphQLResult = query.run()
+    val requestResult = query.run()
 
-    if (graphQLResult.hasErrors()) {
-      throw graphQlError(graphQLResult.error)
+    if (requestResult.hasErrors()) {
+      throw requestError(requestResult.error)
     }
 
     // Actual result of the query.
-    val result = graphQLResult.result
+    val result = requestResult.result
 
     if (result.errors != null) {
+      // Happens when the collection is empty. We do not want to error on empty collections.
+      if (result.errors.find { it.message.startsWith("Cannot query field \"content\"") } != null) {
+        LOG.warn("Empty collection detected, skipping; Original error: {}", result.errors)
+        return listOf()
+      }
       throw queryError(result.errors)
     } else if (result.data == null) {
       LOG.warn("Weaviate did not return any data; Result: {}", result)
@@ -61,8 +66,8 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     }
 
     val data =
-      graphQLResult.result.data as? Map<*, *>
-        ?: throw mappingError("Cannot cast ${graphQLResult.result.data} to Map")
+      requestResult.result.data as? Map<*, *>
+        ?: throw mappingError("Cannot cast ${requestResult.result.data} to Map")
 
     val mappedData =
       data["Get"] as? Map<*, *> ?: throw mappingError("Cannot cast ${data["Get"]} to Map")
@@ -112,14 +117,14 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
   }
 
   /** Error in transport to Weaviate. */
-  private fun graphQlError(weaviateError: io.weaviate.client.base.WeaviateError): AppError {
+  private fun requestError(weaviateError: io.weaviate.client.base.WeaviateError): AppError {
     LOG.error("Weaviate GraphQL error: $weaviateError")
     return AppError.api(ErrorReason.VectorDatabase, "Weaviate GraphQL error: $weaviateError")
   }
 
   /** Internal error when remapping GraphQL data. We do not expose our n00bery to clients. */
-  private fun mappingError(weaviateError: String): AppError {
-    LOG.error("Weaviate mapping error: $weaviateError")
+  private fun mappingError(error: String): AppError {
+    LOG.error("Weaviate mapping error: $error")
     return AppError.internal()
   }
 
