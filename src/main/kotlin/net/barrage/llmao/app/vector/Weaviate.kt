@@ -4,8 +4,7 @@ import io.ktor.util.logging.*
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
 import io.weaviate.client.v1.graphql.model.GraphQLError
-import io.weaviate.client.v1.graphql.query.argument.NearVectorArgument
-import io.weaviate.client.v1.graphql.query.fields.Field
+import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -21,30 +20,22 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
   }
 
   /**
-   * Query Weaviate based on `searchVector` and return `amount` most similar results.
+   * Query Weaviate based on `searchVector` and return `amount` most similar results from the given
+   * `collections`.
    *
    * This method does not throw in case the query returns no results. Only internal errors and
    * errors obtained from the GraphQL API are thrown.
    */
-  override fun query(searchVector: List<Double>, collection: String, amount: Int): List<String> {
-    val fields = Field.builder().name("content").build()
+  override fun query(
+    searchVector: List<Double>,
+    collections: List<Pair<String, Int>>,
+  ): Map<String, List<VectorData>> {
+    if (collections.isEmpty()) {
+      return mapOf()
+    }
 
-    val results = mutableListOf<String>()
-
-    val query =
-      client
-        .graphQL()
-        .get()
-        .withFields(fields)
-        .withClassName(collection)
-        .withNearVector(
-          NearVectorArgument.builder()
-            .vector(searchVector.map { it.toFloat() }.toTypedArray())
-            .build()
-        )
-        .withLimit(amount)
-
-    val requestResult = query.run()
+    val query = constructQuery(searchVector, collections)
+    val requestResult = client.graphQL().raw().withQuery(query).run()
 
     if (requestResult.hasErrors()) {
       throw requestError(requestResult.error)
@@ -55,35 +46,50 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
     if (result.errors != null) {
       // Happens when the collection is empty. We do not want to error on empty collections.
-      if (result.errors.find { it.message.startsWith("Cannot query field \"content\"") } != null) {
-        LOG.warn("Empty collection detected, skipping; Original error: {}", result.errors)
-        return listOf()
+      if (result.errors.find { it.message.startsWith("Cannot query field") } != null) {
+        LOG.warn(
+          "Invalid field detected, skipping; This could be due to leftover fields during development or the collection being empty."
+        )
+        LOG.warn("Original error: {}", result.errors)
+        return mapOf()
       }
       throw queryError(result.errors)
     } else if (result.data == null) {
       LOG.warn("Weaviate did not return any data; Result: {}", result)
-      return listOf()
+      return mapOf()
     }
+
+    val results = mutableMapOf<String, MutableList<VectorData>>()
 
     val data =
       requestResult.result.data as? Map<*, *>
         ?: throw mappingError("Cannot cast ${requestResult.result.data} to Map")
 
+    // Get { collectionName: [ { content: "..." }, { content: "..." } ] }
     val mappedData =
       data["Get"] as? Map<*, *> ?: throw mappingError("Cannot cast ${data["Get"]} to Map")
 
-    val collectionData =
-      mappedData[collection] as? List<*>
-        ?: throw mappingError("Cannot cast ${mappedData[collection]} to List, skipping")
+    for ((collectionName, amount) in collections) {
+      val vectorData = mappedData[collectionName] as? List<*> ?: continue // No vectors as List<*>
 
-    for (item in collectionData) {
-      (item as? Map<*, *>)?.let {
-        val content = it["content"] as String
-        results.add(content)
+      results[collectionName] = mutableListOf()
+
+      for (payload in vectorData) {
+        val properties = payload as Map<*, *>
+
+        val content = properties["content"] as String?
+        val documentId = properties["document_id"] as String?
+
+        if (content == null) {
+          LOG.error("Weaviate query error: Content is null (collection: $collectionName)")
+          continue
+        }
+
+        results[collectionName]!!.add(VectorData(content, documentId))
       }
-    }
 
-    LOG.debug("Successful query in '$collection' (${results.size}/$amount results)")
+      LOG.debug("Successful query in '{}' ({}/{} results)", collectionName, vectorData.size, amount)
+    }
 
     return results
   }
@@ -114,6 +120,23 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     }
 
     return true
+  }
+
+  /**
+   * Construct a raw GraphQL query so we can obtain the results from each collection with a single
+   * request.
+   */
+  private fun constructQuery(
+    searchVector: List<Double>,
+    collections: List<Pair<String, Int>>,
+  ): String {
+    var query = "query { Get { "
+    val vector = searchVector.joinToString(",")
+    for ((name, amount) in collections) {
+      query += "$name(limit: $amount, nearVector: { vector: [$vector] }) { content } "
+    }
+    query += " } }"
+    return query
   }
 
   /** Error in transport to Weaviate. */

@@ -266,12 +266,16 @@ class ChatService(
 
     var collectionInstructions = ""
 
+    val collections = agent.collections.map { Pair(it.collection, it.amount) }.toList()
+    val relatedChunks = vectorDb.query(embedded, collections)
+
     for (collection in agent.collections) {
       val instruction = collection.instruction
-      val relatedChunks =
-        vectorDb.query(embedded, collection.collection, collection.amount).joinToString("\n\t")
+      val collectionData = relatedChunks[collection.collection]?.joinToString("\n") { it.content }
 
-      collectionInstructions += "$instruction\n\"\"\n\t$relatedChunks\n\"\""
+      collectionData?.let {
+        collectionInstructions += "$instruction\n\"\"\n\t$collectionData\n\"\""
+      }
     }
 
     val message = userMessage(prompt, collectionInstructions)
