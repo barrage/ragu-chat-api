@@ -1,0 +1,18 @@
+{
+  "id": "2dddd40a-a49d-40a7-a50d-c60cfc701692",
+  "name": "openai_v1_chat_completions_completion",
+  "request": {
+    "url": "/__fembed/list",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "fembed_list_models_response.json",
+    "headers": {
+      "Date": "Wed, 20 Nov 2024 10:09:44 GMT",
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "2dddd40a-a49d-40a7-a50d-c60cfc701692",
+  "persistent": true
+}

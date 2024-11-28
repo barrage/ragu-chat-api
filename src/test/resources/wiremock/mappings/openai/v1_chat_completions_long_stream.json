@@ -2,7 +2,7 @@
   "id": "db2d52d4-9e0d-4894-b828-e36ed344816e",
   "name": "openai_v1_chat_completions_long_stream",
   "request": {
-    "url": "/v1/chat/completions",
+    "url": "/__openai/v1/chat/completions",
     "headers": {
       "Accept": {
         "contains": "text/event-stream"

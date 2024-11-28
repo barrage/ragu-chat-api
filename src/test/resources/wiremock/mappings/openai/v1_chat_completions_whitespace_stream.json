@@ -2,7 +2,7 @@
   "id": "d56fc4cf-127f-4fac-a783-185a3ebd8edb",
   "name": "openai_v1_chat_completions_whitespace_stream",
   "request": {
-    "url": "/v1/chat/completions",
+    "url": "/__openai/v1/chat/completions",
     "headers": {
       "Accept": {
         "contains": "text/event-stream"

@@ -1,0 +1,7 @@
+{
+  "Qdrant/all-MiniLM-L6-v2-onnx": 384,
+  "Xenova/all-MiniLM-L12-v2": 384,
+  "Xenova/bge-base-en-v1.5": 768,
+  "Xenova/bge-large-en-v1.5": 1024,
+  "Xenova/bge-small-en-v1.5": 384
+}

@@ -123,12 +123,13 @@ open class IntegrationTest(
     cfg =
       cfg.mergeWith(
         MapApplicationConfig(
-          "llm.openai.endpoint" to "${url}/v1/",
+          "llm.openai.endpoint" to "${url}/$OPENAI_WM/v1/",
           "llm.openai.apiKey" to "super-duper-secret-openai-api-key",
-          "embeddings.openai.endpoint" to "${url}/v1/",
+          "embeddings.openai.endpoint" to "${url}/$OPENAI_WM/v1/",
           "embeddings.openai.apiKey" to "super-duper-secret-openai-api-key",
-          "embeddings.azure.endpoint" to "${url}/openai/deployments",
+          "embeddings.azure.endpoint" to "${url}/${AZURE_WM}/openai/deployments",
           "embeddings.azure.apiKey" to "super-duper-secret-azure-api-key",
+          "embeddings.fembed.endpoint" to "${url}/${FEMBED_WM}",
         )
       )
   }
@@ -136,6 +137,12 @@ open class IntegrationTest(
 
 /** Has to be the same name as `session.cookieName`. */
 fun sessionCookie(sessionId: UUID): String = "kappi=id%3D%2523s$sessionId"
+
+// Wiremock URL discriminators
+
+const val OPENAI_WM = "__openai"
+const val AZURE_WM = "__azure"
+const val FEMBED_WM = "__fembed"
 
 // Wiremock response triggers
 
