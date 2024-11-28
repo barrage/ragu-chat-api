@@ -41,6 +41,6 @@ class FastEmbedder(private val endpoint: String) : Embedder {
   }
 }
 
-@Serializable private data class EmbeddingRequest(val content: List<String>, val model: String)
+@Serializable private data class EmbeddingRequest(val input: List<String>, val model: String)
 
 @Serializable private data class EmbeddingResponse(val embeddings: List<List<Double>>)

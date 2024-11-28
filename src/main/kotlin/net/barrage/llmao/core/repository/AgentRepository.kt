@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.repository
 
+import io.ktor.util.logging.*
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -27,6 +28,8 @@ import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
+
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.repository.AgentRepository")
 
 class AgentRepository(private val dslContext: DSLContext) {
   fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
@@ -100,6 +103,12 @@ class AgentRepository(private val dslContext: DSLContext) {
         val collections = getCollections(id)
         AgentFull(agent, configuration, collections)
       } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
+  }
+
+  fun deleteAllCollections(agentId: KUUID) {
+    val deleted =
+      dslContext.delete(AGENT_COLLECTIONS).where(AGENT_COLLECTIONS.AGENT_ID.eq(agentId)).execute()
+    LOG.debug("Deleted {} collections from agent {}", deleted, agentId)
   }
 
   fun getActive(id: KUUID): Agent {
@@ -227,6 +236,14 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
           .set(AGENTS.ACTIVE, DSL.coalesce(DSL.`val`(update.active), AGENTS.ACTIVE))
           .set(AGENTS.LANGUAGE, DSL.coalesce(DSL.`val`(update.language), AGENTS.LANGUAGE))
+          .set(
+            AGENTS.EMBEDDING_PROVIDER,
+            DSL.coalesce(DSL.`val`(update.embeddingProvider), AGENTS.EMBEDDING_PROVIDER),
+          )
+          .set(
+            AGENTS.EMBEDDING_MODEL,
+            DSL.coalesce(DSL.`val`(update.embeddingModel), AGENTS.EMBEDDING_MODEL),
+          )
           .where(AGENTS.ID.eq(id))
           .returning()
           .fetchOne(AgentsRecord::toAgent)!!

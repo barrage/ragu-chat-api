@@ -65,8 +65,16 @@ class AgentService(
   }
 
   suspend fun update(id: KUUID, update: UpdateAgent): Any {
-    update.configuration?.let {
-      validateAgentConfigurationParams(llmProvider = it.llmProvider, model = it.model)
+    validateAgentConfigurationParams(
+      llmProvider = update.configuration?.llmProvider,
+      model = update.configuration?.model,
+      embeddingProvider = update.embeddingProvider,
+      embeddingModel = update.embeddingModel,
+    )
+
+    // If embedding configuration is being updated, invalidate all collections.
+    if (update.embeddingProvider != null && update.embeddingModel != null) {
+      agentRepository.deleteAllCollections(id)
     }
 
     return agentRepository.update(id, update)

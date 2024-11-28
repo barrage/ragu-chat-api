@@ -24,7 +24,7 @@ class Channel(private val flow: MutableSharedFlow<String>, private val job: Job)
 
   /** Emit an application error. */
   suspend fun emitError(error: AppError) {
-    LOG.debug("Emitting error", error)
+    LOG.error("Emitting error", error)
     flow.emitJson(error)
   }
 
