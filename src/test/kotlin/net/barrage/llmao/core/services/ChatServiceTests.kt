@@ -34,7 +34,7 @@ class ChatServiceTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyGeneratesChatTitle() = test {
     // Title responses are always the same regardless of the prompt
-    val response = chatService.generateTitle(chat.id, "Test prompt - title", agent.id)
+    val response = chatService.createAndUpdateTitle(chat.id, "Test prompt - title", agent.id)
     assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
   }
 

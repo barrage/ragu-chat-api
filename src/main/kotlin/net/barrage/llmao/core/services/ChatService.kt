@@ -78,7 +78,7 @@ class ChatService(
     chatRepository.insert(id, userId, agentId, title)
   }
 
-  suspend fun generateTitle(chatId: KUUID, prompt: String, agentId: KUUID): String {
+  suspend fun createAndUpdateTitle(chatId: KUUID, prompt: String, agentId: KUUID): String {
     val agentFull = agentRepository.get(agentId)
 
     val titlePrompt = agentFull.configuration.agentInstructions.title(prompt)
