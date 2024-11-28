@@ -126,6 +126,10 @@ class Chat(
       messageReceived = true
     }
 
+    if (title.isNullOrBlank()) {
+      generateTitle(proompt)
+    }
+
     val messages: List<ChatMessage> =
       listOf(ChatMessage.user(proompt), ChatMessage.assistant(response))
 
@@ -137,16 +141,11 @@ class Chat(
       ServerMessage.FinishEvent(id, messageId = assistantMsg.id, reason = finishReason)
 
     channel.emitServer(emitPayload)
-
-    if (title.isNullOrBlank()) {
-      this.generateTitle(proompt)
-    }
   }
 
   private suspend fun generateTitle(prompt: String) {
-    val title = service.generateTitle(id, prompt, agentId)
-    channel.emitServer(ServerMessage.ChatTitle(id, title))
-    this.title = title
+    title = service.createAndUpdateTitle(id, prompt, agentId)
+    channel.emitServer(ServerMessage.ChatTitle(id, title!!))
   }
 
   private suspend fun addToHistory(messages: List<ChatMessage>) {
