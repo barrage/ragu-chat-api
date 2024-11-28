@@ -4,8 +4,6 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 class ChatFactory(private val agentService: AgentService, private val chatService: ChatService) {
 
@@ -23,9 +21,7 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
   }
 
   fun fromExisting(id: KUUID, channel: Channel): Chat {
-    val chat =
-      chatService.getChat(id)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$id'")
+    val chat = chatService.getChat(id)
 
     agentService.getActive(chat.chat.agentId)
 

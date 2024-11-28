@@ -87,6 +87,8 @@ data class CreateAgent(
 data class UpdateAgent(
   @NotBlank val name: String? = null,
   @NotBlank val description: String? = null,
+  @NotBlank val embeddingModel: String? = null,
+  @NotBlank val embeddingProvider: String? = null,
   val active: Boolean? = null,
   @NotBlank val language: String? = null,
   val configuration: UpdateAgentConfiguration? = null,
