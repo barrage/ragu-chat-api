@@ -2,7 +2,7 @@
   "id": "a6febda6-a28f-407b-9563-390a157769b3",
   "name": "azure_embeddings_ada-002",
   "request": {
-    "url": "/openai/deployments/gipitty-text-embedding-ada-002/embeddings?api-version=2023-05-15",
+    "url": "/__azure/openai/deployments/gipitty-text-embedding-ada-002/embeddings?api-version=2023-05-15",
     "method": "POST",
     "bodyPatterns": [
       {

@@ -2,7 +2,7 @@
   "id": "ff6edea8-22bc-4bfe-8296-f08d2d060cdf",
   "name": "openai_v1_chat_completions_title",
   "request": {
-    "url": "/v1/chat/completions",
+    "url": "/__openai/v1/chat/completions",
     "method": "POST",
     "bodyPatterns": [
       {

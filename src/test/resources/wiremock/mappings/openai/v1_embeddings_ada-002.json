@@ -2,7 +2,7 @@
   "id": "d0fa028f-8630-42a5-8fd3-799b026f9d6c",
   "name": "v1_embeddings_ada-002",
   "request": {
-    "url": "/v1/embeddings",
+    "url": "/__openai/v1/embeddings",
     "method": "POST",
     "bodyPatterns": [
       {

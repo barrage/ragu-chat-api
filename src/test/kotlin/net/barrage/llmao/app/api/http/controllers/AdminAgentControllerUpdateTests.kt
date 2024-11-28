@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class AdminAgentControllerUpdateTests : IntegrationTest(useWeaviate = true) {
+class AdminAgentControllerUpdateTests : IntegrationTest(useWeaviate = true, useWiremock = true) {
   private lateinit var adminUser: User
   private lateinit var adminSession: Session
   private lateinit var agent: Agent

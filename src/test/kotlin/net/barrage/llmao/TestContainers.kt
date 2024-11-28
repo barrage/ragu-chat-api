@@ -342,6 +342,8 @@ class Wiremock {
       .response("openai", "openai_v1_embeddings_large-3_response.json")
       .map("azure/embeddings_ada-002")
       .response("azure", "azure_embeddings_ada-002_response.json")
+      .map("fembed/fembed_list_models")
+      .response("fembed", "fembed_list_models_response.json")
 
   init {
     container.start()
