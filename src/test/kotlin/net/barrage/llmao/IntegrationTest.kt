@@ -59,6 +59,7 @@ open class IntegrationTest(
       block()
     } catch (e: Throwable) {
       e.printStackTrace()
+      throw e
     }
   }
 
