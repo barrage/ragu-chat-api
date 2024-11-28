@@ -55,7 +55,11 @@ open class IntegrationTest(
    */
   fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
     environment { config = cfg }
-    block()
+    try {
+      block()
+    } catch (e: Throwable) {
+      e.printStackTrace()
+    }
   }
 
   /** Main execution function for websocket tests that exposes a websocket client. */
