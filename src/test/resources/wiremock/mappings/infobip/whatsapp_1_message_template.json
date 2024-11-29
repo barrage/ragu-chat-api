@@ -12,7 +12,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "whatsapp_1_message_template_response.json",
+    "bodyFileName": "infobip/whatsapp_1_message_template_response.json",
     "headers": {
       "x-request-id": "1732780648555739829",
       "date": "Thu, 28 Nov 2024 07:57:28 GMT",

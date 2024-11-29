@@ -62,9 +62,7 @@ import org.jooq.impl.DSL
 import org.postgresql.ds.PGSimpleDataSource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
-import org.testcontainers.utility.MountableFile
 import org.testcontainers.weaviate.WeaviateContainer
-import org.wiremock.integrations.testcontainers.WireMockContainer
 
 class TestPostgres {
   val container: PostgreSQLContainer<*> =
@@ -416,63 +414,4 @@ class TestWeaviate {
       .withWhere(WhereFilter.builder().operator(Operator.Like).path("id").valueString("*").build())
       .run()
   }
-}
-
-/**
- * Holds the Wiremock test container.
- *
- * The `mappings` directory contains the definition for responses we mock.
- *
- * Each response will have a `bodyFileName` in the response designating the body for it. When the
- * container is started it will copy all files from the `responses` directory to the
- * `/home/wiremock/__files` directory in the container and the directory will be flat, containing
- * only files. The `bodyFileName` must be equal to the file name in the container directory, which
- * is also why every response must have a unique name, regardless of the directory.
- */
-class Wiremock {
-  val container: WireMockContainer =
-    WireMockContainer("wiremock/wiremock:3.9.2")
-      .map("openai/v1_chat_completions_completion")
-      .map("openai/v1_chat_completions_stream")
-      .map("openai/v1_chat_completions_title")
-      .map("openai/v1_chat_completions_whitespace_stream")
-      .map("openai/v1_chat_completions_long_stream")
-      .map("openai/v1_embeddings_ada-002")
-      .map("openai/v1_embeddings_large-3")
-      .response("openai", "openai_v1_chat_completions_completion_response.json")
-      .response("openai", "openai_v1_chat_completions_stream_response.txt")
-      .response("openai", "openai_v1_chat_completions_long_stream_response.txt")
-      .response("openai", "openai_v1_chat_completions_title_response.json")
-      .response("openai", "openai_v1_chat_completions_whitespace_stream_response.txt")
-      .response("openai", "openai_v1_embeddings_ada-002_response.json")
-      .response("openai", "openai_v1_embeddings_large-3_response.json")
-      .map("azure/embeddings_ada-002")
-      .response("azure", "azure_embeddings_ada-002_response.json")
-      .map("fembed/fembed_list_models")
-      .response("fembed", "fembed_list_models_response.json")
-      .map("vault/v1_approle_login")
-      .response("vault", "v1_approle_login_response.json")
-      .map("vault/v1_transit_sign")
-      .response("vault", "v1_transit_sign_response.json")
-      .map("vault/v1_transit_keys_key")
-      .response("vault", "v1_transit_keys_key_response.json")
-      .map("infobip/whatsapp_1_message_template")
-      .response("infobip", "whatsapp_1_message_template_response.json")
-      .map("infobip/whatsapp_1_message_text")
-      .response("infobip", "whatsapp_1_message_text_response.json")
-
-  init {
-    container.start()
-  }
-}
-
-private fun WireMockContainer.map(name: String): WireMockContainer {
-  return withMappingFromResource(name, "wiremock/mappings/$name.json")
-}
-
-private fun WireMockContainer.response(dir: String, name: String): WireMockContainer {
-  return withCopyFileToContainer(
-    MountableFile.forClasspathResource("wiremock/responses/$dir/$name"),
-    "/home/wiremock/__files/$name",
-  )
 }

@@ -1,0 +1,35 @@
+{
+  "id": "f35b4bc5-354f-4b88-8535-48ccb9cdcdd2",
+  "scenarioName": "GoogleAuthKeys",
+  "requiredScenarioState": "WrongKID",
+  "newScenarioState": "WrongKIDProvided",
+  "request": {
+    "url": "/__google/auth/keys",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "auth/invalid_json_web_keys.json",
+    "transformers": [
+      "response-template"
+    ],
+    "headers": {
+      "X-Frame-Options": "SAMEORIGIN",
+      "date": "Thu, 05 Dec 2024 09:12:43 GMT",
+      "expires": "Thu, 05 Dec 2024 14:36:01 GMT",
+      "Alt-Svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "Server": "scaffolding on HTTPServer2",
+      "X-Content-Type-Options": "nosniff",
+      "Vary": [
+        "Origin",
+        "X-Origin",
+        "Referer"
+      ],
+      "X-XSS-Protection": "0",
+      "cache-control": "public, max-age=19398, must-revalidate, no-transform",
+      "Content-Type": "application/json; charset=UTF-8"
+    }
+  },
+  "uuid": "f35b4bc5-354f-4b88-8535-48ccb9cdcdd2",
+  "persistent": true
+}

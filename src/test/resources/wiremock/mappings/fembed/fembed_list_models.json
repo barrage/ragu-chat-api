@@ -7,7 +7,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "fembed_list_models_response.json",
+    "bodyFileName": "fembed/fembed_list_models_response.json",
     "headers": {
       "Date": "Wed, 20 Nov 2024 10:09:44 GMT",
       "Content-Type": "application/json"

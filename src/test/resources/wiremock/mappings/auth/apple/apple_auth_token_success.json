@@ -1,0 +1,45 @@
+{
+  "id": "6cba30a7-1ab4-424c-83e6-939ca0ec8ed7",
+  "name": "apple_auth_token",
+  "request": {
+    "url": "/__apple/auth/token",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "contains": "code=success"
+      },
+      {
+        "contains": "redirect_uri="
+      },
+      {
+        "contains": "grant_type=authorization_code"
+      },
+      {
+        "contains": "code_verifier=success"
+      },
+      {
+        "contains": "client_id="
+      },
+      {
+        "contains": "client_secret="
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "auth/apple/apple_auth_token_success_response.json",
+    "transformers": [
+      "response-template"
+    ],
+    "headers": {
+      "Cache-Control": "no-store",
+      "Server": "Apple",
+      "Host": "appleid.apple.com",
+      "Pragma": "no-cache",
+      "Date": "Tue, 26 Nov 2024 08:11:40 GMT",
+      "Content-Type": "application/json;charset=UTF-8"
+    }
+  },
+  "uuid": "6cba30a7-1ab4-424c-83e6-939ca0ec8ed7",
+  "persistent": true
+}

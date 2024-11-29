@@ -1,0 +1,26 @@
+{
+  "id": "e548eac7-d5f7-48c0-b1c4-c1ba35cd9300",
+  "scenarioName": "AppleAuthKeys",
+  "requiredScenarioState": "Started",
+  "request": {
+    "url": "/__apple/auth/keys",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "body": "{{{ jwks }}}",
+    "transformers": [
+      "response-template"
+    ],
+    "headers": {
+      "Cache-Control": "no-store",
+      "Server": "Apple",
+      "Access-Control-Allow-Origin": "*",
+      "Pragma": "no-cache",
+      "Date": "Tue, 26 Nov 2024 08:11:40 GMT",
+      "Content-Type": "application/json;charset=UTF-8"
+    }
+  },
+  "uuid": "e548eac7-d5f7-48c0-b1c4-c1ba35cd9300",
+  "persistent": true
+}
