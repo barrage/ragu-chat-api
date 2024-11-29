@@ -1,0 +1,27 @@
+{
+  "id": "1dce2121-caba-4fae-a1f1-21d9f734d930",
+  "scenarioName": "AppleAuthKeys",
+  "requiredScenarioState": "WrongKID",
+  "newScenarioState": "WrongKIDProvided",
+  "request": {
+    "url": "/__apple/auth/keys",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "auth/invalid_json_web_keys.json",
+    "transformers": [
+      "response-template"
+    ],
+    "headers": {
+      "Cache-Control": "no-store",
+      "Server": "Apple",
+      "Access-Control-Allow-Origin": "*",
+      "Pragma": "no-cache",
+      "Date": "Tue, 26 Nov 2024 08:11:40 GMT",
+      "Content-Type": "application/json;charset=UTF-8"
+    }
+  },
+  "uuid": "1dce2121-caba-4fae-a1f1-21d9f734d930",
+  "persistent": true
+}

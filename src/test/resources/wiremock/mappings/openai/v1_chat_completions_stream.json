@@ -20,7 +20,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "openai_v1_chat_completions_stream_response.txt",
+    "bodyFileName": "openai/openai_v1_chat_completions_stream_response.txt",
     "headers": {
       "x-request-id": "req_610203e780db60ebd99fd9c962d8b1a8",
       "x-ratelimit-limit-tokens": "2000000",

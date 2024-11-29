@@ -15,7 +15,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "v1_approle_login_response.json",
+    "bodyFileName": "vault/v1_approle_login_response.json",
     "headers": {
       "Content-Type": "application/json"
     }

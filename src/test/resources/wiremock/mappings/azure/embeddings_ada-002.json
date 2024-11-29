@@ -13,7 +13,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "azure_embeddings_ada-002_response.json",
+    "bodyFileName": "azure/azure_embeddings_ada-002_response.json",
     "headers": {
       "x-request-id": "22d1330d-e023-4edf-a89b-33a1f2ff9d0c",
       "access-control-allow-origin": "*",

@@ -1,5 +1,7 @@
 package net.barrage.llmao
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.serialization.kotlinx.*
@@ -16,6 +18,7 @@ import net.barrage.llmao.app.ServiceState
 import net.barrage.llmao.app.api.ws.ClientMessageSerializer
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import org.wiremock.extension.jwt.JwtExtensionFactory
 
 @TestInstance(
   TestInstance.Lifecycle.PER_CLASS // Needed to avoid static methods in companion object
@@ -39,7 +42,7 @@ open class IntegrationTest(
 ) {
   val postgres: TestPostgres = TestPostgres()
   var weaviate: TestWeaviate? = null
-  private var wiremock: Wiremock? = null
+  var wiremock: WireMockServer? = null
   var services: ServiceState? = null
 
   // Always load example config so we are 1:1 with deployments.
@@ -137,8 +140,26 @@ open class IntegrationTest(
       return
     }
 
-    wiremock = Wiremock()
-    val url = wiremock!!.container.baseUrl
+    /**
+     * Creates Wiremock server locally.
+     *
+     * The `resources/wiremock/mappings` directory contains the definition for responses we mock.
+     *
+     * Each response will have a `bodyFileName` in the response designating the body for it. When
+     * the server is started it will copy `resources/wiremock/__files` directory to the
+     * `/home/wiremock/__files` directory onto the server, matching the directory structure. The
+     * `bodyFileName` must be equal to the path from the `__files` directory.
+     */
+    wiremock =
+      WireMockServer(
+        WireMockConfiguration.options()
+          .dynamicPort()
+          .extensions(JwtExtensionFactory())
+          .usingFilesUnderClasspath("wiremock")
+      )
+
+    wiremock!!.start()
+    val url = wiremock!!.baseUrl()
 
     cfg =
       cfg.mergeWith(
@@ -153,6 +174,12 @@ open class IntegrationTest(
           "vault.endpoint" to "$url/$VAULT_WM",
           "infobip.endpoint" to url,
           "infobip.apiKey" to "super-duper-secret-infobip-api-key",
+          "oauth.apple.endpoint" to "$url/$APPLE_VM",
+          "oauth.apple.clientId" to "clientId",
+          "oauth.apple.serviceId" to "serviceId",
+          "oauth.google.tokenEndpoint" to "$url/$GOOGLE_WM/auth/token",
+          "oauth.google.keysEndpoint" to "$url/$GOOGLE_WM/auth/keys",
+          "oauth.google.clientId" to "aud.apps.googleusercontent.com",
         )
       )
   }
@@ -167,6 +194,8 @@ const val OPENAI_WM = "__openai"
 const val AZURE_WM = "__azure"
 const val FEMBED_WM = "__fembed"
 const val VAULT_WM = "__vault"
+const val GOOGLE_WM = "__google"
+const val APPLE_VM = "__apple"
 
 // Wiremock response triggers
 

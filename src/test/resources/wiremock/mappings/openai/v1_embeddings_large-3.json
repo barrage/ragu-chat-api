@@ -15,7 +15,7 @@
   },
   "response": {
     "status": 200,
-    "bodyFileName": "openai_v1_embeddings_large-3_response.json",
+    "bodyFileName": "openai/openai_v1_embeddings_large-3_response.json",
     "headers": {
       "x-request-id": "req_d51fd286ed882d0f8b1549bb0bc2d1a5",
       "x-ratelimit-limit-tokens": "5000000",
