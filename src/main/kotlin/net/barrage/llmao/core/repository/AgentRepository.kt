@@ -156,7 +156,6 @@ class AgentRepository(private val dslContext: DSLContext) {
             AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
             create.configuration.instructions?.summaryInstruction,
           )
-          .set(AGENT_CONFIGURATIONS.VERSION, 0)
           .returning()
           .fetchOne(AgentConfigurationsRecord::toAgentConfiguration)!!
 
@@ -173,20 +172,20 @@ class AgentRepository(private val dslContext: DSLContext) {
   }
 
   fun update(id: KUUID, update: UpdateAgent): AgentWithConfiguration {
+    val currentConfiguration =
+      dslContext
+        .select(AGENT_CONFIGURATIONS.asterisk())
+        .from(AGENT_CONFIGURATIONS)
+        .join(AGENTS)
+        .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
+        .where(AGENTS.ID.eq(id))
+        .fetchOne()
+        ?.into(AGENT_CONFIGURATIONS)
+        ?.toAgentConfiguration()
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id' does not exist")
+
     return dslContext.transactionResult { tx ->
       val context = DSL.using(tx)
-
-      val currentConfiguration =
-        context
-          .select(AGENT_CONFIGURATIONS.asterisk())
-          .from(AGENT_CONFIGURATIONS)
-          .join(AGENTS)
-          .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
-          .where(AGENTS.ID.eq(id))
-          .fetchOne()
-          ?.into(AGENT_CONFIGURATIONS)
-          ?.toAgentConfiguration()
-          ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent configuration with ID '$id'")
 
       val configuration =
         // if configuration or instructions are updated, create a new version
@@ -197,7 +196,7 @@ class AgentRepository(private val dslContext: DSLContext) {
               .selectCount()
               .from(AGENT_CONFIGURATIONS)
               .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(id))
-              .fetchOne(0, Int::class.java) ?: 0
+              .fetchOne(0, Int::class.java) ?: 1
 
           dslContext
             .insertInto(AGENT_CONFIGURATIONS)
@@ -250,6 +249,13 @@ class AgentRepository(private val dslContext: DSLContext) {
 
       return@transactionResult AgentWithConfiguration(agent, configuration)
     }
+  }
+
+  fun delete(id: KUUID): Int {
+    return dslContext
+      .deleteFrom(AGENTS)
+      .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isFalse))
+      .execute()
   }
 
   fun updateCollections(agentId: KUUID, update: UpdateCollections) {

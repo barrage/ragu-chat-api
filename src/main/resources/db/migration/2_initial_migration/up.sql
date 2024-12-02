@@ -48,7 +48,7 @@ CREATE TABLE agent_configurations (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE agent_collections(
+CREATE TABLE agent_collections (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
 
@@ -68,7 +68,7 @@ CREATE TABLE agent_collections(
 
 CREATE TABLE chats (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    agent_id UUID NOT NULL REFERENCES agents(id),
+    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id),
     title TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

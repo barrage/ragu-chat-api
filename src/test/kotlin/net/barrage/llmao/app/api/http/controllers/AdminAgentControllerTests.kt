@@ -24,6 +24,7 @@ import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
@@ -246,6 +247,65 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     val body = response.body<AgentWithConfiguration>()
     assertEquals("TestAgentUpdated", body.agent.name)
     assertEquals(3, body.configuration.version)
+  }
+
+  @Test
+  fun updateAgentFailsNotFound() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val updateAgent =
+      UpdateAgent(
+        name = "TestAgentUpdated",
+        description = "description",
+        active = true,
+        language = "english",
+        configuration =
+          UpdateAgentConfiguration(
+            context = "context",
+            llmProvider = "azure",
+            model = "gpt-4",
+            temperature = 0.5,
+            instructions = null,
+          ),
+      )
+
+    val response =
+      client.put("/admin/agents/${KUUID.randomUUID()}") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(updateAgent)
+      }
+
+    assertEquals(404, response.status.value)
+    assertEquals("API", response.body<AppError>().type)
+    assertEquals(ErrorReason.EntityDoesNotExist, response.body<AppError>().reason)
+  }
+
+  @Test
+  fun deleteAgentWorks() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.delete("/admin/agents/${agentTwo.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(204, response.status.value)
+  }
+
+  @Test
+  fun deleteAgentFailsForActiveAgent() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.delete("/admin/agents/${agentOne.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(400, response.status.value)
+    assertEquals("API", response.body<AppError>().type)
+    assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().reason)
+    assertEquals(
+      "Cannot delete active agent or agent not found",
+      response.body<AppError>().description,
+    )
   }
 
   @Test
