@@ -80,6 +80,16 @@ class AgentService(
     return agentRepository.update(id, update)
   }
 
+  fun delete(id: KUUID) {
+    val count = agentRepository.delete(id)
+    if (count == 0) {
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "Cannot delete active agent or agent not found",
+      )
+    }
+  }
+
   suspend fun updateCollections(
     agentId: KUUID,
     update: UpdateCollections,

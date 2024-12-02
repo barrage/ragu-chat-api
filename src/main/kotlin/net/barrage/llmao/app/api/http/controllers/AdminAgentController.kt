@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.put
@@ -55,6 +56,12 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
         val updatedAgent: UpdateAgent = call.receive()
         val agent = agentService.update(agentId, updatedAgent)
         call.respond(HttpStatusCode.OK, agent)
+      }
+
+      delete(deleteAgent()) {
+        val agentId = call.pathUuid("id")
+        agentService.delete(agentId)
+        call.respond(HttpStatusCode.NoContent)
       }
 
       put("/collections", updateAgentCollections()) {
@@ -198,6 +205,35 @@ private fun updateAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating agent"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun deleteAgent(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents")
+  description = "Delete an agent"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Agent deleted successfully" }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Cannot delete active agent"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.NotFound to
+      {
+        description = "Agent not found"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while deleting agent"
         body<List<AppError>> {}
       }
   }
