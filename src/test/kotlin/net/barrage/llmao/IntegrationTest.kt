@@ -33,6 +33,7 @@ open class IntegrationTest(
    * environment variable, but we do not live in an ideal world.
    */
   private val wiremockUrlOverride: String? = null,
+  private val enableChonkitAuth: Boolean = false,
 ) {
   val postgres: TestPostgres = TestPostgres()
   var weaviate: TestWeaviate? = null
@@ -42,6 +43,7 @@ open class IntegrationTest(
   private var cfg = YamlConfigLoader().load("application.yaml")!!
 
   init {
+    // Postgres
     cfg =
       cfg.mergeWith(
         MapApplicationConfig(
@@ -51,6 +53,12 @@ open class IntegrationTest(
           "db.runMigrations" to "false", // We migrate manually on PG container initialization
           "oauth.apple.clientSecret" to generateP8PrivateKey(),
         )
+      )
+
+    // Feature adapters
+    cfg =
+      cfg.mergeWith(
+        MapApplicationConfig("ktor.features.chonkitAuthServer" to enableChonkitAuth.toString())
       )
   }
 

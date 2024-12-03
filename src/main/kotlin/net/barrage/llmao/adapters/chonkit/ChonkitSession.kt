@@ -1,4 +1,4 @@
-package net.barrage.llmao.adapters.chonkit.models
+package net.barrage.llmao.adapters.chonkit
 
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID

@@ -1,10 +1,12 @@
 package net.barrage.llmao.app
 
 import io.ktor.server.config.*
+import kotlin.reflect.KClass
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationRepository
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
+import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
@@ -19,39 +21,65 @@ import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.plugins.initDatabase
+import net.barrage.llmao.string
 import org.jooq.DSLContext
 
+private const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
+
 class ApplicationState(config: ApplicationConfig) {
-  val repository: RepositoryState
-  val adapterRepository: AdapterRepositoryState
   val providers = ProviderState(config)
+  val repository: RepositoryState
   val adapters: AdapterState
 
   init {
+    CookieFactory.init(config)
     val database = initDatabase(config)
     repository = RepositoryState(database)
-    adapterRepository = AdapterRepositoryState(database)
-    adapters = AdapterState(config, adapterRepository)
+    adapters = AdapterState(config, database)
   }
 }
 
-class AdapterState(config: ApplicationConfig, repositoryState: AdapterRepositoryState) {
-  // TODO: Module flag
-  val chonkitAuth: ChonkitAuthenticationService = runBlocking {
-    ChonkitAuthenticationService.init(repositoryState.chonkit, config)
+class RepositoryState(database: DSLContext) {
+  val user: UserRepository = UserRepository(database)
+  val session: SessionRepository = SessionRepository(database)
+  val agent: AgentRepository = AgentRepository(database)
+  val chat: ChatRepository = ChatRepository(database)
+}
+
+/**
+ * Keeps the state of optional modules. Modules are configured via the `ktor.features` flags.
+ * Whenever a flag is enabled, the corresponding adapter is enabled for use.
+ */
+class AdapterState(config: ApplicationConfig, database: DSLContext) {
+  val adapters = mutableMapOf<KClass<*>, Any>()
+
+  init {
+    if (config.string(CHONKIT_AUTH_FEATURE_FLAG).toBoolean()) {
+      val chonkitAuthRepo = ChonkitAuthenticationRepository(database)
+      adapters[ChonkitAuthenticationService::class] = runBlocking {
+        ChonkitAuthenticationService.init(chonkitAuthRepo, config)
+      }
+    }
   }
-}
 
-class AdapterRepositoryState(client: DSLContext) {
-  // TODO: Module flag
-  val chonkit = ChonkitAuthenticationRepository(client)
-}
+  /**
+   * Execute the given block if the given feature is enabled.
+   *
+   * @param block Block to run if the feature is enabled. Gets access to whichever adapter is mapped
+   *   to the feature.
+   * @param T The type of adapter to run the block with. Callers need to make sure they are passing
+   *   the correct type or the cast will fail.
+   * @param O The return type of the block.
+   */
+  inline fun <reified T, O> runIfEnabled(block: (T) -> O): O? {
+    return adapters[T::class]?.let { adapter ->
+      return block(adapter as T)
+    }
+  }
 
-class RepositoryState(client: DSLContext) {
-  val user: UserRepository = UserRepository(client)
-  val session: SessionRepository = SessionRepository(client)
-  val agent: AgentRepository = AgentRepository(client)
-  val chat: ChatRepository = ChatRepository(client)
+  inline fun <reified T> adapterForFeature(): T? {
+    return adapters[T::class] as T
+  }
 }
 
 class ProviderState(config: ApplicationConfig) {
@@ -89,7 +117,6 @@ class ServiceState(state: ApplicationState) {
       state.repository.chat,
       state.repository.user,
     )
-  val chonkitAuth = state.adapters.chonkitAuth
 }
 
 @Serializable

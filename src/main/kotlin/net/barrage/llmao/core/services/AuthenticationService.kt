@@ -21,9 +21,11 @@ class AuthenticationService(
   /**
    * Authenticate the user using the provider from the payload and establish a session upon success.
    */
-  suspend fun authenticateUser(login: LoginPayload): Session {
+  suspend fun authenticateUser(login: LoginPayload): Pair<User, Session> {
     val provider = providers.getProvider(login.provider)
+
     val userInfo = provider.authenticate(login)
+
     val sessionId = UUID.randomUUID()
 
     val user =
@@ -40,7 +42,9 @@ class AuthenticationService(
       )
     }
 
-    return sessionRepo.create(sessionId, user.id)
+    val session = sessionRepo.create(sessionId, user.id)
+
+    return Pair(user, session)
   }
 
   /**

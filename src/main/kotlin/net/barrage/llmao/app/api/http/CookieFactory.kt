@@ -6,7 +6,18 @@ import io.ktor.server.util.*
 import java.time.Instant
 import net.barrage.llmao.string
 
-class CookieFactory(private val config: ApplicationConfig) {
+/**
+ * Factory for creating cookies.
+ *
+ * The factory is initialized with the application config on application start.
+ */
+object CookieFactory {
+  private lateinit var config: ApplicationConfig
+
+  fun init(config: ApplicationConfig) {
+    this.config = config
+  }
+
   fun getRefreshTokenCookieName(): String {
     return config.string("chonkit.jwt.cookie.refresh.name")
   }

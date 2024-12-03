@@ -28,7 +28,7 @@ fun Application.module() {
   extendSession(services.auth)
   configureOpenApi()
   websocketServer(ChatFactory(services.agent, services.chat))
-  configureRouting(state, environment.config)
+  configureRouting(state)
   configureRequestValidation()
   configureErrorHandling()
   configureCors()

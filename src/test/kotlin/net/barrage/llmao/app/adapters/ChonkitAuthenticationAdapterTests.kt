@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class ChonkitAuthenticationAdapterTests : IntegrationTest() {
+class ChonkitAuthenticationAdapterTests : IntegrationTest(enableChonkitAuth = true) {
   private lateinit var chadUser: User
   private lateinit var peasantUser: User
   private lateinit var chadSession: Session
@@ -231,5 +231,37 @@ class ChonkitAuthenticationAdapterTests : IntegrationTest() {
       }
 
     assertEquals(401, response.status.value)
+  }
+
+  @Test
+  fun loggingOutInvalidatesTokens() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val authResponse =
+      client.post("/auth/chonkit/token") { header("Cookie", sessionCookie(chadSession.sessionId)) }
+
+    val refreshToken = authResponse.body<ChonkitAuthentication>().refreshToken
+
+    val logoutResponse =
+      client.post("/auth/chonkit/logout") {
+        contentType(ContentType.Application.Json)
+        setBody(ChonkitAuthenticationRequest(refreshToken = refreshToken))
+        header("Cookie", sessionCookie(chadSession.sessionId))
+      }
+
+    assertEquals(204, logoutResponse.status.value)
+
+    val cookies = logoutResponse.setCookie()
+
+    for (cookie in cookies) {
+      if (cookie.name != "kappi") assertEquals(0, cookie.maxAge)
+    }
+  }
+
+  @Test
+  fun regularAuthenticationRouteWorksWithChonkitAuth() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response = client.post("/auth/login")
+
+    assertEquals(200, response.status.value)
   }
 }

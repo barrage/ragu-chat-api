@@ -1,8 +1,6 @@
 package net.barrage.llmao.adapters.chonkit
 
 import java.time.OffsetDateTime
-import net.barrage.llmao.adapters.chonkit.models.ChonkitSession
-import net.barrage.llmao.adapters.chonkit.models.toChonkitSession
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.CHONKIT_SESSIONS
 import org.jooq.DSLContext
