@@ -11,22 +11,43 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
+import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
+import net.barrage.llmao.app.AdapterState
+import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.string
+import net.barrage.llmao.plugins.user
 
-fun Route.authRoutes(service: AuthenticationService) {
+fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
   post("/auth/login", loginUser()) {
     val form = call.receiveParameters()
     val loginPayload = LoginPayload.fromForm(form)
 
-    val session = service.authenticateUser(loginPayload)
+    val (user, session) = service.authenticateUser(loginPayload)
+
     call.sessions.set(SessionCookie(session.sessionId))
 
-    call.respond(HttpStatusCode.NoContent)
+    val chonkitTokens =
+      adapters.runIfEnabled<ChonkitAuthenticationService, ChonkitAuthentication> { adapter ->
+        val existingRefreshToken =
+          call.request.cookies[CookieFactory.getRefreshTokenCookieName(), CookieEncoding.RAW]
+        val chonkitAuth = adapter.authenticate(user, existingRefreshToken)
+
+        val accessCookie = CookieFactory.createChonkitAccessTokenCookie(chonkitAuth.accessToken)
+        val refreshCookie = CookieFactory.createChonkitRefreshTokenCookie(chonkitAuth.refreshToken)
+
+        call.response.cookies.append(accessCookie)
+        call.response.cookies.append(refreshCookie)
+
+        return@runIfEnabled chonkitAuth
+      }
+
+    call.respond(chonkitTokens ?: HttpStatusCode.NoContent)
   }
 
   post("/auth/logout", logoutUser()) {
@@ -37,9 +58,25 @@ fun Route.authRoutes(service: AuthenticationService) {
       return@post
     }
 
+    val user = call.user()
+
     service.logout(userSession.id)
 
     call.sessions.clear<SessionCookie>()
+
+    adapters.runIfEnabled<ChonkitAuthenticationService, Unit> { adapter ->
+      val refreshToken =
+        call.request.cookies[CookieFactory.getRefreshTokenCookieName(), CookieEncoding.RAW]
+          ?: return@runIfEnabled
+
+      adapter.logout(user.id, refreshToken, false)
+
+      val accessExpiryCookie = CookieFactory.createChonkitAccessTokenExpiryCookie()
+      val refreshExpiryCookie = CookieFactory.createChonkitRefreshTokenExpiryCookie()
+
+      call.response.cookies.append(accessExpiryCookie)
+      call.response.cookies.append(refreshExpiryCookie)
+    }
 
     call.respond(HttpStatusCode.NoContent)
   }

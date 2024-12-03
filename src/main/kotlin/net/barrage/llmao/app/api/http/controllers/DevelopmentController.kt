@@ -11,6 +11,7 @@ import io.ktor.server.sessions.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
+import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.models.CreateUser
@@ -23,8 +24,7 @@ import net.barrage.llmao.plugins.pathUuid
 fun Route.devController(
   authService: AuthenticationService,
   userService: UserService,
-  chonkitAuthService: ChonkitAuthenticationService,
-  cookieFactory: CookieFactory,
+  adapters: AdapterState,
 ) {
   route("/dev") {
     post("/users", devCreateUser()) {
@@ -42,13 +42,19 @@ fun Route.devController(
       val user = userService.get(userId)
       call.sessions.set(SessionCookie(sessionId))
 
-      val chonkitAuth = chonkitAuthService.authenticate(user)
+      val chonkitAuth =
+        adapters.runIfEnabled<ChonkitAuthenticationService, ChonkitAuthentication> { adapter ->
+          val chonkitAuth = adapter.authenticate(user)
 
-      val accessCookie = cookieFactory.createChonkitAccessTokenCookie(chonkitAuth.accessToken)
-      val refreshCookie = cookieFactory.createChonkitRefreshTokenCookie(chonkitAuth.refreshToken)
+          val accessCookie = CookieFactory.createChonkitAccessTokenCookie(chonkitAuth.accessToken)
+          val refreshCookie =
+            CookieFactory.createChonkitRefreshTokenCookie(chonkitAuth.refreshToken)
 
-      call.response.cookies.append(accessCookie)
-      call.response.cookies.append(refreshCookie)
+          call.response.cookies.append(accessCookie)
+          call.response.cookies.append(refreshCookie)
+
+          return@runIfEnabled chonkitAuth
+        }
 
       call.respond(DevLoginResponse(sessionId, chonkitAuth))
     }

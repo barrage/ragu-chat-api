@@ -5,6 +5,9 @@ ktor:
   deployment:
     port: 42069
   environment: "development"
+  features:
+    whatsapp: true
+    chonkitAuthServer: true
 
 frontend:
   url: "http://localhost:3000"
