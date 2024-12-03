@@ -7,8 +7,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAccessTokenCookie
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitRefreshTokenCookie
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.services.AuthenticationService
@@ -51,52 +49,6 @@ fun Application.configureSession(service: AuthenticationService) {
         this@configureSession.environment.config.property("session.domain").getString()
       cookie.extensions["SameSite"] =
         this@configureSession.environment.config.property("session.sameSite").getString()
-    }
-
-    cookie<ChonkitAccessTokenCookie>("chonkit_access_token") {
-      cookie.path = "/"
-      cookie.maxAgeInSeconds =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.accessTokenDurationSeconds")
-          .getString()
-          .toLong()
-      cookie.httpOnly = true
-      cookie.secure =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.cookie.access.secure")
-          .getString()
-          .toBoolean()
-      cookie.domain =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.cookie.access.domain")
-          .getString()
-      cookie.extensions["SameSite"] =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.cookie.access.sameSite")
-          .getString()
-    }
-
-    cookie<ChonkitRefreshTokenCookie>("chonkit_refresh_token") {
-      cookie.path = "/"
-      cookie.maxAgeInSeconds =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.refreshTokenDurationSeconds")
-          .getString()
-          .toLong()
-      cookie.httpOnly = true
-      cookie.secure =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.cookie.refresh.secure")
-          .getString()
-          .toBoolean()
-      cookie.domain =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.cookie.refresh.domain")
-          .getString()
-      cookie.extensions["SameSite"] =
-        this@configureSession.environment.config
-          .property("chonkit.jwt.cookie.refresh.sameSite")
-          .getString()
     }
   }
 

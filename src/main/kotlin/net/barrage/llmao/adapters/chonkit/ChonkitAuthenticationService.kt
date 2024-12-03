@@ -8,7 +8,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
 import io.ktor.server.config.*
 import java.security.SecureRandom
 import java.time.Instant
@@ -19,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -132,6 +132,10 @@ private constructor(
     user: User,
     existingRefreshToken: String? = null,
   ): ChonkitAuthentication {
+    if (user.role != Role.ADMIN) {
+      throw AppError.api(ErrorReason.Authentication, "Insufficient permissions")
+    }
+
     if (existingRefreshToken != null) {
       val amount = repository.removeSingleSession(user.id, existingRefreshToken)
       LOG.debug("Removed {} chonkit session(s) for user '{}'", amount, user.id)
@@ -154,16 +158,15 @@ private constructor(
     return ChonkitAuthentication(accessToken.token, refreshToken)
   }
 
-  suspend fun refresh(userId: KUUID, refreshToken: String): ChonkitAuthentication {
-    LOG.info("Refreshing token for user '$userId'")
+  suspend fun refresh(user: User, refreshToken: String): ChonkitAuthentication {
+    if (user.role != Role.ADMIN) {
+      throw AppError.api(ErrorReason.Authentication, "Insufficient permissions")
+    }
 
-    val session =
-      repository.getActiveSession(userId, refreshToken)
-        ?: throw AppError.api(ErrorReason.Authentication, "Invalid refresh token")
+    LOG.info("Refreshing token for user '${user.id}'")
 
-    val user =
-      repository.getUser(session.userId)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+    repository.getActiveSession(user.id, refreshToken)
+      ?: throw AppError.api(ErrorReason.Authentication, "Invalid refresh token")
 
     return authenticate(user, refreshToken)
   }
