@@ -5,10 +5,14 @@ import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.config.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.date.*
 import net.barrage.llmao.adapters.chonkit.api.chonkitAuthRouter
+import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.ServiceState
+import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.api.http.controllers.adminAgentsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminUserRoutes
@@ -22,10 +26,12 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-fun Application.configureApiRoutes(services: ServiceState) {
+fun Application.configureRouting(state: ApplicationState, config: ApplicationConfig) {
   routing {
     // K8S specific route
     route("/__health") { get(health()) { call.respond(HttpStatusCode.OK) } }
+
+    val services = ServiceState(state)
 
     // Unprotected authentication routes
     authRoutes(services.auth)
@@ -41,7 +47,7 @@ fun Application.configureApiRoutes(services: ServiceState) {
       adminUserRoutes(services.user)
       adminChatsRoutes(services.chat)
       administrationRouter(services.admin)
-      chonkitAuthRouter(services.chonkitAuth)
+      chonkitAuthRouter(services.chonkitAuth, CookieFactory(config))
     }
 
     // User API routes
@@ -52,7 +58,7 @@ fun Application.configureApiRoutes(services: ServiceState) {
     }
 
     if (application.environment.config.property("ktor.environment").getString() == "development") {
-      devController(services.auth, services.user, services.chonkitAuth)
+      devController(services.auth, services.user, services.chonkitAuth, CookieFactory(config))
     }
   }
 }
@@ -68,6 +74,23 @@ fun ApplicationCall.pathUuid(param: String): KUUID {
   } catch (e: IllegalArgumentException) {
     throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID")
   }
+}
+
+fun ApplicationCall.expireCookie(name: String) {
+  response.cookies.append(
+    Cookie(
+      name = name,
+      value = "",
+      encoding = CookieEncoding.RAW,
+      maxAge = 0,
+      expires = GMTDate(),
+      domain = null,
+      path = null,
+      secure = false,
+      httpOnly = true,
+      extensions = mapOf(),
+    )
+  )
 }
 
 private fun health(): OpenApiRoute.() -> Unit = {

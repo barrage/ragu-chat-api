@@ -3,11 +3,8 @@ package net.barrage.llmao.adapters.chonkit
 import java.time.OffsetDateTime
 import net.barrage.llmao.adapters.chonkit.models.ChonkitSession
 import net.barrage.llmao.adapters.chonkit.models.toChonkitSession
-import net.barrage.llmao.core.models.User
-import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.CHONKIT_SESSIONS
-import net.barrage.llmao.tables.references.USERS
 import org.jooq.DSLContext
 
 class ChonkitAuthenticationRepository(private val dsl: DSLContext) {
@@ -47,10 +44,6 @@ class ChonkitAuthenticationRepository(private val dsl: DSLContext) {
       .returning()
       .fetchOne()
       ?.toChonkitSession()
-  }
-
-  fun getUser(userId: KUUID): User? {
-    return dsl.selectFrom(USERS).where(USERS.ID.eq(userId)).fetchOne()?.toUser()
   }
 
   fun removeSingleSession(userId: KUUID, refreshToken: String): Int {

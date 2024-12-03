@@ -7,50 +7,51 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAccessTokenCookie
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthenticationRequest
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitRefreshTokenCookie
+import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 
-fun Route.chonkitAuthRouter(service: ChonkitAuthenticationService) {
+fun Route.chonkitAuthRouter(service: ChonkitAuthenticationService, cookieFactory: CookieFactory) {
   route("/auth/chonkit") {
     post("/token", createChonkitToken()) {
       val user = call.user()
 
-      val existingRefreshToken = call.sessions.get<ChonkitRefreshTokenCookie>()
+      val existingRefreshToken =
+        call.request.cookies[cookieFactory.getRefreshTokenCookieName(), CookieEncoding.RAW]
+      val chonkitAuth = service.authenticate(user, existingRefreshToken)
 
-      val chonkitAuth = service.authenticate(user, existingRefreshToken?.token)
+      val accessCookie = cookieFactory.createChonkitAccessTokenCookie(chonkitAuth.accessToken)
+      val refreshCookie = cookieFactory.createChonkitRefreshTokenCookie(chonkitAuth.refreshToken)
 
-      call.sessions.set(ChonkitAccessTokenCookie.from(chonkitAuth))
-      call.sessions.set(ChonkitRefreshTokenCookie.from(chonkitAuth))
+      call.response.cookies.append(accessCookie)
+      call.response.cookies.append(refreshCookie)
 
       call.respond(chonkitAuth)
     }
 
     post("/refresh", refreshChonkitToken()) {
       val user = call.user()
-      var refreshToken: String
-
-      try {
-        val request = call.receive<ChonkitAuthenticationRequest>()
-        refreshToken = request.refreshToken
-      } catch (e: ContentTransformationException) {
-        val refreshCookie =
-          call.sessions.get<ChonkitRefreshTokenCookie>()
+      val refreshToken =
+        try {
+          val request = call.receive<ChonkitAuthenticationRequest>()
+          request.refreshToken
+        } catch (e: ContentTransformationException) {
+          call.request.cookies[cookieFactory.getRefreshTokenCookieName(), CookieEncoding.RAW]
             ?: throw AppError.api(ErrorReason.Authentication, "No refresh token found")
-        refreshToken = refreshCookie.token
-      }
+        }
 
-      val chonkitAuth = service.refresh(user.id, refreshToken)
+      val chonkitAuth = service.refresh(user, refreshToken)
 
-      call.sessions.set(ChonkitAccessTokenCookie.from(chonkitAuth))
-      call.sessions.set(ChonkitRefreshTokenCookie.from(chonkitAuth))
+      val accessCookie = cookieFactory.createChonkitAccessTokenCookie(chonkitAuth.accessToken)
+      val refreshCookie = cookieFactory.createChonkitRefreshTokenCookie(chonkitAuth.refreshToken)
+
+      call.response.cookies.append(accessCookie)
+      call.response.cookies.append(refreshCookie)
 
       call.respond(chonkitAuth)
     }
@@ -58,22 +59,22 @@ fun Route.chonkitAuthRouter(service: ChonkitAuthenticationService) {
     post("/logout", logoutChonkitToken()) {
       val user = call.user()
       val purge = call.queryParam("purge")?.toBoolean() ?: false
-      var refreshToken: String
-
-      try {
-        val request = call.receive<ChonkitAuthenticationRequest>()
-        refreshToken = request.refreshToken
-      } catch (e: ContentTransformationException) {
-        val refreshCookie =
-          call.sessions.get<ChonkitRefreshTokenCookie>()
+      val refreshToken =
+        try {
+          val request = call.receive<ChonkitAuthenticationRequest>()
+          request.refreshToken
+        } catch (e: ContentTransformationException) {
+          call.request.cookies[cookieFactory.getRefreshTokenCookieName(), CookieEncoding.RAW]
             ?: throw AppError.api(ErrorReason.Authentication, "No refresh token found")
-        refreshToken = refreshCookie.token
-      }
+        }
 
       service.logout(user.id, refreshToken, purge)
 
-      call.sessions.clear<ChonkitRefreshTokenCookie>()
-      call.sessions.clear<ChonkitAccessTokenCookie>()
+      val accessExpiryCookie = cookieFactory.createChonkitAccessTokenExpiryCookie()
+      val refreshExpiryCookie = cookieFactory.createChonkitRefreshTokenExpiryCookie()
+
+      call.response.cookies.append(accessExpiryCookie)
+      call.response.cookies.append(refreshExpiryCookie)
 
       call.respond(HttpStatusCode.NoContent)
     }
