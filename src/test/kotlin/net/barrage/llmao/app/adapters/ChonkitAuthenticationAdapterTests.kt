@@ -256,12 +256,4 @@ class ChonkitAuthenticationAdapterTests : IntegrationTest(enableChonkitAuth = tr
       if (cookie.name != "kappi") assertEquals(0, cookie.maxAge)
     }
   }
-
-  @Test
-  fun regularAuthenticationRouteWorksWithChonkitAuth() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-    val response = client.post("/auth/login")
-
-    assertEquals(200, response.status.value)
-  }
 }

@@ -50,7 +50,7 @@ data class JwtPayload(
   val role: String,
 
   /** Version of the key used to sign the token. */
-  val version: String,
+  val version: Int,
 )
 
 data class JwtConfig(

@@ -185,10 +185,11 @@ private constructor(
     val version = getLatestKeyVersion()
     val jwt = constructJwt(user, version)
 
+    LOG.info("Signing chonkit token for user '${user.id}'")
     return signJwt(jwt)
   }
 
-  private suspend fun getLatestKeyVersion(): String {
+  private suspend fun getLatestKeyVersion(): Int {
     val keyResponse =
       client.get("$transitPath/keys/$key") { contentType(ContentType.Application.Json) }
 
@@ -202,19 +203,19 @@ private constructor(
       keys.maxOfOrNull { it.toIntOrNull() ?: Int.MIN_VALUE }
         ?: throw Exception("No keys found in Vault")
 
-    return "v$latest"
+    return latest
   }
 
-  private fun constructJwt(user: User, keyVersion: String): Jwt {
+  private fun constructJwt(user: User, keyVersion: Int): Jwt {
     val header = JwtHeader()
     val payload =
       JwtPayload(
         sub = user.email,
         iss = jwtConfig.issuer,
         aud = jwtConfig.audience,
-        iat = Instant.now().toEpochMilli() / 1000,
-        nbf = Instant.now().toEpochMilli() / 1000,
-        exp = Instant.now().plusSeconds(jwtConfig.accessTokenDurationSeconds).toEpochMilli() / 1000,
+        iat = Instant.now().epochSecond,
+        nbf = Instant.now().epochSecond,
+        exp = Instant.now().plusSeconds(jwtConfig.accessTokenDurationSeconds).epochSecond,
         role = user.role.name,
         version = keyVersion,
       )
@@ -246,7 +247,7 @@ private constructor(
     // Every signature coming from the transit engine starts with the prefix
     // "vault:<KEY_VERSION>:". We don't necessarily need to strip it, but it's OK
     // to leave h4x0r5 wondering why their attempts are failing
-    val prefix = "vault:${jwt.payload.version}:"
+    val prefix = "vault:v${jwt.payload.version}:"
     val strippedSignature = signature.replace(prefix, "")
 
     return ChonkitToken("$tokenString.$strippedSignature", jwt.payload.version)
@@ -267,10 +268,10 @@ private constructor(
 }
 
 /** Holds the access token and the version of the key used to sign the token. */
-@Serializable data class ChonkitToken(val token: String, val keyVersion: String)
+@Serializable private data class ChonkitToken(val token: String, val keyVersion: Int)
 
 @Serializable
-data class VaultAuthResponse(val auth: Auth) {
+private data class VaultAuthResponse(val auth: Auth) {
   @Serializable
   data class Auth(
     val renewable: Boolean,
@@ -283,7 +284,7 @@ data class VaultAuthResponse(val auth: Auth) {
 }
 
 @Serializable
-data class VaultKeyResponse(val data: KeyData) {
+private data class VaultKeyResponse(val data: KeyData) {
   @Serializable
   data class KeyData(
     val type: String,

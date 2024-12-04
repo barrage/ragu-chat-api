@@ -29,7 +29,7 @@ class ChonkitAuthenticationRepository(private val dsl: DSLContext) {
     userId: KUUID,
     refreshToken: String,
     keyName: String,
-    keyVersion: String,
+    keyVersion: Int,
     expiresAt: OffsetDateTime,
   ): ChonkitSession? {
     return dsl

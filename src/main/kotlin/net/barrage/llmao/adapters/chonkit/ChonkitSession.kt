@@ -8,7 +8,7 @@ data class ChonkitSession(
   val userId: KUUID,
   val refreshToken: String,
   val keyName: String,
-  val keyVersion: String,
+  val keyVersion: Int,
   val expiresAt: KOffsetDateTime,
   val createdAt: KOffsetDateTime,
 )
