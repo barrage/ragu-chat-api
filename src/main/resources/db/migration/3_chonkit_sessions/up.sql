@@ -9,7 +9,7 @@ CREATE TABLE chonkit_sessions (
     key_name TEXT NOT NULL,
 
     -- The version of the key used to sign the token in the Vault.
-    key_version TEXT NOT NULL,
+    key_version INTEGER NOT NULL,
 
     -- Token expiration date time.
     expires_at TIMESTAMPTZ NOT NULL,
