@@ -9,9 +9,6 @@ ktor:
     whatsapp: true
     chonkitAuthServer: true
 
-frontend:
-  url: "http://localhost:3000"
-
 db:
   url: "jdbc:postgresql://localhost:5454/kappi"
   user: "postgres"
@@ -64,6 +61,8 @@ oauth:
     clientSecret: ""
     keyId: ""
     teamId: ""
+    # Used to redirect to the frontend after obtaining the code.
+    frontendUrl: "http://localhost:3000"
 
 session:
   cookieName: "kappi"
@@ -103,9 +102,6 @@ chonkit:
         domain: "localhost"
         sameSite: "Lax"
 
-
-apple:
-  appID: "appID"
 
 android:
   namespace: "namespace"

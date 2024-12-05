@@ -20,7 +20,9 @@ import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.user
+import net.barrage.llmao.string
 
 fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
   post("/auth/login", loginUser()) {
@@ -92,7 +94,7 @@ fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
         ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing code")
 
     call.respondRedirect(
-      url = "${application.environment.config.string("frontend.url")}/auth/apple?code=$code",
+      url = "${application.environment.config.string("apple.frontendUrl")}/auth/apple?code=$code",
       permanent = true,
     )
   }
