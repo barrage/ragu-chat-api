@@ -7,7 +7,7 @@
     - [Agents](#agents)
 - [Authentication](#authentication)
     - [Google](#google)
-    - [Chonkit](#chonkit)
+    - [Chonkit](#chonkit-authorization)
 - [Setup](#setup)
     - [Migrations and seeders](#migrations-and-seeders)
     - [Building and running](#building-and-running)
@@ -95,15 +95,19 @@ Both Chonkit and Kappi use
 the [Vault transit engine](https://developer.hashicorp.com/vault/docs/secrets/transit) to verify and sign tokens,
 respectively.
 
-All access tokens are generated in Kappi. Web clients should rely on the browser mechanisms to forward
-the token to Chonkit, since they will most likely be deployed on the same domain. The following steps outline the
+Chonkit access tokens are generated in Kappi. Web clients should rely on the browser mechanisms to forward
+the token to Chonkit, since they will be deployed on the same domain. The following steps outline the
 general flow:
 
 1. User logs in to Kappi.
-2. The web client sends a request to the Kappi `/auth/chonkit/token` endpoint.
+2. The web client sends a request to the Kappi `/auth/chonkit/token` endpoint. This step is optional as
+   web clients will automatically get an access token (in the body AND cookie) on the `/auth/login` route.
 3. An access and refresh token are generated and returned to the client.
 4. The web client stores the access token in an HTTP only, secure cookie and forwards it to Chonkit.
 5. Chonkit verifies the token signature and, if valid, allows the request.
+
+It is the responsibility of the web client to refresh the access token when it expires by sending a request to
+the `/auth/chonkit/refresh` endpoint.
 
 ## Setup
 

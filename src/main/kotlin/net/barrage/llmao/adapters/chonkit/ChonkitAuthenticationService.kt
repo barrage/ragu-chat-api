@@ -13,6 +13,12 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.*
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -40,6 +46,8 @@ private constructor(
   private val key: String,
   private val jwtConfig: JwtConfig,
   private val repository: ChonkitAuthenticationRepository,
+  private var token: String,
+  private var tokenDuration: Int,
 ) {
   private val transitPath = "/v1/llmao-transit-engine"
 
@@ -78,7 +86,7 @@ private constructor(
           jwtRefreshTokenDurationSeconds,
         )
 
-      val tempClient =
+      val client =
         HttpClient(Apache) {
           install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
           defaultRequest {
@@ -90,7 +98,7 @@ private constructor(
         }
 
       val response =
-        tempClient.post("/v1/auth/approle/login") {
+        client.post("/v1/auth/approle/login") {
           contentType(ContentType.Application.Json)
           setBody(mapOf("role_id" to roleId, "secret_id" to secretId))
         }
@@ -103,22 +111,66 @@ private constructor(
       val body = response.body<VaultAuthResponse>()
       val token = body.auth.clientToken
 
-      LOG.info("Successfully logged in to Vault")
+      LOG.info("Successfully logged in to Vault. Token valid for ${body.auth.leaseDuration}s")
 
-      val client =
-        HttpClient(Apache) {
-          install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-          defaultRequest {
-            url {
-              protocol = URLProtocol.HTTPS
-              host = endpoint
-            }
-            header("X-Vault-Token", token)
-          }
+      val vault =
+        ChonkitAuthenticationService(
+          client,
+          vaultKey,
+          jwtConfig,
+          repository,
+          token,
+          body.auth.leaseDuration,
+        )
+
+      val refreshRate = refreshRate(body.auth.leaseDuration)
+      LOG.info("Refreshing token every $refreshRate seconds")
+
+      CoroutineScope(Dispatchers.Default).launch {
+        while (true) {
+          delay(refreshRate.seconds.toJavaDuration())
+          vault.renewToken()
         }
+      }
 
-      return ChonkitAuthenticationService(client, vaultKey, jwtConfig, repository)
+      return vault
     }
+
+    private fun refreshRate(leaseDuration: Int): Int {
+      return if (leaseDuration - 300 > 0) {
+        leaseDuration - 300
+      } else {
+        leaseDuration
+      }
+    }
+  }
+
+  private suspend fun renewToken() {
+    val response =
+      try {
+        client.post("/v1/auth/token/renew-self") {
+          contentType(ContentType.Application.Json)
+          setBody(mapOf("increment" to tokenDuration))
+          header("X-Vault-Token", token)
+        }
+      } catch (e: Exception) {
+        LOG.error("Failed to renew Vault token", e)
+        return
+      }
+
+    if (response.status != HttpStatusCode.OK) {
+      LOG.error("Failed to renew Vault token: {}", response.body<String>())
+      return
+    }
+
+    val body = response.body<VaultAuthResponse>()
+
+    LOG.info(
+      "Successfully renewed Vault token. Token valid for ${body.auth.leaseDuration}s, refreshing every ${refreshRate(body.auth.leaseDuration)} seconds"
+    )
+
+    token = body.auth.clientToken
+    tokenDuration = body.auth.leaseDuration
   }
 
   /**
@@ -191,7 +243,10 @@ private constructor(
 
   private suspend fun getLatestKeyVersion(): Int {
     val keyResponse =
-      client.get("$transitPath/keys/$key") { contentType(ContentType.Application.Json) }
+      client.get("$transitPath/keys/$key") {
+        contentType(ContentType.Application.Json)
+        header("X-Vault-Token", token)
+      }
 
     if (keyResponse.status != HttpStatusCode.OK) {
       LOG.error("Failed to retrieve signing key: {}", keyResponse.body<String>())
@@ -234,6 +289,7 @@ private constructor(
       client.post("$transitPath/sign/$key") {
         contentType(ContentType.Application.Json)
         setBody(mapOf("input" to signatureData))
+        header("X-Vault-Token", token)
       }
 
     if (response.status != HttpStatusCode.OK) {

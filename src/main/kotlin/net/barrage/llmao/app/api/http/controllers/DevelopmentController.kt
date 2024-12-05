@@ -16,6 +16,7 @@ import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
@@ -43,7 +44,11 @@ fun Route.devController(
       call.sessions.set(SessionCookie(sessionId))
 
       val chonkitAuth =
-        adapters.runIfEnabled<ChonkitAuthenticationService, ChonkitAuthentication> { adapter ->
+        adapters.runIfEnabled<ChonkitAuthenticationService, ChonkitAuthentication?> { adapter ->
+          if (user.role != Role.ADMIN) {
+            return@runIfEnabled null
+          }
+
           val chonkitAuth = adapter.authenticate(user)
 
           val accessCookie = CookieFactory.createChonkitAccessTokenCookie(chonkitAuth.accessToken)
