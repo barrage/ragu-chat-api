@@ -11,14 +11,13 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.api.http.dto.SessionCookie
 import net.barrage.llmao.core.auth.LoginPayload
+import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.user
@@ -32,8 +31,14 @@ fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
 
     call.sessions.set(SessionCookie(session.sessionId))
 
+    // Chonkit authorization
+
     val chonkitTokens =
-      adapters.runIfEnabled<ChonkitAuthenticationService, ChonkitAuthentication> { adapter ->
+      adapters.runIfEnabled<ChonkitAuthenticationService, ChonkitAuthentication?> { adapter ->
+        if (user.role != Role.ADMIN) {
+          return@runIfEnabled null
+        }
+
         val existingRefreshToken =
           call.request.cookies[CookieFactory.getRefreshTokenCookieName(), CookieEncoding.RAW]
         val chonkitAuth = adapter.authenticate(user, existingRefreshToken)
