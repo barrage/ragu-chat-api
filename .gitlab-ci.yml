@@ -20,7 +20,6 @@ build-and-test:
   script:
     - screen -d -m /usr/local/bin/dockerd
     - cp gradle.example.properties gradle.properties
-    - cp config/application.example.yaml config/application.yaml
     - ./gradlew test
     - ./gradlew buildFatJar
   artifacts:
@@ -45,7 +44,7 @@ review:
   environment:
     on_stop: cleanup
   rules:
-    - !reference [ '.review_app', 'rules' ]
+    - !reference [ ".review_app", "rules" ]
     - when: on_success
 
 cleanup:
@@ -53,7 +52,7 @@ cleanup:
   variables:
     HELM_RELEASE_NAME: kubetest
   rules:
-    - !reference [ '.stop_review', 'rules' ]
+    - !reference [ ".stop_review", "rules" ]
     - when: manual
 
 deploy stg:

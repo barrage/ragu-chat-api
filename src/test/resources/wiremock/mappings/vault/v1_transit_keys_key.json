@@ -1,0 +1,18 @@
+{
+  "id": "f5d1264a-6918-4151-ba5f-5dcfb646ef63",
+  "name": "vault_v1_transit_keys_key",
+  "request": {
+    "urlPathTemplate": "/__vault/v1/{mount}/keys/{key}",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "v1_transit_keys_key_response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "f5d1264a-6918-4151-ba5f-5dcfb646ef63",
+  "persistent": true,
+  "insertionIndex": 10
+}

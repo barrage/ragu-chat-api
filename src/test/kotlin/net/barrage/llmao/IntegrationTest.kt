@@ -33,14 +33,17 @@ open class IntegrationTest(
    * environment variable, but we do not live in an ideal world.
    */
   private val wiremockUrlOverride: String? = null,
-  private val enableChonkitAuth: Boolean = false,
+
+  /** If `true`, enables the Chonkit authentication module. */
+  enableChonkitAuth: Boolean = false,
 ) {
   val postgres: TestPostgres = TestPostgres()
   var weaviate: TestWeaviate? = null
   private var wiremock: Wiremock? = null
   var services: ServiceState? = null
 
-  private var cfg = ConfigLoader.load("application.conf")
+  // Always load example config so we are 1:1 with deployments.
+  private var cfg = ConfigLoader.load("application.example.conf")
 
   init {
     // Postgres
@@ -120,11 +123,12 @@ open class IntegrationTest(
             // We are not overriding the API key since we need real ones.
 
             // Has to match the URL from the OpenAI SDK.
-            "llm.openai.endpoint" to "${wiremockUrlOverride}/v1/",
-            "embeddings.openai.endpoint" to "${wiremockUrlOverride}/v1/",
+            "llm.openai.endpoint" to "$wiremockUrlOverride/v1/",
+            "embeddings.openai.endpoint" to "$wiremockUrlOverride/v1/",
 
             // Has to match the URL from the Azure OpenAI SDK.
-            "embeddings.azure.endpoint" to "${wiremockUrlOverride}/openai/deployments",
+            "embeddings.azure.endpoint" to "wiremockUrlOverride/openai/deployments",
+            "vault.endpoint" to wiremockUrlOverride,
           )
         )
       return
@@ -136,13 +140,14 @@ open class IntegrationTest(
     cfg =
       cfg.mergeWith(
         MapApplicationConfig(
-          "llm.openai.endpoint" to "${url}/$OPENAI_WM/v1/",
+          "llm.openai.endpoint" to "$url/$OPENAI_WM/v1/",
           "llm.openai.apiKey" to "super-duper-secret-openai-api-key",
-          "embeddings.openai.endpoint" to "${url}/$OPENAI_WM/v1/",
+          "embeddings.openai.endpoint" to "$url/$OPENAI_WM/v1/",
           "embeddings.openai.apiKey" to "super-duper-secret-openai-api-key",
-          "embeddings.azure.endpoint" to "${url}/${AZURE_WM}/openai/deployments",
+          "embeddings.azure.endpoint" to "$url/$AZURE_WM/openai/deployments",
           "embeddings.azure.apiKey" to "super-duper-secret-azure-api-key",
-          "embeddings.fembed.endpoint" to "${url}/${FEMBED_WM}",
+          "embeddings.fembed.endpoint" to "$url/$FEMBED_WM",
+          "vault.endpoint" to "$url/$VAULT_WM",
         )
       )
   }
@@ -156,6 +161,7 @@ fun sessionCookie(sessionId: UUID): String = "kappi=id%3D%2523s$sessionId"
 const val OPENAI_WM = "__openai"
 const val AZURE_WM = "__azure"
 const val FEMBED_WM = "__fembed"
+const val VAULT_WM = "__vault"
 
 // Wiremock response triggers
 

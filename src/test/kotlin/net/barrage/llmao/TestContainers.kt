@@ -344,6 +344,12 @@ class Wiremock {
       .response("azure", "azure_embeddings_ada-002_response.json")
       .map("fembed/fembed_list_models")
       .response("fembed", "fembed_list_models_response.json")
+      .map("vault/v1_approle_login")
+      .response("vault", "v1_approle_login_response.json")
+      .map("vault/v1_transit_sign")
+      .response("vault", "v1_transit_sign_response.json")
+      .map("vault/v1_transit_keys_key")
+      .response("vault", "v1_transit_keys_key_response.json")
 
   init {
     container.start()
