@@ -36,10 +36,10 @@ class AuthenticationProviderFactory(config: ApplicationConfig) :
   private fun initGoogleOAuth(config: ApplicationConfig): GoogleAuthenticationProvider {
     val client = httpClient()
     val tokenEp = config.string("oauth.google.tokenEndpoint")
-    val accEp = config.string("oauth.google.accountEndpoint")
+    val keysEp = config.string("oauth.google.keysEndpoint")
     val clientId = config.string("oauth.google.clientId")
     val clientSecret = config.string("oauth.google.clientSecret")
-    return GoogleAuthenticationProvider(client, tokenEp, accEp, clientId, clientSecret)
+    return GoogleAuthenticationProvider(client, tokenEp, keysEp, clientId, clientSecret)
   }
 
   private fun initAppleOAuth(config: ApplicationConfig): AppleAuthenticationProvider {

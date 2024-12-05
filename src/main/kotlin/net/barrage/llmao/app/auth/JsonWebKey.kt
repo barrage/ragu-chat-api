@@ -1,9 +1,9 @@
-package net.barrage.llmao.app.auth.apple
+package net.barrage.llmao.app.auth
 
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ApplePublicKey(
+data class JsonWebKey(
   val kty: String,
   val kid: String,
   val use: String,
@@ -12,4 +12,4 @@ data class ApplePublicKey(
   val e: String,
 )
 
-@Serializable class AppleKeysResponse(val keys: List<ApplePublicKey>)
+@Serializable class JsonWebKeys(val keys: List<JsonWebKey>)
