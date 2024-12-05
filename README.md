@@ -188,11 +188,11 @@ This will create a fat jar in the `build/libs` directory.
 To run the application, run
 
 ```bash
-java -jar build/libs/llmao.jar -config=config/application.yaml
+java -jar build/libs/llmao.jar -config=config/application.conf
 ```
 
 You have to provide a configuration file with the application configuration. The configuration file example can be found
-in `config/application.example.yaml`.
+in `config/application.example.conf`.
 
 ## WebSocket
 

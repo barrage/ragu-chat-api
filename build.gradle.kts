@@ -56,7 +56,6 @@ dependencies {
   implementation("io.ktor:ktor-server-request-validation:$ktorVersion")
   implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-config-yaml:$ktorVersion")
   implementation("io.ktor:ktor-server-websockets:$ktorVersion")
 
   implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
@@ -221,6 +220,6 @@ tasks.named("generateJooq") { dependsOn("liquibaseUpdate") }
 
 tasks.matching { it.name != "stopBuildDb" }.all { finalizedBy("stopBuildDb") }
 
-tasks.withType<Jar> { exclude("application.yaml") }
+tasks.withType<Jar> { exclude("application.conf") }
 
 tasks.withType<ShadowJar> { mergeServiceFiles() }

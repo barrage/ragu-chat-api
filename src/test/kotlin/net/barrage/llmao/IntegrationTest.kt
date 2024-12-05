@@ -4,7 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.server.config.*
-import io.ktor.server.config.yaml.*
+import io.ktor.server.config.ConfigLoader.Companion.load
 import io.ktor.server.testing.*
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
@@ -40,7 +40,7 @@ open class IntegrationTest(
   private var wiremock: Wiremock? = null
   var services: ServiceState? = null
 
-  private var cfg = YamlConfigLoader().load("application.yaml")!!
+  private var cfg = ConfigLoader.load("application.conf")
 
   init {
     // Postgres
