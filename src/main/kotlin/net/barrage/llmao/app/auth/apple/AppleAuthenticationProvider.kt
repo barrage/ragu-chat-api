@@ -18,6 +18,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.RSAPublicKeySpec
 import java.time.Instant
 import java.util.*
+import net.barrage.llmao.app.auth.JsonWebKeys
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.auth.LoginSource
@@ -28,7 +29,7 @@ import net.barrage.llmao.error.ErrorReason
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.auth.apple")
 
 class AppleAuthenticationProvider(
-  private val httpClient: HttpClient,
+  private val client: HttpClient,
   private val endpoint: String,
   private val clientId: String,
   private val serviceId: String,
@@ -67,7 +68,7 @@ class AppleAuthenticationProvider(
         append("code_verifier", payload.codeVerifier)
       }
 
-    val res = httpClient.submitForm(url = "$endpoint/auth/token", params, encodeInQuery = false)
+    val res = client.submitForm(url = "$endpoint/auth/token", params, encodeInQuery = false)
 
     if (res.status != HttpStatusCode.OK) {
       val errorBody = res.bodyAsText()
@@ -94,7 +95,7 @@ class AppleAuthenticationProvider(
         it
       }
 
-    val isVerified = idToken.getClaim("email_verified")?.asBoolean() ?: false
+    val isVerified = idToken.getClaim("email_verified")?.asBoolean() == true
     if (!isVerified) {
       throw AppError.api(ErrorReason.Authentication, "Email not verified")
     }
@@ -121,7 +122,7 @@ class AppleAuthenticationProvider(
   }
 
   private suspend fun getPublicKey(kid: String): RSAPublicKey {
-    val res = httpClient.get("$endpoint/auth/keys")
+    val res = client.get("$endpoint/auth/keys")
     if (res.status != HttpStatusCode.OK) {
       LOG.error("Unable to validate token signature; Unable to retrieve public keys")
       throw AppError.internal("Unable to validate token signature; Unable to retrieve public keys")
@@ -129,7 +130,7 @@ class AppleAuthenticationProvider(
 
     val keys =
       try {
-        res.body<AppleKeysResponse>().keys
+        res.body<JsonWebKeys>().keys
       } catch (e: Exception) {
         LOG.error("Unable to validate token signature; Unable to parse public keys")
         throw AppError.internal("Unable to validate token signature; Unable to parse public keys")
