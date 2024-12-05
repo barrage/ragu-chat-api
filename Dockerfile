@@ -5,4 +5,4 @@ WORKDIR /app
 COPY build/libs/llmao.jar .
 RUN mkdir -p /app/config
 EXPOSE 42069/tcp
-CMD ["java", "-jar", "/app/llmao.jar", "-config=/app/config/application.yaml"]
+CMD ["java", "-jar", "/app/llmao.jar", "-config=/app/config/application.conf"]

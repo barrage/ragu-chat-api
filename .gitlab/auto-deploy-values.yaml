@@ -11,18 +11,18 @@ image:
   pullPolicy: IfNotPresent
   secrets:
     - name: gitlab-registry-llmao-kotlin-api
-extraLabels: {}
-lifecycle: {}
+extraLabels: { }
+lifecycle: { }
 # preStop:
 #   exec:
 #     command: ["/bin/sh", "-c", "sleep 10"]
-podAnnotations: {}
-nodeSelector: {}
-securityContext: {}
-containerSecurityContext: {}
+podAnnotations: { }
+nodeSelector: { }
+securityContext: { }
+containerSecurityContext: { }
 hostNetwork: false
-dnsPolicy: {}
-dnsConfig: {}
+dnsPolicy: { }
+dnsConfig: { }
 #    nameservers:
 #      - 8.8.8.8
 #    searches:
@@ -31,14 +31,14 @@ dnsConfig: {}
 #    options:
 #      - name: ndots
 #        value: "1"
-affinity: {}
-tolerations: []
+affinity: { }
+tolerations: [ ]
 priorityClassName:
-initContainers: []
+initContainers: [ ]
 # - name: init-myservice
 #   image: busybox
 #   command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice to start; sleep 1; done;']
-topologySpreadConstraints: []
+topologySpreadConstraints: [ ]
 application:
   track: stable
   tier: web
@@ -50,7 +50,7 @@ application:
     - /bin/bash
     - -c
   args:
-    - ln -s /vault/values/secret_data /app/config/application.yaml && java -jar /app/llmao.jar -config=/app/config/application.yaml
+    - ln -s /vault/values/secret_data /app/config/application.conf && java -jar /app/llmao.jar -config=/app/config/application.conf
 
   # You can omit `DATABASE_URL` variable injection into your deployment containers,
   # if you explicitly set `database_url` to `null`.
@@ -87,7 +87,7 @@ gitlab:
   projectID:
 service:
   enabled: true
-  annotations: {}
+  annotations: { }
   name: web
   type: ClusterIP
   url:
@@ -96,7 +96,7 @@ service:
   externalPort: 42069
   internalPort: 42069
   # nodePort: 30001
-  extraPorts: []
+  extraPorts: [ ]
 ingress:
   enabled: true
   path: "/"
@@ -124,7 +124,7 @@ livenessProbe:
   timeoutSeconds: 15
   scheme: "HTTP"
   probeType: "httpGet"
-  httpHeaders: []
+  httpHeaders: [ ]
 readinessProbe:
   enabled: true
   path: "/__health"
@@ -132,7 +132,7 @@ readinessProbe:
   timeoutSeconds: 3
   scheme: "HTTP"
   probeType: "httpGet"
-  httpHeaders: []
+  httpHeaders: [ ]
 startupProbe:
   enabled: false
   path: "/"
@@ -142,7 +142,7 @@ startupProbe:
   periodSeconds: 10
   scheme: "HTTP"
   probeType: "httpGet"
-  httpHeaders: []
+  httpHeaders: [ ]
 
 #hostAliases:
 #- ip: X.X.X.X
@@ -153,8 +153,8 @@ startupProbe:
 postgresql:
   managed: false
   managedClassSelector:
-    #   matchLabels:
-    #     stack: gitlab (This is an example. The labels should match the labels on the CloudSQLInstanceClass)
+  #   matchLabels:
+  #     stack: gitlab (This is an example. The labels should match the labels on the CloudSQLInstanceClass)
 
 resources:
   limits:
@@ -179,18 +179,18 @@ networkPolicy:
   enabled: false
   spec:
     podSelector:
-      matchLabels: {}
+      matchLabels: { }
     ingress:
-    - from:
-      - podSelector:
-          matchLabels: {}
-      - namespaceSelector:
-          matchLabels:
-            app.gitlab.com/managed_by: gitlab
+      - from:
+          - podSelector:
+              matchLabels: { }
+          - namespaceSelector:
+              matchLabels:
+                app.gitlab.com/managed_by: gitlab
 
 serviceAccount:
   name: kappi-sa
-  annotations: {}
+  annotations: { }
   createNew: true
 
 persistence:
@@ -215,7 +215,7 @@ persistence:
 ## Configure extra Volumes
 ## ref: https://kubernetes.io/docs/concepts/storage/volumes/
 #
-extraVolumes: []
+extraVolumes: [ ]
 # - name: config-volume
 #   configMap:
 #     name: test-config
@@ -223,20 +223,20 @@ extraVolumes: []
 ## Configure extra Volumes mounts
 ## ref: https://kubernetes.io/docs/concepts/storage/volumes/
 #
-extraVolumeMounts: []
+extraVolumeMounts: [ ]
 # - name: config-volume
 #   mountPath: /app/config.yaml
 #   subPath: config.yaml
 
-extraEnvFrom: []
+extraEnvFrom: [ ]
 # - secretRef:
 #     name: {{ .Values.application.secretName }}
 
-extraEnv: []
+extraEnv: [ ]
 # - name:  ENV_VAR
 #   value: ENV_VAL
 
-workers: {}
+workers: { }
   # worker:
   #   replicaCount: 1
   #   image:
@@ -290,10 +290,10 @@ workers: {}
   #   - stop_worker
   #   extraVolumes: []
   #   extraVolumeMounts: []
-  #   extraEnv: []
-  #   extraEnvFrom: []
+#   extraEnv: []
+#   extraEnvFrom: []
 
-cronjobs: {}
+cronjobs: { }
   # job:
   #   schedule: "*/2 * * * *"
   #   image:
@@ -321,8 +321,8 @@ cronjobs: {}
   #     scheme: "HTTP"
   #     probeType: "httpGet"
   #   extraVolumes: []
-  #   extraVolumeMounts: []
-  #   extraEnvFrom: []
+#   extraVolumeMounts: []
+#   extraEnvFrom: []
 
 # customResources:
 #   - apiVersion: "traefik.containo.us/v1alpha1"
