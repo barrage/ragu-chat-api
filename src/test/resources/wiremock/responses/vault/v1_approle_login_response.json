@@ -1,0 +1,12 @@
+{
+  "auth": {
+    "renewable": true,
+    "lease_duration": 2764800,
+    "metadata": {},
+    "policies": [
+      "super-secret-policy-of-mysticism"
+    ],
+    "accessor": "5d7fb475-07cb-4060-c2de-1ca3fcbf0c56",
+    "client_token": "hvb.98a4c7ab-b1fe-361b-ba0b-e307aacfd587"
+  }
+}

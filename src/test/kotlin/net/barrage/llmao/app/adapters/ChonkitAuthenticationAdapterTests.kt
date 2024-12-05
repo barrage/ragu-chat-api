@@ -3,6 +3,7 @@ package net.barrage.llmao.app.adapters
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.util.*
@@ -22,7 +23,12 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class ChonkitAuthenticationAdapterTests : IntegrationTest(enableChonkitAuth = true) {
+class ChonkitAuthenticationAdapterTests :
+  IntegrationTest(
+    enableChonkitAuth = true,
+    useWiremock = true,
+    // wiremockUrlOverride = "http://localhost:8080",
+  ) {
   private lateinit var chadUser: User
   private lateinit var peasantUser: User
   private lateinit var chadSession: Session

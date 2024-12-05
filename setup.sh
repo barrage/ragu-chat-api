@@ -13,12 +13,12 @@ else
 fi
 
 # Set up the application properties
-cat ./config/application.yaml &> /dev/null
+cat ./config/application.conf &> /dev/null
 
 if [ $? -eq 0 ]; then
-  echo "application.yaml already exists, skipping"
+  echo "application.conf already exists, skipping"
 else
-  cp ./config/application.example.yaml ./config/application.yaml
+  cp ./config/application.example.conf ./config/application.conf
 fi
 
 ./gradlew generateJooq

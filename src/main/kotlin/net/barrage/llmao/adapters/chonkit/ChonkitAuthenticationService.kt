@@ -3,7 +3,6 @@ package net.barrage.llmao.adapters.chonkit
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.apache.*
-import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -42,6 +41,7 @@ class ChonkitAuthenticationService
  * @param repository Repository to use for storing refresh tokens.
  */
 private constructor(
+  private val endpoint: String,
   private val client: HttpClient,
   private val key: String,
   private val jwtConfig: JwtConfig,
@@ -49,7 +49,7 @@ private constructor(
   private var token: String,
   private var tokenDuration: Int,
 ) {
-  private val transitPath = "/v1/llmao-transit-engine"
+  private val transitPath = "v1/llmao-transit-engine"
 
   companion object {
     /** Initialize an instance of `ChonkitAuthenticationService` and log in to Vault. */
@@ -89,16 +89,10 @@ private constructor(
       val client =
         HttpClient(Apache) {
           install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-          defaultRequest {
-            url {
-              protocol = URLProtocol.HTTPS
-              host = endpoint
-            }
-          }
         }
 
       val response =
-        client.post("/v1/auth/approle/login") {
+        client.post("$endpoint/v1/auth/approle/login") {
           contentType(ContentType.Application.Json)
           setBody(mapOf("role_id" to roleId, "secret_id" to secretId))
         }
@@ -115,6 +109,7 @@ private constructor(
 
       val vault =
         ChonkitAuthenticationService(
+          endpoint,
           client,
           vaultKey,
           jwtConfig,
@@ -148,7 +143,7 @@ private constructor(
   private suspend fun renewToken() {
     val response =
       try {
-        client.post("/v1/auth/token/renew-self") {
+        client.post("$endpoint/v1/auth/token/renew-self") {
           contentType(ContentType.Application.Json)
           setBody(mapOf("increment" to tokenDuration))
           header("X-Vault-Token", token)
@@ -243,7 +238,7 @@ private constructor(
 
   private suspend fun getLatestKeyVersion(): Int {
     val keyResponse =
-      client.get("$transitPath/keys/$key") {
+      client.get("$endpoint/$transitPath/keys/$key") {
         contentType(ContentType.Application.Json)
         header("X-Vault-Token", token)
       }
@@ -286,7 +281,7 @@ private constructor(
 
     // The payload is always signed with the latest key.
     val response =
-      client.post("$transitPath/sign/$key") {
+      client.post("$endpoint/$transitPath/sign/$key") {
         contentType(ContentType.Application.Json)
         setBody(mapOf("input" to signatureData))
         header("X-Vault-Token", token)

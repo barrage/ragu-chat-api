@@ -1,0 +1,20 @@
+{
+  "id": "ebb68c1b-e639-48b3-a828-4d59d8c183fc",
+  "name": "vault_v1_transit_sign",
+  "request": {
+    "urlPathTemplate": "/__vault/v1/{mount}/sign/{key}",
+    "method": "POST",
+    "bodyPatterns": [
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "v1_transit_sign_response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "ebb68c1b-e639-48b3-a828-4d59d8c183fc",
+  "persistent": true,
+  "insertionIndex": 10
+}
