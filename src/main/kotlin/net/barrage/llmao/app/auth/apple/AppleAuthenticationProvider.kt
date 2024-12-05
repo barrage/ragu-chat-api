@@ -18,9 +18,9 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.RSAPublicKeySpec
 import java.time.Instant
 import java.util.*
-import net.barrage.llmao.app.auth.LoginSource
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.auth.LoginPayload
+import net.barrage.llmao.core.auth.LoginSource
 import net.barrage.llmao.core.auth.UserInfo
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
