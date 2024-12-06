@@ -332,7 +332,7 @@ class ChatRepository(private val dslContext: DSLContext) {
   fun agentsChatHistoryCounts(period: Period): List<AgentChatsOnDate> {
     val startDate =
       when (period) {
-        Period.WEEK -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(7)
+        Period.WEEK -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(6)
         Period.MONTH -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusMonths(1)
         Period.YEAR ->
           KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusYears(1).withDayOfMonth(1)
