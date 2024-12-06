@@ -18,6 +18,11 @@ class AuthenticationService(
   private val userRepo: UserRepository,
 ) {
 
+  fun getUserForSession(sessionId: KUUID): User? {
+    val serverSession = sessionRepo.get(sessionId) ?: return null
+    return userRepo.get(serverSession.userId)
+  }
+
   /**
    * Authenticate the user using the provider from the payload and establish a session upon success.
    */
