@@ -20,6 +20,7 @@ import net.barrage.llmao.app.api.http.controllers.agentsRoutes
 import net.barrage.llmao.app.api.http.controllers.authRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
 import net.barrage.llmao.app.api.http.controllers.devController
+import net.barrage.llmao.app.api.http.controllers.thirdPartyRoutes
 import net.barrage.llmao.app.api.http.controllers.userRoutes
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
@@ -34,6 +35,8 @@ fun Application.configureRouting(state: ApplicationState) {
 
     // Unprotected authentication routes
     authRoutes(services.auth, state.adapters)
+
+    thirdPartyRoutes()
 
     // Add swagger-ui only if we're not in production.
     if (application.environment.config.property("ktor.environment").getString() != "production") {
