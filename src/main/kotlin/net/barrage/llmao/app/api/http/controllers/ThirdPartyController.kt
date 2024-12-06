@@ -4,7 +4,6 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.routing.application
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.string
@@ -13,16 +12,15 @@ fun Route.thirdPartyRoutes() {
   val config = application.environment.config
 
   get("/apple-app-site-association") {
+    val appID = "${config.string("oauth.apple.teamId")}.${config.string("oauth.apple.clientId")}"
+
     val appleAppSiteAssociation =
       AppleAppSiteAssociation(
         applinks =
           AppLinks(
             details =
               listOf(
-                AppDetail(
-                  appID = config.property("apple.appID").getString(),
-                  paths = listOf("/oauthredirect"),
-                ),
+                AppDetail(appID = appID, paths = listOf("/oauthredirect")),
                 AppDetail(
                   appID = config.property("multiplatform.ios.appID").getString(),
                   paths = listOf("/oauthredirect"),
