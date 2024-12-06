@@ -20,10 +20,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
-class AdministrationControllerTests : IntegrationTest() {
+class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
   private lateinit var admin: User
   private lateinit var adminSession: Session
   private lateinit var userActive: User
@@ -106,7 +105,6 @@ class AdministrationControllerTests : IntegrationTest() {
     assertEquals(body, listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o"))
   }
 
-  @Disabled
   @Test
   fun getListOfProviderLanguageModelsTestOllama() = test {
     val client = createClient { install(ContentNegotiation) { json() } }

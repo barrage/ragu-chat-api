@@ -180,6 +180,7 @@ open class IntegrationTest(
           "oauth.google.tokenEndpoint" to "$url/$GOOGLE_WM/auth/token",
           "oauth.google.keysEndpoint" to "$url/$GOOGLE_WM/auth/keys",
           "oauth.google.clientId" to "aud.apps.googleusercontent.com",
+          "llm.ollama.endpoint" to "$url/$OLLAMA_WM",
         )
       )
   }
@@ -196,6 +197,7 @@ const val FEMBED_WM = "__fembed"
 const val VAULT_WM = "__vault"
 const val GOOGLE_WM = "__google"
 const val APPLE_VM = "__apple"
+const val OLLAMA_WM = "__ollama"
 
 // Wiremock response triggers
 
