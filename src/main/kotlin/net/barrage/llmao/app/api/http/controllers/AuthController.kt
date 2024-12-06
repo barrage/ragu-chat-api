@@ -4,7 +4,6 @@ import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.config.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -21,7 +20,6 @@ import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.user
 import net.barrage.llmao.string
 
 fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
@@ -65,11 +63,16 @@ fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
       return@post
     }
 
-    val user = call.user()
-
     service.logout(userSession.id)
 
     call.sessions.clear<SessionCookie>()
+
+    val user =
+      service.getUserForSession(userSession.id)
+        ?: let {
+          call.respond(HttpStatusCode.NoContent)
+          return@post
+        }
 
     adapters.runIfEnabled<ChonkitAuthenticationService, Unit> { adapter ->
       val refreshToken =
