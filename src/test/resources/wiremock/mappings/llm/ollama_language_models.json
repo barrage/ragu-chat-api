@@ -1,0 +1,17 @@
+{
+  "id": "7ae36bd0-24c6-4e53-9894-329a747694bd",
+  "uuid": "7ae36bd0-24c6-4e53-9894-329a747694bd",
+  "name": "ollama_language_models",
+  "request": {
+    "url": "/__ollama/api/tags",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "llm/ollama_language_models_response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "persistent": true
+}
