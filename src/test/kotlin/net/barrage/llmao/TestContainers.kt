@@ -142,23 +142,12 @@ class TestPostgres {
       .fetchOne(SessionsRecord::toSessionData)!!
   }
 
-  fun testAgent(
-    name: String = "Test",
-    active: Boolean = true,
-    vectorProvider: String = "weaviate",
-  ): Agent {
+  fun testAgent(name: String = "Test", active: Boolean = true): Agent {
     val agent =
       dslContext
         .insertInto(AGENTS)
-        .columns(
-          AGENTS.NAME,
-          AGENTS.DESCRIPTION,
-          AGENTS.ACTIVE,
-          AGENTS.VECTOR_PROVIDER,
-          AGENTS.ACTIVE,
-          AGENTS.LANGUAGE,
-        )
-        .values(name, "Test", active, vectorProvider, active, "croatian")
+        .columns(AGENTS.NAME, AGENTS.DESCRIPTION, AGENTS.ACTIVE, AGENTS.ACTIVE, AGENTS.LANGUAGE)
+        .values(name, "Test", active, active, "croatian")
         .returning()
         .fetchOne(AgentsRecord::toAgent)!!
 

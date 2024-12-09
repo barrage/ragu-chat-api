@@ -133,7 +133,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         name = "TestAgentCreated",
         description = "description",
         active = true,
-        vectorProvider = "weaviate",
         language = "english",
         configuration =
           CreateAgentConfiguration(
@@ -155,7 +154,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     val body = response.body<AgentWithConfiguration>()
     assertEquals("TestAgentCreated", body.agent.name)
     assertEquals("description", body.agent.description)
-    assertEquals("weaviate", body.agent.vectorProvider)
     assertEquals("azure", body.configuration.llmProvider)
     assertEquals("gpt-4", body.configuration.model)
 
@@ -163,7 +161,7 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
   }
 
   @Test
-  fun createAgentFailsWrongProvider() = test {
+  fun createAgentFailsWrongLLmProvider() = test {
     val client = createClient {
       install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
     }
@@ -171,7 +169,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
       CreateAgent(
         name = "TestAgentCreated",
         description = "description",
-        vectorProvider = "weaviate",
         configuration =
           CreateAgentConfiguration(
             context = "context",
