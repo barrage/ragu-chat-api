@@ -1,22 +1,16 @@
 package net.barrage.llmao.core.vector
 
+import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.types.KUUID
+
 interface VectorDatabase {
   fun id(): String
 
-  /**
-   * Perform semantic similarity search in the given `collections`, returning `amount` most similar
-   * results from each based on the given `searchVector`.
-   */
-  fun query(
-    searchVector: List<Double>,
-    collections: List<Pair<String, Int>>,
-  ): Map<String, List<VectorData>>
+  /** Perform semantic similarity search using the given `queries`. */
+  fun query(queries: List<CollectionQuery>): Map<String, List<VectorData>>
 
-  /**
-   * Used by services to reason about the existence of collections. Returns `true` if the collection
-   * exists and can be used by an agent, `false` otherwise.
-   */
-  fun validateCollection(name: String, vectorSize: Int): Boolean
+  /** Get collection info directly from a vector database. */
+  fun getCollectionInfo(name: String): VectorCollectionInfo?
 }
 
 /** Data class representing the payload associated with a vector. */
@@ -27,3 +21,29 @@ data class VectorData(
   /** The document ID in `chonkit`. */
   val documentId: String?,
 )
+
+@Serializable
+data class VectorCollectionInfo(
+  val collectionId: KUUID,
+
+  /** Collection name. */
+  val name: String,
+
+  /** Embedding vector size. */
+  val size: Int,
+
+  /** Embedding model used for the collection. */
+  val embeddingModel: String,
+
+  /** Embedding provider for the model. */
+  val embeddingProvider: String,
+
+  /** Underlying vector storage provider. */
+  val vectorProvider: String,
+)
+
+/**
+ * Used by vector databases to obtain the most similar results from a collection. The `vector`
+ * length must always be the same as the collection's vector size.
+ */
+data class CollectionQuery(val name: String, val amount: Int, val vector: List<Double>)

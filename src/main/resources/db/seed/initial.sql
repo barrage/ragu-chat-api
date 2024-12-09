@@ -3,8 +3,6 @@ INSERT INTO agents (
     name,
     description,
     vector_provider,
-    embedding_provider,
-    embedding_model,
     language
 )
 VALUES (
@@ -12,8 +10,6 @@ VALUES (
  'Glorious God Emperor Bayram of the Chadlands',
  'Your friendly neighbourhood soy blaster',
  'weaviate',
- 'azure',
- 'text-embedding-ada-002',
  'croatian'
 ) ON CONFLICT DO NOTHING;
 

@@ -22,7 +22,7 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.vector.VectorDatabase
+import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
@@ -117,10 +117,9 @@ class ChatService(
   ): Flow<List<TokenChunk>> {
     val agentFull = agentRepository.get(agentId)
 
-    val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
-    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
+    val query = prepareChatPrompt(prompt, agentFull, history)
 
-    val query = prepareChatPrompt(prompt, agentFull, history, vectorDb)
+    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
 
     return llm.completionStream(
       query,
@@ -131,10 +130,9 @@ class ChatService(
   suspend fun chatCompletion(prompt: String, history: List<ChatMessage>, agentId: KUUID): String {
     val agentFull = agentRepository.get(agentId)
 
-    val vectorDb = providers.vector.getProvider(agentFull.agent.vectorProvider)
-    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
+    val query = prepareChatPrompt(prompt, agentFull, history)
 
-    val query = prepareChatPrompt(prompt, agentFull, history, vectorDb)
+    val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
 
     return llm.chatCompletion(
       query,
@@ -253,21 +251,28 @@ class ChatService(
     prompt: String,
     agent: AgentFull,
     history: List<ChatMessage>,
-    vectorDb: VectorDatabase,
   ): List<ChatMessage> {
+    val vectorDb = providers.vector.getProvider(agent.agent.vectorProvider)
+
     val systemMessage =
-      systemMessage(
+      ChatMessage.system(
         "${agent.configuration.context}\n${agent.configuration.agentInstructions.language()}"
       )
 
     LOG.trace("Created system message {}", systemMessage)
 
-    val embedded = embedQuery(agent.agent.embeddingProvider, agent.agent.embeddingModel, prompt)
-
     var collectionInstructions = ""
 
-    val collections = agent.collections.map { Pair(it.collection, it.amount) }.toList()
-    val relatedChunks = vectorDb.query(embedded, collections)
+    val queries =
+      agent.collections
+        .map {
+          val embeddings =
+            providers.embedding.getProvider(it.embeddingProvider).embed(prompt, it.embeddingModel)
+          CollectionQuery(it.collection, it.amount, embeddings)
+        }
+        .toList()
+
+    val relatedChunks = vectorDb.query(queries)
 
     for (collection in agent.collections) {
       val instruction = collection.instruction
@@ -285,10 +290,6 @@ class ChatService(
     val messages = mutableListOf(systemMessage, *history.toTypedArray(), message)
 
     return messages
-  }
-
-  private fun systemMessage(context: String): ChatMessage {
-    return ChatMessage.system(context)
   }
 
   private fun userMessage(prompt: String, instructions: String): ChatMessage {
@@ -313,10 +314,5 @@ class ChatService(
       }
     }
     throw AppError.api(ErrorReason.InvalidParameter, "Cannot find tokenizer for model '$llm'")
-  }
-
-  private suspend fun embedQuery(provider: String, model: String, input: String): List<Double> {
-    val embedder = providers.embedding.getProvider(provider)
-    return embedder.embed(input, model)
   }
 }

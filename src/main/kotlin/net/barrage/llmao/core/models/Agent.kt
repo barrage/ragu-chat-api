@@ -22,12 +22,6 @@ data class Agent(
   /** Which vector provider to use, e.g. Weaviate/Qdrant. */
   val vectorProvider: String,
 
-  /** Which embedding provider to use, e.g. azure, fembed. */
-  val embeddingProvider: String,
-
-  /** Which embedding model to use, must be supported by provider. */
-  val embeddingModel: String,
-
   /** If `true`, the agent is visible to non-admin users. */
   val active: Boolean,
 
@@ -48,8 +42,6 @@ fun AgentsRecord.toAgent() =
     name = this.name,
     description = description,
     vectorProvider = this.vectorProvider,
-    embeddingProvider = this.embeddingProvider,
-    embeddingModel = this.embeddingModel,
     active = this.active!!,
     activeConfigurationId = this.activeConfigurationId,
     language = this.language!!,
@@ -76,8 +68,6 @@ data class CreateAgent(
   @NotBlank val description: String?,
   val active: Boolean,
   val vectorProvider: String,
-  val embeddingProvider: String,
-  val embeddingModel: String,
   @NotBlank val language: String,
   val configuration: CreateAgentConfiguration,
 ) : Validation
@@ -87,8 +77,6 @@ data class CreateAgent(
 data class UpdateAgent(
   @NotBlank val name: String? = null,
   @NotBlank val description: String? = null,
-  @NotBlank val embeddingModel: String? = null,
-  @NotBlank val embeddingProvider: String? = null,
   val active: Boolean? = null,
   @NotBlank val language: String? = null,
   val configuration: UpdateAgentConfiguration? = null,

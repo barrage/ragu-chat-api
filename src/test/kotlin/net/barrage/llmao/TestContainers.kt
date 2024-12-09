@@ -34,6 +34,7 @@ import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
@@ -145,8 +146,6 @@ class TestPostgres {
     name: String = "Test",
     active: Boolean = true,
     vectorProvider: String = "weaviate",
-    embeddingProvider: String = "azure",
-    embeddingModel: String = "text-embedding-ada-002",
   ): Agent {
     val agent =
       dslContext
@@ -156,21 +155,10 @@ class TestPostgres {
           AGENTS.DESCRIPTION,
           AGENTS.ACTIVE,
           AGENTS.VECTOR_PROVIDER,
-          AGENTS.EMBEDDING_PROVIDER,
-          AGENTS.EMBEDDING_MODEL,
           AGENTS.ACTIVE,
           AGENTS.LANGUAGE,
         )
-        .values(
-          name,
-          "Test",
-          active,
-          vectorProvider,
-          embeddingProvider,
-          embeddingModel,
-          active,
-          "croatian",
-        )
+        .values(name, "Test", active, vectorProvider, active, "croatian")
         .returning()
         .fetchOne(AgentsRecord::toAgent)!!
 
@@ -212,6 +200,9 @@ class TestPostgres {
     collection: String,
     amount: Int,
     instruction: String,
+    embeddingProvider: String = "azure",
+    embeddingModel: String = "text-embedding-ada-002",
+    vectorProvider: String,
   ): AgentCollection {
     return dslContext
       .insertInto(AGENT_COLLECTIONS)
@@ -219,6 +210,9 @@ class TestPostgres {
       .set(AGENT_COLLECTIONS.COLLECTION, collection)
       .set(AGENT_COLLECTIONS.AMOUNT, amount)
       .set(AGENT_COLLECTIONS.INSTRUCTION, instruction)
+      .set(AGENT_COLLECTIONS.EMBEDDING_PROVIDER, embeddingProvider)
+      .set(AGENT_COLLECTIONS.EMBEDDING_MODEL, embeddingModel)
+      .set(AGENT_COLLECTIONS.VECTOR_PROVIDER, vectorProvider)
       .returning()
       .fetchInto(AgentCollectionsRecord::class.java)
       .map { it.toAgentCollection() }
@@ -361,22 +355,53 @@ class TestWeaviate {
     client = WeaviateClient(Config("http", container.httpHostAddress))
   }
 
-  fun insertTestCollection(name: String = "TestClass", size: Int = 1536) {
-    val contentProperty =
+  fun insertTestCollection(
+    name: String = "TestClass",
+    size: Int = 1536,
+    embeddingProvider: String = "azure",
+    embeddingModel: String = "text-embedding-ada-002",
+  ) {
+
+    val idProperty =
       Property.builder()
-        .name("content")
-        .description("Document content")
+        .name("collection_id")
+        .description(KUUID.randomUUID().toString())
         .dataType(listOf("text"))
         .build()
 
     val sizeProperty =
       Property.builder().name("size").description(size.toString()).dataType(listOf("text")).build()
 
+    val nameProperty =
+      Property.builder().name("name").description(name).dataType(listOf("text")).build()
+
+    val embeddingProviderProperty =
+      Property.builder()
+        .name("embedding_provider")
+        .description(embeddingProvider)
+        .dataType(listOf("text"))
+        .build()
+
+    val embeddingModelProperty =
+      Property.builder()
+        .name("embedding_model")
+        .description(embeddingModel)
+        .dataType(listOf("text"))
+        .build()
+
     val newClass =
       WeaviateClass.builder()
         .className(name)
         .description("Test vector collection")
-        .properties(listOf(contentProperty, sizeProperty))
+        .properties(
+          listOf(
+            idProperty,
+            sizeProperty,
+            nameProperty,
+            embeddingProviderProperty,
+            embeddingModelProperty,
+          )
+        )
         .build()
 
     client.schema().classCreator().withClass(newClass).run()
