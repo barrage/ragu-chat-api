@@ -23,6 +23,7 @@ import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.CollectionQuery
+import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
@@ -252,8 +253,6 @@ class ChatService(
     agent: AgentFull,
     history: List<ChatMessage>,
   ): List<ChatMessage> {
-    val vectorDb = providers.vector.getProvider(agent.agent.vectorProvider)
-
     val systemMessage =
       ChatMessage.system(
         "${agent.configuration.context}\n${agent.configuration.agentInstructions.language()}"
@@ -263,20 +262,42 @@ class ChatService(
 
     var collectionInstructions = ""
 
-    val queries =
-      agent.collections
-        .map {
-          val embeddings =
-            providers.embedding.getProvider(it.embeddingProvider).embed(prompt, it.embeddingModel)
-          CollectionQuery(it.collection, it.amount, embeddings)
-        }
-        .toList()
+    // Maps providers to lists of CollectionQuery
+    val providerQueries = mutableMapOf<String, MutableList<CollectionQuery>>()
 
-    val relatedChunks = vectorDb.query(queries)
+    // Embed the input per collection provider and model
+    for (collection in agent.collections) {
+      val embeddings =
+        providers.embedding
+          .getProvider(collection.embeddingProvider)
+          .embed(prompt, collection.embeddingModel)
+
+      if (!providerQueries.containsKey(collection.vectorProvider)) {
+        providerQueries[collection.vectorProvider] =
+          mutableListOf(CollectionQuery(collection.collection, collection.amount, embeddings))
+      } else {
+        providerQueries[collection.vectorProvider]!!.add(
+          CollectionQuery(collection.collection, collection.amount, embeddings)
+        )
+      }
+    }
+
+    // Holds Provider -> Collection -> VectorData
+    val relatedChunks = mutableMapOf<String, Map<String, List<VectorData>>>()
+
+    // Query each vector provider for the most similar vectors
+    providerQueries.forEach { (provider, queries) ->
+      val vectorDb = providers.vector.getProvider(provider)
+      relatedChunks[provider] = vectorDb.query(queries)
+    }
 
     for (collection in agent.collections) {
       val instruction = collection.instruction
-      val collectionData = relatedChunks[collection.collection]?.joinToString("\n") { it.content }
+      // Safe to !! because the providers must be present here if they were mapped above
+      val collectionData =
+        relatedChunks[collection.vectorProvider]!![collection.collection]?.joinToString("\n") {
+          it.content
+        }
 
       collectionData?.let {
         collectionInstructions += "$instruction\n\"\"\n\t$collectionData\n\"\""

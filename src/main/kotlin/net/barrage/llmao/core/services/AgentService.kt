@@ -57,7 +57,6 @@ class AgentService(
     providers.validateSupportedConfigurationParams(
       llmProvider = create.configuration.llmProvider,
       model = create.configuration.model,
-      vectorProvider = create.vectorProvider,
     )
 
     return agentRepository.create(create) ?: throw IllegalStateException("Something went wrong")
@@ -112,7 +111,6 @@ class AgentService(
   private suspend fun validateAgentConfigurationParams(
     llmProvider: String? = null,
     model: String? = null,
-    vectorProvider: String? = null,
   ) {
     if (llmProvider != null && model != null) {
       // Throws if invalid provider
@@ -123,11 +121,6 @@ class AgentService(
           "Provider '${llm.id()}' does not support model '${model}'",
         )
       }
-    }
-
-    if (vectorProvider != null) {
-      // Throws if invalid provider
-      providers.vector.getProvider(vectorProvider)
     }
   }
 

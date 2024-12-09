@@ -129,7 +129,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           .insertInto(AGENTS)
           .set(AGENTS.NAME, create.name)
           .set(AGENTS.DESCRIPTION, create.description)
-          .set(AGENTS.VECTOR_PROVIDER, create.vectorProvider)
           .set(AGENTS.LANGUAGE, create.language)
           .set(AGENTS.ACTIVE, create.active)
           .returning()
