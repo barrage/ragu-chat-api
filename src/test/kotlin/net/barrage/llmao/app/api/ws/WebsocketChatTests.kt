@@ -155,7 +155,9 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
   /**
    * A client connects via Websocket, opens a chat, sends a message and receives an error.
    * Beforehand, the agent is configured to the wrong collection (whose embedding size is different
-   * than the embeddings created by the agent's model).
+   * than the embeddings created by the agent's model). Theoretically should never happen since now
+   * we load embedding configuration from the collection itself, but still nice to have as a test
+   * scenario.
    */
   @Test
   fun sendsVectorDatabaseErrorWhenAgentEmbeddingModelIsNotConfiguredProperly() = wsTest { client ->
@@ -337,11 +339,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
   // Valid and invalid here refer to configuration, not the actual models and objects.
 
   private fun createValidAgent(): AgentFull {
-    val validAgent =
-      postgres.testAgent(
-        embeddingProvider = "openai",
-        embeddingModel = "text-embedding-ada-002", // 1536
-      )
+    val validAgent = postgres.testAgent()
 
     val validAgentConfiguration =
       postgres.testAgentConfiguration(
@@ -356,17 +354,16 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
         collection = TEST_COLLECTION,
         amount = 2,
         instruction = "Use the valuable information below to solve the three body problem.",
+        embeddingProvider = "openai",
+        embeddingModel = "text-embedding-ada-002", // 1536
+        vectorProvider = "weaviate",
       )
 
     return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection))
   }
 
   private fun createInvalidAgent(): AgentFull {
-    val invalidAgent =
-      postgres.testAgent(
-        embeddingProvider = "openai",
-        embeddingModel = "text-embedding-3-large", // 3072
-      )
+    val invalidAgent = postgres.testAgent()
 
     val invalidAgentConfiguration =
       postgres.testAgentConfiguration(
@@ -381,6 +378,9 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
         TEST_COLLECTION,
         2,
         "Use the valuable information below to pass the butter.",
+        embeddingProvider = "openai",
+        embeddingModel = "text-embedding-3-large", // 3072
+        vectorProvider = "weaviate",
       )
 
     return AgentFull(invalidAgent, invalidAgentConfiguration, listOf(invalidAgentCollection))

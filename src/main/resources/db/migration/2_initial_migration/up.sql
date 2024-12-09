@@ -25,8 +25,6 @@ CREATE TABLE agents (
     description TEXT,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     vector_provider TEXT NOT NULL,
-    embedding_provider TEXT NOT NULL,
-    embedding_model TEXT NOT NULL,
     active_configuration_id UUID NULL,
     language TEXT NOT NULL DEFAULT 'english',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -55,15 +53,25 @@ CREATE TABLE agent_collections (
     -- Specifies what the agent should do with the data obtained from this collection.
     instruction TEXT NOT NULL,
 
-    -- The collection name
+    -- The collection name.
     collection TEXT NOT NULL,
 
-    -- Amount of items to retrieve from collection
+    -- Amount of items to retrieve from collection.
     amount INTEGER NOT NULL,
+
+    -- Which model to use when embedding text for querying this collection.
+    embedding_model TEXT NOT NULL,
+
+    -- Which provider has the model.
+    embedding_provider TEXT NOT NULL,
+
+    -- Vector database the collection is stored in.
+    vector_provider TEXT NOT NULL,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT unique_agent_collection UNIQUE(agent_id, collection)
+    CONSTRAINT unique_agent_collection UNIQUE(agent_id, collection, vector_provider)
 );
 
 CREATE TABLE chats (

@@ -13,13 +13,13 @@ import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.CollectionItem
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.CreateAgentConfiguration
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateAgentConfiguration
+import net.barrage.llmao.core.models.UpdateCollectionAddition
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.User
@@ -50,8 +50,7 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
   fun setup() {
     adminUser = postgres.testUser("foo@bar.com", admin = true)
     peasantUser = postgres.testUser("bar@foo.com", admin = false)
-    agentOne =
-      postgres.testAgent(embeddingProvider = "azure", embeddingModel = "text-embedding-ada-002")
+    agentOne = postgres.testAgent()
     agentOneConfigurationV1 = postgres.testAgentConfiguration(agentOne.id, version = 1)
     agentOneConfigurationV2 = postgres.testAgentConfiguration(agentOne.id, version = 2)
     agentOneChat = postgres.testChat(peasantUser.id, agentOne.id)
@@ -135,8 +134,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         description = "description",
         active = true,
         vectorProvider = "weaviate",
-        embeddingProvider = "azure",
-        embeddingModel = "text-embedding-ada-002",
         language = "english",
         configuration =
           CreateAgentConfiguration(
@@ -159,8 +156,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     assertEquals("TestAgentCreated", body.agent.name)
     assertEquals("description", body.agent.description)
     assertEquals("weaviate", body.agent.vectorProvider)
-    assertEquals("azure", body.agent.embeddingProvider)
-    assertEquals("text-embedding-ada-002", body.agent.embeddingModel)
     assertEquals("azure", body.configuration.llmProvider)
     assertEquals("gpt-4", body.configuration.model)
 
@@ -177,8 +172,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
         name = "TestAgentCreated",
         description = "description",
         vectorProvider = "weaviate",
-        embeddingProvider = "fembed",
-        embeddingModel = "Xenova/bge-large-en-v1.5",
         configuration =
           CreateAgentConfiguration(
             context = "context",
@@ -313,10 +306,10 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     val client = createClient { install(ContentNegotiation) { json() } }
     val updateCollections =
       UpdateCollections(
-        provider = "weaviate",
         add =
           listOf(
-            CollectionItem(
+            UpdateCollectionAddition(
+              provider = "weaviate",
               name = "Kusturica_small",
               amount = 10,
               instruction = "you pass the butter",
@@ -338,34 +331,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     assertEquals("Kusturica_small", body.added[0].name)
     assertEquals(0, body.removed.size)
     assertEquals(0, body.failed.size)
-  }
-
-  @Test
-  fun updateAgentCollectionsFails() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-    val updateCollections =
-      UpdateCollections(
-        provider = "weaviate",
-        add =
-          listOf(
-            CollectionItem(name = "Kusturica_big", amount = 10, instruction = "you pass the butter")
-          ),
-        remove = null,
-      )
-
-    val response =
-      client.put("/admin/agents/${agentOne.id}/collections") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-        contentType(ContentType.Application.Json)
-        setBody(updateCollections)
-      }
-
-    assertEquals(200, response.status.value)
-    val body = response.body<UpdateCollectionsResult>()
-    assertEquals(0, body.added.size)
-    assertEquals(0, body.removed.size)
-    assertEquals(1, body.failed.size)
-    assertEquals("Kusturica_big", body.failed[0].name)
   }
 
   @Test

@@ -7,9 +7,10 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentWithConfiguration
+import net.barrage.llmao.core.models.CollectionInsert
+import net.barrage.llmao.core.models.CollectionRemove
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
-import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
@@ -27,6 +28,7 @@ import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import org.jooq.DSLContext
 import org.jooq.SortField
+import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.repository.AgentRepository")
@@ -128,8 +130,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.NAME, create.name)
           .set(AGENTS.DESCRIPTION, create.description)
           .set(AGENTS.VECTOR_PROVIDER, create.vectorProvider)
-          .set(AGENTS.EMBEDDING_PROVIDER, create.embeddingProvider)
-          .set(AGENTS.EMBEDDING_MODEL, create.embeddingModel)
           .set(AGENTS.LANGUAGE, create.language)
           .set(AGENTS.ACTIVE, create.active)
           .returning()
@@ -235,14 +235,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
           .set(AGENTS.ACTIVE, DSL.coalesce(DSL.`val`(update.active), AGENTS.ACTIVE))
           .set(AGENTS.LANGUAGE, DSL.coalesce(DSL.`val`(update.language), AGENTS.LANGUAGE))
-          .set(
-            AGENTS.EMBEDDING_PROVIDER,
-            DSL.coalesce(DSL.`val`(update.embeddingProvider), AGENTS.EMBEDDING_PROVIDER),
-          )
-          .set(
-            AGENTS.EMBEDDING_MODEL,
-            DSL.coalesce(DSL.`val`(update.embeddingModel), AGENTS.EMBEDDING_MODEL),
-          )
           .where(AGENTS.ID.eq(id))
           .returning()
           .fetchOne(AgentsRecord::toAgent)!!
@@ -258,30 +250,67 @@ class AgentRepository(private val dslContext: DSLContext) {
       .execute()
   }
 
-  fun updateCollections(agentId: KUUID, update: UpdateCollections) {
-    update.add?.let {
-      dslContext
-        .batch(
-          it.map { (name, amount, instruction) ->
-            dslContext
-              .insertInto(AGENT_COLLECTIONS)
-              .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
-              .set(AGENT_COLLECTIONS.COLLECTION, name)
-              .set(AGENT_COLLECTIONS.AMOUNT, amount)
-              .set(AGENT_COLLECTIONS.INSTRUCTION, instruction)
-              .onConflict(AGENT_COLLECTIONS.AGENT_ID, AGENT_COLLECTIONS.COLLECTION)
-              .doUpdate()
-              .set(AGENT_COLLECTIONS.AMOUNT, amount)
-          }
-        )
-        .execute()
-    }
+  fun updateCollections(
+    agentId: KUUID,
+    add: List<CollectionInsert>?,
+    remove: List<CollectionRemove>?,
+  ) {
+    dslContext.transactionResult { tx ->
+      add?.let { additions ->
+        try {
+          tx
+            .dsl()
+            .batch(
+              additions.map { collection ->
+                tx
+                  .dsl()
+                  .insertInto(AGENT_COLLECTIONS)
+                  .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
+                  .set(AGENT_COLLECTIONS.COLLECTION, collection.info.name)
+                  .set(AGENT_COLLECTIONS.EMBEDDING_PROVIDER, collection.info.embeddingProvider)
+                  .set(AGENT_COLLECTIONS.EMBEDDING_MODEL, collection.info.embeddingModel)
+                  .set(AGENT_COLLECTIONS.VECTOR_PROVIDER, collection.info.vectorProvider)
+                  .set(AGENT_COLLECTIONS.AMOUNT, collection.amount)
+                  .set(AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
+                  .onConflict(
+                    AGENT_COLLECTIONS.AGENT_ID,
+                    AGENT_COLLECTIONS.COLLECTION,
+                    AGENT_COLLECTIONS.VECTOR_PROVIDER,
+                  )
+                  .doUpdate()
+                  .set(AGENT_COLLECTIONS.AMOUNT, collection.amount)
+                  .set(AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
+              }
+            )
+            .execute()
+        } catch (e: DataAccessException) {
+          LOG.error("Error adding collections", e)
+          throw AppError.internal(e.message ?: "Failed to add collections")
+        }
+      }
 
-    update.remove?.let {
-      dslContext
-        .deleteFrom(AGENT_COLLECTIONS)
-        .where(AGENT_COLLECTIONS.AGENT_ID.eq(agentId).and(AGENT_COLLECTIONS.COLLECTION.`in`(it)))
-        .execute()
+      remove?.let { removals ->
+        try {
+          tx
+            .dsl()
+            .batch(
+              removals.map { collection ->
+                tx
+                  .dsl()
+                  .deleteFrom(AGENT_COLLECTIONS)
+                  .where(
+                    AGENT_COLLECTIONS.AGENT_ID.eq(agentId)
+                      .and(AGENT_COLLECTIONS.COLLECTION.eq(collection.name))
+                      .and(AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(collection.provider))
+                  )
+              }
+            )
+            .execute()
+        } catch (e: DataAccessException) {
+          LOG.error("Error removing collections", e)
+          throw AppError.internal(e.message ?: "Failed to remove collections")
+        }
+      }
     }
   }
 

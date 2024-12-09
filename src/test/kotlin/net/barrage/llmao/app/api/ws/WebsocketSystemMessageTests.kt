@@ -27,8 +27,7 @@ class WebsocketSystemMessageTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    agent =
-      postgres.testAgent(embeddingProvider = "fembed", embeddingModel = "Xenova/bge-large-en-v1.5")
+    agent = postgres.testAgent()
     agentConfiguration = postgres.testAgentConfiguration(agentId = agent.id)
     user = postgres.testUser(email = "not@important.org", admin = false)
     session = postgres.testSession(user.id)

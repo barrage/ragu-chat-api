@@ -6,11 +6,12 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentWithConfiguration
-import net.barrage.llmao.core.models.CollectionItem
+import net.barrage.llmao.core.models.CollectionInsert
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
+import net.barrage.llmao.core.models.UpdateCollectionsFailure
 import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -57,8 +58,6 @@ class AgentService(
       llmProvider = create.configuration.llmProvider,
       model = create.configuration.model,
       vectorProvider = create.vectorProvider,
-      embeddingProvider = create.embeddingProvider,
-      embeddingModel = create.embeddingModel,
     )
 
     return agentRepository.create(create) ?: throw IllegalStateException("Something went wrong")
@@ -68,14 +67,7 @@ class AgentService(
     providers.validateSupportedConfigurationParams(
       llmProvider = update.configuration?.llmProvider,
       model = update.configuration?.model,
-      embeddingProvider = update.embeddingProvider,
-      embeddingModel = update.embeddingModel,
     )
-
-    // If embedding configuration is being updated, invalidate all collections.
-    if (update.embeddingProvider != null && update.embeddingModel != null) {
-      agentRepository.deleteAllCollections(id)
-    }
 
     return agentRepository.update(id, update)
   }
@@ -90,43 +82,53 @@ class AgentService(
     }
   }
 
-  suspend fun updateCollections(
-    agentId: KUUID,
-    update: UpdateCollections,
-  ): UpdateCollectionsResult {
-    val vectorDb = providers.vector.getProvider(update.provider)
+  fun updateCollections(agentId: KUUID, update: UpdateCollections): UpdateCollectionsResult {
+    val additions = mutableListOf<CollectionInsert>()
+    val failures = mutableListOf<UpdateCollectionsFailure>()
 
-    val agent = agentRepository.get(agentId)
-    val vectorSize =
-      providers.embedding
-        .getProvider(agent.agent.embeddingProvider)
-        .vectorSize(agent.agent.embeddingModel)
+    update.add?.forEach { collectionAdd ->
+      val vectorDb = providers.vector.getProvider(collectionAdd.provider)
 
-    val verifiedCollections = mutableListOf<CollectionItem>()
-    val failedCollections = mutableListOf<CollectionItem>()
+      // Ensure the collections being added exist
+      val collection = vectorDb.getCollectionInfo(collectionAdd.name)
 
-    // Ensure the collections being added exist
-    val filteredUpdate: UpdateCollections =
-      if (update.add != null) {
-        for (collectionItem in update.add) {
-          if (vectorDb.validateCollection(collectionItem.name, vectorSize)) {
-            verifiedCollections.add(collectionItem)
-          } else {
-            failedCollections.add(collectionItem)
-          }
-        }
-
-        UpdateCollections(
-          provider = update.provider,
-          add = verifiedCollections,
-          remove = update.remove,
-        )
+      if (collection != null) {
+        additions.add(CollectionInsert(collectionAdd.amount, collectionAdd.instruction, collection))
       } else {
-        update
+        LOG.warn("Collection '${collectionAdd.name}' does not exist")
+        failures.add(UpdateCollectionsFailure(collectionAdd.name, "Collection does not exist"))
       }
+    }
 
-    agentRepository.updateCollections(agentId, update)
-    return UpdateCollectionsResult(verifiedCollections, update.remove.orEmpty(), failedCollections)
+    agentRepository.updateCollections(agentId, additions, update.remove)
+
+    return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
+  }
+
+  /**
+   * Checks whether the providers and their respective models are supported. Data passed to this
+   * function should come from already validated DTOs.
+   */
+  private suspend fun validateAgentConfigurationParams(
+    llmProvider: String? = null,
+    model: String? = null,
+    vectorProvider: String? = null,
+  ) {
+    if (llmProvider != null && model != null) {
+      // Throws if invalid provider
+      val llm = providers.llm.getProvider(llmProvider)
+      if (!llm.supportsModel(model)) {
+        throw AppError.api(
+          ErrorReason.InvalidParameter,
+          "Provider '${llm.id()}' does not support model '${model}'",
+        )
+      }
+    }
+
+    if (vectorProvider != null) {
+      // Throws if invalid provider
+      providers.vector.getProvider(vectorProvider)
+    }
   }
 
   fun getAgentConfigurationVersions(

@@ -3,7 +3,13 @@ package net.barrage.llmao.app.vector
 import io.ktor.util.logging.*
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
+import io.weaviate.client.base.Result
 import io.weaviate.client.v1.graphql.model.GraphQLError
+import io.weaviate.client.v1.schema.model.Property
+import kotlin.properties.Delegates
+import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.vector.CollectionQuery
+import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.error.AppError
@@ -11,7 +17,6 @@ import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.vector.Weaviate")
 
-// TODO: ADD WEAVIATE DATA CLASSES
 class Weaviate(scheme: String, host: String) : VectorDatabase {
   private val client: WeaviateClient = WeaviateClient(Config(scheme, host))
 
@@ -20,21 +25,18 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
   }
 
   /**
-   * Query Weaviate based on `searchVector` and return `amount` most similar results from the given
-   * `collections`.
+   * Query Weaviate based on the provided queries.
    *
-   * This method does not throw in case the query returns no results. Only internal errors and
-   * errors obtained from the GraphQL API are thrown.
+   * This method does not throw in case the generated query returns no results. Only internal errors
+   * and errors obtained from the GraphQL API are thrown.
    */
-  override fun query(
-    searchVector: List<Double>,
-    collections: List<Pair<String, Int>>,
-  ): Map<String, List<VectorData>> {
-    if (collections.isEmpty()) {
+  override fun query(queries: List<CollectionQuery>): Map<String, List<VectorData>> {
+    if (queries.isEmpty()) {
       return mapOf()
     }
 
-    val query = constructQuery(searchVector, collections)
+    val query = constructQuery(queries)
+
     val requestResult = client.graphQL().raw().withQuery(query).run()
 
     if (requestResult.hasErrors()) {
@@ -69,7 +71,10 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     val mappedData =
       data["Get"] as? Map<*, *> ?: throw mappingError("Cannot cast ${data["Get"]} to Map")
 
-    for ((collectionName, amount) in collections) {
+    for (collectionQuery in queries) {
+      val collectionName = collectionQuery.name
+      val amount = collectionQuery.amount
+
       val vectorData = mappedData[collectionName] as? List<*> ?: continue // No vectors as List<*>
 
       results[collectionName] = mutableListOf()
@@ -94,8 +99,14 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     return results
   }
 
-  override fun validateCollection(name: String, vectorSize: Int): Boolean {
-    val response = client.schema().classGetter().withClassName(name).run()
+  override fun getCollectionInfo(name: String): VectorCollectionInfo? {
+    val clazz =
+      handleResponseError { client.schema().classGetter().withClassName(name).run() } ?: return null
+    return VectorCollectionInfo.fromWeaviateProperties(clazz.properties)
+  }
+
+  private fun <T> handleResponseError(block: () -> Result<T?>): T? {
+    val response = block()
 
     if (response.hasErrors()) {
       LOG.error(
@@ -103,40 +114,27 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
         response.error.messages.first().message,
         response.error.statusCode,
       )
-      return false
+      return null
     } else if (response.result == null) {
-      LOG.error("Weaviate schema error: Collection '{}' not found", name)
-      return false
+      LOG.error("Weaviate schema error; Result is null; Response: {}", response)
+      return null
     }
 
-    val properties = response.result.properties
-    val size = properties.first { it.name == "size" }.description.toInt()
-
-    if (size != vectorSize) {
-      LOG.error(
-        "Weaviate vector size mismatch: Collection '$name' has size $size, expected $vectorSize"
-      )
-      return false
-    }
-
-    return true
+    return response.result
   }
 
   /**
    * Construct a raw GraphQL query so we can obtain the results from each collection with a single
    * request.
    */
-  private fun constructQuery(
-    searchVector: List<Double>,
-    collections: List<Pair<String, Int>>,
-  ): String {
-    var query = "query { Get { "
-    val vector = searchVector.joinToString(",")
-    for ((name, amount) in collections) {
-      query += "$name(limit: $amount, nearVector: { vector: [$vector] }) { content } "
+  private fun constructQuery(queries: List<CollectionQuery>): String {
+    var finalQuery = "query { "
+    for (query in queries) {
+      val vector = query.vector.joinToString(",")
+      finalQuery +=
+        " Get { ${query.name}(limit: ${query.amount}, nearVector: { vector: [$vector] }) { content } }"
     }
-    query += " } }"
-    return query
+    return "$finalQuery }"
   }
 
   /** Error in transport to Weaviate. */
@@ -163,4 +161,34 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
     return AppError.api(ErrorReason.VectorDatabase, message)
   }
+}
+
+private fun VectorCollectionInfo.Companion.fromWeaviateProperties(
+  properties: List<Property>
+): VectorCollectionInfo {
+  lateinit var id: KUUID
+  lateinit var name: String
+  var size by Delegates.notNull<Int>()
+  lateinit var embeddingModel: String
+  lateinit var embeddingProvider: String
+  val vectorProvider = "weaviate"
+
+  for (property in properties) {
+    when (property.name) {
+      "collection_id" -> id = KUUID.fromString(property.description)
+      "size" -> size = property.description.toInt()
+      "name" -> name = property.description
+      "embedding_model" -> embeddingModel = property.description
+      "embedding_provider" -> embeddingProvider = property.description
+    }
+  }
+
+  return VectorCollectionInfo(
+    collectionId = id,
+    name = name,
+    size = size,
+    embeddingModel = embeddingModel,
+    embeddingProvider = embeddingProvider,
+    vectorProvider = vectorProvider,
+  )
 }

@@ -3,6 +3,7 @@ package net.barrage.llmao.core.models
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.tables.records.AgentCollectionsRecord
 import net.barrage.llmao.utils.NotBlank
 import net.barrage.llmao.utils.Validation
@@ -14,6 +15,9 @@ data class AgentCollection(
   val instruction: String,
   val collection: String,
   val amount: Int,
+  val embeddingProvider: String,
+  val embeddingModel: String,
+  val vectorProvider: String,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
@@ -25,6 +29,9 @@ fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
     instruction = instruction,
     collection = collection,
     amount = amount,
+    embeddingProvider = embeddingProvider,
+    embeddingModel = embeddingModel,
+    vectorProvider = vectorProvider,
     createdAt = createdAt!!,
     updatedAt = updatedAt!!,
   )
@@ -42,18 +49,31 @@ fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
  */
 @Serializable
 data class UpdateCollections(
-  @NotBlank val provider: String,
-  val add: List<CollectionItem>? = null,
-  val remove: List<String>? = null,
+  val add: List<UpdateCollectionAddition>? = null,
+  val remove: List<CollectionRemove>? = null,
 ) : Validation
 
 @Serializable
-data class CollectionItem(@NotBlank val name: String, val amount: Int, val instruction: String) :
-  Validation
+data class UpdateCollectionAddition(
+  @NotBlank val provider: String,
+  @NotBlank val name: String,
+  val amount: Int,
+  val instruction: String,
+) : Validation
 
 @Serializable
 data class UpdateCollectionsResult(
-  val added: List<CollectionItem>,
-  val removed: List<String>,
-  val failed: List<CollectionItem>,
+  val added: List<VectorCollectionInfo>,
+  val removed: List<CollectionRemove>,
+  val failed: List<UpdateCollectionsFailure>,
 )
+
+@Serializable data class UpdateCollectionsFailure(val name: String, val reason: String)
+
+data class CollectionInsert(
+  val amount: Int,
+  val instruction: String,
+  val info: VectorCollectionInfo,
+)
+
+@Serializable data class CollectionRemove(val name: String, val provider: String)
