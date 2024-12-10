@@ -17,7 +17,7 @@ data class Agent(
   val name: String,
 
   /** User friendly agent description. */
-  val description: String?,
+  val description: String? = null,
 
   /** If `true`, the agent is visible to non-admin users. */
   val active: Boolean,
@@ -26,7 +26,7 @@ data class Agent(
   val activeConfigurationId: KUUID? = null,
 
   /** Language the agent is configured to use. For display purposes only. */
-  val language: String,
+  val language: String? = null,
 
   /** Agents timestamps. */
   val createdAt: KOffsetDateTime,
@@ -40,7 +40,7 @@ fun AgentsRecord.toAgent() =
     description = description,
     active = this.active!!,
     activeConfigurationId = this.activeConfigurationId,
-    language = this.language!!,
+    language = this.language,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

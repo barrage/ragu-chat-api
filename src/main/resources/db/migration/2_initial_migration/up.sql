@@ -25,7 +25,7 @@ CREATE TABLE agents (
     description TEXT,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     active_configuration_id UUID NULL,
-    language TEXT NOT NULL DEFAULT 'english',
+    language TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
