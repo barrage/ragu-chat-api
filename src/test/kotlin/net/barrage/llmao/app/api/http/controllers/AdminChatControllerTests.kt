@@ -19,6 +19,7 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.sessionCookie
+import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -106,9 +107,27 @@ class AdminChatControllerTests : IntegrationTest() {
         setBody(updatedChatTitle)
       }
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<String>()
-    assertNotNull(body)
-    assertEquals("Chat title successfully updated", body)
+    val body = response.body<Chat>()
+    assertEquals(chatOne.id, body.id)
+    assertEquals("Updated Chat Title", body.title)
+  }
+
+  @Test
+  fun shouldUpdateChatTitleValidationFails() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val newTitle = "12"
+    val updatedChatTitle = UpdateChatTitleDTO(newTitle)
+    val response =
+      client.put("/admin/chats/${chatOne.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(updatedChatTitle)
+      }
+    assertEquals(422, response.status.value)
+    val body = response.body<List<ValidationError>>()
+    assertEquals("charRange", body[0].code)
+    assertEquals("Value must be between 3 - 255 characters long", body[0].message)
+    assertEquals("title", body[0].fieldName)
   }
 
   @Test

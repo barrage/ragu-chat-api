@@ -100,13 +100,13 @@ class ChatService(
     return title
   }
 
-  fun updateTitle(chatId: KUUID, title: String) {
-    chatRepository.updateTitle(chatId, title)
+  fun updateTitle(chatId: KUUID, title: String): Chat {
+    return chatRepository.updateTitle(chatId, title)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 
-  fun updateTitle(chatId: KUUID, userId: KUUID, title: String) {
-    chatRepository.updateTitle(chatId, userId, title)
+  fun updateTitle(chatId: KUUID, userId: KUUID, title: String): Chat {
+    return chatRepository.updateTitle(chatId, userId, title)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 

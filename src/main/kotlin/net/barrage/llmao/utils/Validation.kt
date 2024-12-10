@@ -42,6 +42,19 @@ annotation class Range(
 )
 
 /**
+ * Valid on `String` fields. Validate that the character length falls within the specified range.
+ */
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.RUNTIME)
+@Repeatable
+annotation class CharRange(
+  val min: Int = 0,
+  val max: Int = Int.MAX_VALUE,
+  val code: String = "charRange",
+  val message: String = "",
+)
+
+/**
  * Validate the data object as a whole.
  *
  * The provided method must exist on the data class, its return type must be
@@ -132,6 +145,17 @@ private fun validateInternal(
         listOf(ValidationError(annotation.code, message, fieldName))
       }
     }
+    is CharRange -> {
+      return if (validateCharRange(value as String, annotation.min, annotation.max)) {
+        null
+      } else {
+        val message =
+          annotation.message.ifBlank {
+            "Value must be between ${annotation.min} - ${annotation.max} characters long"
+          }
+        listOf(ValidationError(annotation.code, message, fieldName))
+      }
+    }
     else -> {
       return null
     }
@@ -170,4 +194,8 @@ private fun validateRange(input: Any, min: Double, max: Double): Boolean {
     is Double -> input in min..max
     else -> false
   }
+}
+
+private fun validateCharRange(input: String, min: Int, max: Int): Boolean {
+  return input.length in min..max
 }
