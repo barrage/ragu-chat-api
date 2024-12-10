@@ -1,25 +1,8 @@
 package net.barrage.llmao.app.api.http.dto
 
-import io.ktor.server.plugins.requestvalidation.ValidationResult
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.utils.CharRange
+import net.barrage.llmao.utils.Validation
 
 @Serializable
-data class UpdateChatTitleDTO(var title: String) {
-  fun validate(): ValidationResult {
-    val errors: MutableList<String> = mutableListOf()
-
-    if (title.length < 3) {
-      errors.add("Chat title must be at least 3 characters long")
-    }
-
-    if (title.length > 255) {
-      errors.add("Chat title is too long. Max 255 characters")
-    }
-
-    if (errors.isNotEmpty()) {
-      return ValidationResult.Invalid(errors)
-    }
-
-    return ValidationResult.Valid
-  }
-}
+data class UpdateChatTitleDTO(@CharRange(min = 3, max = 255) var title: String) : Validation

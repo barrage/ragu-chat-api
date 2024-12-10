@@ -44,8 +44,8 @@ fun Route.adminChatsRoutes(service: ChatService) {
       put(adminUpdateTitle()) {
         val chatId = call.pathUuid("chatId")
         val input: UpdateChatTitleDTO = call.receive()
-        service.updateTitle(chatId, input.title)
-        call.respond(HttpStatusCode.OK, "Chat title successfully updated")
+        val chat = service.updateTitle(chatId, input.title)
+        call.respond(HttpStatusCode.OK, chat)
       }
 
       delete(adminDeleteChat()) {

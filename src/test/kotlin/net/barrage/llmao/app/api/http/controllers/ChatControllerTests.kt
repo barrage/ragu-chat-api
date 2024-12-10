@@ -18,6 +18,7 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.sessionCookie
+import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -83,8 +84,27 @@ class ChatControllerTests : IntegrationTest() {
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<String>()
-    assertEquals("", body)
+    val body = response.body<Chat>()
+    assertEquals(chatOne.id, body.id)
+    assertEquals("Updated Title", body.title)
+  }
+
+  @Test
+  fun shouldUpdateChatTitleValidationFails() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val updatedTitle = UpdateChatTitleDTO("12")
+    val response =
+      client.put("/chats/${chatOne.id}") {
+        header("Cookie", sessionCookie(userSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(updatedTitle)
+      }
+
+    assertEquals(422, response.status.value)
+    val body = response.body<List<ValidationError>>()
+    assertEquals("charRange", body[0].code)
+    assertEquals("Value must be between 3 - 255 characters long", body[0].message)
+    assertEquals("title", body[0].fieldName)
   }
 
   @Test
