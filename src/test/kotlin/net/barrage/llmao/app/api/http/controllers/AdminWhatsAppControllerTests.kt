@@ -7,11 +7,11 @@ import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppChatWithUserNameDTO
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.core.models.CreateAgent
@@ -37,8 +37,8 @@ class AdminWhatsAppControllerTests :
   private lateinit var adminSession: Session
   private lateinit var peasantSession: Session
   private lateinit var whatsAppNumber: WhatsAppNumber
-  private lateinit var whatsAppAgentOne: WhatsAppAgentDTO
-  private lateinit var whatsAppAgentTwo: WhatsAppAgentDTO
+  private lateinit var whatsAppAgentOne: WhatsAppAgent
+  private lateinit var whatsAppAgentTwo: WhatsAppAgent
   private lateinit var whatsAppChat: WhatsAppChat
   private lateinit var whatsAppMessageOne: WhatsAppMessage
   private lateinit var whatsAppMessageTwo: WhatsAppMessage
@@ -86,7 +86,7 @@ class AdminWhatsAppControllerTests :
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<CountedList<WhatsAppAgentDTO>>()
+    val body = response.body<CountedList<WhatsAppAgent>>()
     assertEquals(2, body.total)
     assertEquals("Test WhatsApp Agent", body.items[0].name)
   }
@@ -129,7 +129,7 @@ class AdminWhatsAppControllerTests :
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<WhatsAppAgentDTO>()
+    val body = response.body<WhatsAppAgent>()
     assertEquals("Test WhatsApp Agent", body.name)
     assertEquals("Test WhatsApp Agent Description", body.description)
     assertEquals(true, body.active)
@@ -168,7 +168,7 @@ class AdminWhatsAppControllerTests :
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<WhatsAppAgentDTO>()
+    val body = response.body<WhatsAppAgent>()
     assertEquals("Test WhatsApp Agent Updated", body.name)
     assertEquals("Test Description Updated", body.description)
   }
@@ -339,7 +339,7 @@ class AdminWhatsAppControllerTests :
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<CountedList<WhatsAppChatWithUserNameDTO>>()
+    val body = response.body<CountedList<WhatsAppChatWithUserName>>()
     assertEquals(1, body.total)
     assertEquals(peasantUser.id, body.items[0].chat.userId)
     assertEquals(peasantUser.fullName, body.items[0].fullName)

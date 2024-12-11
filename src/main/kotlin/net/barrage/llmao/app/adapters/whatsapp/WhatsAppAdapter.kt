@@ -16,12 +16,12 @@ import io.ktor.server.config.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppChatWithUserNameDTO
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
@@ -98,7 +98,7 @@ class WhatsAppAdapter(
     }
   }
 
-  fun getAllAgents(pagination: PaginationSort): CountedList<WhatsAppAgentDTO> {
+  fun getAllAgents(pagination: PaginationSort): CountedList<WhatsAppAgent> {
     return repository.getAgents(pagination)
   }
 
@@ -106,7 +106,7 @@ class WhatsAppAdapter(
     return repository.getAgent(id)
   }
 
-  suspend fun createAgent(create: CreateAgent): WhatsAppAgentDTO {
+  suspend fun createAgent(create: CreateAgent): WhatsAppAgent {
     providers.validateSupportedConfigurationParams(
       llmProvider = create.configuration.llmProvider,
       model = create.configuration.model,
@@ -115,7 +115,7 @@ class WhatsAppAdapter(
     return repository.createAgent(create) ?: throw IllegalStateException("Something went wrong")
   }
 
-  fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserNameDTO> {
+  fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
     return repository.getAllChats(pagination)
   }
 
@@ -139,7 +139,7 @@ class WhatsAppAdapter(
     return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
   }
 
-  suspend fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgentDTO {
+  suspend fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgent {
     providers.validateSupportedConfigurationParams(
       llmProvider = update.configuration?.llmProvider,
       model = update.configuration?.model,
@@ -206,7 +206,7 @@ class WhatsAppAdapter(
     val history = chatMessages.map(WhatsAppMessage::toChatMessage)
 
     val agentConfig = agentFull.getConfiguration()
-    val agentCollections = agentFull.collections.map { it.toCollection() }
+    val agentCollections = agentFull.collections
 
     val query = conversation.prepareChatPrompt(message, agentConfig, agentCollections, history)
 
