@@ -1,0 +1,36 @@
+{
+  "id": "3a461b00-39e6-4026-9d00-d1296509d076",
+  "name": "carnet_user_info_success",
+  "scenarioName": "CarnetUserInfo",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "Success",
+  "request": {
+    "url": "/__carnet/auth/userinfo",
+    "method": "GET",
+    "headers": {
+      "Authorization": {
+        "contains": "Bearer "
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "auth/carnet/carnet_user_info_success_response.json",
+    "headers": {
+      "Keep-Alive": "timeout=3, max=100",
+      "Server": "Apache",
+      "Access-Control-Allow-Origin": "*",
+      "X-Content-Type-Options": "nosniff",
+      "Date": "Tue, 10 Dec 2024 12:43:45 GMT",
+      "x-Frame-Options": "SAMEORIGIN",
+      "Referrer-Policy": "strict-origin",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "Vary": "Accept-Encoding",
+      "Set-Cookie": "ssoSimpleSAMLSessionID=2f13da8d1e8178fb595e1827d2995ddb; path=/; secure; HttpOnly; SameSite=None",
+      "X-XSS-Protection": "1; mode=block",
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "3a461b00-39e6-4026-9d00-d1296509d076",
+  "persistent": true
+}

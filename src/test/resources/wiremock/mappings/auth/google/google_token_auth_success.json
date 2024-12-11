@@ -1,6 +1,6 @@
 {
   "id": "757f859a-bdee-423d-b5ca-fc31e96b667e",
-  "name": "token_success",
+  "name": "google_token_auth_success",
   "request": {
     "url": "/__google/auth/token",
     "method": "POST",

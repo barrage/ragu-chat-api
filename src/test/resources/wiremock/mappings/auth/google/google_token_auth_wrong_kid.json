@@ -1,6 +1,6 @@
 {
   "id": "1cd67d67-287b-40ab-8aa1-95e95e520ca9",
-  "name": "token_wrong_kid",
+  "name": "google_token_auth_wrong_kid",
   "request": {
     "url": "/__google/auth/token",
     "method": "POST",

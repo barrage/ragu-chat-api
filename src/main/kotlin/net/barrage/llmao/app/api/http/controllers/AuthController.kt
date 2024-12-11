@@ -4,6 +4,7 @@ import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -91,15 +92,21 @@ fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
     call.respond(HttpStatusCode.NoContent)
   }
 
-  post("/auth/apple/callback-web", callbackWeb()) {
-    val code =
-      call.receiveParameters()["code"]
-        ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing code")
+  if (
+    application.environment.config.tryGetString("ktor.features.oauth.apple")?.toBoolean() == true
+  ) {
+    post("/auth/apple/callback-web", callbackWeb()) {
+      val code =
+        call.receiveParameters()["code"]
+          ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing code")
 
-    call.respondRedirect(
-      url = "${application.environment.config.string("apple.frontendUrl")}/auth/apple?code=$code",
-      permanent = true,
-    )
+      call.response.headers.append(
+        "Location",
+        application.environment.config.string("oauth.apple.frontendUrl") + "/auth/apple?code=$code",
+      )
+
+      call.respond(HttpStatusCode.PermanentRedirect)
+    }
   }
 }
 
@@ -115,10 +122,16 @@ fun loginUser(): OpenApiRoute.() -> Unit = {
       part<String>("redirect_uri") {}
       part<String>("provider") {}
       part<String>("source") {}
+      part<String>("code_verifier") {}
     }
   }
   response {
-    HttpStatusCode.OK to { description = "User logged in." }
+    HttpStatusCode.OK to
+      {
+        description = "Administrator logged in."
+        body<ChonkitAuthentication>()
+      }
+    HttpStatusCode.NotFound to { description = "User logged in." }
     HttpStatusCode.BadRequest to
       {
         description = "Invalid login data."
@@ -157,12 +170,12 @@ fun logoutUser(): OpenApiRoute.() -> Unit = {
 }
 
 private fun callbackWeb(): OpenApiRoute.() -> Unit = {
-  summary = "Apple OAuth callback for web"
+  summary = "Apple OAuth callback for web."
   description = "Apple OAuth callback for web."
   tags("auth")
   request { multipartBody { part<String>("code") {} } }
   response {
-    HttpStatusCode.OK to { description = "User logged in." }
+    HttpStatusCode.PermanentRedirect to { description = "Redirecting to frontend." }
     HttpStatusCode.BadRequest to
       {
         description = "Invalid login data."

@@ -3,7 +3,6 @@ package net.barrage.llmao.app.api.http.controllers
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
@@ -263,7 +262,6 @@ class AdminWhatsAppControllerTests :
         header("Cookie", sessionCookie(adminSession.sessionId))
       }
 
-    println(response2.bodyAsText())
     assertEquals(200, response2.status.value)
     val body = response2.body<WhatsAppAgentFull>()
     assertEquals(1, body.collections.size)
