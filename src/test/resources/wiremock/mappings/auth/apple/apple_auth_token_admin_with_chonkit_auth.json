@@ -1,0 +1,45 @@
+{
+  "id": "2cc4193c-98b0-4b0c-9548-fcb8501bc146",
+  "name": "apple_auth_token_admin_with_chonkit_auth",
+  "request": {
+    "url": "/__apple/auth/token",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "contains": "code=admin"
+      },
+      {
+        "contains": "redirect_uri="
+      },
+      {
+        "contains": "grant_type=authorization_code"
+      },
+      {
+        "contains": "code_verifier=admin"
+      },
+      {
+        "contains": "client_id="
+      },
+      {
+        "contains": "client_secret="
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "auth/apple/apple_auth_token_admin_with_chonkit_response.json",
+    "transformers": [
+      "response-template"
+    ],
+    "headers": {
+      "Cache-Control": "no-store",
+      "Server": "Apple",
+      "Host": "appleid.apple.com",
+      "Pragma": "no-cache",
+      "Date": "Tue, 26 Nov 2024 08:11:40 GMT",
+      "Content-Type": "application/json;charset=UTF-8"
+    }
+  },
+  "uuid": "2cc4193c-98b0-4b0c-9548-fcb8501bc146",
+  "persistent": true
+}

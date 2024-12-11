@@ -3,5 +3,5 @@
   "token_type": "Bearer",
   "expires_in": 3600,
   "refresh_token": "refresh_token",
-  "id_token": "{{{ jwt email='test@user.me' email_verified=true maxAge='1 days' iss='https://appleid.apple.com' aud='serviceId' sub='appleId' alg='RS256' }}}"
+  "id_token": "{{{ jwt email='test@user.me' email_verified=true maxAge='1 days' iss='tokenIssuer' aud='serviceId' sub='appleId' alg='RS256' }}}"
 }

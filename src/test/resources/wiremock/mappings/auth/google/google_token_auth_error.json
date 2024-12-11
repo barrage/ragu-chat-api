@@ -1,12 +1,12 @@
 {
-  "id": "cae2a58e-652e-40a3-afa5-0882a69f699f",
-  "name": "google_token_auth_missing_email",
+  "id": "7b00171b-b090-4f6c-b157-d2722f412adf",
+  "name": "google_token_auth_error",
   "request": {
     "url": "/__google/auth/token",
     "method": "POST",
     "bodyPatterns": [
       {
-        "contains": "code=missing_email"
+        "contains": "code=error"
       },
       {
         "contains": "redirect_uri="
@@ -15,7 +15,7 @@
         "contains": "grant_type=authorization_code"
       },
       {
-        "contains": "code_verifier=missing_email"
+        "contains": "code_verifier=error"
       },
       {
         "contains": "client_id="
@@ -26,8 +26,8 @@
     ]
   },
   "response": {
-    "status": 200,
-    "bodyFileName": "auth/google/google_token_auth_missing_email_response.json",
+    "status": 400,
+    "bodyFileName": "auth/google/google_token_auth_error_response.json",
     "transformers": [
       "response-template"
     ],
@@ -50,6 +50,6 @@
       "Content-Type": "application/json; charset=utf-8"
     }
   },
-  "uuid": "cae2a58e-652e-40a3-afa5-0882a69f699f",
+  "uuid": "7b00171b-b090-4f6c-b157-d2722f412adf",
   "persistent": true
 }

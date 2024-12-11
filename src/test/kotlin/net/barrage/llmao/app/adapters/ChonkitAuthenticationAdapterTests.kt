@@ -3,7 +3,7 @@ package net.barrage.llmao.app.adapters
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
+import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.util.*
@@ -261,5 +261,36 @@ class ChonkitAuthenticationAdapterTests :
     for (cookie in cookies) {
       if (cookie.name != "kappi") assertEquals(0, cookie.maxAge)
     }
+  }
+
+  @Test
+  fun loginAgent() = test {
+    createClient { install(ContentNegotiation) { json() } }
+
+    val response =
+      client.post("/auth/login") {
+        header("Content-Type", "application/x-www-form-urlencoded")
+        setBody(
+          FormDataContent(
+            Parameters.build {
+              append("code", "admin")
+              append("redirect_uri", "redirect_uri")
+              append("provider", "apple")
+              append("source", "web")
+              append("code_verifier", "admin")
+              append("grant_type", "authorization_code")
+            }
+          )
+        )
+      }
+
+    assertEquals(200, response.status.value)
+
+    val cookies = response.setCookie()
+
+    assertEquals(3, cookies.size)
+    assertNotNull(cookies.first { it.name == "chonkit_access_token" })
+    assertNotNull(cookies.first { it.name == "chonkit_refresh_token" })
+    assertNotNull(cookies.first { it.name == "kappi" })
   }
 }

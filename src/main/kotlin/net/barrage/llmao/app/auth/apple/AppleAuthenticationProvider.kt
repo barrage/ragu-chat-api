@@ -2,23 +2,17 @@ package net.barrage.llmao.app.auth.apple
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.auth0.jwt.interfaces.DecodedJWT
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.util.logging.*
-import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.interfaces.ECPrivateKey
-import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.RSAPublicKeySpec
 import java.time.Instant
 import java.util.*
-import net.barrage.llmao.app.auth.JsonWebKeys
 import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.auth.LoginSource
@@ -30,7 +24,9 @@ internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.auth.apple")
 
 class AppleAuthenticationProvider(
   private val client: HttpClient,
-  private val endpoint: String,
+  private val tokenEndpoint: String,
+  private val keysEndpoint: String,
+  private val tokenIssuer: String,
   private val clientId: String,
   private val serviceId: String,
   private val teamId: String,
@@ -68,7 +64,7 @@ class AppleAuthenticationProvider(
         append("code_verifier", payload.codeVerifier)
       }
 
-    val res = client.submitForm(url = "$endpoint/auth/token", params, encodeInQuery = false)
+    val res = client.submitForm(url = tokenEndpoint, params, encodeInQuery = false)
 
     if (res.status != HttpStatusCode.OK) {
       val errorBody = res.bodyAsText()
@@ -79,7 +75,7 @@ class AppleAuthenticationProvider(
     val response = res.body<AppleTokenResponse>()
     val idToken = JWT.decode(response.idToken)
 
-    verifyJwtSignature(idToken)
+    verifyJwtSignature(client, idToken, keysEndpoint, tokenIssuer, arrayOf(clientId, serviceId))
 
     val appleId = idToken.subject
 
@@ -103,53 +99,6 @@ class AppleAuthenticationProvider(
     return UserInfo(id = appleId, email = email)
   }
 
-  private suspend fun verifyJwtSignature(jwt: DecodedJWT) {
-    val key = getPublicKey(jwt.keyId)
-
-    val algorithm = Algorithm.RSA256(key, null)
-
-    val verifier =
-      JWT.require(algorithm)
-        .withIssuer("https://appleid.apple.com")
-        .withAnyOfAudience(clientId, serviceId)
-        .build()
-
-    try {
-      verifier.verify(jwt)
-    } catch (e: Exception) {
-      throw AppError.api(ErrorReason.Authentication, "Invalid token")
-    }
-  }
-
-  private suspend fun getPublicKey(kid: String): RSAPublicKey {
-    val res = client.get("$endpoint/auth/keys")
-    if (res.status != HttpStatusCode.OK) {
-      LOG.error("Unable to validate token signature; Unable to retrieve public keys")
-      throw AppError.internal("Unable to validate token signature; Unable to retrieve public keys")
-    }
-
-    val keys =
-      try {
-        res.body<JsonWebKeys>().keys
-      } catch (e: Exception) {
-        LOG.error("Unable to validate token signature; Unable to parse public keys")
-        throw AppError.internal("Unable to validate token signature; Unable to parse public keys")
-      }
-
-    val publicKey =
-      keys.find { it.kid == kid }
-        ?: throw AppError.api(
-          ErrorReason.Authentication,
-          "Unable to validate token signature; Unable to match public key!",
-        )
-
-    val modulus = Base64.getUrlDecoder().decode(publicKey.n)
-    val exponent = Base64.getUrlDecoder().decode(publicKey.e)
-    val spec = RSAPublicKeySpec(BigInteger(1, modulus), BigInteger(1, exponent))
-
-    return KeyFactory.getInstance("RSA").generatePublic(spec) as RSAPublicKey
-  }
-
   private fun generateToken(subject: String): String {
     val keyBytes = Base64.getDecoder().decode(clientSecret)
     val encodedKey = PKCS8EncodedKeySpec(keyBytes)
@@ -160,7 +109,7 @@ class AppleAuthenticationProvider(
     val now = Instant.now()
     return JWT.create()
       .withIssuer(teamId)
-      .withAudience(endpoint)
+      .withAudience(tokenIssuer)
       .withSubject(subject)
       .withIssuedAt(now)
       .withExpiresAt(now.plusSeconds(30 * 24 * 3600)) // expires in 30 days

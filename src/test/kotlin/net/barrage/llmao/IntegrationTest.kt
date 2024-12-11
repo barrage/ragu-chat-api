@@ -31,6 +31,9 @@ open class IntegrationTest(
   /** If `true`, start a wiremock container for all external APIs. */
   private val useWiremock: Boolean = false,
 
+  /** Enabled OAuth providers. */
+  oAuthProviders: List<String> = listOf("google", "apple", "carnet"),
+
   /**
    * If given and `useWiremock` is `true`, an existing wiremock container will be used instead,
    * located on the URL. Useful for recording responses from test suites. Ideally this would be an
@@ -69,6 +72,7 @@ open class IntegrationTest(
         MapApplicationConfig(
           CHONKIT_AUTH_FEATURE_FLAG to enableChonkitAuth.toString(),
           WHATSAPP_FEATURE_FLAG to enableWhatsApp.toString(),
+          *oAuthProviders.map { "ktor.features.oauth.$it" to "true" }.toTypedArray(),
         )
       )
   }
@@ -178,12 +182,16 @@ open class IntegrationTest(
           "vault.endpoint" to "$url/$VAULT_WM",
           "infobip.endpoint" to url,
           "infobip.apiKey" to "super-duper-secret-infobip-api-key",
-          "oauth.apple.endpoint" to "$url/$APPLE_VM",
+          "oauth.apple.tokenEndpoint" to "$url/$APPLE_VM/auth/token",
+          "oauth.apple.keysEndpoint" to "$url/$APPLE_VM/auth/keys",
           "oauth.apple.clientId" to "clientId",
           "oauth.apple.serviceId" to "serviceId",
           "oauth.google.tokenEndpoint" to "$url/$GOOGLE_WM/auth/token",
           "oauth.google.keysEndpoint" to "$url/$GOOGLE_WM/auth/keys",
           "oauth.google.clientId" to "aud.apps.googleusercontent.com",
+          "oauth.carnet.tokenEndpoint" to "$url/$CARNET_WM/auth/token",
+          "oauth.carnet.keysEndpoint" to "$url/$CARNET_WM/auth/jwks",
+          "oauth.carnet.userInfoEndpoint" to "$url/$CARNET_WM/auth/userinfo",
           "llm.ollama.endpoint" to "$url/$OLLAMA_WM",
         )
       )
@@ -201,6 +209,7 @@ const val FEMBED_WM = "__fembed"
 const val VAULT_WM = "__vault"
 const val GOOGLE_WM = "__google"
 const val APPLE_VM = "__apple"
+const val CARNET_WM = "__carnet"
 const val OLLAMA_WM = "__ollama"
 
 // Wiremock response triggers

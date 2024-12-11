@@ -5,7 +5,6 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.time.OffsetDateTime
@@ -22,11 +21,13 @@ import org.junit.jupiter.api.Test
 
 class AuthControllerTests : IntegrationTest(useWiremock = true) {
   lateinit var user: User
+  lateinit var admin: User
 
   @BeforeAll
   fun setup() {
     user =
       postgres.testUser(email = "test@user.me", admin = false) // must match wiremock response email
+    admin = postgres.testUser(email = "admin@user.me", admin = true)
     postgres.testUser(email = "deleted@user.me", admin = false, active = false)
   }
 
@@ -55,9 +56,9 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
     Assertions.assertTrue(response.headers.contains("Set-Cookie"))
     val cookies = response.setCookie()
     Assertions.assertEquals(1, cookies.size)
-    val setCookie = cookies.first()
-    Assertions.assertTrue(setCookie.name == "kappi")
-    val cookieVal = setCookie.value
+    val kappi = cookies.firstOrNull { it.name == "kappi" }
+    Assertions.assertNotNull(kappi)
+    val cookieVal = kappi!!.value
     Assertions.assertTrue(cookieVal.startsWith("id=%23s"))
     val sessionId = cookieVal.substringAfter("id=%23s")
     postgres.dslContext
@@ -86,7 +87,6 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
         )
       }
 
-    println(response.bodyAsText())
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
     Assertions.assertEquals(ErrorReason.Authentication, body.reason)
@@ -212,7 +212,6 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
         )
       }
 
-    println(response.bodyAsText())
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
     Assertions.assertEquals(ErrorReason.Authentication, body.reason)
@@ -305,6 +304,132 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
     val body = response.body<AppError>()
     Assertions.assertEquals(ErrorReason.Authentication, body.reason)
     Assertions.assertEquals("Email not found", body.description)
+  }
+
+  // Carnet login tests
+
+  @Test
+  fun shouldLoginUserCarnet() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/auth/login") {
+        header("Content-Type", "application/x-www-form-urlencoded")
+        setBody(
+          FormDataContent(
+            Parameters.build {
+              append("code", "success")
+              append("redirect_uri", "redirect_uri")
+              append("provider", "carnet")
+              append("source", "web")
+              append("code_verifier", "success")
+              append("grant_type", "authorization_code")
+            }
+          )
+        )
+      }
+
+    Assertions.assertEquals(204, response.status.value)
+
+    Assertions.assertTrue(response.headers.contains("Set-Cookie"))
+    val cookies = response.setCookie()
+    Assertions.assertEquals(1, cookies.size)
+    Assertions.assertNotNull(cookies.firstOrNull { it.name == "kappi" })
+    val cookieVal = cookies.first { it.name == "kappi" }.value
+    Assertions.assertTrue(cookieVal.startsWith("id=%23s"))
+    val sessionId = cookieVal.substringAfter("id=%23s")
+    postgres.dslContext
+      .deleteFrom(SESSIONS)
+      .where(SESSIONS.ID.eq(UUID.fromString(sessionId)))
+      .execute()
+  }
+
+  @Test
+  fun shouldThrowErrorOnLoginAdminCarnetTokenError() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/auth/login") {
+        header("Content-Type", "application/x-www-form-urlencoded")
+        setBody(
+          FormDataContent(
+            Parameters.build {
+              append("code", "error")
+              append("redirect_uri", "redirect_uri")
+              append("provider", "carnet")
+              append("source", "web")
+              append("code_verifier", "error")
+              append("grant_type", "authorization_code")
+            }
+          )
+        )
+      }
+
+    Assertions.assertEquals(401, response.status.value)
+    val body = response.body<AppError>()
+    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+  }
+
+  @Test
+  fun shouldThrowErrorOnLoginAdminCarnetWrongKid() = test {
+    wiremock!!.resetScenarios()
+    wiremock!!.setScenarioState("CarnetAuthKeys", "WrongKID")
+    val client = createClient {
+      install(ContentNegotiation) { json() }
+      defaultRequest { header("X-Test-Scenario", "WrongKID") }
+    }
+    val response =
+      client.post("/auth/login") {
+        header("Content-Type", "application/x-www-form-urlencoded")
+        setBody(
+          FormDataContent(
+            Parameters.build {
+              append("code", "wrong_kid")
+              append("redirect_uri", "redirect_uri")
+              append("provider", "carnet")
+              append("source", "web")
+              append("code_verifier", "wrong_kid")
+              append("grant_type", "authorization_code")
+            }
+          )
+        )
+      }
+
+    Assertions.assertEquals(401, response.status.value)
+    val body = response.body<AppError>()
+    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+    Assertions.assertEquals(
+      "Unable to validate token signature; Unable to match public key!",
+      body.description,
+    )
+
+    wiremock!!.resetScenarios()
+  }
+
+  @Test
+  fun shouldThrowErrorOnLoginAdminCarnetUnknownUser() = test {
+    wiremock!!.resetScenarios()
+    wiremock!!.setScenarioState("CarnetUserInfo", "UnknownUser")
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/auth/login") {
+        header("Content-Type", "application/x-www-form-urlencoded")
+        setBody(
+          FormDataContent(
+            Parameters.build {
+              append("code", "unknown_user")
+              append("redirect_uri", "redirect_uri")
+              append("provider", "carnet")
+              append("source", "web")
+              append("code_verifier", "unknown_user")
+              append("grant_type", "authorization_code")
+            }
+          )
+        )
+      }
+
+    Assertions.assertEquals(404, response.status.value)
+    val body = response.body<AppError>()
+    Assertions.assertEquals(ErrorReason.EntityDoesNotExist, body.reason)
+    Assertions.assertEquals("User 'unknown@user.me' does not exist", body.description)
   }
 
   // Logout tests

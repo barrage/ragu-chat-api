@@ -1,0 +1,53 @@
+{
+  "id": "e256e1de-16e2-417c-99a0-fde46b6439e3",
+  "name": "carnet_auth_token_success",
+  "request": {
+    "url": "/__carnet/auth/token",
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "contains": "code=success"
+      },
+      {
+        "contains": "redirect_uri="
+      },
+      {
+        "contains": "grant_type=authorization_code"
+      },
+      {
+        "contains": "code_verifier=success"
+      },
+      {
+        "contains": "client_id="
+      },
+      {
+        "contains": "client_secret="
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "auth/carnet/carnet_auth_token_success_response.json",
+    "transformers": [
+      "response-template"
+    ],
+    "headers": {
+      "Keep-Alive": "timeout=3, max=100",
+      "Server": "Apache",
+      "Access-Control-Allow-Origin": "*",
+      "X-Content-Type-Options": "nosniff",
+      "Pragma": "no-cache",
+      "Date": "Tue, 10 Dec 2024 12:43:45 GMT",
+      "x-Frame-Options": "SAMEORIGIN",
+      "Referrer-Policy": "strict-origin",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "Cache-Control": "no-store",
+      "Vary": "Accept-Encoding",
+      "Set-Cookie": "ssoSimpleSAMLSessionID=1d4e862cc4d785b5416451cc88b0d31e; path=/; secure; HttpOnly; SameSite=None",
+      "X-XSS-Protection": "1; mode=block",
+      "Content-Type": "application/json; charset=UTF-8"
+    }
+  },
+  "uuid": "e256e1de-16e2-417c-99a0-fde46b6439e3",
+  "persistent": true
+}

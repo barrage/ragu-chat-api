@@ -1,0 +1,7 @@
+{
+  "access_token": "{{{ jwt iss='tokenIssuer' aud='clientId' sub='4206969421' maxAge='1 days' alg='RS256' typ='JWT' scopes=['email']}}}",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "refresh_token",
+  "id_token": "id_token"
+}
