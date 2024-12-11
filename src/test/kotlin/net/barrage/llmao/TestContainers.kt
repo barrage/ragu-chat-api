@@ -12,11 +12,11 @@ import java.util.*
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.toWhatsAppAgentDTO
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
@@ -259,7 +259,7 @@ class TestPostgres {
   fun testWhatsAppAgent(
     name: String = "Test WhatsApp Agent",
     active: Boolean = true,
-  ): WhatsAppAgentDTO {
+  ): WhatsAppAgent {
     val agent =
       dslContext
         .insertInto(WHATS_APP_AGENTS)
@@ -284,7 +284,7 @@ class TestPostgres {
           active,
         )
         .returning()
-        .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgentDTO)!!
+        .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgent)!!
 
     return agent
   }

@@ -1,20 +1,17 @@
 package net.barrage.llmao.app.adapters.whatsapp.repositories
 
 import io.ktor.util.logging.*
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppChatDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppChatWithUserNameDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.toUserDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.toWhatsAppAgentCollectionDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.toWhatsAppAgentDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.toWhatsAppChatDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.toWhatsAppMessageDTO
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.models.toAgentCollection
+import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppAgent
+import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppAgentCurrent
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
@@ -25,11 +22,12 @@ import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
+import net.barrage.llmao.core.models.toUser
+import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.tables.records.WhatsAppAgentsRecord
-import net.barrage.llmao.tables.records.WhatsAppChatsRecord
 import net.barrage.llmao.tables.records.WhatsAppMessagesRecord
 import net.barrage.llmao.tables.references.USERS
 import net.barrage.llmao.tables.references.WHATS_APP_AGENTS
@@ -49,9 +47,17 @@ internal val LOG =
 class WhatsAppRepository(private val dslContext: DSLContext) {
   fun getNumberById(id: KUUID): WhatsAppNumber {
     return dslContext
-      .selectFrom(WHATS_APP_NUMBERS)
+      .select(
+        WHATS_APP_NUMBERS.ID,
+        WHATS_APP_NUMBERS.USER_ID,
+        WHATS_APP_NUMBERS.PHONE_NUMBER,
+        WHATS_APP_NUMBERS.CREATED_AT,
+        WHATS_APP_NUMBERS.UPDATED_AT,
+      )
+      .from(WHATS_APP_NUMBERS)
       .where(WHATS_APP_NUMBERS.ID.eq(id))
       .fetchOne()
+      ?.into(WHATS_APP_NUMBERS)
       ?.toWhatsAppNumber()
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp number not found")
   }
@@ -79,17 +85,33 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
 
   fun getNumbersByUserId(userId: KUUID): List<WhatsAppNumber> {
     return dslContext
-      .selectFrom(WHATS_APP_NUMBERS)
+      .select(
+        WHATS_APP_NUMBERS.ID,
+        WHATS_APP_NUMBERS.USER_ID,
+        WHATS_APP_NUMBERS.PHONE_NUMBER,
+        WHATS_APP_NUMBERS.CREATED_AT,
+        WHATS_APP_NUMBERS.UPDATED_AT,
+      )
+      .from(WHATS_APP_NUMBERS)
       .where(WHATS_APP_NUMBERS.USER_ID.eq(userId))
       .fetch()
+      .map { it.into(WHATS_APP_NUMBERS) }
       .map { it.toWhatsAppNumber() }
   }
 
   fun getNumber(number: String): WhatsAppNumber? {
     return dslContext
-      .selectFrom(WHATS_APP_NUMBERS)
+      .select(
+        WHATS_APP_NUMBERS.ID,
+        WHATS_APP_NUMBERS.USER_ID,
+        WHATS_APP_NUMBERS.PHONE_NUMBER,
+        WHATS_APP_NUMBERS.CREATED_AT,
+        WHATS_APP_NUMBERS.UPDATED_AT,
+      )
+      .from(WHATS_APP_NUMBERS)
       .where(WHATS_APP_NUMBERS.PHONE_NUMBER.eq(number))
       .fetchOne()
+      ?.into(WHATS_APP_NUMBERS)
       ?.toWhatsAppNumber()
   }
 
@@ -121,7 +143,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       .execute() == 1
   }
 
-  fun getAgents(pagination: PaginationSort): CountedList<WhatsAppAgentDTO> {
+  fun getAgents(pagination: PaginationSort): CountedList<WhatsAppAgent> {
     val order = getSortOrderAgent(pagination)
     val (limit, offset) = pagination.limitOffset()
 
@@ -129,12 +151,28 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
 
     val agents =
       dslContext
-        .selectFrom(WHATS_APP_AGENTS)
+        .select(
+          WHATS_APP_AGENTS.ID,
+          WHATS_APP_AGENTS.NAME,
+          WHATS_APP_AGENTS.DESCRIPTION,
+          WHATS_APP_AGENTS.CONTEXT,
+          WHATS_APP_AGENTS.LLM_PROVIDER,
+          WHATS_APP_AGENTS.MODEL,
+          WHATS_APP_AGENTS.TEMPERATURE,
+          WHATS_APP_AGENTS.LANGUAGE,
+          WHATS_APP_AGENTS.ACTIVE,
+          WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
+          WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
+          WHATS_APP_AGENTS.CREATED_AT,
+          WHATS_APP_AGENTS.UPDATED_AT,
+        )
+        .from(WHATS_APP_AGENTS)
         .orderBy(order)
         .limit(limit)
         .offset(offset)
         .fetch()
-        .map { it.toWhatsAppAgentDTO() }
+        .map { it.into(WHATS_APP_AGENTS) }
+        .map { it.toWhatsAppAgent() }
 
     return CountedList(total, agents)
   }
@@ -154,11 +192,15 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.ACTIVE,
           WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
+          WHATS_APP_AGENTS.CREATED_AT,
+          WHATS_APP_AGENTS.UPDATED_AT,
           WHATS_APP_AGENT_COLLECTIONS.ID,
           WHATS_APP_AGENT_COLLECTIONS.AGENT_ID,
           WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
           WHATS_APP_AGENT_COLLECTIONS.AMOUNT,
           WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION,
+          WHATS_APP_AGENT_COLLECTIONS.CREATED_AT,
+          WHATS_APP_AGENT_COLLECTIONS.UPDATED_AT,
           WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
           WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_MODEL,
           WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER,
@@ -173,11 +215,11 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not found")
     }
 
-    val agent = result.first().into(WHATS_APP_AGENTS).toWhatsAppAgentDTO()
+    val agent = result.first().into(WHATS_APP_AGENTS).toWhatsAppAgent()
     val collections =
       result
         .filter { it.get(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID) != null }
-        .map { it.into(WHATS_APP_AGENT_COLLECTIONS).toWhatsAppAgentCollectionDTO() }
+        .map { it.into(WHATS_APP_AGENT_COLLECTIONS).toAgentCollection() }
 
     return WhatsAppAgentFull(agent, collections)
   }
@@ -197,11 +239,15 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.ACTIVE,
           WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
+          WHATS_APP_AGENTS.CREATED_AT,
+          WHATS_APP_AGENTS.UPDATED_AT,
           WHATS_APP_AGENT_COLLECTIONS.ID,
           WHATS_APP_AGENT_COLLECTIONS.AGENT_ID,
           WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
           WHATS_APP_AGENT_COLLECTIONS.AMOUNT,
           WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION,
+          WHATS_APP_AGENT_COLLECTIONS.CREATED_AT,
+          WHATS_APP_AGENT_COLLECTIONS.UPDATED_AT,
         )
         .from(WHATS_APP_AGENTS)
         .leftJoin(WHATS_APP_AGENT_COLLECTIONS)
@@ -213,16 +259,16 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not found")
     }
 
-    val agent = result.first().into(WHATS_APP_AGENTS).toWhatsAppAgentDTO()
+    val agent = result.first().into(WHATS_APP_AGENTS).toWhatsAppAgent()
     val collections =
       result
         .filter { it.get(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID) != null }
-        .map { it.into(WHATS_APP_AGENT_COLLECTIONS).toWhatsAppAgentCollectionDTO() }
+        .map { it.into(WHATS_APP_AGENT_COLLECTIONS).toAgentCollection() }
 
     return WhatsAppAgentFull(agent, collections)
   }
 
-  fun createAgent(create: CreateAgent): WhatsAppAgentDTO? {
+  fun createAgent(create: CreateAgent): WhatsAppAgent? {
     return dslContext.transactionResult { tx ->
       // Deactivate all currently active agents
       if (create.active) {
@@ -254,7 +300,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           create.configuration.instructions?.summaryInstruction,
         )
         .returning()
-        .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgentDTO)
+        .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgent)
     }
   }
 
@@ -325,12 +371,15 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
     }
   }
 
-  fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgentDTO {
+  fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgent {
     val currentAgent =
       dslContext
-        .selectFrom(WHATS_APP_AGENTS)
+        .select(WHATS_APP_AGENTS.ID, WHATS_APP_AGENTS.ACTIVE)
+        .from(WHATS_APP_AGENTS)
         .where(WHATS_APP_AGENTS.ID.eq(agentId))
-        .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgentDTO)
+        .fetchOne()
+        ?.into(WHATS_APP_AGENTS)
+        ?.toWhatsAppAgentCurrent()
 
     if (currentAgent == null) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not found")
@@ -416,7 +465,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           )
           .where(WHATS_APP_AGENTS.ID.eq(agentId))
           .returning()
-          .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgentDTO)
+          .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgent)
           ?: throw AppError.internal("Failed to update WhatsApp agent")
       }
     } catch (e: Exception) {
@@ -441,7 +490,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
     LOG.debug("Deleted {} collections from agent {}", deleted, agentId)
   }
 
-  fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserNameDTO> {
+  fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
     val order = getSortOrderChat(pagination)
     val (limit, offset) = pagination.limitOffset()
 
@@ -449,7 +498,13 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
 
     val results =
       dslContext
-        .select(WHATS_APP_CHATS.ID, WHATS_APP_CHATS.USER_ID, USERS.FULL_NAME)
+        .select(
+          WHATS_APP_CHATS.ID,
+          WHATS_APP_CHATS.USER_ID,
+          WHATS_APP_CHATS.CREATED_AT,
+          WHATS_APP_CHATS.UPDATED_AT,
+          USERS.FULL_NAME,
+        )
         .from(WHATS_APP_CHATS)
         .leftJoin(USERS)
         .on(WHATS_APP_CHATS.USER_ID.eq(USERS.ID))
@@ -457,16 +512,24 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .limit(limit)
         .offset(offset)
         .fetch()
-        .map { it.toWhatsAppChat() }
+        .map { it.toWhatsAppChatWithUserName() }
 
     return CountedList(total, results)
   }
 
   fun getChatByUserId(userId: KUUID): WhatsAppChat? {
     return dslContext
-      .selectFrom(WHATS_APP_CHATS)
+      .select(
+        WHATS_APP_CHATS.ID,
+        WHATS_APP_CHATS.USER_ID,
+        WHATS_APP_CHATS.CREATED_AT,
+        WHATS_APP_CHATS.UPDATED_AT,
+      )
+      .from(WHATS_APP_CHATS)
       .where(WHATS_APP_CHATS.USER_ID.eq(userId))
-      .fetchOne(WhatsAppChatsRecord::toWhatsAppChat)
+      .fetchOne()
+      ?.into(WHATS_APP_CHATS)
+      ?.toWhatsAppChat()
   }
 
   fun getChatWithMessages(id: KUUID): WhatsAppChatWithUserAndMessages {
@@ -475,6 +538,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .select(
           WHATS_APP_CHATS.ID,
           WHATS_APP_CHATS.USER_ID,
+          WHATS_APP_CHATS.CREATED_AT,
+          WHATS_APP_CHATS.UPDATED_AT,
 
           // WHATS_APP_MESSAGES columns
           WHATS_APP_MESSAGES.ID,
@@ -483,6 +548,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_MESSAGES.CONTENT,
           WHATS_APP_MESSAGES.CHAT_ID,
           WHATS_APP_MESSAGES.RESPONSE_TO,
+          WHATS_APP_MESSAGES.CREATED_AT,
+          WHATS_APP_MESSAGES.UPDATED_AT,
 
           // USERS columns
           USERS.ID,
@@ -492,6 +559,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           USERS.LAST_NAME,
           USERS.ACTIVE,
           USERS.ROLE,
+          USERS.CREATED_AT,
+          USERS.UPDATED_AT,
         )
         .from(WHATS_APP_CHATS)
         .leftJoin(WHATS_APP_MESSAGES)
@@ -506,12 +575,12 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp chat not found")
     }
 
-    val chat = result.first().into(WHATS_APP_CHATS).toWhatsAppChatDTO()
-    val user = result.first().into(USERS).toUserDTO()
+    val chat = result.first().into(WHATS_APP_CHATS).toWhatsAppChat()
+    val user = result.first().into(USERS).toUser()
     val messages =
       result
         .filter { it.get(WHATS_APP_MESSAGES.CHAT_ID) != null }
-        .map { it.into(WHATS_APP_MESSAGES).toWhatsAppMessageDTO() }
+        .map { it.into(WHATS_APP_MESSAGES).toWhatsAppMessage() }
 
     return WhatsAppChatWithUserAndMessages(chat, user, messages)
   }
@@ -529,11 +598,22 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
 
   fun getMessages(chatId: KUUID, limit: Int? = null): List<WhatsAppMessage> {
     return dslContext
-      .selectFrom(WHATS_APP_MESSAGES)
+      .select(
+        WHATS_APP_MESSAGES.ID,
+        WHATS_APP_MESSAGES.SENDER,
+        WHATS_APP_MESSAGES.SENDER_TYPE,
+        WHATS_APP_MESSAGES.CONTENT,
+        WHATS_APP_MESSAGES.CHAT_ID,
+        WHATS_APP_MESSAGES.RESPONSE_TO,
+        WHATS_APP_MESSAGES.CREATED_AT,
+        WHATS_APP_MESSAGES.UPDATED_AT,
+      )
+      .from(WHATS_APP_MESSAGES)
       .where(WHATS_APP_MESSAGES.CHAT_ID.eq(chatId))
       .orderBy(WHATS_APP_MESSAGES.CREATED_AT.desc())
       .apply { limit?.let { limit(it) } }
-      .fetchInto(WhatsAppMessagesRecord::class.java)
+      .fetch()
+      .map { it.into(WHATS_APP_MESSAGES) }
       .map { it.toWhatsAppMessage() }
   }
 
@@ -604,11 +684,13 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
   }
 }
 
-private fun Record.toWhatsAppChat(): WhatsAppChatWithUserNameDTO {
-  return WhatsAppChatWithUserNameDTO(
-    WhatsAppChatDTO(
+private fun Record.toWhatsAppChatWithUserName(): WhatsAppChatWithUserName {
+  return WhatsAppChatWithUserName(
+    WhatsAppChat(
       id = this[WHATS_APP_CHATS.ID] as KUUID,
       userId = this[WHATS_APP_CHATS.USER_ID] as KUUID,
+      createdAt = this[WHATS_APP_CHATS.CREATED_AT] as KOffsetDateTime,
+      updatedAt = this[WHATS_APP_CHATS.UPDATED_AT] as KOffsetDateTime,
     ),
     fullName = this[USERS.FULL_NAME]!!,
   )

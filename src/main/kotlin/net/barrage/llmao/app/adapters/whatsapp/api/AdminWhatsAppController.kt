@@ -11,11 +11,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppChatWithUserNameDTO
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.core.models.CreateAgent
@@ -125,7 +125,7 @@ private fun adminGetAllWhatsAppAgents(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "List of WhatsAppAgents"
-        body<CountedList<WhatsAppAgentDTO>>()
+        body<CountedList<WhatsAppAgent>>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -143,7 +143,7 @@ private fun adminCreateWhatsAppAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.Created to
       {
         description = "WhatsAppAgent created successfully"
-        body<WhatsAppAgentDTO>()
+        body<WhatsAppAgent>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -190,7 +190,7 @@ private fun adminUpdateWhatsAppAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "WhatsAppAgent updated successfully"
-        body<WhatsAppAgentDTO>()
+        body<WhatsAppAgent>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -363,7 +363,7 @@ private fun adminGetAllWhatsAppChats(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "A list of WhatsApp chats"
-        body<CountedList<WhatsAppChatWithUserNameDTO>>()
+        body<CountedList<WhatsAppChatWithUserName>>()
       }
     HttpStatusCode.InternalServerError to
       {

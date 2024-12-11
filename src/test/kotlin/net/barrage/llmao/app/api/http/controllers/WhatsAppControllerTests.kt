@@ -11,7 +11,7 @@ import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.dto.Message
 import net.barrage.llmao.app.adapters.whatsapp.dto.Price
-import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
@@ -30,8 +30,8 @@ class WhatsAppControllerTests :
   private lateinit var peasantUser: User
   private lateinit var peasantSession: Session
   private lateinit var whatsAppNumber: WhatsAppNumber
-  private lateinit var whatsAppAgentOne: WhatsAppAgentDTO
-  private lateinit var whatsAppAgentTwo: WhatsAppAgentDTO
+  private lateinit var whatsAppAgentOne: WhatsAppAgent
+  private lateinit var whatsAppAgentTwo: WhatsAppAgent
   private lateinit var whatsAppChat: WhatsAppChat
   private lateinit var whatsAppMessageOne: WhatsAppMessage
   private lateinit var whatsAppMessageTwo: WhatsAppMessage
