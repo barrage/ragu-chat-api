@@ -13,7 +13,7 @@ import net.barrage.llmao.utils.Validation
 data class Agent(
   val id: KUUID,
 
-  /** User friendly agent name. */
+  /** User-friendly agent name. */
   val name: String,
 
   /** User friendly agent description. */

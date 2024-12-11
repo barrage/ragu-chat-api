@@ -47,12 +47,23 @@ class AgentRepository(private val dslContext: DSLContext) {
 
     val agents =
       dslContext
-        .selectFrom(AGENTS)
+        .select(
+          AGENTS.ID,
+          AGENTS.NAME,
+          AGENTS.DESCRIPTION,
+          AGENTS.ACTIVE,
+          AGENTS.ACTIVE_CONFIGURATION_ID,
+          AGENTS.LANGUAGE,
+          AGENTS.CREATED_AT,
+          AGENTS.UPDATED_AT,
+        )
+        .from(AGENTS)
         .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch(AgentsRecord::toAgent)
+        .fetch()
+        .map { it.into(AGENTS).toAgent() }
 
     return CountedList(total, agents)
   }
@@ -73,7 +84,28 @@ class AgentRepository(private val dslContext: DSLContext) {
 
     val agents =
       dslContext
-        .select()
+        .select(
+          AGENTS.ID,
+          AGENTS.NAME,
+          AGENTS.DESCRIPTION,
+          AGENTS.ACTIVE,
+          AGENTS.ACTIVE_CONFIGURATION_ID,
+          AGENTS.LANGUAGE,
+          AGENTS.CREATED_AT,
+          AGENTS.UPDATED_AT,
+          AGENT_CONFIGURATIONS.ID,
+          AGENT_CONFIGURATIONS.AGENT_ID,
+          AGENT_CONFIGURATIONS.VERSION,
+          AGENT_CONFIGURATIONS.CONTEXT,
+          AGENT_CONFIGURATIONS.LLM_PROVIDER,
+          AGENT_CONFIGURATIONS.MODEL,
+          AGENT_CONFIGURATIONS.TEMPERATURE,
+          AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+          AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
+          AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+          AGENT_CONFIGURATIONS.CREATED_AT,
+          AGENT_CONFIGURATIONS.UPDATED_AT,
+        )
         .from(AGENTS)
         .leftJoin(AGENT_CONFIGURATIONS)
         .on(AGENT_CONFIGURATIONS.ID.eq(AGENTS.ACTIVE_CONFIGURATION_ID))
@@ -94,7 +126,28 @@ class AgentRepository(private val dslContext: DSLContext) {
 
   fun get(id: KUUID): AgentFull {
     return dslContext
-      .select(AGENTS.asterisk(), AGENT_CONFIGURATIONS.asterisk())
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME,
+        AGENTS.DESCRIPTION,
+        AGENTS.ACTIVE,
+        AGENTS.ACTIVE_CONFIGURATION_ID,
+        AGENTS.LANGUAGE,
+        AGENTS.CREATED_AT,
+        AGENTS.UPDATED_AT,
+        AGENT_CONFIGURATIONS.ID,
+        AGENT_CONFIGURATIONS.AGENT_ID,
+        AGENT_CONFIGURATIONS.VERSION,
+        AGENT_CONFIGURATIONS.CONTEXT,
+        AGENT_CONFIGURATIONS.LLM_PROVIDER,
+        AGENT_CONFIGURATIONS.MODEL,
+        AGENT_CONFIGURATIONS.TEMPERATURE,
+        AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+        AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
+        AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+        AGENT_CONFIGURATIONS.CREATED_AT,
+        AGENT_CONFIGURATIONS.UPDATED_AT,
+      )
       .from(AGENTS)
       .leftJoin(AGENT_CONFIGURATIONS)
       .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
@@ -107,18 +160,23 @@ class AgentRepository(private val dslContext: DSLContext) {
       } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
   }
 
-  fun deleteAllCollections(agentId: KUUID) {
-    val deleted =
-      dslContext.delete(AGENT_COLLECTIONS).where(AGENT_COLLECTIONS.AGENT_ID.eq(agentId)).execute()
-    LOG.debug("Deleted {} collections from agent {}", deleted, agentId)
-  }
-
   fun getActive(id: KUUID): Agent {
     return dslContext
-      .selectFrom(AGENTS)
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME,
+        AGENTS.DESCRIPTION,
+        AGENTS.ACTIVE,
+        AGENTS.ACTIVE_CONFIGURATION_ID,
+        AGENTS.LANGUAGE,
+        AGENTS.CREATED_AT,
+        AGENTS.UPDATED_AT,
+      )
+      .from(AGENTS)
       .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isTrue))
-      .fetchOne(AgentsRecord::toAgent)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
+      .fetchOne()
+      ?.into(AGENTS)
+      ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
   }
 
   fun create(create: CreateAgent): AgentWithConfiguration? {
@@ -315,7 +373,19 @@ class AgentRepository(private val dslContext: DSLContext) {
 
   private fun getCollections(id: KUUID): List<AgentCollection> {
     return dslContext
-      .selectFrom(AGENT_COLLECTIONS)
+      .select(
+        AGENT_COLLECTIONS.ID,
+        AGENT_COLLECTIONS.AGENT_ID,
+        AGENT_COLLECTIONS.INSTRUCTION,
+        AGENT_COLLECTIONS.COLLECTION,
+        AGENT_COLLECTIONS.AMOUNT,
+        AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
+        AGENT_COLLECTIONS.EMBEDDING_MODEL,
+        AGENT_COLLECTIONS.VECTOR_PROVIDER,
+        AGENT_COLLECTIONS.CREATED_AT,
+        AGENT_COLLECTIONS.UPDATED_AT,
+      )
+      .from(AGENT_COLLECTIONS)
       .where(AGENT_COLLECTIONS.AGENT_ID.eq(id))
       .fetchInto(AgentCollectionsRecord::class.java)
       .map { it.toAgentCollection() }
@@ -402,21 +472,52 @@ class AgentRepository(private val dslContext: DSLContext) {
 
     val configurations =
       dslContext
-        .selectFrom(AGENT_CONFIGURATIONS)
+        .select(
+          AGENT_CONFIGURATIONS.ID,
+          AGENT_CONFIGURATIONS.AGENT_ID,
+          AGENT_CONFIGURATIONS.VERSION,
+          AGENT_CONFIGURATIONS.CONTEXT,
+          AGENT_CONFIGURATIONS.LLM_PROVIDER,
+          AGENT_CONFIGURATIONS.MODEL,
+          AGENT_CONFIGURATIONS.TEMPERATURE,
+          AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+          AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
+          AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+          AGENT_CONFIGURATIONS.CREATED_AT,
+          AGENT_CONFIGURATIONS.UPDATED_AT,
+        )
+        .from(AGENT_CONFIGURATIONS)
         .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(agentId))
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch(AgentConfigurationsRecord::toAgentConfiguration)
+        .fetch()
+        .map { it.into(AGENT_CONFIGURATIONS).toAgentConfiguration() }
 
     return CountedList(total, configurations)
   }
 
   fun getAgentConfiguration(agentId: KUUID, versionId: KUUID): AgentConfiguration {
     return dslContext
-      .selectFrom(AGENT_CONFIGURATIONS)
+      .select(
+        AGENT_CONFIGURATIONS.ID,
+        AGENT_CONFIGURATIONS.AGENT_ID,
+        AGENT_CONFIGURATIONS.VERSION,
+        AGENT_CONFIGURATIONS.CONTEXT,
+        AGENT_CONFIGURATIONS.LLM_PROVIDER,
+        AGENT_CONFIGURATIONS.MODEL,
+        AGENT_CONFIGURATIONS.TEMPERATURE,
+        AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+        AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
+        AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+        AGENT_CONFIGURATIONS.CREATED_AT,
+        AGENT_CONFIGURATIONS.UPDATED_AT,
+      )
+      .from(AGENT_CONFIGURATIONS)
       .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(agentId).and(AGENT_CONFIGURATIONS.ID.eq(versionId)))
-      .fetchOne(AgentConfigurationsRecord::toAgentConfiguration)
+      .fetchOne()
+      ?.into(AGENT_CONFIGURATIONS)
+      ?.toAgentConfiguration()
       ?: throw AppError.api(
         ErrorReason.EntityDoesNotExist,
         "Agent configuration with ID '$versionId'",
@@ -443,9 +544,20 @@ class AgentRepository(private val dslContext: DSLContext) {
 
   fun getAgent(agentId: KUUID): Agent {
     return dslContext
-      .selectFrom(AGENTS)
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME,
+        AGENTS.DESCRIPTION,
+        AGENTS.ACTIVE,
+        AGENTS.ACTIVE_CONFIGURATION_ID,
+        AGENTS.LANGUAGE,
+        AGENTS.CREATED_AT,
+        AGENTS.UPDATED_AT,
+      )
+      .from(AGENTS)
       .where(AGENTS.ID.eq(agentId))
-      .fetchOne(AgentsRecord::toAgent)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+      .fetchOne()
+      ?.into(AGENTS)
+      ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
   }
 }
