@@ -7,6 +7,7 @@ import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppChatDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppMessageDTO
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
@@ -62,7 +63,22 @@ data class WhatsAppAgent(
 data class WhatsAppAgentFull(
   val agent: WhatsAppAgentDTO,
   val collections: List<WhatsAppAgentCollectionDTO>,
-)
+) {
+  fun getConfiguration(): AgentConfiguration {
+    return AgentConfiguration(
+      id = agent.id,
+      agentId = agent.id,
+      version = 1,
+      context = agent.context,
+      llmProvider = agent.llmProvider,
+      model = agent.model,
+      temperature = agent.temperature,
+      agentInstructions = agent.agentInstructions,
+      createdAt = KOffsetDateTime.now(),
+      updatedAt = KOffsetDateTime.now(),
+    )
+  }
+}
 
 @Serializable
 data class WhatsAppMessage(

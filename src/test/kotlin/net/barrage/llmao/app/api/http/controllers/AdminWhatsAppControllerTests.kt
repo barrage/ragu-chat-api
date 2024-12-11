@@ -3,6 +3,7 @@ package net.barrage.llmao.app.api.http.controllers
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
@@ -13,10 +14,10 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
-import net.barrage.llmao.core.models.CollectionItem
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.CreateAgentConfiguration
 import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.UpdateCollectionAddition
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
@@ -29,7 +30,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWiremock = true) {
+class AdminWhatsAppControllerTests :
+  IntegrationTest(useWeaviate = true, useWiremock = true, enableWhatsApp = true) {
   private lateinit var adminUser: User
   private lateinit var peasantUser: User
   private lateinit var adminSession: Session
@@ -55,7 +57,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWire
     whatsAppNumber = postgres.testWhatsAppNumber(peasantUser.id, "385981234567")
     whatsAppAgentOne = postgres.testWhatsAppAgent(active = true)
     whatsAppAgentTwo = postgres.testWhatsAppAgent(active = false)
-    whatsAppChat = postgres.testWhatsAppChat(peasantUser.id, whatsAppAgentOne.id)
+    whatsAppChat = postgres.testWhatsAppChat(peasantUser.id)
     whatsAppMessageOne = postgres.testWhatsAppMessage(whatsAppChat.id, peasantUser.id)
     whatsAppMessageTwo =
       postgres.testWhatsAppMessage(
@@ -110,9 +112,6 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWire
         name = "Test WhatsApp Agent",
         description = "Test WhatsApp Agent Description",
         active = true,
-        vectorProvider = "weaviate",
-        embeddingProvider = "azure",
-        embeddingModel = "text-embedding-ada-002",
         language = "croatian",
         configuration =
           CreateAgentConfiguration(
@@ -221,10 +220,14 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWire
     val client = createClient { install(ContentNegotiation) { json() } }
     val updateCollections =
       UpdateCollections(
-        provider = "weaviate",
         add =
           listOf(
-            CollectionItem(name = "Kusturica", amount = 10, instruction = "you pass the butter")
+            UpdateCollectionAddition(
+              name = "Kusturica",
+              amount = 10,
+              instruction = "you pass the butter",
+              provider = "weaviate",
+            )
           ),
         remove = null,
       )
@@ -243,64 +246,12 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWire
         header("Cookie", sessionCookie(adminSession.sessionId))
       }
 
+    println(response2.bodyAsText())
     assertEquals(200, response2.status.value)
     val body = response2.body<WhatsAppAgentFull>()
     assertEquals(1, body.collections.size)
     assertEquals("Kusturica", body.collections[0].collection)
     assertEquals(10, body.collections[0].amount)
-  }
-
-  @Test
-  fun adminUpdatingWhatsAppAgentEmbeddingParametersInvalidatesCollections() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-    val updateCollections =
-      UpdateCollections(
-        provider = "weaviate",
-        add =
-          listOf(
-            CollectionItem(name = "Kusturica", amount = 10, instruction = "you pass the butter")
-          ),
-        remove = null,
-      )
-
-    val response =
-      client.put("/admin/whatsapp/agents/${whatsAppAgentOne.id}/collections") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
-        header("Content-Type", "application/json")
-        setBody(updateCollections)
-      }
-
-    assertEquals(200, response.status.value)
-
-    val whatsAppAgentResponse =
-      client.put("/admin/whatsapp/agents/${whatsAppAgentOne.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
-        header("Content-Type", "application/json")
-        setBody(
-          mapOf(
-            "name" to "Test WhatsApp Agent Updated",
-            "description" to "Test Description Updated",
-            "embeddingProvider" to "fembed",
-            "embeddingModel" to "Xenova/bge-large-en-v1.5",
-          )
-        )
-      }
-
-    assertEquals(200, whatsAppAgentResponse.status.value)
-    val whatsAppAgentBody = whatsAppAgentResponse.body<WhatsAppAgentDTO>()
-    assertEquals("Test WhatsApp Agent Updated", whatsAppAgentBody.name)
-    assertEquals("Test Description Updated", whatsAppAgentBody.description)
-    assertEquals("fembed", whatsAppAgentBody.embeddingProvider)
-    assertEquals("Xenova/bge-large-en-v1.5", whatsAppAgentBody.embeddingModel)
-
-    val whatsAppAgentFullResponse =
-      client.get("/admin/whatsapp/agents/${whatsAppAgentOne.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
-      }
-
-    assertEquals(200, whatsAppAgentFullResponse.status.value)
-    val whatsAppAgentFullBody = whatsAppAgentFullResponse.body<WhatsAppAgentFull>()
-    assertEquals(0, whatsAppAgentFullBody.collections.size)
   }
 
   @Test

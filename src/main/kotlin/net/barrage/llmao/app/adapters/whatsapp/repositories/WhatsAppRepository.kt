@@ -18,9 +18,10 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
+import net.barrage.llmao.core.models.CollectionInsert
+import net.barrage.llmao.core.models.CollectionRemove
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
-import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
@@ -149,11 +150,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.LLM_PROVIDER,
           WHATS_APP_AGENTS.MODEL,
           WHATS_APP_AGENTS.TEMPERATURE,
-          WHATS_APP_AGENTS.VECTOR_PROVIDER,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
-          WHATS_APP_AGENTS.EMBEDDING_PROVIDER,
-          WHATS_APP_AGENTS.EMBEDDING_MODEL,
           WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENT_COLLECTIONS.ID,
@@ -161,6 +159,9 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
           WHATS_APP_AGENT_COLLECTIONS.AMOUNT,
           WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION,
+          WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
+          WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_MODEL,
+          WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER,
         )
         .from(WHATS_APP_AGENTS)
         .leftJoin(WHATS_APP_AGENT_COLLECTIONS)
@@ -192,11 +193,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.LLM_PROVIDER,
           WHATS_APP_AGENTS.MODEL,
           WHATS_APP_AGENTS.TEMPERATURE,
-          WHATS_APP_AGENTS.VECTOR_PROVIDER,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
-          WHATS_APP_AGENTS.EMBEDDING_PROVIDER,
-          WHATS_APP_AGENTS.EMBEDDING_MODEL,
           WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENT_COLLECTIONS.ID,
@@ -245,11 +243,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .set(WHATS_APP_AGENTS.LLM_PROVIDER, create.configuration.llmProvider)
         .set(WHATS_APP_AGENTS.MODEL, create.configuration.model)
         .set(WHATS_APP_AGENTS.TEMPERATURE, create.configuration.temperature)
-        .set(WHATS_APP_AGENTS.VECTOR_PROVIDER, create.vectorProvider)
         .set(WHATS_APP_AGENTS.LANGUAGE, create.language)
         .set(WHATS_APP_AGENTS.ACTIVE, create.active)
-        .set(WHATS_APP_AGENTS.EMBEDDING_PROVIDER, create.embeddingProvider)
-        .set(WHATS_APP_AGENTS.EMBEDDING_MODEL, create.embeddingModel)
         .set(
           WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           create.configuration.instructions?.languageInstruction,
@@ -263,36 +258,70 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
     }
   }
 
-  fun updateCollections(agentId: KUUID, update: UpdateCollections) {
-    update.add?.let {
-      dslContext
-        .batch(
-          it.map { (name, amount, instruction) ->
-            dslContext
-              .insertInto(WHATS_APP_AGENT_COLLECTIONS)
-              .set(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID, agentId)
-              .set(WHATS_APP_AGENT_COLLECTIONS.COLLECTION, name)
-              .set(WHATS_APP_AGENT_COLLECTIONS.AMOUNT, amount)
-              .set(WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION, instruction)
-              .onConflict(
-                WHATS_APP_AGENT_COLLECTIONS.AGENT_ID,
-                WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
-              )
-              .doUpdate()
-              .set(WHATS_APP_AGENT_COLLECTIONS.AMOUNT, amount)
-          }
-        )
-        .execute()
-    }
+  fun updateCollections(
+    agentId: KUUID,
+    add: List<CollectionInsert>?,
+    remove: List<CollectionRemove>?,
+  ) {
+    dslContext.transactionResult { tx ->
+      add?.let { additions ->
+        try {
+          tx
+            .dsl()
+            .batch(
+              additions.map { collection ->
+                tx
+                  .dsl()
+                  .insertInto(WHATS_APP_AGENT_COLLECTIONS)
+                  .set(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID, agentId)
+                  .set(WHATS_APP_AGENT_COLLECTIONS.COLLECTION, collection.info.name)
+                  .set(
+                    WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
+                    collection.info.embeddingProvider,
+                  )
+                  .set(WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_MODEL, collection.info.embeddingModel)
+                  .set(WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER, collection.info.vectorProvider)
+                  .set(WHATS_APP_AGENT_COLLECTIONS.AMOUNT, collection.amount)
+                  .set(WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
+                  .onConflict(
+                    WHATS_APP_AGENT_COLLECTIONS.AGENT_ID,
+                    WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
+                    WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER,
+                  )
+                  .doUpdate()
+                  .set(WHATS_APP_AGENT_COLLECTIONS.AMOUNT, collection.amount)
+                  .set(WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
+              }
+            )
+            .execute()
+        } catch (e: DataAccessException) {
+          LOG.error("Error adding collections", e)
+          throw AppError.internal(e.message ?: "Failed to add collections")
+        }
+      }
 
-    update.remove?.let {
-      dslContext
-        .deleteFrom(WHATS_APP_AGENT_COLLECTIONS)
-        .where(
-          WHATS_APP_AGENT_COLLECTIONS.AGENT_ID.eq(agentId)
-            .and(WHATS_APP_AGENT_COLLECTIONS.COLLECTION.`in`(it))
-        )
-        .execute()
+      remove?.let { removals ->
+        try {
+          tx
+            .dsl()
+            .batch(
+              removals.map { collection ->
+                tx
+                  .dsl()
+                  .deleteFrom(WHATS_APP_AGENT_COLLECTIONS)
+                  .where(
+                    WHATS_APP_AGENT_COLLECTIONS.AGENT_ID.eq(agentId)
+                      .and(WHATS_APP_AGENT_COLLECTIONS.COLLECTION.eq(collection.name))
+                      .and(WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(collection.provider))
+                  )
+              }
+            )
+            .execute()
+        } catch (e: DataAccessException) {
+          LOG.error("Error removing collections", e)
+          throw AppError.internal(e.message ?: "Failed to remove collections")
+        }
+      }
     }
   }
 
@@ -343,14 +372,6 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           .set(
             WHATS_APP_AGENTS.DESCRIPTION,
             DSL.coalesce(DSL.`val`(update.description), WHATS_APP_AGENTS.DESCRIPTION),
-          )
-          .set(
-            WHATS_APP_AGENTS.EMBEDDING_PROVIDER,
-            DSL.coalesce(DSL.`val`(update.embeddingProvider), WHATS_APP_AGENTS.EMBEDDING_PROVIDER),
-          )
-          .set(
-            WHATS_APP_AGENTS.EMBEDDING_MODEL,
-            DSL.coalesce(DSL.`val`(update.embeddingModel), WHATS_APP_AGENTS.EMBEDDING_MODEL),
           )
           .set(
             WHATS_APP_AGENTS.ACTIVE,

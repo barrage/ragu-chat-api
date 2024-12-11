@@ -7,7 +7,6 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationRepository
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
-import net.barrage.llmao.app.adapters.whatsapp.WhatsAppChatService
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
@@ -22,6 +21,7 @@ import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -29,19 +29,21 @@ import net.barrage.llmao.plugins.initDatabase
 import net.barrage.llmao.string
 import org.jooq.DSLContext
 
-private const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
-private const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
+const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
+const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
 
 class ApplicationState(config: ApplicationConfig) {
   val providers = ProviderState(config)
   val repository: RepositoryState
   val adapters: AdapterState
+  val services: ServiceState
 
   init {
     CookieFactory.init(config)
     val database = initDatabase(config)
     repository = RepositoryState(database)
-    adapters = AdapterState(config, database, providers)
+    services = ServiceState(providers, repository)
+    adapters = AdapterState(config, database, providers, services)
   }
 }
 
@@ -56,7 +58,12 @@ class RepositoryState(database: DSLContext) {
  * Keeps the state of optional modules. Modules are configured via the `ktor.features` flags.
  * Whenever a flag is enabled, the corresponding adapter is enabled for use.
  */
-class AdapterState(config: ApplicationConfig, database: DSLContext, providers: ProviderState) {
+class AdapterState(
+  config: ApplicationConfig,
+  database: DSLContext,
+  providers: ProviderState,
+  services: ServiceState,
+) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 
   init {
@@ -68,10 +75,8 @@ class AdapterState(config: ApplicationConfig, database: DSLContext, providers: P
     }
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       val whatsAppRepo = WhatsAppRepository(database)
-      val whatsAppChatService = WhatsAppChatService(providers, whatsAppRepo)
-      WhatsAppAdapter(config, providers, whatsAppChatService, whatsAppRepo)
       adapters[WhatsAppAdapter::class] =
-        WhatsAppAdapter(config, providers, whatsAppChatService, whatsAppRepo)
+        WhatsAppAdapter(config, services.conversation, providers, whatsAppRepo)
     }
   }
 
@@ -149,25 +154,13 @@ class ProviderState(config: ApplicationConfig) {
   }
 }
 
-class ServiceState(state: ApplicationState) {
-  val chat =
-    ChatService(
-      state.providers,
-      state.repository.chat,
-      state.repository.agent,
-      state.repository.user,
-    )
-  val agent = AgentService(state.providers, state.repository.agent, state.repository.chat)
-  val user = UserService(state.repository.user, state.repository.session)
-  val auth =
-    AuthenticationService(state.providers.auth, state.repository.session, state.repository.user)
-  val admin =
-    AdministrationService(
-      state.providers,
-      state.repository.agent,
-      state.repository.chat,
-      state.repository.user,
-    )
+class ServiceState(providers: ProviderState, repository: RepositoryState) {
+  val chat = ChatService(repository.chat, repository.agent, repository.user)
+  val agent = AgentService(providers, repository.agent, repository.chat)
+  val user = UserService(repository.user, repository.session)
+  val auth = AuthenticationService(providers.auth, repository.session, repository.user)
+  val admin = AdministrationService(providers, repository.agent, repository.chat, repository.user)
+  val conversation = ConversationService(providers, repository.agent, repository.chat)
 }
 
 @Serializable

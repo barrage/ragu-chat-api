@@ -2,10 +2,13 @@ package net.barrage.llmao.app.api.ws
 
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.services.AgentService
-import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.types.KUUID
 
-class ChatFactory(private val agentService: AgentService, private val chatService: ChatService) {
+class ChatFactory(
+  private val agentService: AgentService,
+  private val conversationService: ConversationService,
+) {
 
   fun new(userId: KUUID, agentId: KUUID, channel: Channel): Chat {
     val id = KUUID.randomUUID()
@@ -13,7 +16,7 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
     agentService.getActive(agentId)
     return Chat(
       id = id,
-      service = chatService,
+      service = conversationService,
       userId = userId,
       agentId = agentId,
       channel = channel,
@@ -21,7 +24,7 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
   }
 
   fun fromExisting(id: KUUID, channel: Channel): Chat {
-    val chat = chatService.getChat(id)
+    val chat = conversationService.getChat(id)
 
     agentService.getActive(chat.chat.agentId)
 
@@ -29,7 +32,7 @@ class ChatFactory(private val agentService: AgentService, private val chatServic
 
     return Chat(
       id = chat.chat.id,
-      service = chatService,
+      service = conversationService,
       userId = chat.chat.userId,
       agentId = chat.chat.agentId,
       title = chat.chat.title,

@@ -21,7 +21,7 @@ import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.user
 
 fun Route.whatsAppHookRoutes(whatsAppAdapter: WhatsAppAdapter) {
-  post("/chats/whatsapp", infobipResponse()) {
+  post("/whatsapp/webhook", infobipResponse()) {
     val input = call.receive<InfobipResponseDTO>()
     whatsAppAdapter.handleIncomingMessage(input)
     call.respond(HttpStatusCode.OK)

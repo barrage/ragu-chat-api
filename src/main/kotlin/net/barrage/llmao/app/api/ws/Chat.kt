@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.models.FinishReason
-import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -24,7 +24,7 @@ class Chat(
   val id: KUUID,
 
   /** The main business logic delegate. */
-  private val service: ChatService,
+  private val service: ConversationService,
 
   /** The proompter. */
   private val userId: KUUID,

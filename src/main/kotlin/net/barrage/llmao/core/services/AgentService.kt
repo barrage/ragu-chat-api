@@ -21,6 +21,9 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
+private val LOG =
+  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.services.AgentService")
+
 class AgentService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
@@ -82,46 +85,11 @@ class AgentService(
   }
 
   fun updateCollections(agentId: KUUID, update: UpdateCollections): UpdateCollectionsResult {
-    val additions = mutableListOf<CollectionInsert>()
-    val failures = mutableListOf<UpdateCollectionsFailure>()
-
-    update.add?.forEach { collectionAdd ->
-      val vectorDb = providers.vector.getProvider(collectionAdd.provider)
-
-      // Ensure the collections being added exist
-      val collection = vectorDb.getCollectionInfo(collectionAdd.name)
-
-      if (collection != null) {
-        additions.add(CollectionInsert(collectionAdd.amount, collectionAdd.instruction, collection))
-      } else {
-        LOG.warn("Collection '${collectionAdd.name}' does not exist")
-        failures.add(UpdateCollectionsFailure(collectionAdd.name, "Collection does not exist"))
-      }
-    }
+    val (additions, failures) = processAdditions(providers, update)
 
     agentRepository.updateCollections(agentId, additions, update.remove)
 
     return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
-  }
-
-  /**
-   * Checks whether the providers and their respective models are supported. Data passed to this
-   * function should come from already validated DTOs.
-   */
-  private suspend fun validateAgentConfigurationParams(
-    llmProvider: String? = null,
-    model: String? = null,
-  ) {
-    if (llmProvider != null && model != null) {
-      // Throws if invalid provider
-      val llm = providers.llm.getProvider(llmProvider)
-      if (!llm.supportsModel(model)) {
-        throw AppError.api(
-          ErrorReason.InvalidParameter,
-          "Provider '${llm.id()}' does not support model '${model}'",
-        )
-      }
-    }
   }
 
   fun getAgentConfigurationVersions(
@@ -160,4 +128,28 @@ class AgentService(
   fun getAgent(agentId: KUUID): Agent {
     return agentRepository.getAgent(agentId)
   }
+}
+
+fun processAdditions(
+  providers: ProviderState,
+  update: UpdateCollections,
+): Pair<List<CollectionInsert>, List<UpdateCollectionsFailure>> {
+  val additions = mutableListOf<CollectionInsert>()
+  val failures = mutableListOf<UpdateCollectionsFailure>()
+
+  update.add?.forEach { collectionAdd ->
+    val vectorDb = providers.vector.getProvider(collectionAdd.provider)
+
+    // Ensure the collections being added exist
+    val collection = vectorDb.getCollectionInfo(collectionAdd.name)
+
+    if (collection != null) {
+      additions.add(CollectionInsert(collectionAdd.amount, collectionAdd.instruction, collection))
+    } else {
+      LOG.warn("Collection '${collectionAdd.name}' does not exist")
+      failures.add(UpdateCollectionsFailure(collectionAdd.name, "Collection does not exist"))
+    }
+  }
+
+  return Pair(additions, failures)
 }

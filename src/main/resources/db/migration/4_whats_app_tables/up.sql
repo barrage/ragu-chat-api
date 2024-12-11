@@ -14,11 +14,8 @@ CREATE TABLE whats_app_agents (
     llm_provider TEXT NOT NULL,
     model TEXT NOT NULL,
     temperature FLOAT NOT NULL DEFAULT 0.1,
-    vector_provider TEXT NOT NULL,
-    language TEXT NOT NULL DEFAULT 'english',
+    language TEXT,
     active BOOLEAN NOT NULL DEFAULT FALSE,
-    embedding_provider TEXT NOT NULL,
-    embedding_model TEXT NOT NULL,
     language_instruction TEXT,
     summary_instruction TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -34,12 +31,16 @@ CREATE TABLE whats_app_agent_collections(
     -- The collection name
     collection TEXT NOT NULL,
 
+    embedding_model TEXT NOT NULL,
+    vector_provider TEXT NOT NULL,
+    embedding_provider TEXT NOT NULL,
+
     -- Amount of items to retrieve from collection
     amount INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT unique_whats_app_agent_collection UNIQUE(agent_id, collection)
+    CONSTRAINT unique_whats_app_agent_collection_provider UNIQUE(agent_id, collection, vector_provider)
 );
 
 CREATE TABLE whats_app_chats (

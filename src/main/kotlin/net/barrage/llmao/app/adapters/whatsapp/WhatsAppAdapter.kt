@@ -20,24 +20,31 @@ import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppChatWithUserNameDTO
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
+import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
+import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
+import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.services.ConversationService
+import net.barrage.llmao.core.services.processAdditions
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
 
+internal val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
+
 class WhatsAppAdapter(
-  val config: ApplicationConfig,
+  private val config: ApplicationConfig,
+  private val conversation: ConversationService,
   private val providers: ProviderState,
-  private val chatService: WhatsAppChatService,
   private val repository: WhatsAppRepository,
 ) {
   private var whatsAppApi: WhatsAppApi
@@ -103,9 +110,6 @@ class WhatsAppAdapter(
     providers.validateSupportedConfigurationParams(
       llmProvider = create.configuration.llmProvider,
       model = create.configuration.model,
-      vectorProvider = create.vectorProvider,
-      embeddingProvider = create.embeddingProvider,
-      embeddingModel = create.embeddingModel,
     )
 
     return repository.createAgent(create) ?: throw IllegalStateException("Something went wrong")
@@ -127,41 +131,19 @@ class WhatsAppAdapter(
     return repository.getChatWithMessages(id)
   }
 
-  suspend fun updateCollections(agentId: KUUID, update: UpdateCollections) {
-    val vectorDb = providers.vector.getProvider(update.provider)
-    val agent = repository.getAgent(agentId)
-    val vectorSize =
-      providers.embedding
-        .getProvider(agent.agent.embeddingProvider)
-        .vectorSize(agent.agent.embeddingModel)
+  fun updateCollections(agentId: KUUID, update: UpdateCollections): UpdateCollectionsResult {
+    val (additions, failures) = processAdditions(providers, update)
 
-    // Ensure the collections being added exist
-    update.add?.let {
-      for (collectionItem in it) {
-        if (!vectorDb.validateCollection(collectionItem.name, vectorSize)) {
-          throw AppError.api(
-            ErrorReason.EntityDoesNotExist,
-            "Collection with name '${collectionItem.name}'",
-          )
-        }
-      }
-    }
+    repository.updateCollections(agentId, additions, update.remove)
 
-    return repository.updateCollections(agentId, update)
+    return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
   }
 
   suspend fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgentDTO {
     providers.validateSupportedConfigurationParams(
       llmProvider = update.configuration?.llmProvider,
       model = update.configuration?.model,
-      embeddingProvider = update.embeddingProvider,
-      embeddingModel = update.embeddingModel,
     )
-
-    // If embedding configuration is being updated, invalidate all collections.
-    if (update.embeddingProvider != null && update.embeddingModel != null) {
-      repository.deleteAllCollections(agentId)
-    }
 
     return repository.updateAgent(agentId, update)
   }
@@ -199,7 +181,7 @@ class WhatsAppAdapter(
 
     val messageInfo = sendWhatsAppMessage(whatsAppMessage)
 
-    chatService.storeMessages(
+    storeMessages(
       processedInput.chatId,
       processedInput.userId,
       processedInput.agentId,
@@ -219,13 +201,18 @@ class WhatsAppAdapter(
     whatsAppNumber: WhatsAppNumber,
   ): ProcessedInput {
     val agentFull = repository.getActiveAgentFull()
-    val chat = chatService.getChat(whatsAppNumber.userId)
-
-    val chatMessages = chatService.getMessages(chat.id, 20)
+    val chat = getChat(whatsAppNumber.userId)
+    val chatMessages = repository.getMessages(chat.id, 20)
     val history = chatMessages.map(WhatsAppMessage::toChatMessage)
 
-    val output = chatService.chatCompletion(message, history, agentFull.agent.id)
+    val agentConfig = agentFull.getConfiguration()
+    val agentCollections = agentFull.collections.map { it.toCollection() }
 
+    val query = conversation.prepareChatPrompt(message, agentConfig, agentCollections, history)
+
+    val llm = providers.llm.getProvider(agentConfig.llmProvider)
+
+    val output = llm.chatCompletion(query, LlmConfig(agentConfig.model, agentConfig.temperature))
     return ProcessedInput(output, chat.id, whatsAppNumber.userId, agentFull.agent.id)
   }
 
@@ -278,6 +265,27 @@ class WhatsAppAdapter(
     } catch (e: Exception) {
       LOG.error("Unexpected error when sending WhatsApp welcome message to: $to", e)
     }
+  }
+
+  private fun getChat(userId: KUUID): WhatsAppChat {
+    val chat = repository.getChatByUserId(userId)
+    if (chat == null) {
+      val id = KUUID.randomUUID()
+      return repository.storeChat(id, userId)
+    }
+    LOG.trace("Found chat {}", chat)
+    return chat
+  }
+
+  private fun storeMessages(
+    chatId: KUUID,
+    userId: KUUID,
+    agentId: KUUID,
+    proompt: String,
+    response: String,
+  ) {
+    val userMessage = repository.insertUserMessage(chatId, userId, proompt)
+    repository.insertAssistantMessage(chatId, agentId, userMessage.id, response)
   }
 }
 
