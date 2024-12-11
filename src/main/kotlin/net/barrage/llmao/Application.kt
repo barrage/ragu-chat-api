@@ -3,7 +3,6 @@ package net.barrage.llmao
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.ServiceState
 import net.barrage.llmao.app.api.ws.ChatFactory
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.plugins.configureCors
@@ -21,13 +20,12 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
   val state = ApplicationState(environment.config)
-  val services = ServiceState(state)
 
   configureSerialization()
-  configureSession(services.auth)
-  extendSession(services.auth)
+  configureSession(state.services.auth)
+  extendSession(state.services.auth)
   configureOpenApi()
-  websocketServer(ChatFactory(services.agent, services.chat))
+  websocketServer(ChatFactory(state.services.agent, state.services.conversation))
   configureRouting(state)
   configureRequestValidation()
   configureErrorHandling()

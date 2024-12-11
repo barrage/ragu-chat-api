@@ -1,8 +1,10 @@
 package net.barrage.llmao.app.adapters.whatsapp.dto
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.models.common.Role
+import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.records.WhatsAppAgentCollectionsRecord
@@ -19,11 +21,8 @@ data class WhatsAppAgentDTO(
   val llmProvider: String,
   val model: String,
   val temperature: Double,
-  val vectorProvider: String,
   val language: String,
   val active: Boolean,
-  val embeddingProvider: String,
-  val embeddingModel: String,
   val agentInstructions: AgentInstructions,
 ) {
   fun language(): String {
@@ -38,7 +37,25 @@ data class WhatsAppAgentCollectionDTO(
   val instruction: String,
   val collection: String,
   val amount: Int,
-)
+  val embeddingModel: String,
+  val vectorProvider: String,
+  val embeddingProvider: String,
+) {
+  fun toCollection(): AgentCollection {
+    return AgentCollection(
+      id = id,
+      agentId = agentId,
+      instruction = instruction,
+      collection = collection,
+      amount = amount,
+      embeddingProvider = embeddingProvider,
+      embeddingModel = embeddingModel,
+      vectorProvider = vectorProvider,
+      createdAt = KOffsetDateTime.now(),
+      updatedAt = KOffsetDateTime.now(),
+    )
+  }
+}
 
 @Serializable data class WhatsAppChatDTO(val id: KUUID, val userId: KUUID)
 
@@ -75,11 +92,8 @@ fun WhatsAppAgentsRecord.toWhatsAppAgentDTO() =
     llmProvider = this.llmProvider,
     model = this.model,
     temperature = this.temperature!!,
-    vectorProvider = this.vectorProvider,
     language = this.language!!,
     active = this.active!!,
-    embeddingProvider = this.embeddingProvider,
-    embeddingModel = this.embeddingModel,
     agentInstructions =
       AgentInstructions(
         languageInstruction = this.languageInstruction,
@@ -94,6 +108,9 @@ fun WhatsAppAgentCollectionsRecord.toWhatsAppAgentCollectionDTO() =
     instruction = this.instruction,
     collection = this.collection,
     amount = this.amount,
+    embeddingModel = this.embeddingModel,
+    vectorProvider = this.vectorProvider,
+    embeddingProvider = this.embeddingProvider,
   )
 
 fun WhatsAppChatsRecord.toWhatsAppChatDTO() = WhatsAppChatDTO(id = this.id!!, userId = this.userId)

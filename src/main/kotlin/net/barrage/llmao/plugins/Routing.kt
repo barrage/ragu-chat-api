@@ -11,7 +11,6 @@ import io.ktor.util.date.*
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.adapters.chonkit.chonkitAuthRouter
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.ServiceState
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.api.adminWhatsAppRoutes
 import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppHookRoutes
@@ -35,10 +34,8 @@ fun Application.configureRouting(state: ApplicationState) {
     // K8S specific route
     route("/__health") { get(health()) { call.respond(HttpStatusCode.OK) } }
 
-    val services = ServiceState(state)
-
     // Unprotected authentication routes
-    authRoutes(services.auth, state.adapters)
+    authRoutes(state.services.auth, state.adapters)
 
     thirdPartyRoutes()
 
@@ -49,18 +46,18 @@ fun Application.configureRouting(state: ApplicationState) {
 
     // Admin API routes
     authenticate("auth-session-admin") {
-      adminAgentsRoutes(services.agent)
-      adminUserRoutes(services.user)
-      adminChatsRoutes(services.chat)
-      administrationRouter(services.admin)
+      adminAgentsRoutes(state.services.agent)
+      adminUserRoutes(state.services.user)
+      adminChatsRoutes(state.services.chat)
+      administrationRouter(state.services.admin)
       state.adapters.runIfEnabled<ChonkitAuthenticationService, Unit> { chonkitAuthRouter(it) }
     }
 
     // User API routes
     authenticate("auth-session") {
-      agentsRoutes(services.agent)
-      userRoutes(services.user)
-      chatsRoutes(services.chat)
+      agentsRoutes(state.services.agent)
+      userRoutes(state.services.user)
+      chatsRoutes(state.services.chat)
     }
 
     // WhatsApp API routes
@@ -71,7 +68,7 @@ fun Application.configureRouting(state: ApplicationState) {
     }
 
     if (application.environment.config.property("ktor.environment").getString() == "development") {
-      devController(services.auth, services.user, state.adapters)
+      devController(state.services.auth, state.services.user, state.adapters)
     }
   }
 }

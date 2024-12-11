@@ -2,14 +2,12 @@ INSERT INTO agents (
     id,
     name,
     description,
-    vector_provider,
     language
 )
 VALUES (
  '00000000-0000-0000-0000-000000000000',
  'Glorious God Emperor Bayram of the Chadlands',
  'Your friendly neighbourhood soy blaster',
- 'weaviate',
  'croatian'
 ) ON CONFLICT DO NOTHING;
 

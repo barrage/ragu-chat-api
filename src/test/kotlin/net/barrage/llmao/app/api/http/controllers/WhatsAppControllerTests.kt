@@ -25,7 +25,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWiremock = true) {
+class WhatsAppControllerTests :
+  IntegrationTest(useWeaviate = true, useWiremock = true, enableWhatsApp = true) {
   private lateinit var peasantUser: User
   private lateinit var peasantSession: Session
   private lateinit var whatsAppNumber: WhatsAppNumber
@@ -47,7 +48,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWiremock 
     whatsAppNumber = postgres.testWhatsAppNumber(peasantUser.id, "385981234567")
     whatsAppAgentOne = postgres.testWhatsAppAgent(active = true)
     whatsAppAgentTwo = postgres.testWhatsAppAgent(active = false)
-    whatsAppChat = postgres.testWhatsAppChat(peasantUser.id, whatsAppAgentOne.id)
+    whatsAppChat = postgres.testWhatsAppChat(peasantUser.id)
     whatsAppMessageOne = postgres.testWhatsAppMessage(whatsAppChat.id, peasantUser.id)
     whatsAppMessageTwo =
       postgres.testWhatsAppMessage(
@@ -92,7 +93,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, useWiremock 
 
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.post("/chats/whatsapp") {
+      client.post("/whatsapp/webhook") {
         header("Content-Type", "application/json")
         setBody(infobipResponse)
       }

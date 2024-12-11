@@ -14,7 +14,8 @@ import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.*
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.ServiceState
+import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
+import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.app.api.ws.ClientMessageSerializer
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -39,11 +40,12 @@ open class IntegrationTest(
 
   /** If `true`, enables the Chonkit authentication module. */
   enableChonkitAuth: Boolean = false,
+  enableWhatsApp: Boolean = false,
 ) {
   val postgres: TestPostgres = TestPostgres()
   var weaviate: TestWeaviate? = null
   var wiremock: WireMockServer? = null
-  var services: ServiceState? = null
+  lateinit var app: ApplicationState
 
   // Always load example config so we are 1:1 with deployments.
   private var cfg = ConfigLoader.load("application.example.conf")
@@ -64,7 +66,10 @@ open class IntegrationTest(
     // Feature adapters
     cfg =
       cfg.mergeWith(
-        MapApplicationConfig("ktor.features.chonkitAuthServer" to enableChonkitAuth.toString())
+        MapApplicationConfig(
+          CHONKIT_AUTH_FEATURE_FLAG to enableChonkitAuth.toString(),
+          WHATSAPP_FEATURE_FLAG to enableWhatsApp.toString(),
+        )
       )
   }
 
@@ -103,8 +108,7 @@ open class IntegrationTest(
       loadWiremock()
     }
 
-    val applicationState = ApplicationState(cfg)
-    services = ServiceState(applicationState)
+    app = ApplicationState(cfg)
   }
 
   private fun loadWeaviate() {

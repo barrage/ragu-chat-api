@@ -259,9 +259,6 @@ class TestPostgres {
   fun testWhatsAppAgent(
     name: String = "Test WhatsApp Agent",
     active: Boolean = true,
-    vectorProvider: String = "weaviate",
-    embeddingProvider: String = "openai",
-    embeddingModel: String = "text-embedding-ada-002",
   ): WhatsAppAgentDTO {
     val agent =
       dslContext
@@ -273,11 +270,8 @@ class TestPostgres {
           WHATS_APP_AGENTS.LLM_PROVIDER,
           WHATS_APP_AGENTS.MODEL,
           WHATS_APP_AGENTS.TEMPERATURE,
-          WHATS_APP_AGENTS.VECTOR_PROVIDER,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
-          WHATS_APP_AGENTS.EMBEDDING_PROVIDER,
-          WHATS_APP_AGENTS.EMBEDDING_MODEL,
         )
         .values(
           name,
@@ -286,11 +280,8 @@ class TestPostgres {
           "openai",
           "gpt-4",
           0.4,
-          vectorProvider,
           "croatian",
           active,
-          embeddingProvider,
-          embeddingModel,
         )
         .returning()
         .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgentDTO)!!
@@ -302,7 +293,7 @@ class TestPostgres {
     dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(id)).execute()
   }
 
-  fun testWhatsAppChat(userId: UUID, agentId: UUID): WhatsAppChat {
+  fun testWhatsAppChat(userId: UUID): WhatsAppChat {
     return dslContext
       .insertInto(WHATS_APP_CHATS)
       .set(WHATS_APP_CHATS.ID, UUID.randomUUID())
