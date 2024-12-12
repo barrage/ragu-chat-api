@@ -49,7 +49,12 @@ fun AgentConfigurationsRecord.toAgentConfiguration() =
     model = this.model,
     temperature = this.temperature!!,
     agentInstructions =
-      AgentInstructions(this.titleInstruction, this.languageInstruction, this.summaryInstruction),
+      AgentInstructions(
+        this.promptInstruction,
+        this.titleInstruction,
+        this.languageInstruction,
+        this.summaryInstruction,
+      ),
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

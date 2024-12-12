@@ -14,6 +14,7 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMes
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.CreateAgentConfiguration
 import net.barrage.llmao.core.models.Session
@@ -119,6 +120,12 @@ class AdminWhatsAppControllerTests :
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.4,
+            instructions =
+              AgentInstructions(
+                promptInstruction = "Test WhatsApp Agent Prompt Instruction",
+                languageInstruction = "Test WhatsApp Agent Language Instruction",
+                summaryInstruction = "Test WhatsApp Agent Summary Instruction",
+              ),
           ),
       )
     val response =
@@ -133,6 +140,16 @@ class AdminWhatsAppControllerTests :
     assertEquals("Test WhatsApp Agent", body.name)
     assertEquals("Test WhatsApp Agent Description", body.description)
     assertEquals(true, body.active)
+    assertEquals("Test WhatsApp Agent Context", body.context)
+    assertEquals("Test WhatsApp Agent Prompt Instruction", body.agentInstructions.promptInstruction)
+    assertEquals(
+      "Test WhatsApp Agent Language Instruction",
+      body.agentInstructions.languageInstruction,
+    )
+    assertEquals(
+      "Test WhatsApp Agent Summary Instruction",
+      body.agentInstructions.summaryInstruction,
+    )
     postgres.deleteTestWhatsAppAgent(body.id)
   }
 

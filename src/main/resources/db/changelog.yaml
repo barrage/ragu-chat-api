@@ -89,3 +89,21 @@ databaseChangeLog:
             path: migration/5_add_indexes/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
+  - changeSet:
+      id: 6
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 6.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/6_add_prompt_instruction_to_agent_configurations/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/6_add_prompt_instruction_to_agent_configurations/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
