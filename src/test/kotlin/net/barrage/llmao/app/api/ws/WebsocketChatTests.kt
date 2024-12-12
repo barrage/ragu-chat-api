@@ -1,7 +1,12 @@
 package net.barrage.llmao.app.api.ws
 
+import io.ktor.client.plugins.websocket.*
+import io.ktor.serialization.kotlinx.*
 import io.ktor.websocket.*
 import kotlin.random.Random
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.SerializationException
 import net.barrage.llmao.COMPLETIONS_STREAM_LONG_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
@@ -394,5 +399,119 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
 
   private fun deleteVectors() {
     weaviate!!.deleteVectors(TEST_COLLECTION)
+  }
+
+  @Test
+  fun userMultipleChatsAtOnce() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_STREAM_PROMPT)
+
+    val client1 = createClient {
+      install(WebSockets) {
+        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+      }
+    }
+
+    val client2 = createClient {
+      install(WebSockets) {
+        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+      }
+    }
+
+    val validAgent = createValidAgent()
+    val validAgent2 = createValidAgent()
+
+    val result = runCatching {
+      coroutineScope {
+        val res1 = async {
+          client1.chatSession(session.sessionId) {
+            openNewChat(validAgent.agent.id)
+
+            var buffer = ""
+            sendMessage("Will this trigger a stream response?") { incoming ->
+              for (frame in incoming) {
+                val response = (frame as Frame.Text).readText()
+                try {
+                  val finishEvent = json.decodeFromString<ServerMessage>(response)
+                  // React only to finish events since titles can also get sent
+                  if (finishEvent is ServerMessage.FinishEvent) {
+                    assert(finishEvent.reason == FinishReason.Stop)
+                    asserted = true
+                    break
+                  }
+                } catch (e: SerializationException) {
+                  val errMessage = e.message ?: throw e
+                  if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
+                    throw e
+                  }
+                  buffer += response
+                } catch (e: Throwable) {
+                  e.printStackTrace()
+                  break
+                }
+              }
+            }
+
+            assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+            sendClientSystem(SystemMessage.CloseChat)
+          }
+        }
+
+        Thread.sleep(500)
+
+        val res2 = async {
+          var buffer = ""
+
+          client2.chatSession(session.sessionId) {
+            openNewChat(validAgent2.agent.id)
+
+            sendMessage("Will this trigger a stream response?") { incoming ->
+              for (frame in incoming) {
+                val response = (frame as Frame.Text).readText()
+
+                try {
+                  val finishEvent = json.decodeFromString<ServerMessage>(response)
+
+                  // React only to finish events since titles can also get sent
+                  if (finishEvent is ServerMessage.FinishEvent) {
+                    assert(finishEvent.reason == FinishReason.Stop)
+                    asserted = true
+                    break
+                  }
+                } catch (e: SerializationException) {
+                  val errMessage = e.message ?: throw e
+                  if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
+                    throw e
+                  }
+                  buffer += response
+                } catch (e: Throwable) {
+                  e.printStackTrace()
+                  break
+                }
+              }
+            }
+
+            assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+            sendClientSystem(SystemMessage.CloseChat)
+          }
+        }
+
+        listOf(res1, res2)
+      }
+    }
+
+    result
+      .onSuccess {
+        it.awaitAll()
+        asserted = true
+      }
+      .onFailure { LOG.error("Error in test", it) }
+
+    deleteVectors()
+
+    assert(asserted)
   }
 }

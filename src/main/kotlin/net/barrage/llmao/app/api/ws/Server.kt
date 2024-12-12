@@ -47,7 +47,7 @@ fun Application.websocketServer(factory: ChatFactory) {
       }
     }
 
-    // The websocket route is unprotected in regards to the regular HTTP auth mechanisms (read
+    // The websocket route is unprotected in regard to the regular HTTP auth mechanisms (read
     // cookies). We protect it manually with the TokenManager.
     webSocket {
       // Validate session
@@ -75,7 +75,7 @@ fun Application.websocketServer(factory: ChatFactory) {
 
       val channel = channel()
 
-      LOG.debug("Websocket connection opened for '{}'", userId)
+      LOG.debug("Websocket connection opened for '{}' with token '{}'", userId, token)
 
       runCatching {
           for (frame in incoming) {
@@ -96,7 +96,7 @@ fun Application.websocketServer(factory: ChatFactory) {
               }
 
             try {
-              messageHandler.handleMessage(userId, message, channel)
+              messageHandler.handleMessage(userId, token, message, channel)
             } catch (error: AppError) {
               channel.emitError(error)
             }
@@ -105,13 +105,13 @@ fun Application.websocketServer(factory: ChatFactory) {
         .onFailure { e ->
           e.printStackTrace()
           LOG.error("Websocket exception occurred", e)
-          messageHandler.removeChat(userId)
+          messageHandler.removeChat(userId, token)
           return@webSocket
         }
 
       // From this point on, the websocket connection is closed
-      LOG.debug("Websocket connection closed for '{}'", userId)
-      messageHandler.removeChat(userId)
+      LOG.debug("Websocket connection closed for '{}' with token '{}'", userId, token)
+      messageHandler.removeChat(userId, token)
 
       // Has to be closed manually to stop the job from running
       channel.close()
