@@ -49,11 +49,7 @@ data class WhatsAppAgent(
   val agentInstructions: AgentInstructions,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
-) {
-  fun language(): String {
-    return agentInstructions.language()
-  }
-}
+)
 
 @Serializable
 data class WhatsAppAgentFull(val agent: WhatsAppAgent, val collections: List<AgentCollection>) {
@@ -142,6 +138,7 @@ fun WhatsAppAgentsRecord.toWhatsAppAgent() =
     active = this.active!!,
     agentInstructions =
       AgentInstructions(
+        promptInstruction = this.promptInstruction,
         languageInstruction = this.languageInstruction,
         summaryInstruction = this.summaryInstruction,
       ),

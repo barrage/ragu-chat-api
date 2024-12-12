@@ -185,7 +185,7 @@ class ConversationService(
       }
     }
 
-    val message = userMessage(prompt, collectionInstructions)
+    val message = userMessage(agentConfig, prompt, collectionInstructions)
 
     LOG.trace("Created user message {}", message)
 
@@ -194,13 +194,12 @@ class ConversationService(
     return messages
   }
 
-  private fun userMessage(prompt: String, instructions: String): ChatMessage {
-    val base =
-      """
-        Use the instructions surrounded by triple quotes to respond to the prompt surrounded by triple quotes.
-        Also use the information from the current conversation to respond if it is relevant.
-        If you do not know something, admit so."""
-        .trimIndent()
+  private fun userMessage(
+    agentConfig: AgentConfiguration,
+    prompt: String,
+    instructions: String,
+  ): ChatMessage {
+    val base = agentConfig.agentInstructions.basePrompt()
 
     val message =
       "$base\nInstructions: ${"\"\"\""}\n$instructions\n${"\"\"\""}\nPrompt: ${"\"\"\""}\n$prompt\n${"\"\"\""}"

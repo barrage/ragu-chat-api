@@ -4,6 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AgentInstructions(
+  /** Base instructions to tell the LLM how to respond to prompts. */
+  val promptInstruction: String? = null,
+
   /**
    * Used in chats - specifies the instructions for an LLM on how to generate a chat title. Usually
    * the default directive will be fine, but it's nice to have an option to change this if the
@@ -23,6 +26,18 @@ data class AgentInstructions(
    */
   val summaryInstruction: String? = null,
 ) {
+  fun basePrompt(): String {
+    if (promptInstruction != null) {
+      return promptInstruction
+    }
+
+    return """
+        Use the instructions surrounded by triple quotes to respond to the prompt surrounded by triple quotes.
+        Also use the information from the current conversation to respond if it is relevant.
+        If you do not know something, admit so."""
+      .trimIndent()
+  }
+
   fun title(proompt: String): String {
     if (titleInstruction != null) {
       return "$titleInstruction\nPrompt: \"\"\"$proompt\"\"\"\nTitle:"

@@ -11,6 +11,7 @@ import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
+import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.CreateAgent
@@ -140,6 +141,13 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.5,
+            instructions =
+              AgentInstructions(
+                promptInstruction = "prompt",
+                titleInstruction = "title",
+                languageInstruction = "language",
+                summaryInstruction = "summary",
+              ),
           ),
       )
 
@@ -156,6 +164,10 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     assertEquals("description", body.agent.description)
     assertEquals("azure", body.configuration.llmProvider)
     assertEquals("gpt-4", body.configuration.model)
+    assertEquals("prompt", body.configuration.agentInstructions.promptInstruction)
+    assertEquals("title", body.configuration.agentInstructions.titleInstruction)
+    assertEquals("language", body.configuration.agentInstructions.languageInstruction)
+    assertEquals("summary", body.configuration.agentInstructions.summaryInstruction)
 
     postgres.deleteTestAgent(body.agent.id)
   }
