@@ -112,7 +112,8 @@ class WhatsAppAdapter(
       model = create.configuration.model,
     )
 
-    return repository.createAgent(create) ?: throw IllegalStateException("Something went wrong")
+    return repository.createAgent(create)
+      ?: throw AppError.api(ErrorReason.Internal, "Something went wrong while creating agent")
   }
 
   fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {

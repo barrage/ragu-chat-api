@@ -62,7 +62,8 @@ class AgentService(
       model = create.configuration.model,
     )
 
-    return agentRepository.create(create) ?: throw IllegalStateException("Something went wrong")
+    return agentRepository.create(create)
+      ?: throw AppError.api(ErrorReason.Internal, "Something went wrong while creating agent")
   }
 
   suspend fun update(id: KUUID, update: UpdateAgent): Any {
