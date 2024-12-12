@@ -25,10 +25,6 @@ class UserService(
     return usersRepository.get(id) ?: throw NotFoundException("User not found")
   }
 
-  fun getByEmail(email: String): User {
-    return usersRepository.getByEmail(email) ?: throw NotFoundException("User not found")
-  }
-
   fun create(user: CreateUser): User {
     val existingUser = usersRepository.getByEmail(user.email)
 

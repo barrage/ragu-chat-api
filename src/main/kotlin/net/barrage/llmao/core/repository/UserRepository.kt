@@ -30,28 +30,69 @@ class UserRepository(private val dslContext: DSLContext) {
 
     val users =
       dslContext
-        .selectFrom(USERS)
+        .select(
+          USERS.ID,
+          USERS.EMAIL,
+          USERS.FULL_NAME,
+          USERS.FIRST_NAME,
+          USERS.LAST_NAME,
+          USERS.ROLE,
+          USERS.ACTIVE,
+          USERS.CREATED_AT,
+          USERS.UPDATED_AT,
+          USERS.DELETED_AT,
+        )
+        .from(USERS)
         .where(USERS.DELETED_AT.isNull)
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch(UsersRecord::toUser)
+        .fetch()
+        .map { it.into(USERS).toUser() }
 
     return CountedList(total, users)
   }
 
   fun get(id: UUID): User? {
     return dslContext
-      .selectFrom(USERS)
+      .select(
+        USERS.ID,
+        USERS.EMAIL,
+        USERS.FULL_NAME,
+        USERS.FIRST_NAME,
+        USERS.LAST_NAME,
+        USERS.ROLE,
+        USERS.ACTIVE,
+        USERS.CREATED_AT,
+        USERS.UPDATED_AT,
+        USERS.DELETED_AT,
+      )
+      .from(USERS)
       .where(USERS.ID.eq(id).and(USERS.DELETED_AT.isNull))
-      .fetchOne(UsersRecord::toUser)
+      .fetchOne()
+      ?.into(USERS)
+      ?.toUser()
   }
 
   fun getByEmail(email: String): User? {
     return dslContext
-      .selectFrom(USERS)
+      .select(
+        USERS.ID,
+        USERS.EMAIL,
+        USERS.FULL_NAME,
+        USERS.FIRST_NAME,
+        USERS.LAST_NAME,
+        USERS.ROLE,
+        USERS.ACTIVE,
+        USERS.CREATED_AT,
+        USERS.UPDATED_AT,
+        USERS.DELETED_AT,
+      )
+      .from(USERS)
       .where(USERS.EMAIL.eq(email).and(USERS.DELETED_AT.isNull))
-      .fetchOne(UsersRecord::toUser)
+      .fetchOne()
+      ?.into(USERS)
+      ?.toUser()
   }
 
   fun create(user: CreateUser): User {
