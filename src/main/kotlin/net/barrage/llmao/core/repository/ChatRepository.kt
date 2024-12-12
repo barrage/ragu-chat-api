@@ -48,7 +48,14 @@ class ChatRepository(private val dslContext: DSLContext) {
 
     val chats =
       dslContext
-        .select()
+        .select(
+          CHATS.ID,
+          CHATS.USER_ID,
+          CHATS.AGENT_ID,
+          CHATS.TITLE,
+          CHATS.CREATED_AT,
+          CHATS.UPDATED_AT,
+        )
         .from(CHATS)
         .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
         .orderBy(order)
@@ -76,7 +83,31 @@ class ChatRepository(private val dslContext: DSLContext) {
 
     val chats =
       dslContext
-        .select()
+        .select(
+          CHATS.ID,
+          CHATS.USER_ID,
+          CHATS.AGENT_ID,
+          CHATS.TITLE,
+          CHATS.CREATED_AT,
+          CHATS.UPDATED_AT,
+          AGENTS.ID,
+          AGENTS.NAME,
+          AGENTS.DESCRIPTION,
+          AGENTS.ACTIVE,
+          AGENTS.ACTIVE_CONFIGURATION_ID,
+          AGENTS.LANGUAGE,
+          AGENTS.CREATED_AT,
+          AGENTS.UPDATED_AT,
+          USERS.ID,
+          USERS.EMAIL,
+          USERS.FULL_NAME,
+          USERS.FIRST_NAME,
+          USERS.LAST_NAME,
+          USERS.ACTIVE,
+          USERS.ROLE,
+          USERS.CREATED_AT,
+          USERS.UPDATED_AT,
+        )
         .from(CHATS)
         .leftJoin(AGENTS)
         .on(CHATS.AGENT_ID.eq(AGENTS.ID))
@@ -99,7 +130,14 @@ class ChatRepository(private val dslContext: DSLContext) {
 
   fun get(id: KUUID): Chat? {
     return dslContext
-      .select()
+      .select(
+        CHATS.ID,
+        CHATS.USER_ID,
+        CHATS.AGENT_ID,
+        CHATS.TITLE,
+        CHATS.CREATED_AT,
+        CHATS.UPDATED_AT,
+      )
       .from(CHATS)
       .where(CHATS.ID.eq(id))
       .fetchOneInto(ChatsRecord::class.java)
@@ -114,7 +152,17 @@ class ChatRepository(private val dslContext: DSLContext) {
 
   fun getMessages(chatId: KUUID): List<Message> {
     return dslContext
-      .select()
+      .select(
+        MESSAGES.ID,
+        MESSAGES.SENDER,
+        MESSAGES.SENDER_TYPE,
+        MESSAGES.CONTENT,
+        MESSAGES.CHAT_ID,
+        MESSAGES.RESPONSE_TO,
+        MESSAGES.EVALUATION,
+        MESSAGES.CREATED_AT,
+        MESSAGES.UPDATED_AT,
+      )
       .from(MESSAGES)
       .where(MESSAGES.CHAT_ID.eq(chatId))
       .orderBy(MESSAGES.CREATED_AT.desc())
@@ -124,33 +172,44 @@ class ChatRepository(private val dslContext: DSLContext) {
 
   fun getMessagesForUser(chatId: KUUID, userId: KUUID): List<Message> {
     return dslContext
-      .select()
+      .select(
+        MESSAGES.ID,
+        MESSAGES.SENDER,
+        MESSAGES.SENDER_TYPE,
+        MESSAGES.CONTENT,
+        MESSAGES.CHAT_ID,
+        MESSAGES.RESPONSE_TO,
+        MESSAGES.EVALUATION,
+        MESSAGES.CREATED_AT,
+        MESSAGES.UPDATED_AT,
+      )
       .from(MESSAGES)
       .join(CHATS)
       .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
       .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
       .orderBy(MESSAGES.CREATED_AT.desc())
-      .fetchInto(MessagesRecord::class.java)
+      .fetchInto(MESSAGES)
       .map { it.toMessage() }
   }
 
   fun getMessage(chatId: KUUID, messageId: KUUID): Message? {
     return dslContext
-      .selectFrom(MESSAGES)
-      .where(MESSAGES.ID.eq(messageId).and(MESSAGES.CHAT_ID.eq(chatId)))
-      .fetchOne(MessagesRecord::toMessage)
-  }
-
-  fun getMessageForUser(chatId: KUUID, messageId: KUUID, userId: KUUID): Message? {
-    return dslContext
-      .select()
-      .from(MESSAGES)
-      .join(CHATS)
-      .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
-      .where(
-        MESSAGES.ID.eq(messageId).and(MESSAGES.CHAT_ID.eq(chatId)).and(CHATS.USER_ID.eq(userId))
+      .select(
+        MESSAGES.ID,
+        MESSAGES.SENDER,
+        MESSAGES.SENDER_TYPE,
+        MESSAGES.CONTENT,
+        MESSAGES.CHAT_ID,
+        MESSAGES.RESPONSE_TO,
+        MESSAGES.EVALUATION,
+        MESSAGES.CREATED_AT,
+        MESSAGES.UPDATED_AT,
       )
-      .fetchOne { it.into(MessagesRecord::class.java).toMessage() }
+      .from(MESSAGES)
+      .where(MESSAGES.ID.eq(messageId).and(MESSAGES.CHAT_ID.eq(chatId)))
+      .fetchOne()
+      ?.into(MESSAGES)
+      ?.toMessage()
   }
 
   fun evaluateMessage(id: KUUID, evaluation: Boolean): Message? {
@@ -423,7 +482,18 @@ class ChatRepository(private val dslContext: DSLContext) {
 
     val messages =
       dslContext
-        .selectFrom(MESSAGES)
+        .select(
+          MESSAGES.ID,
+          MESSAGES.SENDER,
+          MESSAGES.SENDER_TYPE,
+          MESSAGES.CONTENT,
+          MESSAGES.CHAT_ID,
+          MESSAGES.RESPONSE_TO,
+          MESSAGES.EVALUATION,
+          MESSAGES.CREATED_AT,
+          MESSAGES.UPDATED_AT,
+        )
+        .from(MESSAGES)
         .where(
           MESSAGES.SENDER.eq(versionId)
             .and(MESSAGES.EVALUATION.isNotNull)
@@ -438,7 +508,8 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch(MessagesRecord::toMessage)
+        .fetch()
+        .map { it.into(MESSAGES).toMessage() }
 
     return CountedList(count, messages)
   }
