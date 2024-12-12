@@ -6,7 +6,6 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.tables.records.SessionsRecord
 import net.barrage.llmao.tables.references.SESSIONS
 import org.jooq.DSLContext
 
@@ -42,16 +41,33 @@ class SessionRepository(private val dslContext: DSLContext) {
 
   fun get(id: KUUID): Session? {
     return dslContext
-      .selectFrom(SESSIONS)
+      .select(
+        SESSIONS.ID,
+        SESSIONS.USER_ID,
+        SESSIONS.CREATED_AT,
+        SESSIONS.UPDATED_AT,
+        SESSIONS.EXPIRES_AT,
+      )
+      .from(SESSIONS)
       .where(SESSIONS.ID.eq(id))
-      .fetchOne(SessionsRecord::toSessionData)
+      .fetchOne()
+      ?.into(SESSIONS)
+      ?.toSessionData()
   }
 
   fun getActiveByUserId(id: KUUID): List<Session?> {
     return dslContext
-      .selectFrom(SESSIONS)
+      .select(
+        SESSIONS.ID,
+        SESSIONS.USER_ID,
+        SESSIONS.CREATED_AT,
+        SESSIONS.UPDATED_AT,
+        SESSIONS.EXPIRES_AT,
+      )
+      .from(SESSIONS)
       .where(SESSIONS.USER_ID.eq(id).and(SESSIONS.EXPIRES_AT.gt(OffsetDateTime.now())))
-      .fetch(SessionsRecord::toSessionData)
+      .fetch()
+      .map { it.into(SESSIONS).toSessionData() }
   }
 
   fun extend(id: KUUID) {
