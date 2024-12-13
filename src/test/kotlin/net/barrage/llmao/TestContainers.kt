@@ -160,6 +160,10 @@ class TestPostgres {
     context: String = "Test",
     llmProvider: String = "openai",
     model: String = "gpt-4",
+    promptInstruction: String? = null,
+    titleInstruction: String? = null,
+    languageInstruction: String? = null,
+    summaryInstruction: String? = null,
   ): AgentConfiguration {
     val configuration =
       dslContext
@@ -170,8 +174,22 @@ class TestPostgres {
           AGENT_CONFIGURATIONS.CONTEXT,
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
+          AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
+          AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+          AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
+          AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
         )
-        .values(agentId, version, context, llmProvider, model)
+        .values(
+          agentId,
+          version,
+          context,
+          llmProvider,
+          model,
+          promptInstruction,
+          titleInstruction,
+          languageInstruction,
+          summaryInstruction,
+        )
         .returning()
         .fetchOne(AgentConfigurationsRecord::toAgentConfiguration)!!
 
@@ -217,10 +235,6 @@ class TestPostgres {
       .set(CHATS.TITLE, title)
       .returning()
       .fetchOne(ChatsRecord::toChat)!!
-  }
-
-  fun deleteTestChat(id: UUID) {
-    dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).execute()
   }
 
   fun testChatMessage(
