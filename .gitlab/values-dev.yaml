@@ -1,7 +1,9 @@
 ingress:
   className: nginx-external
+  tls:
+    enabled: false
   annotations:
-    cert-manager.io/cluster-issuer: "barrage-dev"
+    # cert-manager.io/cluster-issuer: "barrage-dev"
     ## The following annotation is to limit access to the ingress
 
 barrage:

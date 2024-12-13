@@ -42,6 +42,8 @@ review:
   extends: .review_app
   needs:
     - containerize
+  variables:
+    KUBE_INGRESS_BASE_DOMAIN: barrage.dev
   environment:
     on_stop: cleanup
   rules:
@@ -56,6 +58,8 @@ cleanup:
 
 deploy dev:
   extends: .development
+  variables:
+    KUBE_INGRESS_BASE_DOMAIN: barrage.dev
   needs:
     - containerize
   rules:
