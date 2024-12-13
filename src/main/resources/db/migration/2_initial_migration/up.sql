@@ -38,6 +38,7 @@ CREATE TABLE agent_configurations (
     llm_provider TEXT NOT NULL,
     model TEXT NOT NULL,
     temperature FLOAT NOT NULL DEFAULT 0.1,
+    prompt_instruction TEXT,
     title_instruction TEXT,
     language_instruction TEXT,
     summary_instruction TEXT,
@@ -111,3 +112,13 @@ SELECT manage_updated_at('agent_collections');
 SELECT manage_updated_at('chats');
 SELECT manage_updated_at('messages');
 SELECT manage_updated_at('failed_messages');
+
+CREATE INDEX idx_users_deleted_at ON users (deleted_at);
+CREATE INDEX idx_agents_active ON agents (active);
+CREATE INDEX idx_agent_collections_agent_id ON agent_collections (agent_id);
+CREATE INDEX idx_sessions_user_id_expires_at ON sessions (user_id, expires_at);
+CREATE INDEX idx_chats_user_id ON chats (user_id);
+CREATE INDEX idx_chats_agent_id ON chats (agent_id);
+CREATE INDEX idx_messages_chat_id ON messages (chat_id);
+CREATE INDEX idx_messages_sender ON messages (sender);
+CREATE INDEX idx_messages_evaluation ON messages (evaluation);

@@ -39,7 +39,10 @@ VALUES
 ('9029ee9a-f443-489a-8aae-ead857991408', 'stefani.majic@barrage.net', 'Stefani Majic', 'Stefani', 'M', 'ADMIN', TRUE),
 ('f348812f-a17b-4076-8fc4-958d9157a9f6', 'bruno.spajic@barrage.net', 'Bruno Spajic', 'Bruno', 'S', 'ADMIN', TRUE),
 ('3926263d-044c-469d-8490-d4b331e192ad', 'ivan.pistingli@barrage.net', 'Ivan Pistingli', 'Ivan', 'P', 'ADMIN', TRUE),
-('1ade1b2e-9edd-44e9-b40d-38cb0fd37285', 'marko.pavicic@barrage.net', 'Marko Pavicic', 'Marko', 'P', 'ADMIN', TRUE)
+('1ade1b2e-9edd-44e9-b40d-38cb0fd37285', 'marko.pavicic@barrage.net', 'Marko Pavicic', 'Marko', 'P', 'ADMIN', TRUE),
+('7ec7eea8-504a-4d3a-b452-8a98801a3133', 'toni.kolaric@barrage.net', 'Toni Kolaric', 'Toni', 'K', 'ADMIN', TRUE),
+('2d55ade7-7970-4c11-bb49-437349e64c18', 'adrian.zuparic@barrage.net', 'Adrian Zuparic', 'Adrian', 'Z', 'ADMIN', TRUE),
+('0836b36c-d536-42d7-a297-0a9d508cbd0d', 'miran.hrupacki@barrage.net', 'Miran Hrupacki', 'Miran', 'H', 'ADMIN', TRUE)
 ON CONFLICT DO NOTHING;
 
 SELECT id, email, full_name FROM users;
