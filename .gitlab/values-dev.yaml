@@ -1,0 +1,10 @@
+ingress:
+  className: nginx-external
+  annotations:
+    cert-manager.io/cluster-issuer: "barrage-dev"
+    ## The following annotation is to limit access to the ingress
+
+barrage:
+  vault:
+    role: llmao-kappi-k8-dev
+    moduleWorkspace: llmao/data/deploy-kappi-dev

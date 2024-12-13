@@ -1,4 +1,5 @@
 ingress:
+  className: nginx-internal
   annotations:
     cert-manager.io/cluster-issuer: "barrage-le-production"
     ## The following annotation is to limit access to the ingress
@@ -6,7 +7,5 @@ ingress:
 
 barrage:
   vault:
-    env: prod
-    role: llmao-kappi-k8-s2
+    role: llmao-kappi-k8-prod
     moduleWorkspace: llmao/data/deploy-kappi-prod
-    authPath: auth/kubernetes-s2

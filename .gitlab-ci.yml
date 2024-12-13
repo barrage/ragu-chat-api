@@ -1,7 +1,10 @@
 include:
   - project: devops/ci-template
-    ref: v1.0.0
+    ref: v1.1.0
     file: GitlabFlow/Deploy-custom.yml
+
+variables:
+    HELM_RELEASE_PREFIX: llmao-kappi
 
 build-and-test:
   stage: build
@@ -36,11 +39,9 @@ containerize:
     - when: on_success
 
 review:
-  extends: .review_app_staging
+  extends: .review_app
   needs:
     - containerize
-  variables:
-    HELM_RELEASE_NAME: kappi
   environment:
     on_stop: cleanup
   rules:
@@ -48,17 +49,13 @@ review:
     - when: on_success
 
 cleanup:
-  extends: .stop_review_staging
-  variables:
-    HELM_RELEASE_NAME: kubetest
+  extends: .stop_review
   rules:
     - !reference [ ".stop_review", "rules" ]
     - when: manual
 
-deploy stg:
-  extends: .pre-production
-  variables:
-    HELM_RELEASE_NAME: kappi
+deploy dev:
+  extends: .development
   needs:
     - containerize
   rules:
