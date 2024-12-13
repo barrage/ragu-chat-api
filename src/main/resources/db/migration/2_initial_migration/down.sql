@@ -1,3 +1,13 @@
+DROP INDEX IF EXISTS idx_users_deleted_at;
+DROP INDEX IF EXISTS idx_agents_active;
+DROP INDEX IF EXISTS idx_agent_collections_agent_id;
+DROP INDEX IF EXISTS idx_sessions_user_id_expires_at;
+DROP INDEX IF EXISTS idx_chats_user_id;
+DROP INDEX IF EXISTS idx_chats_agent_id;
+DROP INDEX IF EXISTS idx_messages_chat_id;
+DROP INDEX IF EXISTS idx_messages_sender;
+DROP INDEX IF EXISTS idx_messages_evaluation;
+
 DROP TRIGGER IF EXISTS set_updated_at ON failed_messages;
 DROP TRIGGER IF EXISTS set_updated_at ON messages;
 DROP TRIGGER IF EXISTS set_updated_at ON chats;

@@ -16,6 +16,7 @@ CREATE TABLE whats_app_agents (
     temperature FLOAT NOT NULL DEFAULT 0.1,
     language TEXT,
     active BOOLEAN NOT NULL DEFAULT FALSE,
+    prompt_instruction TEXT,
     language_instruction TEXT,
     summary_instruction TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -67,3 +68,6 @@ SELECT manage_updated_at('whats_app_agent_collections');
 SELECT manage_updated_at('whats_app_chats');
 SELECT manage_updated_at('whats_app_messages');
 
+CREATE INDEX idx_whatsapp_numbers_user_id ON whats_app_numbers (user_id);
+CREATE INDEX idx_whatsapp_numbers_phone_number ON whats_app_numbers (phone_number);
+CREATE INDEX idx_whatsapp_agents_active ON whats_app_agents (active);
