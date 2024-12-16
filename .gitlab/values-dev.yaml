@@ -1,12 +1,8 @@
 ingress:
   className: nginx-external
-  tls:
-    enabled: true
   annotations:
-    # cert-manager.io/cluster-issuer: barrage-dev
-    acme.cert-manager.io/http01-edit-in-place: "true" 
-    cert-manager.io/cluster-issuer: barrage-le-production
-    ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: barrage-dev
+    # cert-manager.io/cluster-issuer: barrage-le-production
     ## The following annotation is to limit access to the ingress
 
 barrage:
