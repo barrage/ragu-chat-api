@@ -61,10 +61,6 @@ class GoogleAuthenticationProvider(
       throw AppError.api(ErrorReason.Authentication, "Invalid token signature; Token expired")
     }
 
-    val email =
-      idToken.getClaim("email")?.asString()
-        ?: throw AppError.api(ErrorReason.Authentication, "Email not found")
-
     val name = idToken.getClaim("name")?.asString()
 
     val givenName = idToken.getClaim("given_name")?.asString()
@@ -73,10 +69,16 @@ class GoogleAuthenticationProvider(
 
     val isVerified = idToken.getClaim("email_verified")?.asBoolean() == true
 
+    val picture = idToken.getClaim("picture")?.asString()
+
+    val email =
+      idToken.getClaim("email")?.asString()
+        ?: throw AppError.api(ErrorReason.Authentication, "Email not found")
+
     if (!isVerified) {
       throw AppError.api(ErrorReason.Authentication, "Email not verified")
     }
 
-    return UserInfo(googleId, email, name, givenName, familyName)
+    return UserInfo(googleId, email, name, givenName, familyName, picture)
   }
 }

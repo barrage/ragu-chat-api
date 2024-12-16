@@ -34,21 +34,28 @@ fun ApplicationCall.user(): User {
 fun Application.configureSession(service: AuthenticationService) {
   install(Sessions) {
     cookie<SessionCookie>(
-      this@configureSession.environment.config.property("session.cookieName").getString()
+      this@configureSession.environment.config.property("cookies.session.cookieName").getString()
     ) {
       cookie.path = "/"
-      cookie.maxAgeInSeconds = 24 * 60 * 60 * 1 // 1 day
+      cookie.maxAgeInSeconds =
+        this@configureSession.environment.config
+          .property("cookies.session.maxAge")
+          .getString()
+          .toLong() // 1 day
       cookie.httpOnly =
         this@configureSession.environment.config
-          .property("session.httpOnly")
+          .property("cookies.session.httpOnly")
           .getString()
           .toBoolean()
       cookie.secure =
-        this@configureSession.environment.config.property("session.secure").getString().toBoolean()
+        this@configureSession.environment.config
+          .property("cookies.session.secure")
+          .getString()
+          .toBoolean()
       cookie.domain =
-        this@configureSession.environment.config.property("session.domain").getString()
+        this@configureSession.environment.config.property("cookies.session.domain").getString()
       cookie.extensions["SameSite"] =
-        this@configureSession.environment.config.property("session.sameSite").getString()
+        this@configureSession.environment.config.property("cookies.session.sameSite").getString()
     }
   }
 

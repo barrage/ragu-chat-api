@@ -16,4 +16,7 @@ data class UserInfo(
 
   /** Optional last name. */
   val lastName: String? = null,
+
+  /** Optional user profile image */
+  val picture: String? = null,
 )

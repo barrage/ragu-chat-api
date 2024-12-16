@@ -79,4 +79,33 @@ object CookieFactory {
       extensions = mapOf("SameSite" to config.string("chonkit.jwt.cookie.refresh.sameSite")),
     )
   }
+
+  fun createUserPictureCookie(value: String): Cookie {
+    return Cookie(
+      name = config.string("cookies.userPicture.cookieName"),
+      value = value,
+      encoding = CookieEncoding.RAW,
+      maxAge = config.string("cookies.userPicture.maxAge").toInt(),
+      domain = config.string("cookies.userPicture.domain"),
+      path = "/",
+      secure = config.string("cookies.userPicture.secure").toBoolean(),
+      httpOnly = false,
+      extensions = mapOf("SameSite" to config.string("cookies.userPicture.sameSite")),
+    )
+  }
+
+  fun createUserPictureExpiryCookie(): Cookie {
+    return Cookie(
+      name = config.string("cookies.userPicture.cookieName"),
+      value = "",
+      encoding = CookieEncoding.RAW,
+      maxAge = 0,
+      expires = Instant.now().toGMTDate(),
+      domain = config.string("cookies.userPicture.domain"),
+      path = "/",
+      secure = config.string("cookies.userPicture.secure").toBoolean(),
+      httpOnly = false,
+      extensions = mapOf("SameSite" to config.string("cookies.userPicture.sameSite")),
+    )
+  }
 }
