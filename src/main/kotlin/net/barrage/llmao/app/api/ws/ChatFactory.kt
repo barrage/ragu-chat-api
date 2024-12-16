@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.api.ws
 
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.types.KUUID
@@ -23,8 +24,8 @@ class ChatFactory(
     )
   }
 
-  fun fromExisting(id: KUUID, channel: Channel): Chat {
-    val chat = conversationService.getChat(id)
+  fun fromExisting(id: KUUID, channel: Channel, initialHistorySize: Int): Chat {
+    val chat = conversationService.getChat(id, Pagination(1, initialHistorySize))
 
     agentService.getActive(chat.chat.agentId)
 

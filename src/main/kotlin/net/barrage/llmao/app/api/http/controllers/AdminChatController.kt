@@ -13,10 +13,12 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.app.api.http.queryPagination
+import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
@@ -57,7 +59,8 @@ fun Route.adminChatsRoutes(service: ChatService) {
       route("/messages") {
         get(adminGetMessages()) {
           val chatId = call.pathUuid("chatId")
-          val messages: List<Message> = service.getMessages(chatId)
+          val pagination = call.query(Pagination::class)
+          val messages: List<Message> = service.getMessages(chatId, pagination = pagination)
           call.respond(HttpStatusCode.OK, messages)
         }
 
@@ -78,7 +81,7 @@ private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve list of all chats"
   request {
-    queryPagination()
+    queryPaginationSort()
     queryParameter<KUUID>("userId") {
       description = "Filter by user ID"
       required = false
@@ -136,6 +139,7 @@ private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
       description = "The ID of the chat to retrieve messages from"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
+    queryPagination()
   }
   response {
     HttpStatusCode.OK to

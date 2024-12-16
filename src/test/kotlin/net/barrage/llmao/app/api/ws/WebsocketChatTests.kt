@@ -19,6 +19,7 @@ import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.json
@@ -205,7 +206,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
     client.chatSession(session.sessionId) {
       val chatId = openNewChat(validAgent.agent.id)
 
-      val error = assertThrows<AppError> { app.services.chat.getChat(chatId) }
+      val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
       assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
 
       var buffer = ""
@@ -244,7 +245,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
 
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-      val chat = app.services.chat.getChat(chatId)
+      val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
       assertEquals(2, chat.messages.size)
     }
 
@@ -263,11 +264,13 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
 
     client.chatSession(session.sessionId) {
       val chatOne = openNewChat(validAgent.agent.id)
-      val errorOne = assertThrows<AppError> { app.services.chat.getChat(chatOne) }
+      val errorOne =
+        assertThrows<AppError> { app.services.chat.getChat(chatOne, Pagination(1, 50)) }
       assertEquals(ErrorReason.EntityDoesNotExist, errorOne.reason)
 
       val chatTwo = openNewChat(validAgent.agent.id)
-      val errorTwo = assertThrows<AppError> { app.services.chat.getChat(chatTwo) }
+      val errorTwo =
+        assertThrows<AppError> { app.services.chat.getChat(chatTwo, Pagination(1, 50)) }
       assertEquals(ErrorReason.EntityDoesNotExist, errorTwo.reason)
 
       asserted = true
@@ -289,7 +292,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
     client.chatSession(session.sessionId) {
       val chatId = openNewChat(validAgent.agent.id)
 
-      val error = assertThrows<AppError> { app.services.chat.getChat(chatId) }
+      val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
       assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
 
       val message = "{ \"type\": \"chat\", \"text\": \"Will this trigger a stream response?\" }"
@@ -332,7 +335,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
         }
       }
 
-      val chat = app.services.chat.getChat(chatId)
+      val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
       assertEquals(2, chat.messages.size)
     }
 

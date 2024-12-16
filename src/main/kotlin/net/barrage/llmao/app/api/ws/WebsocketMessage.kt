@@ -27,7 +27,8 @@ sealed class SystemMessage {
 
   @Serializable
   @SerialName("chat_open_existing")
-  data class OpenExistingChat(val chatId: KUUID) : SystemMessage()
+  data class OpenExistingChat(val chatId: KUUID, val initialHistorySize: Int = 10) :
+    SystemMessage()
 
   @Serializable @SerialName("chat_close") data object CloseChat : SystemMessage()
 

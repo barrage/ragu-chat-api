@@ -13,10 +13,12 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.app.api.http.queryPagination
+import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
@@ -61,7 +63,8 @@ fun Route.chatsRoutes(service: ChatService) {
         get(getMessages()) {
           val user = call.user()
           val chatId = call.pathUuid("chatId")
-          val messages: List<Message> = service.getMessages(chatId, user.id)
+          val pagination = call.query(Pagination::class)
+          val messages: List<Message> = service.getMessages(chatId, user.id, pagination)
           call.respond(HttpStatusCode.OK, messages)
         }
 
@@ -82,12 +85,12 @@ fun Route.chatsRoutes(service: ChatService) {
 private fun getAllChats(): OpenApiRoute.() -> Unit = {
   tags("chats")
   description = "Retrieve list of all chats"
-  request { queryPagination() }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {
         description = "A list of Chat objects representing all the chats"
-        body<CountedList<Chat>> {}
+        body<List<Chat>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -134,12 +137,13 @@ private fun getMessages(): OpenApiRoute.() -> Unit = {
       required = true
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
+    queryPagination()
   }
   response {
     HttpStatusCode.OK to
       {
-        description = "A list of Message objects representing all the messages from a chat"
-        body<List<Message>> {}
+        description = "A counted list of Message objects representing all the messages from a chat"
+        body<CountedList<Message>> {}
       }
     HttpStatusCode.InternalServerError to
       {

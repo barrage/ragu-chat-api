@@ -10,7 +10,7 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.app.api.http.queryPagination
+import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
@@ -33,7 +33,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
   route("/admin/agents") {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
-      val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() ?: false
+      val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() == true
       val agents = agentService.getAllAdmin(pagination, showDeactivated)
       call.respond(HttpStatusCode.OK, agents)
     }
@@ -126,7 +126,7 @@ private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve list of all agents"
   request {
-    queryPagination()
+    queryPaginationSort()
     queryParameter<Boolean>("showDeactivated") {
       description = "Show deactivated agents"
       required = false
@@ -383,7 +383,7 @@ private fun getAgentConfigurationEvaluatedMessages(): OpenApiRoute.() -> Unit = 
       required = false
       example("default") { value = true }
     }
-    queryPagination()
+    queryPaginationSort()
   }
   response {
     HttpStatusCode.OK to

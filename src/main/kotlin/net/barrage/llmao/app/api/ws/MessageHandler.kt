@@ -61,7 +61,7 @@ class MessageHandler(private val factory: ChatFactory) {
 
         chat?.cancelStream()
 
-        val existingChat = factory.fromExisting(message.chatId, channel)
+        val existingChat = factory.fromExisting(message.chatId, channel, message.initialHistorySize)
 
         chats[Pair(userId, token)] = existingChat
 

@@ -132,7 +132,7 @@ class ChatControllerTests : IntegrationTest() {
   fun shouldRetrieveChatMessages() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/chats/${chatOne.id}/messages") {
+      client.get("/chats/${chatOne.id}/messages?page=1&perPage=25") {
         header("Cookie", sessionCookie(userSession.sessionId))
       }
 
@@ -148,7 +148,7 @@ class ChatControllerTests : IntegrationTest() {
   fun shouldThrowErrorWhenRetrievingMessagesForNonExistingChat() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/chats/${UUID.randomUUID()}/messages") {
+      client.get("/chats/${UUID.randomUUID()}/messages?page=1&perPage=25") {
         header("Cookie", sessionCookie(userSession.sessionId))
       }
 
