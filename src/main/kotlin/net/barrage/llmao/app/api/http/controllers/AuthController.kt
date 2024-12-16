@@ -28,21 +28,27 @@ fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
     val form = call.receiveParameters()
     val loginPayload = LoginPayload.fromForm(form)
 
-    val (user, session) = service.authenticateUser(loginPayload)
+    val authenticationResult = service.authenticateUser(loginPayload)
 
-    call.sessions.set(SessionCookie(session.sessionId))
+    call.sessions.set(SessionCookie(authenticationResult.session.sessionId))
+
+    if (authenticationResult.userInfo.picture != null) {
+      call.response.cookies.append(
+        CookieFactory.createUserPictureCookie(authenticationResult.userInfo.picture)
+      )
+    }
 
     // Chonkit authorization
 
     val chonkitTokens =
       adapters.runIfEnabled<ChonkitAuthenticationService, ChonkitAuthentication?> { adapter ->
-        if (user.role != Role.ADMIN) {
+        if (authenticationResult.user.role != Role.ADMIN) {
           return@runIfEnabled null
         }
 
         val existingRefreshToken =
           call.request.cookies[CookieFactory.getRefreshTokenCookieName(), CookieEncoding.RAW]
-        val chonkitAuth = adapter.authenticate(user, existingRefreshToken)
+        val chonkitAuth = adapter.authenticate(authenticationResult.user, existingRefreshToken)
 
         val accessCookie = CookieFactory.createChonkitAccessTokenCookie(chonkitAuth.accessToken)
         val refreshCookie = CookieFactory.createChonkitRefreshTokenCookie(chonkitAuth.refreshToken)
@@ -67,6 +73,8 @@ fun Route.authRoutes(service: AuthenticationService, adapters: AdapterState) {
     service.logout(userSession.id)
 
     call.sessions.clear<SessionCookie>()
+
+    call.response.cookies.append(CookieFactory.createUserPictureExpiryCookie())
 
     val user =
       service.getUserForSession(userSession.id)

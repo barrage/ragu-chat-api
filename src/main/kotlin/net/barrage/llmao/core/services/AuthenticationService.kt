@@ -2,6 +2,7 @@ package net.barrage.llmao.core.services
 
 import java.util.*
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
+import net.barrage.llmao.core.auth.AuthenticationResult
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
@@ -26,7 +27,7 @@ class AuthenticationService(
   /**
    * Authenticate the user using the provider from the payload and establish a session upon success.
    */
-  suspend fun authenticateUser(login: LoginPayload): Pair<User, Session> {
+  suspend fun authenticateUser(login: LoginPayload): AuthenticationResult {
     val provider = providers.getProvider(login.provider)
 
     val userInfo = provider.authenticate(login)
@@ -49,7 +50,7 @@ class AuthenticationService(
 
     val session = sessionRepo.create(sessionId, user.id)
 
-    return Pair(user, session)
+    return AuthenticationResult(user, session, userInfo)
   }
 
   /**

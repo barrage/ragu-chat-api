@@ -180,10 +180,12 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
     Assertions.assertEquals(204, response.status.value)
     Assertions.assertTrue(response.headers.contains("Set-Cookie"))
     val cookies = response.setCookie()
-    Assertions.assertEquals(1, cookies.size)
-    val setCookie = cookies.first()
-    Assertions.assertTrue(setCookie.name == "kappi")
-    val cookieVal = setCookie.value
+    Assertions.assertEquals(2, cookies.size)
+    val profileCookie = cookies.firstOrNull { it.name == "user_picture" }!!
+    Assertions.assertEquals("https://not.set.com", profileCookie.value)
+    val sessionCookie = cookies.firstOrNull { it.name == "kappi" }!!
+    Assertions.assertTrue(sessionCookie.name == "kappi")
+    val cookieVal = sessionCookie.value
     Assertions.assertTrue(cookieVal.startsWith("id=%23s"))
     val sessionId = cookieVal.substringAfter("id=%23s")
     postgres.dslContext

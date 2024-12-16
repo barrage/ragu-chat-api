@@ -41,7 +41,7 @@ fun Application.configureOpenApi() {
     }
     security {
       securityScheme("cookieAuth") {
-        name = environment.config.property("session.cookieName").getString()
+        name = environment.config.property("cookies.session.cookieName").getString()
         type = AuthType.API_KEY
         location = AuthKeyLocation.COOKIE
       }
