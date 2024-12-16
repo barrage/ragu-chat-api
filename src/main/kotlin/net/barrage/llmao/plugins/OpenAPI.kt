@@ -36,7 +36,7 @@ fun Application.configureOpenApi() {
       description = "Local Server"
     }
     server {
-      url = "https://llmao-kotlin-api-staging.m2.barrage.beer"
+      url = "https://llmao-kotlin-api-development.barrage.dev"
       description = "Development Server"
     }
     security {
