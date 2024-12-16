@@ -7,6 +7,7 @@ import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
@@ -58,8 +59,8 @@ class ChatService(
     return ChatWithUserAndAgent(chat, user, agent.agent)
   }
 
-  fun getChat(chatId: KUUID): ChatWithMessages {
-    return chatRepository.getWithMessages(chatId)
+  fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {
+    return chatRepository.getWithMessages(chatId, pagination)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$chatId'")
   }
 
@@ -100,18 +101,18 @@ class ChatService(
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
   }
 
-  fun getMessages(id: KUUID, userId: KUUID? = null): List<Message> {
+  fun getMessages(id: KUUID, userId: KUUID? = null, pagination: Pagination): List<Message> {
     val messages =
       if (userId != null) {
-        chatRepository.getMessagesForUser(id, userId)
+        chatRepository.getMessagesForUser(id, userId, pagination)
       } else {
-        chatRepository.getMessages(id)
+        chatRepository.getMessages(id, pagination)
       }
 
-    if (messages.isEmpty()) {
+    if (messages.total == 0) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
     }
 
-    return messages
+    return messages.items
   }
 }

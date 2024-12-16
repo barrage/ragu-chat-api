@@ -6,7 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.app.api.http.queryPagination
+import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -36,7 +36,7 @@ fun Route.agentsRoutes(agentService: AgentService) {
 private fun getAllAgents(): OpenApiRoute.() -> Unit = {
   tags("agents")
   description = "Retrieve list of all agents"
-  request { queryPagination() }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {

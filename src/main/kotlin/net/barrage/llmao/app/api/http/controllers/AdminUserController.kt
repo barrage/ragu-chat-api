@@ -10,7 +10,7 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.app.api.http.queryPagination
+import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
@@ -66,7 +66,7 @@ fun Route.adminUserRoutes(userService: UserService) {
 private fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
   description = "Retrieve list of all users"
-  request { queryPagination() }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {

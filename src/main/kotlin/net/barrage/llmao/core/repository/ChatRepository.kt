@@ -12,6 +12,7 @@ import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.FailedMessage
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.Period
 import net.barrage.llmao.core.models.common.SortOrder
@@ -144,52 +145,86 @@ class ChatRepository(private val dslContext: DSLContext) {
       ?.toChat()
   }
 
-  fun getWithMessages(id: KUUID): ChatWithMessages? {
+  fun getWithMessages(id: KUUID, pagination: Pagination): ChatWithMessages? {
     val chat = get(id) ?: return null
-    val messages = getMessages(id)
-    return ChatWithMessages(chat, messages)
+    val messages = getMessages(id, pagination)
+    return ChatWithMessages(chat, messages.items)
   }
 
-  fun getMessages(chatId: KUUID): List<Message> {
-    return dslContext
-      .select(
-        MESSAGES.ID,
-        MESSAGES.SENDER,
-        MESSAGES.SENDER_TYPE,
-        MESSAGES.CONTENT,
-        MESSAGES.CHAT_ID,
-        MESSAGES.RESPONSE_TO,
-        MESSAGES.EVALUATION,
-        MESSAGES.CREATED_AT,
-        MESSAGES.UPDATED_AT,
-      )
-      .from(MESSAGES)
-      .where(MESSAGES.CHAT_ID.eq(chatId))
-      .orderBy(MESSAGES.CREATED_AT.desc())
-      .fetchInto(MessagesRecord::class.java)
-      .map { it.toMessage() }
+  fun getMessages(chatId: KUUID, pagination: Pagination): CountedList<Message> {
+    val (limit, offset) = pagination.limitOffset()
+
+    val total =
+      dslContext
+        .selectCount()
+        .from(MESSAGES)
+        .where(MESSAGES.CHAT_ID.eq(chatId))
+        .fetchOne(0, Int::class.java) ?: 0
+
+    val messages =
+      dslContext
+        .select(
+          MESSAGES.ID,
+          MESSAGES.SENDER,
+          MESSAGES.SENDER_TYPE,
+          MESSAGES.CONTENT,
+          MESSAGES.CHAT_ID,
+          MESSAGES.RESPONSE_TO,
+          MESSAGES.EVALUATION,
+          MESSAGES.CREATED_AT,
+          MESSAGES.UPDATED_AT,
+        )
+        .from(MESSAGES)
+        .where(MESSAGES.CHAT_ID.eq(chatId))
+        .orderBy(MESSAGES.CREATED_AT.desc())
+        .limit(limit)
+        .offset(offset)
+        .fetchInto(MessagesRecord::class.java)
+        .map { it.toMessage() }
+
+    return CountedList(total, messages)
   }
 
-  fun getMessagesForUser(chatId: KUUID, userId: KUUID): List<Message> {
-    return dslContext
-      .select(
-        MESSAGES.ID,
-        MESSAGES.SENDER,
-        MESSAGES.SENDER_TYPE,
-        MESSAGES.CONTENT,
-        MESSAGES.CHAT_ID,
-        MESSAGES.RESPONSE_TO,
-        MESSAGES.EVALUATION,
-        MESSAGES.CREATED_AT,
-        MESSAGES.UPDATED_AT,
-      )
-      .from(MESSAGES)
-      .join(CHATS)
-      .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
-      .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
-      .orderBy(MESSAGES.CREATED_AT.desc())
-      .fetchInto(MESSAGES)
-      .map { it.toMessage() }
+  fun getMessagesForUser(
+    chatId: KUUID,
+    userId: KUUID,
+    pagination: Pagination,
+  ): CountedList<Message> {
+    val (limit, offset) = pagination.limitOffset()
+
+    val total =
+      dslContext
+        .selectCount()
+        .from(MESSAGES)
+        .join(CHATS)
+        .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
+        .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
+        .fetchOne(0, Int::class.java) ?: 0
+
+    val messages =
+      dslContext
+        .select(
+          MESSAGES.ID,
+          MESSAGES.SENDER,
+          MESSAGES.SENDER_TYPE,
+          MESSAGES.CONTENT,
+          MESSAGES.CHAT_ID,
+          MESSAGES.RESPONSE_TO,
+          MESSAGES.EVALUATION,
+          MESSAGES.CREATED_AT,
+          MESSAGES.UPDATED_AT,
+        )
+        .from(MESSAGES)
+        .join(CHATS)
+        .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
+        .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
+        .orderBy(MESSAGES.CREATED_AT.desc())
+        .limit(limit)
+        .offset(offset)
+        .fetchInto(MESSAGES)
+        .map { it.toMessage() }
+
+    return CountedList(total, messages)
   }
 
   fun getMessage(chatId: KUUID, messageId: KUUID): Message? {

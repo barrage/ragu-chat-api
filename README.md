@@ -231,14 +231,16 @@ Server will always respond with a `chat_open` message of newly generated chat.
 
 Opens an existing chat with the specified chat UUID. If no chat is found with the provided UUID, the server will respond
 by throwing an error. If the chat is found, the server will respond with a `chat_open` message, but if user is already
-found to have an opened chat, the server will respond with a `chat_open` message for that existing chat.
+found to have an opened chat, the server will respond with a `chat_open` message for that existing chat. Optionally, the
+client can specify the initial history size to be used when opening the chat.
 
 ```json
 {
   "type": "system",
   "payload": {
     "type": "chat_open_existing",
-    "chatId": "chat_uuid"
+    "chatId": "chat_uuid",
+    "initialHistorySize": 10
   }
 }
 ```

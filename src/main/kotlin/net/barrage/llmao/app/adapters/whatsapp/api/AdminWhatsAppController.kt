@@ -17,7 +17,7 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
-import net.barrage.llmao.app.api.http.queryPagination
+import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
@@ -120,7 +120,7 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 private fun adminGetAllWhatsAppAgents(): OpenApiRoute.() -> Unit = {
   tags("admin/whatsapp/agents")
   description = "Retrieve list of all WhatsApp agents"
-  request { queryPagination() }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {
@@ -358,7 +358,7 @@ private fun adminDeleteWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
 private fun adminGetAllWhatsAppChats(): OpenApiRoute.() -> Unit = {
   tags("admin/whatsapp/chats")
   description = "Retrieve list of all WhatsApp chats"
-  request { queryPagination() }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {

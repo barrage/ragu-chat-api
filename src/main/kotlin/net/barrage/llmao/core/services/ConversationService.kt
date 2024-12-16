@@ -14,6 +14,7 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.types.KUUID
@@ -30,8 +31,8 @@ class ConversationService(
   private val agentRepository: AgentRepository,
   private val chatRepository: ChatRepository,
 ) {
-  fun getChat(chatId: KUUID): ChatWithMessages {
-    return chatRepository.getWithMessages(chatId)
+  fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {
+    return chatRepository.getWithMessages(chatId, pagination)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$chatId'")
   }
 
