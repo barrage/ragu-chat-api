@@ -24,7 +24,7 @@ class AdministrationService(
     return providers.list()
   }
 
-  fun dashboardCounts(): DashboardCounts {
+  suspend fun dashboardCounts(): DashboardCounts {
     return DashboardCounts(
       chatRepository.getChatCounts(),
       agentRepository.getAgentCounts(),

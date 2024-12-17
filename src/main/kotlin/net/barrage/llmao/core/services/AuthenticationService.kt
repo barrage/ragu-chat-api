@@ -19,7 +19,7 @@ class AuthenticationService(
   private val userRepo: UserRepository,
 ) {
 
-  fun getUserForSession(sessionId: KUUID): User? {
+  suspend fun getUserForSession(sessionId: KUUID): User? {
     val serverSession = sessionRepo.get(sessionId) ?: return null
     return userRepo.get(serverSession.userId)
   }
@@ -60,7 +60,7 @@ class AuthenticationService(
    * - The user cannot be found or their active flag is `false`
    * - The user's role is not ADMIN
    */
-  fun validateAdminSession(sessionId: KUUID): Pair<Session, User>? {
+  suspend fun validateAdminSession(sessionId: KUUID): Pair<Session, User>? {
     val serverSession = sessionRepo.get(sessionId)
 
     if (serverSession == null || !serverSession.isValid()) {
@@ -82,7 +82,7 @@ class AuthenticationService(
    * - The session does not exist or is expired
    * - The user cannot be found or their active flag is `false`
    */
-  fun validateUserSession(sessionId: KUUID): Pair<Session, User>? {
+  suspend fun validateUserSession(sessionId: KUUID): Pair<Session, User>? {
     val serverSession = sessionRepo.get(sessionId)
 
     if (serverSession == null || !serverSession.isValid()) {
