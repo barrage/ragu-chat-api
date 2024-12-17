@@ -382,6 +382,16 @@ class AgentRepository(private val dslContext: DSLContext) {
     }
   }
 
+  fun removeCollectionFromAll(collectionName: String, provider: String) {
+    dslContext
+      .deleteFrom(AGENT_COLLECTIONS)
+      .where(
+        AGENT_COLLECTIONS.COLLECTION.eq(collectionName)
+          .and(AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(provider))
+      )
+      .execute()
+  }
+
   private fun getCollections(id: KUUID): List<AgentCollection> {
     return dslContext
       .select(

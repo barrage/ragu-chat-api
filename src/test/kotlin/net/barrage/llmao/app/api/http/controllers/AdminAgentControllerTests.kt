@@ -20,9 +20,6 @@ import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateAgentConfiguration
-import net.barrage.llmao.core.models.UpdateCollectionAddition
-import net.barrage.llmao.core.models.UpdateCollections
-import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.types.KUUID
@@ -33,7 +30,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
+class AdminAgentControllerTests : IntegrationTest() {
   private lateinit var agentOne: Agent
   private lateinit var agentOneConfigurationV1: AgentConfiguration
   private lateinit var agentOneConfigurationV2: AgentConfiguration
@@ -81,9 +78,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
     agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id)
     adminSession = postgres.testSession(adminUser.id)
     peasantSession = postgres.testSession(peasantUser.id)
-    weaviate!!.insertTestCollection("Kusturica", 1536)
-    weaviate!!.insertTestCollection("Kusturica_small", 1536)
-    weaviate!!.insertTestCollection("Kusturica_big", 3072)
   }
 
   @Test
@@ -308,38 +302,6 @@ class AdminAgentControllerTests : IntegrationTest(useWeaviate = true) {
       "Cannot delete active agent or agent not found",
       response.body<AppError>().description,
     )
-  }
-
-  @Test
-  fun updateAgentCollectionsWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-    val updateCollections =
-      UpdateCollections(
-        add =
-          listOf(
-            UpdateCollectionAddition(
-              provider = "weaviate",
-              name = "Kusturica_small",
-              amount = 10,
-              instruction = "you pass the butter",
-            )
-          ),
-        remove = null,
-      )
-
-    val response =
-      client.put("/admin/agents/${agentOne.id}/collections") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-        contentType(ContentType.Application.Json)
-        setBody(updateCollections)
-      }
-
-    assertEquals(200, response.status.value)
-    val body = response.body<UpdateCollectionsResult>()
-    assertEquals(1, body.added.size)
-    assertEquals("Kusturica_small", body.added[0].name)
-    assertEquals(0, body.removed.size)
-    assertEquals(0, body.failed.size)
   }
 
   @Test

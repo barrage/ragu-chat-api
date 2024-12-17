@@ -52,7 +52,7 @@ class AgentService(
    * Get an agent with full configuration, with its instructions populated with placeholders for
    * display purposes.
    */
-  fun getDisplay(id: KUUID): AgentFull {
+  fun getFull(id: KUUID): AgentFull {
     return agentRepository.get(id)
   }
 
@@ -91,6 +91,10 @@ class AgentService(
     agentRepository.updateCollections(agentId, additions, update.remove)
 
     return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
+  }
+
+  fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
+    agentRepository.removeCollectionFromAll(collectionName, provider)
   }
 
   fun getAgentConfigurationVersions(
