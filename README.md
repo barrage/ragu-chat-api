@@ -412,3 +412,13 @@ More info can be found [here](https://www.infobip.com/docs/whatsapp/message-type
 ### Activation
 
 To use WhatsApp as a chat provider, you need to set the `ktor.features.whatsApp` configuration to `true`.
+
+## License
+
+This repository contains Kotlin API, a part of Ragu, covered under the [Apache License 2.0](LICENSE), except where noted (any Ragu logos or trademarks are not covered under the Apache License, and should be explicitly noted by a LICENSE file.)
+
+Kotlin API, a part of Ragu, is a product produced from this open source software, exclusively by Barrage d.o.o. It is distributed under our commercial terms.
+
+Others are allowed to make their own distribution of the software, but they cannot use any of the Ragu trademarks, cloud services, etc.
+
+We explicitly grant permission for you to make a build that includes our trademarks while developing Ragu itself. You may not publish or share the build, and you may not use that build to run Ragu for any other purpose.
