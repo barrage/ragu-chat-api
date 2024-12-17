@@ -47,7 +47,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
-        val agent = agentService.getDisplay(id)
+        val agent = agentService.getFull(id)
         call.respond(HttpStatusCode.OK, agent)
       }
 
@@ -110,6 +110,13 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
           }
         }
       }
+    }
+
+    delete("/collections", removeCollectionFromAllAgents()) {
+      val collection = call.queryParam("collection")!!
+      val provider = call.queryParam("provider")!!
+      agentService.removeCollectionFromAllAgents(collection, provider)
+      call.respond(HttpStatusCode.NoContent)
     }
   }
 }
@@ -268,6 +275,34 @@ private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating collections"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun removeCollectionFromAllAgents(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents")
+  description = "Remove a collection from all agents"
+  request {
+    queryParameter<String>("collection") {
+      description = "Collection name"
+      example("example") { value = "Kusturica_small" }
+    }
+    queryParameter<String>("provider") {
+      description = "Collection provider"
+      example("example") { value = "weaviate" }
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Collection removed successfully" }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid input"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while removing collection"
         body<List<AppError>> {}
       }
   }
