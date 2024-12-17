@@ -29,11 +29,11 @@ class AgentService(
   private val agentRepository: AgentRepository,
   private val chatRepository: ChatRepository,
 ) {
-  fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
+  suspend fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
     return agentRepository.getAll(pagination, showDeactivated)
   }
 
-  fun getAllAdmin(
+  suspend fun getAllAdmin(
     pagination: PaginationSort,
     name: String?,
     active: Boolean?,
@@ -41,11 +41,11 @@ class AgentService(
     return agentRepository.getAllAdmin(pagination, name, active)
   }
 
-  fun get(id: KUUID): AgentFull {
+  suspend fun get(id: KUUID): AgentFull {
     return agentRepository.get(id)
   }
 
-  fun getActive(id: KUUID): Agent {
+  suspend fun getActive(id: KUUID): Agent {
     return agentRepository.getActive(id)
   }
 
@@ -53,7 +53,7 @@ class AgentService(
    * Get an agent with full configuration, with its instructions populated with placeholders for
    * display purposes.
    */
-  fun getFull(id: KUUID): AgentFull {
+  suspend fun getFull(id: KUUID): AgentFull {
     return agentRepository.get(id)
   }
 
@@ -76,7 +76,7 @@ class AgentService(
     return agentRepository.update(id, update)
   }
 
-  fun delete(id: KUUID) {
+  suspend fun delete(id: KUUID) {
     val count = agentRepository.delete(id)
     if (count == 0) {
       throw AppError.api(
@@ -86,7 +86,10 @@ class AgentService(
     }
   }
 
-  fun updateCollections(agentId: KUUID, update: UpdateCollections): UpdateCollectionsResult {
+  suspend fun updateCollections(
+    agentId: KUUID,
+    update: UpdateCollections,
+  ): UpdateCollectionsResult {
     val (additions, failures) = processAdditions(providers, update)
 
     agentRepository.updateCollections(agentId, additions, update.remove)
@@ -94,11 +97,11 @@ class AgentService(
     return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
   }
 
-  fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
+  suspend fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
     agentRepository.removeCollectionFromAll(collectionName, provider)
   }
 
-  fun getAgentConfigurationVersions(
+  suspend fun getAgentConfigurationVersions(
     agentId: KUUID,
     pagination: PaginationSort,
   ): CountedList<AgentConfiguration> {
@@ -125,13 +128,13 @@ class AgentService(
     return chatRepository.getAgentConfigurationEvaluatedMessages(versionId, evaluation, pagination)
   }
 
-  fun rollbackVersion(agentId: KUUID, versionId: KUUID): AgentWithConfiguration {
+  suspend fun rollbackVersion(agentId: KUUID, versionId: KUUID): AgentWithConfiguration {
     agentRepository.getAgentConfiguration(agentId, versionId)
 
     return agentRepository.rollbackVersion(agentId, versionId)
   }
 
-  fun getAgent(agentId: KUUID): Agent {
+  suspend fun getAgent(agentId: KUUID): Agent {
     return agentRepository.getAgent(agentId)
   }
 }

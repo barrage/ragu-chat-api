@@ -11,7 +11,7 @@ class ChatFactory(
   private val conversationService: ConversationService,
 ) {
 
-  fun new(userId: KUUID, agentId: KUUID, channel: Channel): Chat {
+  suspend fun new(userId: KUUID, agentId: KUUID, channel: Channel): Chat {
     val id = KUUID.randomUUID()
     // Throws if the agent does not exist or is inactive
     agentService.getActive(agentId)

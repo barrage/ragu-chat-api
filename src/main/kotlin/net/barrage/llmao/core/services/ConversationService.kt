@@ -130,7 +130,7 @@ class ConversationService(
     return summary
   }
 
-  fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
+  suspend fun countHistoryTokens(history: List<ChatMessage>, agentId: KUUID): Int {
     val agentFull = agentRepository.get(agentId)
     val text = history.joinToString("\n") { it.content }
     return getEncoder(agentFull.configuration.model).encode(text).size()
