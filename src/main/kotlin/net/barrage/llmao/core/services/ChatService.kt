@@ -24,18 +24,18 @@ class ChatService(
   private val agentRepository: AgentRepository,
   private val userRepository: UserRepository,
 ) {
-  fun listChatsAdmin(
+  suspend fun listChatsAdmin(
     pagination: PaginationSort,
     userId: KUUID?,
   ): CountedList<ChatWithUserAndAgent> {
     return chatRepository.getAllAdmin(pagination, userId)
   }
 
-  fun listChats(pagination: PaginationSort, userId: KUUID): CountedList<Chat> {
+  suspend fun listChats(pagination: PaginationSort, userId: KUUID): CountedList<Chat> {
     return chatRepository.getAll(pagination, userId)
   }
 
-  fun getChatWithAgent(id: KUUID, userId: KUUID): ChatWithAgent {
+  suspend fun getChatWithAgent(id: KUUID, userId: KUUID): ChatWithAgent {
     val chat =
       chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
@@ -59,37 +59,37 @@ class ChatService(
     return ChatWithUserAndAgent(chat, user, agent.agent)
   }
 
-  fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {
+  suspend fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {
     return chatRepository.getWithMessages(chatId, pagination)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$chatId'")
   }
 
-  fun updateTitle(chatId: KUUID, title: String): Chat {
+  suspend fun updateTitle(chatId: KUUID, title: String): Chat {
     return chatRepository.updateTitle(chatId, title)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 
-  fun updateTitle(chatId: KUUID, userId: KUUID, title: String): Chat {
+  suspend fun updateTitle(chatId: KUUID, userId: KUUID, title: String): Chat {
     return chatRepository.updateTitle(chatId, userId, title)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 
-  fun deleteChat(id: KUUID) {
+  suspend fun deleteChat(id: KUUID) {
     chatRepository.delete(id)
   }
 
-  fun deleteChat(id: KUUID, userId: KUUID) {
+  suspend fun deleteChat(id: KUUID, userId: KUUID) {
     chatRepository.delete(id, userId)
   }
 
-  fun evaluateMessage(chatId: KUUID, messageId: KUUID, evaluation: Boolean): Message {
+  suspend fun evaluateMessage(chatId: KUUID, messageId: KUUID, evaluation: Boolean): Message {
     chatRepository.getMessage(chatId, messageId)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
     return chatRepository.evaluateMessage(messageId, evaluation)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
   }
 
-  fun evaluateMessage(
+  suspend fun evaluateMessage(
     chatId: KUUID,
     messageId: KUUID,
     userId: KUUID,
@@ -101,7 +101,7 @@ class ChatService(
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
   }
 
-  fun getMessages(id: KUUID, userId: KUUID? = null, pagination: Pagination): List<Message> {
+  suspend fun getMessages(id: KUUID, userId: KUUID? = null, pagination: Pagination): List<Message> {
     val messages =
       if (userId != null) {
         chatRepository.getMessagesForUser(id, userId, pagination)

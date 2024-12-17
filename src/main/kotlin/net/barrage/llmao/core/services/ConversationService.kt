@@ -31,7 +31,7 @@ class ConversationService(
   private val agentRepository: AgentRepository,
   private val chatRepository: ChatRepository,
 ) {
-  fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {
+  suspend fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {
     return chatRepository.getWithMessages(chatId, pagination)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$chatId'")
   }
@@ -66,7 +66,7 @@ class ConversationService(
     )
   }
 
-  fun processMessagePair(
+  suspend fun processMessagePair(
     chatId: KUUID,
     userId: KUUID,
     agentId: KUUID,
@@ -87,7 +87,12 @@ class ConversationService(
     return Pair(userMessage, assistantMessage)
   }
 
-  fun processFailedMessage(chatId: KUUID, userId: KUUID, prompt: String, reason: FinishReason) {
+  suspend fun processFailedMessage(
+    chatId: KUUID,
+    userId: KUUID,
+    prompt: String,
+    reason: FinishReason,
+  ) {
     chatRepository.insertFailedMessage(chatId, userId, prompt, reason.value)
   }
 
@@ -221,7 +226,7 @@ class ConversationService(
     throw AppError.api(ErrorReason.InvalidParameter, "Cannot find tokenizer for model '$llm'")
   }
 
-  fun storeChat(id: KUUID, userId: KUUID, agentId: KUUID, title: String?) {
+  suspend fun storeChat(id: KUUID, userId: KUUID, agentId: KUUID, title: String?) {
     chatRepository.insert(id, userId, agentId, title)
   }
 

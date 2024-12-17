@@ -24,7 +24,7 @@ class ChatFactory(
     )
   }
 
-  fun fromExisting(id: KUUID, channel: Channel, initialHistorySize: Int): Chat {
+  suspend fun fromExisting(id: KUUID, channel: Channel, initialHistorySize: Int): Chat {
     val chat = conversationService.getChat(id, Pagination(1, initialHistorySize))
 
     agentService.getActive(chat.chat.agentId)

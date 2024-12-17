@@ -32,7 +32,7 @@ class AdministrationService(
     )
   }
 
-  fun getChatHistoryCountsByAgent(period: Period): AgentChatTimeSeries {
+  suspend fun getChatHistoryCountsByAgent(period: Period): AgentChatTimeSeries {
     val agentChatsPerDate = chatRepository.agentsChatHistoryCounts(period)
 
     val timeSeries = AgentChatTimeSeries.builder<Long, String>(period, 0)
