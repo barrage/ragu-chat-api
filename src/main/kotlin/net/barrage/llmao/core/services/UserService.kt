@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.services
 
-import io.ktor.server.plugins.*
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
@@ -17,15 +16,16 @@ class UserService(
   private val usersRepository: UserRepository,
   private val sessionsRepository: SessionRepository,
 ) {
-  fun getAll(pagination: PaginationSort): CountedList<User> {
+  suspend fun getAll(pagination: PaginationSort): CountedList<User> {
     return usersRepository.getAll(pagination)
   }
 
-  fun get(id: KUUID): User {
-    return usersRepository.get(id) ?: throw NotFoundException("User not found")
+  suspend fun get(id: KUUID): User {
+    return usersRepository.get(id)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
   }
 
-  fun create(user: CreateUser): User {
+  suspend fun create(user: CreateUser): User {
     val existingUser = usersRepository.getByEmail(user.email)
 
     if (existingUser != null) {
@@ -35,8 +35,10 @@ class UserService(
     return usersRepository.create(user)
   }
 
-  fun updateUser(id: KUUID, update: UpdateUser): User {
-    val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  suspend fun updateUser(id: KUUID, update: UpdateUser): User {
+    val user: User =
+      usersRepository.get(id)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
 
     if (!user.active) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "User with id '$id'")
@@ -46,8 +48,10 @@ class UserService(
   }
 
   // TODO: Separate this out into an administration service.
-  fun updateAdmin(id: KUUID, update: UpdateUserAdmin, loggedInUserId: KUUID): User {
-    val user: User = usersRepository.get(id) ?: throw NotFoundException("User not found")
+  suspend fun updateAdmin(id: KUUID, update: UpdateUserAdmin, loggedInUserId: KUUID): User {
+    val user: User =
+      usersRepository.get(id)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
 
     if (id == loggedInUserId) {
       if (user.active != update.active) {
@@ -69,7 +73,7 @@ class UserService(
     return usersRepository.updateFull(id, update)
   }
 
-  fun delete(id: KUUID, loggedInUserId: KUUID) {
+  suspend fun delete(id: KUUID, loggedInUserId: KUUID) {
     if (id == loggedInUserId) {
       throw AppError.api(ErrorReason.CannotDeleteSelf, "Cannot delete self")
     }
@@ -80,7 +84,7 @@ class UserService(
         session?.let { sessionsRepository.expire(session.sessionId) }
       }
     } else {
-      throw NotFoundException("User not found")
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
     }
   }
 }

@@ -48,7 +48,7 @@ class ChatService(
     return ChatWithAgent(chat, agent.agent)
   }
 
-  fun getChatWithUserAndAgent(id: KUUID): ChatWithUserAndAgent {
+  suspend fun getChatWithUserAndAgent(id: KUUID): ChatWithUserAndAgent {
     val chat =
       chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 

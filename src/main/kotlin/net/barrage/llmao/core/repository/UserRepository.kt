@@ -2,6 +2,9 @@ package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import java.util.*
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
@@ -11,22 +14,18 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toUser
-import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
 
 class UserRepository(private val dslContext: DSLContext) {
-  fun getAll(pagination: PaginationSort): CountedList<User> {
+  suspend fun getAll(pagination: PaginationSort): CountedList<User> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()
     val total =
-      dslContext
-        .selectCount()
-        .from(USERS)
-        .where(USERS.DELETED_AT.isNull)
-        .fetchOne(0, Int::class.java) ?: 0
+      dslContext.selectCount().from(USERS).where(USERS.DELETED_AT.isNull).awaitSingle().value1()
+        ?: 0
 
     val users =
       dslContext
@@ -47,13 +46,14 @@ class UserRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch()
+        .fetchAsync()
+        .await()
         .map { it.into(USERS).toUser() }
 
     return CountedList(total, users)
   }
 
-  fun get(id: UUID): User? {
+  suspend fun get(id: UUID): User? {
     return dslContext
       .select(
         USERS.ID,
@@ -69,12 +69,12 @@ class UserRepository(private val dslContext: DSLContext) {
       )
       .from(USERS)
       .where(USERS.ID.eq(id).and(USERS.DELETED_AT.isNull))
-      .fetchOne()
+      .awaitSingle()
       ?.into(USERS)
       ?.toUser()
   }
 
-  fun getByEmail(email: String): User? {
+  suspend fun getByEmail(email: String): User? {
     return dslContext
       .select(
         USERS.ID,
@@ -90,12 +90,12 @@ class UserRepository(private val dslContext: DSLContext) {
       )
       .from(USERS)
       .where(USERS.EMAIL.eq(email).and(USERS.DELETED_AT.isNull))
-      .fetchOne()
+      .awaitFirstOrNull()
       ?.into(USERS)
       ?.toUser()
   }
 
-  fun create(user: CreateUser): User {
+  suspend fun create(user: CreateUser): User {
     return dslContext
       .insertInto(USERS)
       .set(USERS.EMAIL, user.email)
@@ -104,10 +104,12 @@ class UserRepository(private val dslContext: DSLContext) {
       .set(USERS.LAST_NAME, user.lastName)
       .set(USERS.ROLE, user.role.name)
       .returning()
-      .fetchOne(UsersRecord::toUser)!!
+      .awaitSingle()
+      .into(USERS)
+      .toUser()
   }
 
-  fun updateNames(id: UUID, update: UpdateUser): User {
+  suspend fun updateNames(id: UUID, update: UpdateUser): User {
     return dslContext
       .update(USERS)
       .set(USERS.FULL_NAME, DSL.coalesce(DSL.`val`(update.fullName), USERS.FULL_NAME))
@@ -115,10 +117,12 @@ class UserRepository(private val dslContext: DSLContext) {
       .set(USERS.LAST_NAME, DSL.coalesce(DSL.`val`(update.lastName), USERS.LAST_NAME))
       .where(USERS.ID.eq(id).and(USERS.DELETED_AT.isNull))
       .returning()
-      .fetchOne(UsersRecord::toUser)!!
+      .awaitSingle()
+      .into(USERS)
+      .toUser()
   }
 
-  fun updateFull(id: UUID, update: UpdateUserAdmin): User {
+  suspend fun updateFull(id: UUID, update: UpdateUserAdmin): User {
     return dslContext
       .update(USERS)
       .set(USERS.FULL_NAME, DSL.coalesce(DSL.`val`(update.fullName), USERS.FULL_NAME))
@@ -129,10 +133,12 @@ class UserRepository(private val dslContext: DSLContext) {
       .set(USERS.ROLE, DSL.coalesce(DSL.`val`(update.role?.name), USERS.ROLE))
       .where(USERS.ID.eq(id).and(USERS.DELETED_AT.isNull))
       .returning()
-      .fetchOne(UsersRecord::toUser)!!
+      .awaitSingle()
+      .into(USERS)
+      .toUser()
   }
 
-  fun delete(id: UUID): Boolean {
+  suspend fun delete(id: UUID): Boolean {
     return dslContext
       .update(USERS)
       .set(USERS.FULL_NAME, "deleted")
@@ -142,7 +148,7 @@ class UserRepository(private val dslContext: DSLContext) {
       .set(USERS.ACTIVE, false)
       .set(USERS.DELETED_AT, OffsetDateTime.now())
       .where(USERS.ID.eq(id))
-      .execute() == 1
+      .awaitSingle() == 1
   }
 
   private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
@@ -168,20 +174,18 @@ class UserRepository(private val dslContext: DSLContext) {
     return order
   }
 
-  fun getUserCounts(): UserCounts {
+  suspend fun getUserCounts(): UserCounts {
     val total: Int =
-      dslContext
-        .selectCount()
-        .from(USERS)
-        .where(USERS.DELETED_AT.isNull)
-        .fetchOne(0, Int::class.java) ?: 0
+      dslContext.selectCount().from(USERS).where(USERS.DELETED_AT.isNull).awaitSingle().value1()
+        ?: 0
 
     val active: Int =
       dslContext
         .selectCount()
         .from(USERS)
         .where(USERS.DELETED_AT.isNull.and(USERS.ACTIVE.isTrue))
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val inactive: Int = total - active
 
@@ -190,7 +194,8 @@ class UserRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(USERS)
         .where(USERS.DELETED_AT.isNull.and(USERS.ACTIVE.isTrue).and(USERS.ROLE.eq("ADMIN")))
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val user: Int = active - admin
 

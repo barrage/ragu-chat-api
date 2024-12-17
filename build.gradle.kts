@@ -9,7 +9,7 @@ val logbackVersion = "1.5.8"
 val postgresVersion = "42.7.4"
 val h2Version = "2.1.214"
 val exposedVersion = "0.52.0"
-val jooqVersion = "3.19.11"
+val jooqVersion = "3.19.16"
 val flywayVersion = "10.17.3"
 val junitVersion = "5.8.1"
 
@@ -65,6 +65,7 @@ dependencies {
   implementation("ch.qos.logback:logback-classic:$logbackVersion")
   implementation("org.postgresql:postgresql:$postgresVersion")
   implementation("org.liquibase:liquibase-core:4.29.2")
+  implementation("org.jooq:jooq-kotlin-coroutines:$jooqVersion")
 
   implementation("io.github.smiley4:ktor-swagger-ui:3.5.1")
   implementation("io.github.smiley4:schema-kenerator-core:1.5.0")
