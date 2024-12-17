@@ -1,6 +1,9 @@
 package net.barrage.llmao.core.repository
 
 import io.ktor.util.logging.*
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -20,9 +23,6 @@ import net.barrage.llmao.core.models.toAgentConfiguration
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.tables.records.AgentCollectionsRecord
-import net.barrage.llmao.tables.records.AgentConfigurationsRecord
-import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
@@ -30,11 +30,12 @@ import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
+import org.jooq.kotlin.coroutines.transactionCoroutine
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.repository.AgentRepository")
 
 class AgentRepository(private val dslContext: DSLContext) {
-  fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
+  suspend fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
     val order = getSortOrderAgent(pagination, admin = false)
     val (limit, offset) = pagination.limitOffset()
 
@@ -43,7 +44,8 @@ class AgentRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(AGENTS)
         .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val agents =
       dslContext
@@ -62,13 +64,14 @@ class AgentRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch()
+        .fetchAsync()
+        .await()
         .map { it.into(AGENTS).toAgent() }
 
     return CountedList(total, agents)
   }
 
-  fun getAllAdmin(
+  suspend fun getAllAdmin(
     pagination: PaginationSort,
     name: String? = null,
     active: Boolean? = null,
@@ -84,7 +87,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         ) // filter by status
 
     val total =
-      dslContext.selectCount().from(AGENTS).where(searchCondition).fetchOne(0, Int::class.java) ?: 0
+      dslContext.selectCount().from(AGENTS).where(searchCondition).awaitSingle().value1() ?: 0
 
     val agents =
       dslContext
@@ -118,7 +121,8 @@ class AgentRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch()
+        .fetchAsync()
+        .await()
         .map {
           AgentWithConfiguration(
             it.into(AGENTS).toAgent(),
@@ -129,7 +133,7 @@ class AgentRepository(private val dslContext: DSLContext) {
     return CountedList(total, agents)
   }
 
-  fun get(id: KUUID): AgentFull {
+  suspend fun get(id: KUUID): AgentFull {
     return dslContext
       .select(
         AGENTS.ID,
@@ -158,7 +162,8 @@ class AgentRepository(private val dslContext: DSLContext) {
       .leftJoin(AGENT_CONFIGURATIONS)
       .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
       .where(AGENTS.ID.eq(id))
-      .fetchOne { record ->
+      .awaitFirstOrNull()
+      ?.let { record ->
         val agent = record.into(AGENTS).toAgent()
         val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
         val collections = getCollections(id)
@@ -166,7 +171,7 @@ class AgentRepository(private val dslContext: DSLContext) {
       } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
   }
 
-  fun getActive(id: KUUID): Agent {
+  suspend fun getActive(id: KUUID): Agent {
     return dslContext
       .select(
         AGENTS.ID,
@@ -180,13 +185,13 @@ class AgentRepository(private val dslContext: DSLContext) {
       )
       .from(AGENTS)
       .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isTrue))
-      .fetchOne()
+      .awaitFirstOrNull()
       ?.into(AGENTS)
       ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
   }
 
-  fun create(create: CreateAgent): AgentWithConfiguration? {
-    return dslContext.transactionResult { tx ->
+  suspend fun create(create: CreateAgent): AgentWithConfiguration {
+    return dslContext.transactionCoroutine { tx ->
       val context = DSL.using(tx)
       val agentInit =
         context
@@ -196,7 +201,9 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.LANGUAGE, create.language)
           .set(AGENTS.ACTIVE, create.active)
           .returning()
-          .fetchOne(AgentsRecord::toAgent)!!
+          .awaitSingle()
+          .into(AGENTS)
+          .toAgent()
 
       val config =
         context
@@ -224,7 +231,9 @@ class AgentRepository(private val dslContext: DSLContext) {
             create.configuration.instructions?.summaryInstruction,
           )
           .returning()
-          .fetchOne(AgentConfigurationsRecord::toAgentConfiguration)!!
+          .awaitSingle()
+          .into(AGENT_CONFIGURATIONS)
+          .toAgentConfiguration()
 
       val agent =
         context
@@ -232,13 +241,15 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.ACTIVE_CONFIGURATION_ID, config.id)
           .where(AGENTS.ID.eq(agentInit.id))
           .returning()
-          .fetchOne(AgentsRecord::toAgent)!!
+          .awaitSingle()
+          .into(AGENTS)
+          .toAgent()
 
-      return@transactionResult AgentWithConfiguration(agent, config)
+      return@transactionCoroutine AgentWithConfiguration(agent, config)
     }
   }
 
-  fun update(id: KUUID, update: UpdateAgent): AgentWithConfiguration {
+  suspend fun update(id: KUUID, update: UpdateAgent): AgentWithConfiguration {
     val currentConfiguration =
       dslContext
         .select(AGENT_CONFIGURATIONS.asterisk())
@@ -246,12 +257,12 @@ class AgentRepository(private val dslContext: DSLContext) {
         .join(AGENTS)
         .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
         .where(AGENTS.ID.eq(id))
-        .fetchOne()
+        .awaitSingle()
         ?.into(AGENT_CONFIGURATIONS)
         ?.toAgentConfiguration()
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id' does not exist")
 
-    return dslContext.transactionResult { tx ->
+    return dslContext.transactionCoroutine { tx ->
       val context = DSL.using(tx)
 
       val configuration =
@@ -263,7 +274,8 @@ class AgentRepository(private val dslContext: DSLContext) {
               .selectCount()
               .from(AGENT_CONFIGURATIONS)
               .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(id))
-              .fetchOne(0, Int::class.java) ?: 1
+              .awaitSingle()
+              .value1() ?: 1
 
           dslContext
             .insertInto(AGENT_CONFIGURATIONS)
@@ -294,7 +306,9 @@ class AgentRepository(private val dslContext: DSLContext) {
                 ?: currentConfiguration.agentInstructions.summaryInstruction,
             )
             .returning()
-            .fetchOne(AgentConfigurationsRecord::toAgentConfiguration)!!
+            .awaitSingle()
+            .into(AGENT_CONFIGURATIONS)
+            .toAgentConfiguration()
         } else {
           currentConfiguration
         }
@@ -309,25 +323,27 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.LANGUAGE, DSL.coalesce(DSL.`val`(update.language), AGENTS.LANGUAGE))
           .where(AGENTS.ID.eq(id))
           .returning()
-          .fetchOne(AgentsRecord::toAgent)!!
+          .awaitSingle()
+          .into(AGENTS)
+          .toAgent()
 
-      return@transactionResult AgentWithConfiguration(agent, configuration)
+      return@transactionCoroutine AgentWithConfiguration(agent, configuration)
     }
   }
 
-  fun delete(id: KUUID): Int {
+  suspend fun delete(id: KUUID): Int {
     return dslContext
       .deleteFrom(AGENTS)
       .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isFalse))
-      .execute()
+      .awaitSingle()
   }
 
-  fun updateCollections(
+  suspend fun updateCollections(
     agentId: KUUID,
     add: List<CollectionInsert>?,
     remove: List<CollectionRemove>?,
   ) {
-    dslContext.transactionResult { tx ->
+    dslContext.transactionCoroutine { tx ->
       add?.let { additions ->
         try {
           tx
@@ -354,7 +370,8 @@ class AgentRepository(private val dslContext: DSLContext) {
                   .set(AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
               }
             )
-            .execute()
+            .executeAsync()
+            .await()
         } catch (e: DataAccessException) {
           LOG.error("Error adding collections", e)
           throw AppError.internal(e.message ?: "Failed to add collections")
@@ -377,7 +394,8 @@ class AgentRepository(private val dslContext: DSLContext) {
                   )
               }
             )
-            .execute()
+            .executeAsync()
+            .await()
         } catch (e: DataAccessException) {
           LOG.error("Error removing collections", e)
           throw AppError.internal(e.message ?: "Failed to remove collections")
@@ -386,17 +404,17 @@ class AgentRepository(private val dslContext: DSLContext) {
     }
   }
 
-  fun removeCollectionFromAll(collectionName: String, provider: String) {
+  suspend fun removeCollectionFromAll(collectionName: String, provider: String) {
     dslContext
       .deleteFrom(AGENT_COLLECTIONS)
       .where(
         AGENT_COLLECTIONS.COLLECTION.eq(collectionName)
           .and(AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(provider))
       )
-      .execute()
+      .awaitSingle()
   }
 
-  private fun getCollections(id: KUUID): List<AgentCollection> {
+  private suspend fun getCollections(id: KUUID): List<AgentCollection> {
     return dslContext
       .select(
         AGENT_COLLECTIONS.ID,
@@ -412,8 +430,9 @@ class AgentRepository(private val dslContext: DSLContext) {
       )
       .from(AGENT_COLLECTIONS)
       .where(AGENT_COLLECTIONS.AGENT_ID.eq(id))
-      .fetchInto(AgentCollectionsRecord::class.java)
-      .map { it.toAgentCollection() }
+      .fetchAsync()
+      .await()
+      .map { it.into(AGENT_COLLECTIONS).toAgentCollection() }
   }
 
   private fun getSortOrderAgent(
@@ -443,16 +462,11 @@ class AgentRepository(private val dslContext: DSLContext) {
     return order
   }
 
-  fun getAgentCounts(): AgentCounts {
-    val total: Int = dslContext.selectCount().from(AGENTS).fetchOne(0, Int::class.java) ?: 0
+  suspend fun getAgentCounts(): AgentCounts {
+    val total: Int = dslContext.selectCount().from(AGENTS).awaitSingle().value1() ?: 0
 
     val active: Int =
-      dslContext
-        .selectCount()
-        .from(AGENTS)
-        .where(AGENTS.ACTIVE.isTrue)
-        .groupBy(AGENTS.ACTIVE)
-        .fetchOne(0, Int::class.java) ?: 0
+      dslContext.selectCount().from(AGENTS).where(AGENTS.ACTIVE.isTrue).awaitSingle().value1() ?: 0
 
     val inactive = total - active
 
@@ -464,7 +478,8 @@ class AgentRepository(private val dslContext: DSLContext) {
         .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
         .where(AGENTS.ACTIVE.isTrue)
         .groupBy(AGENT_CONFIGURATIONS.LLM_PROVIDER)
-        .fetch { it }
+        .fetchAsync()
+        .await()
 
     val out = mutableMapOf<String, Int>()
 
@@ -475,7 +490,7 @@ class AgentRepository(private val dslContext: DSLContext) {
     return AgentCounts(total, active, inactive, out)
   }
 
-  fun getAgentConfigurationVersions(
+  suspend fun getAgentConfigurationVersions(
     agentId: KUUID,
     pagination: PaginationSort,
   ): CountedList<AgentConfiguration> {
@@ -493,7 +508,8 @@ class AgentRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(AGENT_CONFIGURATIONS)
         .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(agentId))
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val configurations =
       dslContext
@@ -517,13 +533,14 @@ class AgentRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch()
+        .fetchAsync()
+        .await()
         .map { it.into(AGENT_CONFIGURATIONS).toAgentConfiguration() }
 
     return CountedList(total, configurations)
   }
 
-  fun getAgentConfiguration(agentId: KUUID, versionId: KUUID): AgentConfiguration {
+  suspend fun getAgentConfiguration(agentId: KUUID, versionId: KUUID): AgentConfiguration {
     return dslContext
       .select(
         AGENT_CONFIGURATIONS.ID,
@@ -542,7 +559,7 @@ class AgentRepository(private val dslContext: DSLContext) {
       )
       .from(AGENT_CONFIGURATIONS)
       .where(AGENT_CONFIGURATIONS.AGENT_ID.eq(agentId).and(AGENT_CONFIGURATIONS.ID.eq(versionId)))
-      .fetchOne()
+      .awaitSingle()
       ?.into(AGENT_CONFIGURATIONS)
       ?.toAgentConfiguration()
       ?: throw AppError.api(
@@ -551,8 +568,8 @@ class AgentRepository(private val dslContext: DSLContext) {
       )
   }
 
-  fun rollbackVersion(agentId: KUUID, versionId: KUUID): AgentWithConfiguration {
-    return dslContext.transactionResult { tx ->
+  suspend fun rollbackVersion(agentId: KUUID, versionId: KUUID): AgentWithConfiguration {
+    return dslContext.transactionCoroutine { tx ->
       val context = DSL.using(tx)
 
       val configuration = getAgentConfiguration(agentId, versionId)
@@ -563,13 +580,15 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENTS.ACTIVE_CONFIGURATION_ID, versionId)
           .where(AGENTS.ID.eq(agentId))
           .returning()
-          .fetchOne(AgentsRecord::toAgent)!!
+          .awaitSingle()
+          .into(AGENTS)
+          .toAgent()
 
-      return@transactionResult AgentWithConfiguration(agent, configuration)
+      return@transactionCoroutine AgentWithConfiguration(agent, configuration)
     }
   }
 
-  fun getAgent(agentId: KUUID): Agent {
+  suspend fun getAgent(agentId: KUUID): Agent {
     return dslContext
       .select(
         AGENTS.ID,
@@ -583,7 +602,7 @@ class AgentRepository(private val dslContext: DSLContext) {
       )
       .from(AGENTS)
       .where(AGENTS.ID.eq(agentId))
-      .fetchOne()
+      .awaitSingle()
       ?.into(AGENTS)
       ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
   }
