@@ -99,15 +99,15 @@ class AuthenticationService(
   }
 
   /** Utility for development routes */
-  fun store(sessionId: KUUID, userId: KUUID) {
+  suspend fun store(sessionId: KUUID, userId: KUUID) {
     sessionRepo.create(sessionId, userId)
   }
 
-  fun get(sessionId: KUUID): Session? {
+  suspend fun get(sessionId: KUUID): Session? {
     return sessionRepo.get(sessionId)
   }
 
-  fun extend(sessionId: KUUID) {
+  suspend fun extend(sessionId: KUUID) {
     val serverSession = sessionRepo.get(sessionId) ?: return
 
     if (!serverSession.isValid()) {
@@ -117,7 +117,7 @@ class AuthenticationService(
     sessionRepo.extend(sessionId)
   }
 
-  fun logout(sessionId: KUUID) {
+  suspend fun logout(sessionId: KUUID) {
     sessionRepo.get(sessionId) ?: return
     sessionRepo.expire(sessionId)
   }

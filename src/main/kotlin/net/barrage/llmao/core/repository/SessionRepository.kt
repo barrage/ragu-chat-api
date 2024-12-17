@@ -1,6 +1,8 @@
 package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.toSessionData
@@ -11,7 +13,7 @@ import org.jooq.DSLContext
 
 @Serializable
 class SessionRepository(private val dslContext: DSLContext) {
-  fun create(sessionId: KUUID, userId: KUUID): Session {
+  suspend fun create(sessionId: KUUID, userId: KUUID): Session {
     val session =
       dslContext
         .insertInto(SESSIONS)
@@ -27,7 +29,7 @@ class SessionRepository(private val dslContext: DSLContext) {
           SESSIONS.UPDATED_AT,
           SESSIONS.EXPIRES_AT,
         )
-        .fetchOne()
+        .awaitSingle()
 
     // This can only happen on constraint failures. Since we
     // are generating a unique UUID every time, this should never
@@ -39,7 +41,7 @@ class SessionRepository(private val dslContext: DSLContext) {
     return session.toSessionData()
   }
 
-  fun get(id: KUUID): Session? {
+  suspend fun get(id: KUUID): Session? {
     return dslContext
       .select(
         SESSIONS.ID,
@@ -50,12 +52,12 @@ class SessionRepository(private val dslContext: DSLContext) {
       )
       .from(SESSIONS)
       .where(SESSIONS.ID.eq(id))
-      .fetchOne()
+      .awaitSingle()
       ?.into(SESSIONS)
       ?.toSessionData()
   }
 
-  fun getActiveByUserId(id: KUUID): List<Session?> {
+  suspend fun getActiveByUserId(id: KUUID): List<Session?> {
     return dslContext
       .select(
         SESSIONS.ID,
@@ -66,33 +68,34 @@ class SessionRepository(private val dslContext: DSLContext) {
       )
       .from(SESSIONS)
       .where(SESSIONS.USER_ID.eq(id).and(SESSIONS.EXPIRES_AT.gt(OffsetDateTime.now())))
-      .fetch()
+      .fetchAsync()
+      .await()
       .map { it.into(SESSIONS).toSessionData() }
   }
 
-  fun extend(id: KUUID) {
+  suspend fun extend(id: KUUID) {
     dslContext
       .update(SESSIONS)
       .set(SESSIONS.UPDATED_AT, OffsetDateTime.now())
       .set(SESSIONS.EXPIRES_AT, OffsetDateTime.now().plusDays(1))
       .where(SESSIONS.ID.eq(id))
-      .execute()
+      .awaitSingle()
   }
 
-  fun expire(id: KUUID) {
+  suspend fun expire(id: KUUID) {
     dslContext
       .update(SESSIONS)
       .set(SESSIONS.UPDATED_AT, OffsetDateTime.now())
       .set(SESSIONS.EXPIRES_AT, OffsetDateTime.now())
       .where(SESSIONS.ID.eq(id))
-      .execute()
+      .awaitSingle()
   }
 
   // TODO: implement cronjob to delete expired sessions
-  fun delete(): Int {
+  suspend fun delete(): Int {
     return dslContext
       .deleteFrom(SESSIONS)
       .where(SESSIONS.EXPIRES_AT.lt(OffsetDateTime.now()))
-      .execute()
+      .awaitSingle()
   }
 }
