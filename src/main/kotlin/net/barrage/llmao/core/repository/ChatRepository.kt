@@ -2,6 +2,9 @@ package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.AgentChatsOnDate
 import net.barrage.llmao.core.models.AgentConfigurationEvaluatedMessageCounts
 import net.barrage.llmao.core.models.Chat
@@ -23,9 +26,6 @@ import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.ChatsRecord
-import net.barrage.llmao.tables.records.FailedMessagesRecord
-import net.barrage.llmao.tables.records.MessagesRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.FAILED_MESSAGES
@@ -36,7 +36,7 @@ import org.jooq.SortField
 import org.jooq.impl.DSL
 
 class ChatRepository(private val dslContext: DSLContext) {
-  fun getAll(pagination: PaginationSort, userId: KUUID? = null): CountedList<Chat> {
+  suspend fun getAll(pagination: PaginationSort, userId: KUUID? = null): CountedList<Chat> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()
 
@@ -45,7 +45,9 @@ class ChatRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(CHATS)
         .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1()
+        ?.toInt() ?: 0
 
     val chats =
       dslContext
@@ -62,13 +64,14 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchInto(ChatsRecord::class.java)
-        .map { it.toChat() }
+        .fetchAsync()
+        .await()
+        .map { it.into(CHATS).toChat() }
 
     return CountedList(total, chats)
   }
 
-  fun getAllAdmin(
+  suspend fun getAllAdmin(
     pagination: PaginationSort,
     userId: KUUID? = null,
   ): CountedList<ChatWithUserAndAgent> {
@@ -80,7 +83,9 @@ class ChatRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(CHATS)
         .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1()
+        ?.toInt() ?: 0
 
     val chats =
       dslContext
@@ -118,6 +123,8 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
+        .fetchAsync()
+        .await()
         .map {
           ChatWithUserAndAgent(
             it.into(CHATS).toChat(),
@@ -129,7 +136,7 @@ class ChatRepository(private val dslContext: DSLContext) {
     return CountedList(total, chats)
   }
 
-  fun get(id: KUUID): Chat? {
+  suspend fun get(id: KUUID): Chat? {
     return dslContext
       .select(
         CHATS.ID,
@@ -141,17 +148,18 @@ class ChatRepository(private val dslContext: DSLContext) {
       )
       .from(CHATS)
       .where(CHATS.ID.eq(id))
-      .fetchOneInto(ChatsRecord::class.java)
+      .awaitFirstOrNull()
+      ?.into(CHATS)
       ?.toChat()
   }
 
-  fun getWithMessages(id: KUUID, pagination: Pagination): ChatWithMessages? {
+  suspend fun getWithMessages(id: KUUID, pagination: Pagination): ChatWithMessages? {
     val chat = get(id) ?: return null
     val messages = getMessages(id, pagination)
     return ChatWithMessages(chat, messages.items)
   }
 
-  fun getMessages(chatId: KUUID, pagination: Pagination): CountedList<Message> {
+  suspend fun getMessages(chatId: KUUID, pagination: Pagination): CountedList<Message> {
     val (limit, offset) = pagination.limitOffset()
 
     val total =
@@ -159,7 +167,8 @@ class ChatRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(MESSAGES)
         .where(MESSAGES.CHAT_ID.eq(chatId))
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val messages =
       dslContext
@@ -179,13 +188,14 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(MESSAGES.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
-        .fetchInto(MessagesRecord::class.java)
-        .map { it.toMessage() }
+        .fetchAsync()
+        .await()
+        .map { it.into(MESSAGES).toMessage() }
 
     return CountedList(total, messages)
   }
 
-  fun getMessagesForUser(
+  suspend fun getMessagesForUser(
     chatId: KUUID,
     userId: KUUID,
     pagination: Pagination,
@@ -199,7 +209,8 @@ class ChatRepository(private val dslContext: DSLContext) {
         .join(CHATS)
         .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
         .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val messages =
       dslContext
@@ -221,13 +232,14 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(MESSAGES.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
-        .fetchInto(MESSAGES)
-        .map { it.toMessage() }
+        .fetchAsync()
+        .await()
+        .map { it.into(MESSAGES).toMessage() }
 
     return CountedList(total, messages)
   }
 
-  fun getMessage(chatId: KUUID, messageId: KUUID): Message? {
+  suspend fun getMessage(chatId: KUUID, messageId: KUUID): Message? {
     return dslContext
       .select(
         MESSAGES.ID,
@@ -242,73 +254,73 @@ class ChatRepository(private val dslContext: DSLContext) {
       )
       .from(MESSAGES)
       .where(MESSAGES.ID.eq(messageId).and(MESSAGES.CHAT_ID.eq(chatId)))
-      .fetchOne()
+      .awaitFirstOrNull()
       ?.into(MESSAGES)
       ?.toMessage()
   }
 
-  fun evaluateMessage(id: KUUID, evaluation: Boolean): Message? {
+  suspend fun evaluateMessage(id: KUUID, evaluation: Boolean): Message? {
     return dslContext
       .update(MESSAGES)
       .set(MESSAGES.EVALUATION, evaluation)
       .set(MESSAGES.UPDATED_AT, OffsetDateTime.now())
       .where(MESSAGES.ID.eq(id))
       .returning()
-      .fetchOne(MessagesRecord::toMessage)
+      .awaitFirstOrNull()
+      ?.into(MESSAGES)
+      ?.toMessage()
   }
 
-  fun evaluateMessage(id: KUUID, userId: KUUID, evaluation: Boolean): Message? {
+  suspend fun evaluateMessage(id: KUUID, userId: KUUID, evaluation: Boolean): Message? {
     return dslContext
       .update(MESSAGES)
       .set(MESSAGES.EVALUATION, evaluation)
       .set(MESSAGES.UPDATED_AT, OffsetDateTime.now())
       .where(MESSAGES.ID.eq(id).and(MESSAGES.SENDER.eq(userId)))
       .returning()
-      .fetchOne(MessagesRecord::toMessage)
+      .awaitFirstOrNull()
+      ?.into(MESSAGES)
+      ?.toMessage()
   }
 
-  fun updateTitle(id: KUUID, title: String): Chat? {
+  suspend fun updateTitle(id: KUUID, title: String): Chat? {
     return dslContext
       .update(CHATS)
       .set(CHATS.TITLE, title)
       .set(CHATS.UPDATED_AT, OffsetDateTime.now())
       .where(CHATS.ID.eq(id))
       .returning()
-      .fetchOne(ChatsRecord::toChat)
+      .awaitFirstOrNull()
+      ?.into(CHATS)
+      ?.toChat()
   }
 
-  fun updateTitle(id: KUUID, userId: KUUID, title: String): Chat? {
+  suspend fun updateTitle(id: KUUID, userId: KUUID, title: String): Chat? {
     return dslContext
       .update(CHATS)
       .set(CHATS.TITLE, title)
       .set(CHATS.UPDATED_AT, OffsetDateTime.now())
       .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
       .returning()
-      .fetchOne(ChatsRecord::toChat)
+      .awaitFirstOrNull()
+      ?.into(CHATS)
+      ?.toChat()
   }
 
-  fun insert(id: KUUID, userId: KUUID, agentId: KUUID, title: String?): Chat? {
-    val chat =
-      dslContext
-        .insertInto(CHATS)
-        .set(CHATS.ID, id)
-        .set(CHATS.USER_ID, userId)
-        .set(CHATS.AGENT_ID, agentId)
-        .set(CHATS.TITLE, title)
-        .returning()
-        .fetchOne() ?: return null
-
-    return Chat(
-      id = chat.id!!,
-      userId = chat.userId,
-      agentId = chat.agentId,
-      title = chat.title,
-      createdAt = chat.createdAt!!,
-      updatedAt = chat.updatedAt!!,
-    )
+  suspend fun insert(id: KUUID, userId: KUUID, agentId: KUUID, title: String?): Chat? {
+    return dslContext
+      .insertInto(CHATS)
+      .set(CHATS.ID, id)
+      .set(CHATS.USER_ID, userId)
+      .set(CHATS.AGENT_ID, agentId)
+      .set(CHATS.TITLE, title)
+      .returning()
+      .awaitFirstOrNull()
+      ?.into(CHATS)
+      ?.toChat()
   }
 
-  fun insertFailedMessage(
+  suspend fun insertFailedMessage(
     chatId: KUUID,
     userId: KUUID,
     content: String,
@@ -321,10 +333,12 @@ class ChatRepository(private val dslContext: DSLContext) {
       .set(FAILED_MESSAGES.CONTENT, content)
       .set(FAILED_MESSAGES.FAIL_REASON, failReason)
       .returning()
-      .fetchOne(FailedMessagesRecord::toFailedMessage)
+      .awaitSingle()
+      ?.into(FAILED_MESSAGES)
+      ?.toFailedMessage()
   }
 
-  fun insertUserMessage(id: KUUID, userId: KUUID, proompt: String): Message {
+  suspend fun insertUserMessage(id: KUUID, userId: KUUID, proompt: String): Message {
     return dslContext
       .insertInto(MESSAGES)
       .set(MESSAGES.CHAT_ID, id)
@@ -332,10 +346,12 @@ class ChatRepository(private val dslContext: DSLContext) {
       .set(MESSAGES.SENDER_TYPE, "user")
       .set(MESSAGES.CONTENT, proompt)
       .returning()
-      .fetchOne(MessagesRecord::toMessage)!!
+      .awaitSingle()
+      ?.into(MESSAGES)
+      ?.toMessage()!!
   }
 
-  fun insertAssistantMessage(
+  suspend fun insertAssistantMessage(
     id: KUUID,
     agentConfigurationId: KUUID,
     response: String,
@@ -349,28 +365,32 @@ class ChatRepository(private val dslContext: DSLContext) {
       .set(MESSAGES.CONTENT, response)
       .set(MESSAGES.RESPONSE_TO, messageId)
       .returning()
-      .fetchOne(MessagesRecord::toMessage)!!
+      .awaitSingle()
+      ?.into(MESSAGES)
+      ?.toMessage()!!
   }
 
-  fun insertSystemMessage(id: KUUID, message: String): Message {
+  suspend fun insertSystemMessage(id: KUUID, message: String): Message {
     return dslContext
       .insertInto(MESSAGES)
       .set(MESSAGES.CHAT_ID, id)
       .set(MESSAGES.SENDER_TYPE, "system")
       .set(MESSAGES.CONTENT, message)
       .returning()
-      .fetchOne(MessagesRecord::toMessage)!!
+      .awaitSingle()
+      ?.into(MESSAGES)
+      ?.toMessage()!!
   }
 
-  fun delete(id: KUUID): Int {
-    return dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).execute()
+  suspend fun delete(id: KUUID): Int {
+    return dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).awaitSingle()
   }
 
-  fun delete(id: KUUID, userId: KUUID): Int {
+  suspend fun delete(id: KUUID, userId: KUUID): Int {
     return dslContext
       .deleteFrom(CHATS)
       .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
-      .execute()
+      .awaitSingle()
   }
 
   private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
@@ -394,8 +414,8 @@ class ChatRepository(private val dslContext: DSLContext) {
     return order
   }
 
-  fun getChatCounts(): ChatCounts {
-    val total = dslContext.selectCount().from(CHATS).fetchOne(0, Int::class.java) ?: 0
+  suspend fun getChatCounts(): ChatCounts {
+    val total = dslContext.selectCount().from(CHATS).awaitSingle().value1() ?: 0
 
     val rows =
       dslContext
@@ -404,7 +424,8 @@ class ChatRepository(private val dslContext: DSLContext) {
         .join(AGENTS)
         .on(CHATS.AGENT_ID.eq(AGENTS.ID))
         .groupBy(CHATS.AGENT_ID, AGENTS.NAME)
-        .fetch { it }
+        .fetchAsync()
+        .await()
 
     val chats = mutableListOf<ChatCount>()
 
@@ -423,7 +444,7 @@ class ChatRepository(private val dslContext: DSLContext) {
    * Returns a map of agent names to a map of dates to chat counts for the given period. The map is
    * { Agent -> { Date -> Count }}.
    */
-  fun agentsChatHistoryCounts(period: Period): List<AgentChatsOnDate> {
+  suspend fun agentsChatHistoryCounts(period: Period): List<AgentChatsOnDate> {
     val startDate =
       when (period) {
         Period.WEEK -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(6)
@@ -433,7 +454,7 @@ class ChatRepository(private val dslContext: DSLContext) {
       }
 
     return dslContext
-      .fetch(
+      .resultQuery(
         """
           WITH chat_date_count AS (
               SELECT 
@@ -455,6 +476,8 @@ class ChatRepository(private val dslContext: DSLContext) {
           ORDER BY chat_date_count.agent_id, chat_date_count.date
         """
       )
+      .fetchAsync()
+      .await()
       .map {
         AgentChatsOnDate(
           agentId = it.get("id", KUUID::class.java),
@@ -467,7 +490,7 @@ class ChatRepository(private val dslContext: DSLContext) {
       .filterNotNull()
   }
 
-  fun getAgentConfigurationMessageCounts(
+  suspend fun getAgentConfigurationMessageCounts(
     versionId: KUUID
   ): AgentConfigurationEvaluatedMessageCounts {
     val total =
@@ -475,14 +498,16 @@ class ChatRepository(private val dslContext: DSLContext) {
         .selectCount()
         .from(MESSAGES)
         .where(MESSAGES.SENDER.eq(versionId))
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val positive =
       dslContext
         .selectCount()
         .from(MESSAGES)
         .where(MESSAGES.SENDER.eq(versionId).and(MESSAGES.EVALUATION.isTrue))
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val negative = total - positive
 
@@ -490,7 +515,7 @@ class ChatRepository(private val dslContext: DSLContext) {
   }
 
   /** List all evaluated messages for a given agent configuration version. */
-  fun getAgentConfigurationEvaluatedMessages(
+  suspend fun getAgentConfigurationEvaluatedMessages(
     versionId: KUUID,
     evaluation: Boolean? = null,
     pagination: PaginationSort,
@@ -513,7 +538,8 @@ class ChatRepository(private val dslContext: DSLContext) {
               }
             )
         )
-        .fetchOne(0, Int::class.java) ?: 0
+        .awaitSingle()
+        .value1() ?: 0
 
     val messages =
       dslContext
@@ -543,7 +569,8 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetch()
+        .fetchAsync()
+        .await()
         .map { it.into(MESSAGES).toMessage() }
 
     return CountedList(count, messages)

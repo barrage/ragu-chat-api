@@ -105,7 +105,7 @@ class AgentService(
     return agentRepository.getAgentConfigurationVersions(agentId, pagination)
   }
 
-  fun getAgentConfigurationWithEvaluationCounts(
+  suspend fun getAgentConfigurationWithEvaluationCounts(
     agentId: KUUID,
     versionId: KUUID,
   ): AgentConfigurationWithEvaluationCounts {
@@ -114,7 +114,7 @@ class AgentService(
     return AgentConfigurationWithEvaluationCounts(agentConfiguration, configurationMessageCounts)
   }
 
-  fun getAgentConfigurationEvaluatedMessages(
+  suspend fun getAgentConfigurationEvaluatedMessages(
     agentId: KUUID,
     versionId: KUUID,
     evaluation: Boolean? = null,
