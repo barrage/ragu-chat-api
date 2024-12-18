@@ -147,6 +147,10 @@ class WhatsAppAdapter(
     return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
   }
 
+  suspend fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
+    repository.removeCollectionFromAllAgents(collectionName, provider)
+  }
+
   suspend fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgent {
     providers.validateSupportedConfigurationParams(
       llmProvider = update.configuration?.llmProvider,

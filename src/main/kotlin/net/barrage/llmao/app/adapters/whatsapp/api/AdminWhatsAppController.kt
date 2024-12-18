@@ -27,6 +27,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
+import net.barrage.llmao.plugins.queryParam
 
 fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
   route("/admin/whatsapp/agents") {
@@ -68,6 +69,13 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
         whatsAppAdapter.deleteAgent(agentId)
         call.respond(HttpStatusCode.NoContent)
       }
+    }
+
+    delete("/collections", adminDeleteCollectionFromAllWhatsAppAgents()) {
+      val collection = call.queryParam("collection")!!
+      val provider = call.queryParam("provider")!!
+      whatsAppAdapter.removeCollectionFromAllAgents(collection, provider)
+      call.respond(HttpStatusCode.NoContent)
     }
   }
 
@@ -252,6 +260,34 @@ private fun adminUpdateWhatsAppAgentCollections(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating collections"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun adminDeleteCollectionFromAllWhatsAppAgents(): OpenApiRoute.() -> Unit = {
+  tags("admin/whatsapp/agents")
+  description = "Remove a collection from all WhatsApp agents"
+  request {
+    queryParameter<String>("collection") {
+      description = "Collection name"
+      example("example") { value = "Kusturica_small" }
+    }
+    queryParameter<String>("provider") {
+      description = "Collection provider"
+      example("example") { value = "weaviate" }
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Collection removed successfully" }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid input"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while removing collection"
         body<List<AppError>> {}
       }
   }

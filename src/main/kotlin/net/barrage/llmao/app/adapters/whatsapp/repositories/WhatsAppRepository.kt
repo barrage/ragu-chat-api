@@ -385,6 +385,16 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
     }
   }
 
+  suspend fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
+    dslContext
+      .deleteFrom(WHATS_APP_AGENT_COLLECTIONS)
+      .where(
+        WHATS_APP_AGENT_COLLECTIONS.COLLECTION.eq(collectionName)
+          .and(WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(provider))
+      )
+      .awaitSingle()
+  }
+
   suspend fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgent {
     val currentAgent =
       dslContext
