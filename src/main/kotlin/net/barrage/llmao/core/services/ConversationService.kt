@@ -225,10 +225,16 @@ class ConversationService(
     chatRepository.insert(id, userId, agentId, title)
   }
 
-  suspend fun createAndUpdateTitle(chatId: KUUID, prompt: String, agentId: KUUID): String {
+  suspend fun createAndUpdateTitle(
+    chatId: KUUID,
+    prompt: String,
+    response: String,
+    agentId: KUUID,
+  ): String {
     val agentFull = agentRepository.get(agentId)
 
-    val titlePrompt = agentFull.configuration.agentInstructions.title(prompt)
+    val titlePrompt = agentFull.configuration.agentInstructions.title(prompt, response)
+
     LOG.trace("Created title prompt:\n{}", titlePrompt)
 
     val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)

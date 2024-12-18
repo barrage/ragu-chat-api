@@ -127,7 +127,7 @@ class Chat(
     }
 
     if (title.isNullOrBlank()) {
-      generateTitle(proompt)
+      generateTitle(proompt, response)
     }
 
     val messages: List<ChatMessage> =
@@ -143,8 +143,8 @@ class Chat(
     channel.emitServer(emitPayload)
   }
 
-  private suspend fun generateTitle(prompt: String) {
-    title = service.createAndUpdateTitle(id, prompt, agentId)
+  private suspend fun generateTitle(prompt: String, response: String) {
+    title = service.createAndUpdateTitle(id, prompt, response, agentId)
     channel.emitServer(ServerMessage.ChatTitle(id, title!!))
   }
 
