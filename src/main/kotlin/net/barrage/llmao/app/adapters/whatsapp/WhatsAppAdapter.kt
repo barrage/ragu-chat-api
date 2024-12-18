@@ -58,17 +58,21 @@ class WhatsAppAdapter(
     whatsAppApi = WhatsAppApi(apiClient)
   }
 
-  fun getNumbers(id: KUUID): List<WhatsAppNumber> {
+  suspend fun getNumbers(id: KUUID): List<WhatsAppNumber> {
     return repository.getNumbersByUserId(id)
   }
 
-  fun addNumber(id: KUUID, number: PhoneNumber): WhatsAppNumber {
+  suspend fun addNumber(id: KUUID, number: PhoneNumber): WhatsAppNumber {
     val response = repository.addNumber(id, number)
     sendWelcomeMessage(number.phoneNumber)
     return response
   }
 
-  fun updateNumber(userId: KUUID, numberId: KUUID, updateNumber: PhoneNumber): WhatsAppNumber {
+  suspend fun updateNumber(
+    userId: KUUID,
+    numberId: KUUID,
+    updateNumber: PhoneNumber,
+  ): WhatsAppNumber {
     val number = repository.getNumberById(numberId)
 
     if (number.userId != userId) {
@@ -83,7 +87,7 @@ class WhatsAppAdapter(
     return response
   }
 
-  fun deleteNumber(userId: KUUID, numberId: KUUID) {
+  suspend fun deleteNumber(userId: KUUID, numberId: KUUID) {
     val number = repository.getNumberById(numberId)
 
     if (number.userId != userId) {
@@ -98,11 +102,11 @@ class WhatsAppAdapter(
     }
   }
 
-  fun getAllAgents(pagination: PaginationSort): CountedList<WhatsAppAgent> {
+  suspend fun getAllAgents(pagination: PaginationSort): CountedList<WhatsAppAgent> {
     return repository.getAgents(pagination)
   }
 
-  fun getAgent(id: KUUID): WhatsAppAgentFull {
+  suspend fun getAgent(id: KUUID): WhatsAppAgentFull {
     return repository.getAgent(id)
   }
 
@@ -116,11 +120,11 @@ class WhatsAppAdapter(
       ?: throw AppError.api(ErrorReason.Internal, "Something went wrong while creating agent")
   }
 
-  fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
+  suspend fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
     return repository.getAllChats(pagination)
   }
 
-  fun getChatByUserId(userId: KUUID): WhatsAppChatWithUserAndMessages {
+  suspend fun getChatByUserId(userId: KUUID): WhatsAppChatWithUserAndMessages {
     val chat =
       repository.getChatByUserId(userId)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp chat not found")
@@ -128,11 +132,14 @@ class WhatsAppAdapter(
     return getChatWithMessages(chat.id)
   }
 
-  fun getChatWithMessages(id: KUUID): WhatsAppChatWithUserAndMessages {
+  suspend fun getChatWithMessages(id: KUUID): WhatsAppChatWithUserAndMessages {
     return repository.getChatWithMessages(id)
   }
 
-  fun updateCollections(agentId: KUUID, update: UpdateCollections): UpdateCollectionsResult {
+  suspend fun updateCollections(
+    agentId: KUUID,
+    update: UpdateCollections,
+  ): UpdateCollectionsResult {
     val (additions, failures) = processAdditions(providers, update)
 
     repository.updateCollections(agentId, additions, update.remove)
@@ -149,7 +156,7 @@ class WhatsAppAdapter(
     return repository.updateAgent(agentId, update)
   }
 
-  fun deleteAgent(agentId: KUUID) {
+  suspend fun deleteAgent(agentId: KUUID) {
     // This is to ensure the agent exists
     val agent = repository.getAgent(agentId)
     if (agent.agent.active) {
@@ -246,7 +253,7 @@ class WhatsAppAdapter(
             .templateName(template)
             .templateData(
               WhatsAppTemplateDataContent()
-                .body(WhatsAppTemplateBodyContent().addPlaceholdersItem("LLMAO"))
+                .body(WhatsAppTemplateBodyContent().addPlaceholdersItem("Ragu"))
             )
         )
 
@@ -268,7 +275,7 @@ class WhatsAppAdapter(
     }
   }
 
-  private fun getChat(userId: KUUID): WhatsAppChat {
+  private suspend fun getChat(userId: KUUID): WhatsAppChat {
     val chat = repository.getChatByUserId(userId)
     if (chat == null) {
       val id = KUUID.randomUUID()
@@ -278,7 +285,7 @@ class WhatsAppAdapter(
     return chat
   }
 
-  private fun storeMessages(
+  private suspend fun storeMessages(
     chatId: KUUID,
     userId: KUUID,
     agentId: KUUID,
