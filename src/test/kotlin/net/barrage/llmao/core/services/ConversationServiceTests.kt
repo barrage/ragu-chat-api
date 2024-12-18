@@ -47,7 +47,13 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyGeneratesChatTitle() = test {
     // Title responses are always the same regardless of the prompt
-    val response = service.createAndUpdateTitle(chat.id, "Test prompt - title", agent.id)
+    val response =
+      service.createAndUpdateTitle(
+        chat.id,
+        "Test prompt - title",
+        "Test response - title",
+        agent.id,
+      )
     assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
   }
 
@@ -152,10 +158,14 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
   fun createAndUpdateTitleCorrectlyIncorporatesAgentInstructions() = test {
     val prompt = "What are the best places to visit in Paris?"
 
-    val titlePrompt = agentConfiguration.agentInstructions.title(prompt)
+    val response =
+      "The Eiffel Tower, the Louvre, and the Notre-Dame Cathedral are some of the best places to visit in Paris."
+
+    val titlePrompt = agentConfiguration.agentInstructions.title(prompt, response)
 
     assertTrue(titlePrompt.contains("Custom title instruction"))
     assertTrue(titlePrompt.contains(prompt))
+    assertTrue(titlePrompt.contains(response))
   }
 
   @Test
@@ -165,9 +175,13 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
 
     val prompt = "What are the best places to visit in Paris?"
 
-    val titlePrompt = defaultAgentConfiguration.agentInstructions.title(prompt)
+    val response =
+      "The Eiffel Tower, the Louvre, and the Notre-Dame Cathedral are some of the best places to visit in Paris."
+
+    val titlePrompt = defaultAgentConfiguration.agentInstructions.title(prompt, response)
 
     assertTrue(titlePrompt.contains("Create a short title based on the examples below"))
     assertTrue(titlePrompt.contains(prompt))
+    assertTrue(titlePrompt.contains(response))
   }
 }

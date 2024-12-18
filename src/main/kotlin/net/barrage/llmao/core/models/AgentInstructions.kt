@@ -38,9 +38,9 @@ data class AgentInstructions(
       .trimMargin()
   }
 
-  fun title(proompt: String): String {
+  fun title(proompt: String, response: String): String {
     if (titleInstruction != null) {
-      return "$titleInstruction\nPrompt: \"\"\"$proompt\"\"\"\nTitle:"
+      return "$titleInstruction\nPrompt: \"\"\"$proompt\"\"\"\nResponse: \"\"\"$response\"\"\"\nTitle:"
     }
 
     return """
@@ -49,10 +49,13 @@ data class AgentInstructions(
        |Generate the title as a single statement in english language.
 
        |Prompt: What is TCP?
+       |Response: Transmission Control Protocol is a protocol used for reliable data transmission over the internet. It is used to ensure that data is not lost or corrupted during transmission.
        |Title: Explaining TCP
        |Prompt: I am Bedga
+       |Response: Bedga is a person. Bedga writes code, creates music, and is a great person. Bedga is born in Croatia.
        |Title: Conversation about Bedga
        |Prompt: $proompt
+       |Response: $response
        |Title:
     """
       .trimMargin()
