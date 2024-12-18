@@ -6,6 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
@@ -248,25 +249,88 @@ class AdminWhatsAppControllerTests :
         remove = null,
       )
 
-    val response =
+    val responseOne =
       client.put("/admin/whatsapp/agents/${whatsAppAgentOne.id}/collections") {
         header("Cookie", sessionCookie(adminSession.sessionId))
         header("Content-Type", "application/json")
         setBody(updateCollections)
       }
 
-    assertEquals(200, response.status.value)
+    assertEquals(200, responseOne.status.value)
 
-    val response2 =
+    val responseTwo =
       client.get("/admin/whatsapp/agents/${whatsAppAgentOne.id}") {
         header("Cookie", sessionCookie(adminSession.sessionId))
       }
 
-    assertEquals(200, response2.status.value)
-    val body = response2.body<WhatsAppAgentFull>()
+    assertEquals(200, responseTwo.status.value)
+    val body = responseTwo.body<WhatsAppAgentFull>()
     assertEquals(1, body.collections.size)
     assertEquals("Kusturica", body.collections[0].collection)
     assertEquals(10, body.collections[0].amount)
+  }
+
+  @Test
+  fun adminRemoveCollectionFromAllWhatsAppAgents() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val updateCollections =
+      UpdateCollections(
+        add =
+          listOf(
+            UpdateCollectionAddition(
+              name = "Kusturica",
+              amount = 10,
+              instruction = "you pass the butter",
+              provider = "weaviate",
+            )
+          ),
+        remove = null,
+      )
+
+    val responseOne =
+      client.put("/admin/whatsapp/agents/${whatsAppAgentOne.id}/collections") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "application/json")
+        setBody(updateCollections)
+      }
+    assertEquals(200, responseOne.status.value)
+
+    val responseTwo =
+      client.put("/admin/whatsapp/agents/${whatsAppAgentTwo.id}/collections") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "application/json")
+        setBody(updateCollections)
+      }
+    assertEquals(200, responseTwo.status.value)
+
+    val agentOneBefore =
+      (app.adapters.adapters[WhatsAppAdapter::class] as? WhatsAppAdapter)?.getAgent(
+        whatsAppAgentOne.id
+      )
+    assertEquals(1, agentOneBefore!!.collections.size)
+
+    val agentTwoBefore =
+      (app.adapters.adapters[WhatsAppAdapter::class] as? WhatsAppAdapter)?.getAgent(
+        whatsAppAgentTwo.id
+      )
+    assertEquals(1, agentTwoBefore!!.collections.size)
+
+    val response =
+      client.delete("/admin/whatsapp/agents/collections?collection=Kusturica&provider=weaviate") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(204, response.status.value)
+    val agentOneAfter =
+      (app.adapters.adapters[WhatsAppAdapter::class] as? WhatsAppAdapter)?.getAgent(
+        whatsAppAgentOne.id
+      )
+    assertEquals(0, agentOneAfter!!.collections.size)
+    val agentTwoAfter =
+      (app.adapters.adapters[WhatsAppAdapter::class] as? WhatsAppAdapter)?.getAgent(
+        whatsAppAgentTwo.id
+      )
+    assertEquals(0, agentTwoAfter!!.collections.size)
   }
 
   @Test
