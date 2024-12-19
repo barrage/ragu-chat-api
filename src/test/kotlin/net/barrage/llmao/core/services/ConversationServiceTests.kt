@@ -167,9 +167,7 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
 
     val titlePrompt = defaultAgentConfiguration.agentInstructions.title(prompt)
 
-    assertTrue(
-      titlePrompt.contains("Create a short and descriptive title based on the prompt below")
-    )
+    assertTrue(titlePrompt.contains("Create a short title based on the examples below"))
     assertTrue(titlePrompt.contains(prompt))
   }
 }

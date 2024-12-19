@@ -32,10 +32,10 @@ data class AgentInstructions(
     }
 
     return """
-        Use the instructions surrounded by triple quotes to respond to the prompt surrounded by triple quotes.
-        Also use the information from the current conversation to respond if it is relevant.
-        If you do not know something, admit so."""
-      .trimIndent()
+        |Use the instructions surrounded by triple quotes to respond to the prompt surrounded by triple quotes.
+        |Also use the information from the current conversation to respond if it is relevant.
+        |If you do not know something, admit so."""
+      .trimMargin()
   }
 
   fun title(proompt: String): String {
@@ -44,18 +44,18 @@ data class AgentInstructions(
     }
 
     return """
-        Create a short and descriptive title based on the prompt below, denoted by triple quotes.
-        The examples below are in english language.
-        You will generate the title as a single statement in english language.
+       |Create a short title based on the examples below.
+       |The examples below are in english language.
+       |Generate the title as a single statement in english language.
 
-        Prompt: What is TCP?
-        Title: Explaining TCP
-        Prompt: I am Bedga
-        Title: Conversation about Bedga
-        Prompt: ${"\"\"\""}$proompt${"\"\"\""}
-        Title:
+       |Prompt: What is TCP?
+       |Title: Explaining TCP
+       |Prompt: I am Bedga
+       |Title: Conversation about Bedga
+       |Prompt: $proompt
+       |Title:
     """
-      .trimIndent()
+      .trimMargin()
   }
 
   fun language(): String {
@@ -64,10 +64,10 @@ data class AgentInstructions(
     }
 
     return """
-      You do not speak any language other than english.
-      You will disregard the original prompt language and answer exclusively in english language.
+      |You do not speak any language other than english.
+      |You will disregard the original prompt language and answer exclusively in english language.
     """
-      .trimIndent()
+      .trimMargin()
   }
 
   fun summary(history: String): String {
@@ -76,16 +76,16 @@ data class AgentInstructions(
     }
 
     return """
-      Create a summary for the conversation below denoted by triple quotes.
-      The summary language must be in english language.
+      |Create a summary for the conversation below denoted by triple quotes.
+      |The summary language must be in english language.
 
-      Desired format:
-      Summary: <summarized_conversation>
+      |Desired format:
+      |Summary: <summarized_conversation>
 
-      Conversation: ${"\"\"\""}
-      $history
-      ${"\"\"\""}
+      |Conversation: ${"\"\"\""}
+      |$history
+      |${"\"\"\""}
     """
-      .trimIndent()
+      .trimMargin()
   }
 }
