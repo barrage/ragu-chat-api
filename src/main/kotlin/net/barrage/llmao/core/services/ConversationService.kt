@@ -197,12 +197,15 @@ class ConversationService(
   private fun userMessage(
     agentConfig: AgentConfiguration,
     prompt: String,
-    instructions: String,
+    collectionInstructions: String,
   ): ChatMessage {
     val base = agentConfig.agentInstructions.basePrompt()
 
-    val message =
-      "$base\nInstructions: ${"\"\"\""}\n$instructions\n${"\"\"\""}\nPrompt: ${"\"\"\""}\n$prompt\n${"\"\"\""}"
+    val instructions =
+      if (collectionInstructions.isEmpty()) ""
+      else "Instructions: ${"\"\"\""}\n$collectionInstructions\n${"\"\"\""}\n"
+
+    val message = "$base\n${instructions}Prompt: ${"\"\"\""}\n$prompt\n${"\"\"\""}"
 
     return ChatMessage.user(message)
   }
