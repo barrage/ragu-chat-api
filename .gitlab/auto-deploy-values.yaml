@@ -120,7 +120,7 @@ prometheus:
 livenessProbe:
   enabled: true
   path: "/__health"
-  initialDelaySeconds: 15
+  initialDelaySeconds: 45
   timeoutSeconds: 15
   scheme: "HTTP"
   probeType: "httpGet"
@@ -128,7 +128,7 @@ livenessProbe:
 readinessProbe:
   enabled: true
   path: "/__health"
-  initialDelaySeconds: 5
+  initialDelaySeconds: 45
   timeoutSeconds: 3
   scheme: "HTTP"
   probeType: "httpGet"
@@ -159,7 +159,7 @@ postgresql:
 resources:
   limits:
     cpu: 1
-    memory: 512Mi
+    memory: 1Gi
   requests:
     cpu: 250m
     memory: 128Mi
@@ -287,9 +287,9 @@ workers: { }
   #   - /bin/herokuish
   #   - procfile
   #   - start
-  #   - stop_worker
-  #   extraVolumes: []
-  #   extraVolumeMounts: []
+#   - stop_worker
+#   extraVolumes: []
+#   extraVolumeMounts: []
 #   extraEnv: []
 #   extraEnvFrom: []
 
@@ -318,9 +318,9 @@ cronjobs: { }
   #     timeoutSeconds: 3
   #     failureThreshold: 3
   #     periodSeconds: 10
-  #     scheme: "HTTP"
-  #     probeType: "httpGet"
-  #   extraVolumes: []
+#     scheme: "HTTP"
+#     probeType: "httpGet"
+#   extraVolumes: []
 #   extraVolumeMounts: []
 #   extraEnvFrom: []
 
