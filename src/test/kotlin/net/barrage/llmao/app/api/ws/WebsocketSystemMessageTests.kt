@@ -2,6 +2,7 @@ package net.barrage.llmao.app.api.ws
 
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.chatSession
 import net.barrage.llmao.core.models.Agent
@@ -27,10 +28,12 @@ class WebsocketSystemMessageTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    agent = postgres.testAgent()
-    agentConfiguration = postgres.testAgentConfiguration(agentId = agent.id)
-    user = postgres.testUser(email = "not@important.org", admin = false)
-    session = postgres.testSession(user.id)
+    runBlocking {
+      agent = postgres.testAgent()
+      agentConfiguration = postgres.testAgentConfiguration(agentId = agent.id)
+      user = postgres.testUser(email = "not@important.org", admin = false)
+      session = postgres.testSession(user.id)
+    }
   }
 
   @Test

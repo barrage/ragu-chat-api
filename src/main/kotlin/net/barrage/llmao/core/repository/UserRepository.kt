@@ -2,7 +2,9 @@ package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import java.util.*
-import kotlinx.coroutines.future.await
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.CreateUser
@@ -46,9 +48,9 @@ class UserRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(USERS).toUser() }
+        .toList()
 
     return CountedList(total, users)
   }
@@ -69,7 +71,7 @@ class UserRepository(private val dslContext: DSLContext) {
       )
       .from(USERS)
       .where(USERS.ID.eq(id).and(USERS.DELETED_AT.isNull))
-      .awaitSingle()
+      .awaitFirstOrNull()
       ?.into(USERS)
       ?.toUser()
   }

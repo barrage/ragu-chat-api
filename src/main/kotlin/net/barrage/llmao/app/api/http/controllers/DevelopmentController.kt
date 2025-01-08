@@ -41,6 +41,7 @@ fun Route.devController(
       authService.store(sessionId, userId)
 
       val user = userService.get(userId)
+
       call.sessions.set(SessionCookie(sessionId))
 
       val chonkitAuth =

@@ -7,6 +7,7 @@ import kotlin.random.Random
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
 import net.barrage.llmao.COMPLETIONS_STREAM_LONG_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
@@ -43,8 +44,10 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
 
   @BeforeAll
   fun setup() {
-    user = postgres.testUser(email = "not@important.org", admin = false)
-    session = postgres.testSession(user.id)
+    runBlocking {
+      user = postgres.testUser(email = "not@important.org", admin = false)
+      session = postgres.testSession(user.id)
+    }
   }
 
   /**
@@ -347,7 +350,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
 
   // Valid and invalid here refer to configuration, not the actual models and objects.
 
-  private fun createValidAgent(): AgentFull {
+  private suspend fun createValidAgent(): AgentFull {
     val validAgent = postgres.testAgent()
 
     val validAgentConfiguration =
@@ -371,7 +374,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
     return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection))
   }
 
-  private fun createInvalidAgent(): AgentFull {
+  private suspend fun createInvalidAgent(): AgentFull {
     val invalidAgent = postgres.testAgent()
 
     val invalidAgentConfiguration =

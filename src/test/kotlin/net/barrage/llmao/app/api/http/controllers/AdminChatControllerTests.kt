@@ -6,6 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.util.*
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
@@ -42,18 +43,20 @@ class AdminChatControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    user = postgres.testUser(email = "not@important.org", admin = false)
-    userAdmin = postgres.testUser(admin = true)
-    userSession = postgres.testSession(user.id)
-    userAdminSession = postgres.testSession(userAdmin.id)
-    agent = postgres.testAgent(active = true)
-    agentConfiguration = postgres.testAgentConfiguration(agent.id)
-    chatOne = postgres.testChat(user.id, agent.id)
-    chatTwo = postgres.testChat(user.id, agent.id)
-    chatThree = postgres.testChat(userAdmin.id, agent.id)
-    messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
-    messageTwo = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
-    chatRepository = ChatRepository(postgres.dslContext)
+    runBlocking {
+      user = postgres.testUser(email = "not@important.org", admin = false)
+      userAdmin = postgres.testUser(admin = true)
+      userSession = postgres.testSession(user.id)
+      userAdminSession = postgres.testSession(userAdmin.id)
+      agent = postgres.testAgent(active = true)
+      agentConfiguration = postgres.testAgentConfiguration(agent.id)
+      chatOne = postgres.testChat(user.id, agent.id)
+      chatTwo = postgres.testChat(user.id, agent.id)
+      chatThree = postgres.testChat(userAdmin.id, agent.id)
+      messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
+      messageTwo = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
+      chatRepository = ChatRepository(postgres.dslContext)
+    }
   }
 
   @Test

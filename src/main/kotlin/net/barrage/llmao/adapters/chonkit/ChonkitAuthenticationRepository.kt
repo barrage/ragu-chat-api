@@ -1,6 +1,8 @@
 package net.barrage.llmao.adapters.chonkit
 
 import java.time.OffsetDateTime
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.CHONKIT_SESSIONS
 import org.jooq.DSLContext
@@ -13,7 +15,7 @@ class ChonkitAuthenticationRepository(private val dsl: DSLContext) {
    * @param refreshToken The refresh token to search for.
    * @return The active session, or `null` if none exists.
    */
-  fun getActiveSession(userId: KUUID, refreshToken: String): ChonkitSession? {
+  suspend fun getActiveSession(userId: KUUID, refreshToken: String): ChonkitSession? {
     return dsl
       .selectFrom(CHONKIT_SESSIONS)
       .where(
@@ -21,11 +23,11 @@ class ChonkitAuthenticationRepository(private val dsl: DSLContext) {
           .and(CHONKIT_SESSIONS.REFRESH_TOKEN.eq(refreshToken))
           .and(CHONKIT_SESSIONS.EXPIRES_AT.gt(OffsetDateTime.now()))
       )
-      .fetchOne()
+      .awaitFirstOrNull()
       ?.toChonkitSession()
   }
 
-  fun insertNewSession(
+  suspend fun insertNewSession(
     userId: KUUID,
     refreshToken: String,
     keyName: String,
@@ -40,21 +42,21 @@ class ChonkitAuthenticationRepository(private val dsl: DSLContext) {
       .set(CHONKIT_SESSIONS.KEY_VERSION, keyVersion)
       .set(CHONKIT_SESSIONS.EXPIRES_AT, expiresAt)
       .returning()
-      .fetchOne()
+      .awaitSingle()
       ?.toChonkitSession()
   }
 
-  fun removeSingleSession(userId: KUUID, refreshToken: String): Int {
+  suspend fun removeSingleSession(userId: KUUID, refreshToken: String): Int {
     return dsl
       .deleteFrom(CHONKIT_SESSIONS)
       .where(
         CHONKIT_SESSIONS.USER_ID.eq(userId).and(CHONKIT_SESSIONS.REFRESH_TOKEN.eq(refreshToken))
       )
-      .execute()
+      .awaitSingle()
   }
 
   /** Delete all sessions (refresh tokens) for the given user. */
-  fun removeAllSessions(userId: KUUID): Int {
-    return dsl.deleteFrom(CHONKIT_SESSIONS).where(CHONKIT_SESSIONS.USER_ID.eq(userId)).execute()
+  suspend fun removeAllSessions(userId: KUUID): Int {
+    return dsl.deleteFrom(CHONKIT_SESSIONS).where(CHONKIT_SESSIONS.USER_ID.eq(userId)).awaitSingle()
   }
 }

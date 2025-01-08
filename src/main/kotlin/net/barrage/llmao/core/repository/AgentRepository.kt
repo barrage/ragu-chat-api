@@ -1,8 +1,12 @@
 package net.barrage.llmao.core.repository
 
 import io.ktor.util.logging.*
-import kotlinx.coroutines.future.await
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitLast
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentCollection
@@ -30,6 +34,7 @@ import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
+import org.jooq.impl.DSL.excluded
 import org.jooq.kotlin.coroutines.transactionCoroutine
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.repository.AgentRepository")
@@ -64,9 +69,9 @@ class AgentRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(AGENTS).toAgent() }
+        .toList()
 
     return CountedList(total, agents)
   }
@@ -121,14 +126,14 @@ class AgentRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map {
           AgentWithConfiguration(
             it.into(AGENTS).toAgent(),
             it.into(AGENT_CONFIGURATIONS).toAgentConfiguration(),
           )
         }
+        .toList()
 
     return CountedList(total, agents)
   }
@@ -162,7 +167,8 @@ class AgentRepository(private val dslContext: DSLContext) {
       .leftJoin(AGENT_CONFIGURATIONS)
       .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
       .where(AGENTS.ID.eq(id))
-      .awaitFirstOrNull()
+      .asFlow()
+      .firstOrNull()
       ?.let { record ->
         val agent = record.into(AGENTS).toAgent()
         val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
@@ -345,33 +351,45 @@ class AgentRepository(private val dslContext: DSLContext) {
   ) {
     dslContext.transactionCoroutine { tx ->
       add?.let { additions ->
+        if (additions.isEmpty()) {
+          return@let
+        }
+
         try {
           tx
             .dsl()
-            .batch(
-              additions.map { collection ->
-                tx
-                  .dsl()
-                  .insertInto(AGENT_COLLECTIONS)
-                  .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
-                  .set(AGENT_COLLECTIONS.COLLECTION, collection.info.name)
-                  .set(AGENT_COLLECTIONS.EMBEDDING_PROVIDER, collection.info.embeddingProvider)
-                  .set(AGENT_COLLECTIONS.EMBEDDING_MODEL, collection.info.embeddingModel)
-                  .set(AGENT_COLLECTIONS.VECTOR_PROVIDER, collection.info.vectorProvider)
-                  .set(AGENT_COLLECTIONS.AMOUNT, collection.amount)
-                  .set(AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
-                  .onConflict(
-                    AGENT_COLLECTIONS.AGENT_ID,
-                    AGENT_COLLECTIONS.COLLECTION,
-                    AGENT_COLLECTIONS.VECTOR_PROVIDER,
-                  )
-                  .doUpdate()
-                  .set(AGENT_COLLECTIONS.AMOUNT, collection.amount)
-                  .set(AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
-              }
+            .insertInto(
+              AGENT_COLLECTIONS,
+              AGENT_COLLECTIONS.AGENT_ID,
+              AGENT_COLLECTIONS.COLLECTION,
+              AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
+              AGENT_COLLECTIONS.EMBEDDING_MODEL,
+              AGENT_COLLECTIONS.VECTOR_PROVIDER,
+              AGENT_COLLECTIONS.AMOUNT,
+              AGENT_COLLECTIONS.INSTRUCTION,
             )
-            .executeAsync()
-            .await()
+            .apply {
+              additions.forEach { collection ->
+                values(
+                  agentId,
+                  collection.info.name,
+                  collection.info.embeddingProvider,
+                  collection.info.embeddingModel,
+                  collection.info.vectorProvider,
+                  collection.amount,
+                  collection.instruction,
+                )
+              }
+            }
+            .onConflict(
+              AGENT_COLLECTIONS.AGENT_ID,
+              AGENT_COLLECTIONS.COLLECTION,
+              AGENT_COLLECTIONS.VECTOR_PROVIDER,
+            )
+            .doUpdate()
+            .set(AGENT_COLLECTIONS.AMOUNT, excluded(AGENT_COLLECTIONS.AMOUNT))
+            .set(AGENT_COLLECTIONS.INSTRUCTION, excluded(AGENT_COLLECTIONS.INSTRUCTION))
+            .awaitLast()
         } catch (e: DataAccessException) {
           LOG.error("Error adding collections", e)
           throw AppError.internal(e.message ?: "Failed to add collections")
@@ -379,23 +397,24 @@ class AgentRepository(private val dslContext: DSLContext) {
       }
 
       remove?.let { removals ->
+        if (removals.isEmpty()) {
+          return@let
+        }
+
         try {
           tx
             .dsl()
-            .batch(
-              removals.map { collection ->
-                tx
-                  .dsl()
-                  .deleteFrom(AGENT_COLLECTIONS)
-                  .where(
-                    AGENT_COLLECTIONS.AGENT_ID.eq(agentId)
-                      .and(AGENT_COLLECTIONS.COLLECTION.eq(collection.name))
-                      .and(AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(collection.provider))
-                  )
-              }
+            .deleteFrom(AGENT_COLLECTIONS)
+            .where(
+              DSL.or(
+                removals.map { collection ->
+                  AGENT_COLLECTIONS.AGENT_ID.eq(agentId)
+                    .and(AGENT_COLLECTIONS.COLLECTION.eq(collection.name))
+                    .and(AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(collection.provider))
+                }
+              )
             )
-            .executeAsync()
-            .await()
+            .awaitLast()
         } catch (e: DataAccessException) {
           LOG.error("Error removing collections", e)
           throw AppError.internal(e.message ?: "Failed to remove collections")
@@ -430,9 +449,9 @@ class AgentRepository(private val dslContext: DSLContext) {
       )
       .from(AGENT_COLLECTIONS)
       .where(AGENT_COLLECTIONS.AGENT_ID.eq(id))
-      .fetchAsync()
-      .await()
+      .asFlow()
       .map { it.into(AGENT_COLLECTIONS).toAgentCollection() }
+      .toList()
   }
 
   private fun getSortOrderAgent(
@@ -478,8 +497,8 @@ class AgentRepository(private val dslContext: DSLContext) {
         .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
         .where(AGENTS.ACTIVE.isTrue)
         .groupBy(AGENT_CONFIGURATIONS.LLM_PROVIDER)
-        .fetchAsync()
-        .await()
+        .asFlow()
+        .toList()
 
     val out = mutableMapOf<String, Int>()
 
@@ -533,9 +552,9 @@ class AgentRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(AGENT_CONFIGURATIONS).toAgentConfiguration() }
+        .toList()
 
     return CountedList(total, configurations)
   }

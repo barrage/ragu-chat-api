@@ -100,7 +100,16 @@ class AuthenticationService(
 
   /** Utility for development routes */
   suspend fun store(sessionId: KUUID, userId: KUUID) {
-    sessionRepo.create(sessionId, userId)
+    try {
+      sessionRepo.create(sessionId, userId)
+    } catch (e: Exception) {
+      when {
+        e.message?.contains("violates foreign key constraint") == true -> {
+          throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+        }
+        else -> throw AppError.internal(e.message ?: "An unexpected error occurred")
+      }
+    }
   }
 
   suspend fun get(sessionId: KUUID): Session? {

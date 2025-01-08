@@ -67,6 +67,9 @@ dependencies {
   implementation("org.liquibase:liquibase-core:4.29.2")
   implementation("org.jooq:jooq-kotlin-coroutines:$jooqVersion")
 
+  implementation("org.postgresql:r2dbc-postgresql:1.0.7.RELEASE")
+  implementation("io.r2dbc:r2dbc-pool:1.0.2.RELEASE")
+
   implementation("io.github.smiley4:ktor-swagger-ui:3.5.1")
   implementation("io.github.smiley4:schema-kenerator-core:1.5.0")
   implementation("io.github.smiley4:schema-kenerator-reflection:1.5.0")

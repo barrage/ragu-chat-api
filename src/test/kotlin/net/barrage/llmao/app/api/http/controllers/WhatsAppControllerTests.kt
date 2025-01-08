@@ -4,6 +4,7 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.adapters.whatsapp.dto.Contact
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipMessageType
@@ -38,33 +39,39 @@ class WhatsAppControllerTests :
 
   @BeforeAll
   fun setup() {
-    peasantUser = postgres.testUser("bar@foo.com", admin = false)
-    peasantSession = postgres.testSession(peasantUser.id)
-    weaviate!!.insertTestCollection("Kusturica")
+    runBlocking {
+      peasantUser = postgres.testUser("bar@foo.com", admin = false)
+      peasantSession = postgres.testSession(peasantUser.id)
+      weaviate!!.insertTestCollection("Kusturica")
+    }
   }
 
   @BeforeEach
   fun setupWhatsAppUser() {
-    whatsAppNumber = postgres.testWhatsAppNumber(peasantUser.id, "385981234567")
-    whatsAppAgentOne = postgres.testWhatsAppAgent(active = true)
-    whatsAppAgentTwo = postgres.testWhatsAppAgent(active = false)
-    whatsAppChat = postgres.testWhatsAppChat(peasantUser.id)
-    whatsAppMessageOne = postgres.testWhatsAppMessage(whatsAppChat.id, peasantUser.id)
-    whatsAppMessageTwo =
-      postgres.testWhatsAppMessage(
-        whatsAppChat.id,
-        whatsAppAgentOne.id,
-        senderType = "assistant",
-        responseTo = whatsAppMessageOne.id,
-      )
+    runBlocking {
+      whatsAppNumber = postgres.testWhatsAppNumber(peasantUser.id, "385981234567")
+      whatsAppAgentOne = postgres.testWhatsAppAgent(active = true)
+      whatsAppAgentTwo = postgres.testWhatsAppAgent(active = false)
+      whatsAppChat = postgres.testWhatsAppChat(peasantUser.id)
+      whatsAppMessageOne = postgres.testWhatsAppMessage(whatsAppChat.id, peasantUser.id)
+      whatsAppMessageTwo =
+        postgres.testWhatsAppMessage(
+          whatsAppChat.id,
+          whatsAppAgentOne.id,
+          senderType = "assistant",
+          responseTo = whatsAppMessageOne.id,
+        )
+    }
   }
 
   @AfterEach
   fun tearDown() {
-    postgres.deleteTestWhatsAppChat(whatsAppChat.id)
-    postgres.deleteTestWhatsAppNumber(whatsAppNumber.id)
-    postgres.deleteTestWhatsAppAgent(whatsAppAgentOne.id)
-    postgres.deleteTestWhatsAppAgent(whatsAppAgentTwo.id)
+    runBlocking {
+      postgres.deleteTestWhatsAppChat(whatsAppChat.id)
+      postgres.deleteTestWhatsAppNumber(whatsAppNumber.id)
+      postgres.deleteTestWhatsAppAgent(whatsAppAgentOne.id)
+      postgres.deleteTestWhatsAppAgent(whatsAppAgentTwo.id)
+    }
   }
 
   /** Webhook tests */

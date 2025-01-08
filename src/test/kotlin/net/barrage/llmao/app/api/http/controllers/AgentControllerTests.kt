@@ -5,6 +5,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -25,10 +26,12 @@ class AgentControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    agent = postgres.testAgent()
-    agentConfiguration = postgres.testAgentConfiguration(agent.id)
-    user = postgres.testUser(admin = false)
-    userSession = postgres.testSession(user.id)
+    runBlocking {
+      agent = postgres.testAgent()
+      agentConfiguration = postgres.testAgentConfiguration(agent.id)
+      user = postgres.testUser(admin = false)
+      userSession = postgres.testSession(user.id)
+    }
   }
 
   @Test

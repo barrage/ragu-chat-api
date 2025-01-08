@@ -1,5 +1,9 @@
 package net.barrage.llmao
 
+import io.r2dbc.pool.ConnectionPool
+import io.r2dbc.pool.ConnectionPoolConfiguration
+import io.r2dbc.spi.ConnectionFactories
+import io.r2dbc.spi.ConnectionFactoryOptions
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
 import io.weaviate.client.v1.data.model.WeaviateObject
@@ -7,8 +11,10 @@ import io.weaviate.client.v1.filters.Operator
 import io.weaviate.client.v1.filters.WhereFilter
 import io.weaviate.client.v1.schema.model.Property
 import io.weaviate.client.v1.schema.model.WeaviateClass
+import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.*
+import kotlinx.coroutines.reactive.awaitSingle
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -35,17 +41,6 @@ import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.AgentCollectionsRecord
-import net.barrage.llmao.tables.records.AgentConfigurationsRecord
-import net.barrage.llmao.tables.records.AgentsRecord
-import net.barrage.llmao.tables.records.ChatsRecord
-import net.barrage.llmao.tables.records.MessagesRecord
-import net.barrage.llmao.tables.records.SessionsRecord
-import net.barrage.llmao.tables.records.UsersRecord
-import net.barrage.llmao.tables.records.WhatsAppAgentsRecord
-import net.barrage.llmao.tables.records.WhatsAppChatsRecord
-import net.barrage.llmao.tables.records.WhatsAppMessagesRecord
-import net.barrage.llmao.tables.records.WhatsAppNumbersRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
@@ -60,6 +55,9 @@ import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
+import org.jooq.impl.DefaultConfiguration
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.postgresql.ds.PGSimpleDataSource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
@@ -72,15 +70,18 @@ class TestPostgres {
         withDatabaseName("test")
         withUsername("test")
         withPassword("test")
+        withCommand("-c max_connections=500")
       }
       .waitingFor(Wait.defaultWaitStrategy())
 
-  val dslContext: DSLContext
-
+  lateinit var dslContext: DSLContext
+  private lateinit var connectionPool: ConnectionPool
   private val liquibase: Liquibase
 
   init {
     container.start()
+    initConnectionPool()
+    initDslContext()
 
     val dataSource =
       PGSimpleDataSource().apply {
@@ -89,8 +90,6 @@ class TestPostgres {
         user = "test"
         databaseName = "test"
       }
-
-    dslContext = DSL.using(dataSource, SQLDialect.POSTGRES)
 
     liquibase =
       Liquibase(
@@ -102,14 +101,50 @@ class TestPostgres {
     liquibase.update()
   }
 
-  fun resetPgDatabase() {
-    dslContext.execute("DROP SCHEMA public CASCADE")
-    dslContext.execute("CREATE SCHEMA public")
+  private fun initConnectionPool() {
+    val connectionFactory =
+      ConnectionFactories.get(
+        ConnectionFactoryOptions.builder()
+          .option(ConnectionFactoryOptions.DRIVER, "postgresql")
+          .option(ConnectionFactoryOptions.HOST, container.host)
+          .option(ConnectionFactoryOptions.PORT, container.getMappedPort(5432))
+          .option(ConnectionFactoryOptions.DATABASE, container.databaseName)
+          .option(ConnectionFactoryOptions.USER, container.username)
+          .option(ConnectionFactoryOptions.PASSWORD, container.password)
+          .build()
+      )
 
-    liquibase.update("main")
+    val poolConfiguration =
+      ConnectionPoolConfiguration.builder(connectionFactory)
+        .maxIdleTime(Duration.ofMillis(1000))
+        .maxSize(10)
+        .build()
+
+    connectionPool = ConnectionPool(poolConfiguration)
   }
 
-  fun testUser(email: String = "test@user.me", admin: Boolean, active: Boolean = true): User {
+  private fun initDslContext() {
+    val configuration = DefaultConfiguration().set(connectionPool).set(SQLDialect.POSTGRES)
+    dslContext = DSL.using(configuration)
+  }
+
+  @BeforeEach
+  fun resetConnectionPool() {
+    connectionPool.dispose()
+    initConnectionPool()
+    initDslContext()
+  }
+
+  @AfterEach
+  fun closeConnectionPool() {
+    connectionPool.dispose()
+  }
+
+  suspend fun testUser(
+    email: String = "test@user.me",
+    admin: Boolean,
+    active: Boolean = true,
+  ): User {
     return dslContext
       .insertInto(USERS)
       .columns(
@@ -122,39 +157,39 @@ class TestPostgres {
       )
       .values(email, "Test", "Test", "Test", if (admin) "ADMIN" else "USER", active)
       .returning()
-      .fetchOne(UsersRecord::toUser)!!
+      .awaitSingle()
+      .toUser()
   }
 
-  fun deleteTestAgent(id: UUID) {
-    dslContext.deleteFrom(AGENTS).where(AGENTS.ID.eq(id)).execute()
+  suspend fun deleteTestAgent(id: UUID) {
+    dslContext.deleteFrom(AGENTS).where(AGENTS.ID.eq(id)).awaitSingle()
   }
 
-  fun deleteTestUser(id: UUID) {
-    dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).execute()
+  suspend fun deleteTestUser(id: UUID) {
+    dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).awaitSingle()
   }
 
-  fun testSession(userId: UUID): Session {
+  suspend fun testSession(userId: UUID): Session {
     return dslContext
       .insertInto(SESSIONS)
       .columns(SESSIONS.USER_ID, SESSIONS.EXPIRES_AT)
       .values(userId, OffsetDateTime.now().plusDays(1))
       .returning()
-      .fetchOne(SessionsRecord::toSessionData)!!
+      .awaitSingle()
+      .toSessionData()
   }
 
-  fun testAgent(name: String = "Test", active: Boolean = true): Agent {
-    val agent =
-      dslContext
-        .insertInto(AGENTS)
-        .columns(AGENTS.NAME, AGENTS.DESCRIPTION, AGENTS.ACTIVE, AGENTS.ACTIVE, AGENTS.LANGUAGE)
-        .values(name, "Test", active, active, "croatian")
-        .returning()
-        .fetchOne(AgentsRecord::toAgent)!!
-
-    return agent
+  suspend fun testAgent(name: String = "Test", active: Boolean = true): Agent {
+    return dslContext
+      .insertInto(AGENTS)
+      .columns(AGENTS.NAME, AGENTS.DESCRIPTION, AGENTS.ACTIVE, AGENTS.ACTIVE, AGENTS.LANGUAGE)
+      .values(name, "Test", active, active, "croatian")
+      .returning()
+      .awaitSingle()
+      .toAgent()
   }
 
-  fun testAgentConfiguration(
+  suspend fun testAgentConfiguration(
     agentId: UUID,
     version: Int = 1,
     context: String = "Test",
@@ -191,18 +226,19 @@ class TestPostgres {
           summaryInstruction,
         )
         .returning()
-        .fetchOne(AgentConfigurationsRecord::toAgentConfiguration)!!
+        .awaitSingle()
+        .toAgentConfiguration()
 
     dslContext
       .update(AGENTS)
       .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
       .where(AGENTS.ID.eq(agentId))
-      .execute()
+      .awaitSingle()
 
     return configuration
   }
 
-  fun testAgentCollection(
+  suspend fun testAgentCollection(
     agentId: UUID,
     collection: String,
     amount: Int,
@@ -221,12 +257,11 @@ class TestPostgres {
       .set(AGENT_COLLECTIONS.EMBEDDING_MODEL, embeddingModel)
       .set(AGENT_COLLECTIONS.VECTOR_PROVIDER, vectorProvider)
       .returning()
-      .fetchInto(AgentCollectionsRecord::class.java)
-      .map { it.toAgentCollection() }
-      .first()
+      .awaitSingle()
+      .toAgentCollection()
   }
 
-  fun testChat(userId: UUID, agentId: UUID, title: String? = "Test Chat Title"): Chat {
+  suspend fun testChat(userId: UUID, agentId: UUID, title: String? = "Test Chat Title"): Chat {
     return dslContext
       .insertInto(CHATS)
       .set(CHATS.ID, UUID.randomUUID())
@@ -234,10 +269,11 @@ class TestPostgres {
       .set(CHATS.AGENT_ID, agentId)
       .set(CHATS.TITLE, title)
       .returning()
-      .fetchOne(ChatsRecord::toChat)!!
+      .awaitSingle()
+      .toChat()
   }
 
-  fun testChatMessage(
+  suspend fun testChatMessage(
     chatId: UUID,
     userId: UUID,
     content: String = "Test message",
@@ -254,23 +290,25 @@ class TestPostgres {
       .set(MESSAGES.RESPONSE_TO, responseTo)
       .set(MESSAGES.EVALUATION, evaluation)
       .returning()
-      .fetchOne(MessagesRecord::toMessage)!!
+      .awaitSingle()
+      .toMessage()
   }
 
-  fun testWhatsAppNumber(userId: UUID, phoneNumber: String): WhatsAppNumber {
+  suspend fun testWhatsAppNumber(userId: UUID, phoneNumber: String): WhatsAppNumber {
     return dslContext
       .insertInto(WHATS_APP_NUMBERS)
       .set(WHATS_APP_NUMBERS.USER_ID, userId)
       .set(WHATS_APP_NUMBERS.PHONE_NUMBER, phoneNumber)
       .returning()
-      .fetchOne(WhatsAppNumbersRecord::toWhatsAppNumber)!!
+      .awaitSingle()
+      .toWhatsAppNumber()
   }
 
-  fun deleteTestWhatsAppNumber(id: UUID) {
-    dslContext.deleteFrom(WHATS_APP_NUMBERS).where(WHATS_APP_NUMBERS.ID.eq(id)).execute()
+  suspend fun deleteTestWhatsAppNumber(id: UUID) {
+    dslContext.deleteFrom(WHATS_APP_NUMBERS).where(WHATS_APP_NUMBERS.ID.eq(id)).awaitSingle()
   }
 
-  fun testWhatsAppAgent(
+  suspend fun testWhatsAppAgent(
     name: String = "Test WhatsApp Agent",
     active: Boolean = true,
   ): WhatsAppAgent {
@@ -298,29 +336,31 @@ class TestPostgres {
           active,
         )
         .returning()
-        .fetchOne(WhatsAppAgentsRecord::toWhatsAppAgent)!!
+        .awaitSingle()
+        .toWhatsAppAgent()
 
     return agent
   }
 
-  fun deleteTestWhatsAppAgent(id: UUID) {
-    dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(id)).execute()
+  suspend fun deleteTestWhatsAppAgent(id: UUID) {
+    dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(id)).awaitSingle()
   }
 
-  fun testWhatsAppChat(userId: UUID): WhatsAppChat {
+  suspend fun testWhatsAppChat(userId: UUID): WhatsAppChat {
     return dslContext
       .insertInto(WHATS_APP_CHATS)
       .set(WHATS_APP_CHATS.ID, UUID.randomUUID())
       .set(WHATS_APP_CHATS.USER_ID, userId)
       .returning()
-      .fetchOne(WhatsAppChatsRecord::toWhatsAppChat)!!
+      .awaitSingle()
+      .toWhatsAppChat()
   }
 
-  fun deleteTestWhatsAppChat(id: UUID) {
-    dslContext.deleteFrom(WHATS_APP_CHATS).where(WHATS_APP_CHATS.ID.eq(id)).execute()
+  suspend fun deleteTestWhatsAppChat(id: UUID) {
+    dslContext.deleteFrom(WHATS_APP_CHATS).where(WHATS_APP_CHATS.ID.eq(id)).awaitSingle()
   }
 
-  fun testWhatsAppMessage(
+  suspend fun testWhatsAppMessage(
     chatId: UUID,
     userId: UUID,
     content: String = "Test message",
@@ -335,7 +375,8 @@ class TestPostgres {
       .set(WHATS_APP_MESSAGES.CONTENT, content)
       .set(WHATS_APP_MESSAGES.RESPONSE_TO, responseTo)
       .returning()
-      .fetchOne(WhatsAppMessagesRecord::toWhatsAppMessage)!!
+      .awaitSingle()
+      .toWhatsAppMessage()
   }
 }
 

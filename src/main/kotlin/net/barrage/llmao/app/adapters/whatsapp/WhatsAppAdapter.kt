@@ -247,6 +247,7 @@ class WhatsAppAdapter(
   private fun sendWelcomeMessage(to: String) {
     val sender = config.string("infobip.sender")
     val template = config.string("infobip.template")
+    val appName = config.string("infobip.appName")
     val message =
       InfobipWhatsAppMessage()
         .from(sender)
@@ -257,7 +258,7 @@ class WhatsAppAdapter(
             .templateName(template)
             .templateData(
               WhatsAppTemplateDataContent()
-                .body(WhatsAppTemplateBodyContent().addPlaceholdersItem("Ragu"))
+                .body(WhatsAppTemplateBodyContent().addPlaceholdersItem(appName))
             )
         )
 

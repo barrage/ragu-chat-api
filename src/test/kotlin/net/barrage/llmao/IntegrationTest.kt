@@ -13,10 +13,13 @@ import java.security.PrivateKey
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.*
+import kotlinx.coroutines.CompletableJob
+import kotlinx.coroutines.Job
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.app.api.ws.ClientMessageSerializer
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.wiremock.extension.jwt.JwtExtensionFactory
@@ -53,6 +56,8 @@ open class IntegrationTest(
   // Always load example config so we are 1:1 with deployments.
   private var cfg = ConfigLoader.load("application.example.conf")
 
+  private val applicationStoppingJob: CompletableJob = Job()
+
   init {
     // Postgres
     cfg =
@@ -61,6 +66,9 @@ open class IntegrationTest(
           "db.url" to postgres.container.jdbcUrl,
           "db.user" to postgres.container.username,
           "db.password" to postgres.container.password,
+          "db.r2dbcHost" to postgres.container.host,
+          "db.r2dbcPort" to postgres.container.getMappedPort(5432).toString(),
+          "db.r2dbcDatabase" to postgres.container.databaseName,
           "db.runMigrations" to "false", // We migrate manually on PG container initialization
           "oauth.apple.clientSecret" to generateP8PrivateKey(),
         )
@@ -112,7 +120,13 @@ open class IntegrationTest(
       loadWiremock()
     }
 
-    app = ApplicationState(cfg)
+    app = ApplicationState(cfg, applicationStoppingJob)
+  }
+
+  @AfterAll
+  fun stopContainersAfterTests() {
+    postgres.container.stop()
+    weaviate?.container?.stop()
   }
 
   private fun loadWeaviate() {

@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.services
 
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.COMPLETIONS_COMPLETION_PROMPT
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
@@ -27,21 +28,23 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
 
   @BeforeAll
   fun setup() {
-    service = app.services.conversation
+    runBlocking {
+      service = app.services.conversation
 
-    admin = postgres.testUser(admin = true)
-    agent = postgres.testAgent()
-    agentConfiguration =
-      postgres.testAgentConfiguration(
-        agent.id,
-        llmProvider = "openai",
-        model = "gpt-4o",
-        promptInstruction = "Custom prompt instruction",
-        titleInstruction = "Custom title instruction",
-        languageInstruction = "Custom language instruction",
-        summaryInstruction = "Custom summary instruction",
-      )
-    chat = postgres.testChat(admin.id, agent.id, null)
+      admin = postgres.testUser(admin = true)
+      agent = postgres.testAgent()
+      agentConfiguration =
+        postgres.testAgentConfiguration(
+          agent.id,
+          llmProvider = "openai",
+          model = "gpt-4o",
+          promptInstruction = "Custom prompt instruction",
+          titleInstruction = "Custom title instruction",
+          languageInstruction = "Custom language instruction",
+          summaryInstruction = "Custom summary instruction",
+        )
+      chat = postgres.testChat(admin.id, agent.id, null)
+    }
   }
 
   @Test

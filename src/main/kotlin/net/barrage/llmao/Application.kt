@@ -2,6 +2,8 @@ package net.barrage.llmao
 
 import io.ktor.server.application.*
 import io.ktor.server.config.*
+import kotlinx.coroutines.CompletableJob
+import kotlinx.coroutines.Job
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.api.ws.ChatFactory
 import net.barrage.llmao.app.api.ws.websocketServer
@@ -19,7 +21,11 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-  val state = ApplicationState(environment.config)
+  val applicationStoppingJob: CompletableJob = Job()
+
+  environment.monitor.subscribe(ApplicationStopping) { applicationStoppingJob.complete() }
+
+  val state = ApplicationState(environment.config, applicationStoppingJob)
 
   configureSerialization()
   configureSession(state.services.auth)

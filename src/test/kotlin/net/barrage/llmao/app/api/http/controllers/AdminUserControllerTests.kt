@@ -5,6 +5,8 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import java.util.*
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
@@ -14,7 +16,6 @@ import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
-import net.barrage.llmao.tables.records.UsersRecord
 import net.barrage.llmao.tables.references.USERS
 import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -29,9 +30,11 @@ class AdminUserControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    adminUser = postgres.testUser("foo@bar.com", admin = true)
-    peasantUser = postgres.testUser("bar@foo.com", admin = false)
-    adminSession = postgres.testSession(adminUser.id)
+    runBlocking {
+      adminUser = postgres.testUser("foo@bar.com", admin = true)
+      peasantUser = postgres.testUser("bar@foo.com", admin = false)
+      adminSession = postgres.testSession(adminUser.id)
+    }
   }
 
   @Test
@@ -321,11 +324,10 @@ class AdminUserControllerTests : IntegrationTest() {
       }
 
     assertEquals(204, response.status.value)
+
     val deletedUser =
-      postgres.dslContext
-        .selectFrom(USERS)
-        .where(USERS.ID.eq(testUser.id))
-        .fetchOne(UsersRecord::toUser)!!
+      postgres.dslContext.selectFrom(USERS).where(USERS.ID.eq(testUser.id)).awaitSingle().toUser()
+
     assertEquals(testUser.id, deletedUser.id)
     assertTrue(deletedUser.deletedAt != null)
     assertEquals("${testUser.id}@deleted.net", deletedUser.email)

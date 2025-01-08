@@ -1,7 +1,9 @@
 package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
-import kotlinx.coroutines.future.await
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.Session
@@ -68,9 +70,9 @@ class SessionRepository(private val dslContext: DSLContext) {
       )
       .from(SESSIONS)
       .where(SESSIONS.USER_ID.eq(id).and(SESSIONS.EXPIRES_AT.gt(OffsetDateTime.now())))
-      .fetchAsync()
-      .await()
+      .asFlow()
       .map { it.into(SESSIONS).toSessionData() }
+      .toList()
   }
 
   suspend fun extend(id: KUUID) {
