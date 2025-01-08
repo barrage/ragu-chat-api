@@ -5,6 +5,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.Session
@@ -32,20 +33,24 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
 
   @BeforeEach
   fun beforeEach() {
-    agentOne = postgres.testAgent()
-    agentTwo = postgres.testAgent()
+    runBlocking {
+      agentOne = postgres.testAgent()
+      agentTwo = postgres.testAgent()
 
-    adminUser = postgres.testUser("foo@bar.com", admin = true)
-    adminSession = postgres.testSession(adminUser.id)
+      adminUser = postgres.testUser("foo@bar.com", admin = true)
+      adminSession = postgres.testSession(adminUser.id)
 
-    postgres.testAgentConfiguration(agentOne.id, version = 1)
-    postgres.testAgentConfiguration(agentTwo.id, version = 1)
+      postgres.testAgentConfiguration(agentOne.id, version = 1)
+      postgres.testAgentConfiguration(agentTwo.id, version = 1)
+    }
   }
 
   @AfterEach
   fun afterEach() {
-    postgres.deleteTestAgent(agentOne.id)
-    postgres.deleteTestUser(adminUser.id)
+    runBlocking {
+      postgres.deleteTestAgent(agentOne.id)
+      postgres.deleteTestUser(adminUser.id)
+    }
   }
 
   @Test

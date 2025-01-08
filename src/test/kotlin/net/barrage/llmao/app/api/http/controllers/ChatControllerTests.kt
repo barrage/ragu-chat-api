@@ -6,6 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.util.*
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
@@ -35,14 +36,16 @@ class ChatControllerTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    user = postgres.testUser(admin = false)
-    userSession = postgres.testSession(user.id)
-    agent = postgres.testAgent(active = true)
-    agentConfiguration = postgres.testAgentConfiguration(agent.id)
-    chatOne = postgres.testChat(user.id, agent.id)
-    chatTwo = postgres.testChat(user.id, agent.id)
-    messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
-    messageTwo = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
+    runBlocking {
+      user = postgres.testUser(admin = false)
+      userSession = postgres.testSession(user.id)
+      agent = postgres.testAgent(active = true)
+      agentConfiguration = postgres.testAgentConfiguration(agent.id)
+      chatOne = postgres.testChat(user.id, agent.id)
+      chatTwo = postgres.testChat(user.id, agent.id)
+      messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
+      messageTwo = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
+    }
   }
 
   @Test

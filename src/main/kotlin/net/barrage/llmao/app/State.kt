@@ -2,6 +2,7 @@ package net.barrage.llmao.app
 
 import io.ktor.server.config.*
 import kotlin.reflect.KClass
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationRepository
@@ -32,7 +33,7 @@ import org.jooq.DSLContext
 const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
 const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
 
-class ApplicationState(config: ApplicationConfig) {
+class ApplicationState(config: ApplicationConfig, applicationStopping: Job) {
   val providers = ProviderState(config)
   val repository: RepositoryState
   val adapters: AdapterState
@@ -40,7 +41,7 @@ class ApplicationState(config: ApplicationConfig) {
 
   init {
     CookieFactory.init(config)
-    val database = initDatabase(config)
+    val database = initDatabase(config, applicationStopping)
     repository = RepositoryState(database)
     services = ServiceState(providers, repository)
     adapters = AdapterState(config, database, providers, services)

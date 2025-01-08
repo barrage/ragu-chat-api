@@ -9,8 +9,11 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.time.OffsetDateTime
 import java.util.*
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
@@ -25,10 +28,15 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
   @BeforeAll
   fun setup() {
-    user =
-      postgres.testUser(email = "test@user.me", admin = false) // must match wiremock response email
-    admin = postgres.testUser(email = "admin@user.me", admin = true)
-    postgres.testUser(email = "deleted@user.me", admin = false, active = false)
+    runBlocking {
+      user =
+        postgres.testUser(
+          email = "test@user.me",
+          admin = false,
+        ) // must match wiremock response email
+      admin = postgres.testUser(email = "admin@user.me", admin = true)
+      postgres.testUser(email = "deleted@user.me", admin = false, active = false)
+    }
   }
 
   // Apple login tests
@@ -64,7 +72,7 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
     postgres.dslContext
       .deleteFrom(SESSIONS)
       .where(SESSIONS.ID.eq(UUID.fromString(sessionId)))
-      .execute()
+      .awaitSingle()
   }
 
   @Test
@@ -191,7 +199,7 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
     postgres.dslContext
       .deleteFrom(SESSIONS)
       .where(SESSIONS.ID.eq(UUID.fromString(sessionId)))
-      .execute()
+      .awaitSingle()
   }
 
   @Test
@@ -342,7 +350,7 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
     postgres.dslContext
       .deleteFrom(SESSIONS)
       .where(SESSIONS.ID.eq(UUID.fromString(sessionId)))
-      .execute()
+      .awaitSingle()
   }
 
   @Test
@@ -447,8 +455,10 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
       postgres.dslContext
         .selectFrom(SESSIONS)
         .where(SESSIONS.ID.eq(userSession.sessionId))
-        .fetchOne()
-    Assertions.assertTrue(session!!.expiresAt.isBefore(OffsetDateTime.now()))
+        .awaitSingle()
+        .toSessionData()
+
+    Assertions.assertTrue(session.expiresAt.isBefore(OffsetDateTime.now()))
   }
 
   @Test

@@ -10,6 +10,7 @@ import io.ktor.server.util.*
 import java.time.Instant
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.DurationUnit
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthenticationRequest
@@ -36,10 +37,12 @@ class ChonkitAuthenticationAdapterTests :
 
   @BeforeAll
   fun setup() {
-    chadUser = postgres.testUser(email = "chad@neovim.bro", admin = true)
-    peasantUser = postgres.testUser(email = "peasant@vscope.soy", admin = false)
-    chadSession = postgres.testSession(chadUser.id)
-    peasantSession = postgres.testSession(peasantUser.id)
+    runBlocking {
+      chadUser = postgres.testUser(email = "chad@neovim.bro", admin = true)
+      peasantUser = postgres.testUser(email = "peasant@vscope.soy", admin = false)
+      chadSession = postgres.testSession(chadUser.id)
+      peasantSession = postgres.testSession(peasantUser.id)
+    }
   }
 
   @Test

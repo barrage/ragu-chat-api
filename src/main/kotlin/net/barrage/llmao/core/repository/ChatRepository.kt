@@ -2,7 +2,10 @@ package net.barrage.llmao.core.repository
 
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
-import kotlinx.coroutines.future.await
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.AgentChatsOnDate
@@ -64,9 +67,9 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(CHATS).toChat() }
+        .toList()
 
     return CountedList(total, chats)
   }
@@ -123,8 +126,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map {
           ChatWithUserAndAgent(
             it.into(CHATS).toChat(),
@@ -132,6 +134,7 @@ class ChatRepository(private val dslContext: DSLContext) {
             it.into(AGENTS).toAgent(),
           )
         }
+        .toList()
 
     return CountedList(total, chats)
   }
@@ -188,9 +191,9 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(MESSAGES.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(MESSAGES).toMessage() }
+        .toList()
 
     return CountedList(total, messages)
   }
@@ -232,9 +235,9 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(MESSAGES.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(MESSAGES).toMessage() }
+        .toList()
 
     return CountedList(total, messages)
   }
@@ -417,25 +420,17 @@ class ChatRepository(private val dslContext: DSLContext) {
   suspend fun getChatCounts(): ChatCounts {
     val total = dslContext.selectCount().from(CHATS).awaitSingle().value1() ?: 0
 
-    val rows =
-      dslContext
-        .select(CHATS.AGENT_ID, DSL.count(), AGENTS.NAME)
-        .from(CHATS)
-        .join(AGENTS)
-        .on(CHATS.AGENT_ID.eq(AGENTS.ID))
-        .groupBy(CHATS.AGENT_ID, AGENTS.NAME)
-        .fetchAsync()
-        .await()
-
     val chats = mutableListOf<ChatCount>()
 
-    for (row in rows) {
-      // Safe to yell because of non-null constraints
-      val id = row.value1()!!
-      val count = row.value2()
-      val name = row.value3()!!
-      chats.add(ChatCount(id, name, count))
-    }
+    dslContext
+      .select(CHATS.AGENT_ID, DSL.count(), AGENTS.NAME)
+      .from(CHATS)
+      .join(AGENTS)
+      .on(CHATS.AGENT_ID.eq(AGENTS.ID))
+      .groupBy(CHATS.AGENT_ID, AGENTS.NAME)
+      .asFlow()
+      .map { row -> chats.add(ChatCount(row.value1()!!, row.value3()!!, row.value2())) }
+      .toList()
 
     return ChatCounts(total, chats)
   }
@@ -476,18 +471,18 @@ class ChatRepository(private val dslContext: DSLContext) {
           ORDER BY chat_date_count.agent_id, chat_date_count.date
         """
       )
-      .fetchAsync()
-      .await()
+      .asFlow()
       .map {
         AgentChatsOnDate(
           agentId = it.get("id", KUUID::class.java),
           agentName = it.get("name", String::class.java),
-          // If no chats for a given date, this will be null and we can skip the whole entry
+          // If no chats for a given date, this will be null, and we can skip the whole entry
           date = it.get("date", KOffsetDateTime::class.java)?.toLocalDate(),
           amount = it.get("count", Long::class.java),
         )
       }
       .filterNotNull()
+      .toList()
   }
 
   suspend fun getAgentConfigurationMessageCounts(
@@ -569,9 +564,9 @@ class ChatRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(MESSAGES).toMessage() }
+        .toList()
 
     return CountedList(count, messages)
   }

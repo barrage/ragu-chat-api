@@ -1,7 +1,9 @@
 package net.barrage.llmao.app.adapters.whatsapp.repositories
 
 import io.ktor.util.logging.*
-import kotlinx.coroutines.future.await
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
@@ -41,6 +43,7 @@ import org.jooq.Record
 import org.jooq.SortField
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
+import org.jooq.impl.DSL.excluded
 import org.jooq.kotlin.coroutines.transactionCoroutine
 
 internal val LOG =
@@ -96,9 +99,9 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       )
       .from(WHATS_APP_NUMBERS)
       .where(WHATS_APP_NUMBERS.USER_ID.eq(userId))
-      .fetchAsync()
-      .await()
+      .asFlow()
       .map { it.into(WHATS_APP_NUMBERS).toWhatsAppNumber() }
+      .toList()
   }
 
   suspend fun getNumber(number: String): WhatsAppNumber? {
@@ -173,9 +176,9 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.into(WHATS_APP_AGENTS).toWhatsAppAgent() }
+        .toList()
 
     return CountedList(total, agents)
   }
@@ -213,8 +216,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .leftJoin(WHATS_APP_AGENT_COLLECTIONS)
         .on(WHATS_APP_AGENTS.ID.eq(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID))
         .where(WHATS_APP_AGENTS.ID.eq(id))
-        .fetchAsync()
-        .await()
+        .asFlow()
+        .toList()
 
     if (result.isEmpty()) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not found")
@@ -259,8 +262,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .leftJoin(WHATS_APP_AGENT_COLLECTIONS)
         .on(WHATS_APP_AGENTS.ID.eq(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID))
         .where(WHATS_APP_AGENTS.ACTIVE.isTrue)
-        .fetchAsync()
-        .await()
+        .asFlow()
+        .toList()
 
     if (result.isEmpty()) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not found")
@@ -323,63 +326,72 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
   ) {
     dslContext.transactionCoroutine { tx ->
       add?.let { additions ->
-        try {
-          tx
-            .dsl()
-            .batch(
-              additions.map { collection ->
-                tx
-                  .dsl()
-                  .insertInto(WHATS_APP_AGENT_COLLECTIONS)
-                  .set(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID, agentId)
-                  .set(WHATS_APP_AGENT_COLLECTIONS.COLLECTION, collection.info.name)
-                  .set(
-                    WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
+        if (additions.isNotEmpty()) {
+          try {
+            tx
+              .dsl()
+              .insertInto(
+                WHATS_APP_AGENT_COLLECTIONS,
+                WHATS_APP_AGENT_COLLECTIONS.AGENT_ID,
+                WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
+                WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
+                WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_MODEL,
+                WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER,
+                WHATS_APP_AGENT_COLLECTIONS.AMOUNT,
+                WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION,
+              )
+              .apply {
+                additions.forEach { collection ->
+                  values(
+                    agentId,
+                    collection.info.name,
                     collection.info.embeddingProvider,
+                    collection.info.embeddingModel,
+                    collection.info.vectorProvider,
+                    collection.amount,
+                    collection.instruction,
                   )
-                  .set(WHATS_APP_AGENT_COLLECTIONS.EMBEDDING_MODEL, collection.info.embeddingModel)
-                  .set(WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER, collection.info.vectorProvider)
-                  .set(WHATS_APP_AGENT_COLLECTIONS.AMOUNT, collection.amount)
-                  .set(WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
-                  .onConflict(
-                    WHATS_APP_AGENT_COLLECTIONS.AGENT_ID,
-                    WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
-                    WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER,
-                  )
-                  .doUpdate()
-                  .set(WHATS_APP_AGENT_COLLECTIONS.AMOUNT, collection.amount)
-                  .set(WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
+                }
               }
-            )
-            .executeAsync()
-            .await()
-        } catch (e: DataAccessException) {
-          LOG.error("Error adding collections", e)
-          throw AppError.internal(e.message ?: "Failed to add collections")
+              .onConflict(
+                WHATS_APP_AGENT_COLLECTIONS.AGENT_ID,
+                WHATS_APP_AGENT_COLLECTIONS.COLLECTION,
+                WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER,
+              )
+              .doUpdate()
+              .set(WHATS_APP_AGENT_COLLECTIONS.AMOUNT, excluded(WHATS_APP_AGENT_COLLECTIONS.AMOUNT))
+              .set(
+                WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION,
+                excluded(WHATS_APP_AGENT_COLLECTIONS.INSTRUCTION),
+              )
+              .awaitSingle()
+          } catch (e: DataAccessException) {
+            LOG.error("Error adding collections", e)
+            throw AppError.internal(e.message ?: "Failed to add collections")
+          }
         }
       }
 
       remove?.let { removals ->
-        try {
-          tx
-            .dsl()
-            .batch(
-              removals.map { collection ->
-                tx
-                  .dsl()
-                  .deleteFrom(WHATS_APP_AGENT_COLLECTIONS)
-                  .where(
+        if (removals.isNotEmpty()) {
+          try {
+            tx
+              .dsl()
+              .deleteFrom(WHATS_APP_AGENT_COLLECTIONS)
+              .where(
+                DSL.or(
+                  removals.map { collection ->
                     WHATS_APP_AGENT_COLLECTIONS.AGENT_ID.eq(agentId)
                       .and(WHATS_APP_AGENT_COLLECTIONS.COLLECTION.eq(collection.name))
                       .and(WHATS_APP_AGENT_COLLECTIONS.VECTOR_PROVIDER.eq(collection.provider))
-                  )
-              }
-            )
-            .executeAsync()
-            .await()
-        } catch (e: DataAccessException) {
-          LOG.error("Error removing collections", e)
-          throw AppError.internal(e.message ?: "Failed to remove collections")
+                  }
+                )
+              )
+              .awaitSingle()
+          } catch (e: DataAccessException) {
+            LOG.error("Error removing collections", e)
+            throw AppError.internal(e.message ?: "Failed to remove collections")
+          }
         }
       }
     }
@@ -512,12 +524,12 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
     dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(agentId)).awaitSingle()
   }
 
-  fun deleteAllCollections(agentId: KUUID) {
+  suspend fun deleteAllCollections(agentId: KUUID) {
     val deleted =
       dslContext
         .delete(WHATS_APP_AGENT_COLLECTIONS)
         .where(WHATS_APP_AGENT_COLLECTIONS.AGENT_ID.eq(agentId))
-        .execute()
+        .awaitSingle()
 
     LOG.debug("Deleted {} collections from agent {}", deleted, agentId)
   }
@@ -543,9 +555,9 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .orderBy(order)
         .limit(limit)
         .offset(offset)
-        .fetchAsync()
-        .await()
+        .asFlow()
         .map { it.toWhatsAppChatWithUserName() }
+        .toList()
 
     return CountedList(total, results)
   }
@@ -602,8 +614,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .on(WHATS_APP_CHATS.USER_ID.eq(USERS.ID))
         .where(WHATS_APP_CHATS.ID.eq(id))
         .orderBy(WHATS_APP_MESSAGES.CREATED_AT.desc())
-        .fetchAsync()
-        .await()
+        .asFlow()
+        .toList()
 
     if (result.isEmpty()) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp chat not found")
@@ -646,9 +658,9 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       .where(WHATS_APP_MESSAGES.CHAT_ID.eq(chatId))
       .orderBy(WHATS_APP_MESSAGES.CREATED_AT.desc())
       .apply { limit?.let { limit(it) } }
-      .fetchAsync()
-      .await()
+      .asFlow()
       .map { it.into(WHATS_APP_MESSAGES).toWhatsAppMessage() }
+      .toList()
   }
 
   suspend fun insertUserMessage(chatId: KUUID, userId: KUUID, proompt: String): WhatsAppMessage {

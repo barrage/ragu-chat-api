@@ -4,6 +4,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
@@ -18,8 +19,10 @@ class AdministrationControllerEmptyDBTests : IntegrationTest() {
 
   @BeforeAll
   fun setup() {
-    admin = postgres.testUser(admin = true, active = true, email = "admin@barrage.net")
-    adminSession = postgres.testSession(admin.id)
+    runBlocking {
+      admin = postgres.testUser(admin = true, active = true, email = "admin@barrage.net")
+      adminSession = postgres.testSession(admin.id)
+    }
   }
 
   @Test

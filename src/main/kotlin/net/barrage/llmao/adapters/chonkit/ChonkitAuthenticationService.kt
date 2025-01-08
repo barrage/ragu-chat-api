@@ -218,7 +218,7 @@ private constructor(
     return authenticate(user, refreshToken)
   }
 
-  fun logout(userId: KUUID, refreshToken: String, purge: Boolean) {
+  suspend fun logout(userId: KUUID, refreshToken: String, purge: Boolean) {
     if (purge) {
       repository.removeAllSessions(userId)
     } else {
