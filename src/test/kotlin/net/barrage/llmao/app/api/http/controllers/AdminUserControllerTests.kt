@@ -3,11 +3,14 @@ package net.barrage.llmao.app.api.http.controllers
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.util.*
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.core.models.CsvImportErrorType
+import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
@@ -360,5 +363,174 @@ class AdminUserControllerTests : IntegrationTest() {
     assertEquals(404, response.status.value)
     val body: AppError = response.body()!!
     assertEquals(ErrorReason.EntityDoesNotExist, body.reason)
+  }
+
+  @Test
+  fun importUsersCsvSuccess() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/import-csv") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", ContentType.Text.CSV)
+        setBody(
+          """
+          FullName,FirstName,LastName,Email,Role
+          Test User,Test,User,test@user.net,user
+        """
+            .trimIndent()
+        )
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<CsvImportUsersResult>()
+    assertEquals(1, body.successful.size)
+    assertEquals(0, body.failed.size)
+
+    assertEquals(Role.USER, body.successful[0].role)
+    assertEquals("test@user.net", body.successful[0].email)
+
+    val user =
+      postgres.dslContext
+        .selectFrom(USERS)
+        .where(USERS.EMAIL.eq("test@user.net"))
+        .awaitSingle()
+        .toUser()
+
+    assertEquals("Test User", user.fullName)
+    assertEquals("Test", user.firstName)
+    assertEquals("User", user.lastName)
+    assertEquals(Role.USER, user.role)
+
+    postgres.deleteTestUser(user.id)
+  }
+
+  @Test
+  fun importUsersCsvWrongContentType() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/import-csv") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", ContentType.Text.Plain)
+        setBody(
+          """
+          FullName,FirstName,LastName,Email,Role
+          Test User,Test,User,test@user.net,user
+        """
+            .trimIndent()
+        )
+      }
+
+    assertEquals(400, response.status.value)
+  }
+
+  @Test
+  fun importUsersCsvUserAlreadyExists() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/import-csv") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", ContentType.Text.CSV)
+        setBody(
+          """
+          FullName,FirstName,LastName,Email,Role
+          Test User,Test,User,test@user.net,user
+          Test User,Test,User,foo@bar.com,user
+        """
+            .trimIndent()
+        )
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<CsvImportUsersResult>()
+    assertEquals(2, body.successful.size)
+    assertEquals(0, body.failed.size)
+
+    assertEquals(Role.USER, body.successful[0].role)
+    assertEquals("test@user.net", body.successful[0].email)
+    assertEquals(Role.USER, body.successful[1].role)
+    assertEquals("foo@bar.com", body.successful[1].email)
+
+    val user =
+      postgres.dslContext
+        .selectFrom(USERS)
+        .where(USERS.EMAIL.eq("test@user.net"))
+        .awaitSingle()
+        .toUser()
+
+    assertEquals("Test User", user.fullName)
+    assertEquals("Test", user.firstName)
+    assertEquals("User", user.lastName)
+    assertEquals(Role.USER, user.role)
+
+    postgres.deleteTestUser(user.id)
+  }
+
+  @Test
+  fun importUsersCsvInvalidLines() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/import-csv") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", ContentType.Text.CSV)
+        setBody(
+          """
+          FullName,FirstName,LastName,Email,Role
+          Test User,Test,User,test@user.net
+          Test User,Test,User,test@user.net,used
+          ,,,,user
+        """
+            .trimIndent()
+        )
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<CsvImportUsersResult>()
+
+    assertEquals(0, body.successful.size)
+    assertEquals(3, body.failed.size)
+    assertEquals(CsvImportErrorType.MISSING_FIELDS, body.failed[0].type)
+    assertEquals(CsvImportErrorType.VALIDATION, body.failed[1].type)
+    assertEquals(CsvImportErrorType.VALIDATION, body.failed[2].type)
+    assertEquals(CsvImportErrorType.VALIDATION, body.failed[2].type)
+  }
+
+  @Test
+  fun importUsersCsvTooLarge() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/import-csv") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", ContentType.Text.CSV)
+        setBody("FullName,FirstName,LastName,Email,Role\n".repeat(1000000))
+      }
+
+    assertEquals(413, response.status.value)
+  }
+
+  @Test
+  fun importUsersCsvEmpty() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/import-csv") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", ContentType.Text.CSV)
+        setBody("")
+      }
+
+    assertEquals(400, response.status.value)
+  }
+
+  @Test
+  fun importUsersCsvInvalidHeader() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/import-csv") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", ContentType.Text.CSV)
+        setBody("FullName,FirstName,LastName,Email,Roled")
+      }
+    assertEquals(400, response.status.value)
+    assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().reason)
+    assertEquals("Invalid CSV header", response.body<AppError>().description)
   }
 }

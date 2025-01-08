@@ -12,6 +12,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.CreateUser
+import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
@@ -19,9 +20,11 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.user
+import net.barrage.llmao.string
 
 fun Route.adminUserRoutes(userService: UserService) {
   route("/admin/users") {
@@ -35,6 +38,29 @@ fun Route.adminUserRoutes(userService: UserService) {
       val newUser: CreateUser = call.receive<CreateUser>()
       val user = userService.create(newUser)
       call.respond(HttpStatusCode.Created, user)
+    }
+
+    post("/import-csv", importUsersCsv()) {
+      if (!call.request.contentType().match(ContentType.Text.CSV)) {
+        throw AppError.api(ErrorReason.InvalidContentType, "Expected type: text/csv")
+      }
+
+      val contentLength = call.request.contentLength() ?: 0
+      val maxContentLength =
+        application.environment.config.string("upload.csv.maxFileSize").toLong()
+
+      if (contentLength > maxContentLength) {
+        throw AppError.api(
+          ErrorReason.PayloadTooLarge,
+          "CSV file size exceeds the maximum allowed size",
+        )
+      }
+
+      val csv = call.receiveChannel()
+      val results = userService.importUsersCsv(csv)
+
+      call.respond(HttpStatusCode.OK, results)
+      return@post
     }
 
     route("/{id}") {
@@ -160,6 +186,38 @@ private fun deleteUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while deleting user"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun importUsersCsv(): OpenApiRoute.() -> Unit = {
+  tags("admin/users")
+  description = "Import users from CSV"
+  request {
+    body<String> {
+      description = "Users to import in CSV format"
+      required = true
+      mediaTypes = setOf(ContentType.Text.CSV)
+      example("default") {
+        value =
+          """
+            FullName,FirstName,LastName,Email,Role
+            John Doe,John,Doe,john.doe@example.com,user
+          """
+            .trimIndent()
+      }
+    }
+  }
+  response {
+    HttpStatusCode.Created to
+      {
+        description = "Users imported successfully"
+        body<CsvImportUsersResult>()
+      }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Failed to import users or invalid CSV"
         body<List<AppError>> {}
       }
   }

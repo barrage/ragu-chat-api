@@ -8,6 +8,8 @@
 - [Authentication](#authentication)
     - [Google](#google)
     - [Chonkit](#chonkit-authorization)
+- [User Management](#user-management)
+    - [CSV format](#csv-format)
 - [Setup](#setup)
     - [Migrations and seeders](#migrations-and-seeders)
     - [Building and running](#building-and-running)
@@ -64,10 +66,6 @@ Application authentication is performed using OAuth with third-party providers,
 incorporating [Proof Key for Code Exchange (PKCE)](https://datatracker.ietf.org/doc/html/rfc7636) to enhance security
 against man-in-the-middle attacks.
 
-When this application is initially deployed, it requires a manual entry in the administrator list (TBD on how we do
-this). This initial entry specifies the email of the superadmin, which can then log in via an external provider and
-extend the list as they see fit.
-
 In addition to the standard parameters in the OAuth flow (code, grant_type, and redirect_uri), 2 parameters are
 required:
 
@@ -109,6 +107,42 @@ general flow:
 
 It is the responsibility of the web client to refresh the access token when it expires by sending a request to
 the `/auth/chonkit/refresh` endpoint.
+
+## User Management
+
+During application setup, initial admin can be inserted into the database manually or by filling `admin` properties in
+the `application.conf` that will automatically insert the user as an admin into the database. The initial user must have
+a valid
+email in regard to one of the authentication providers used in the application, and they must have their role set to
+`admin`. When developing locally this can be done with the database seed script as described
+in [Migrations and seeders](#migrations-and-seeders). When deploying to a cloud environment, this must be done manually
+by connecting to the database and running the following query:
+
+```sql
+INSERT INTO users (email, full_name, role, active) VALUES ('your@email.com', 'Your Name', 'admin', true)
+```
+
+Admin user can then manage access the application and manage other users by using the `/admin/users` endpoints.
+
+Adding new users to the application can be done in two ways:
+
+- individual user creation using the `POST /admin/users` endpoint
+- bulk user creation from a CSV file using the `POST /admin/users/import-csv` endpoint
+
+### CSV format
+
+This way of importing users is useful when you have a large number of users to add to the application. Please note
+that the CSV file must be in the correct format and that the file must not be larger than 5MB.
+
+The CSV file should have the following format:
+
+```csv
+FullName,FirstName,LastName,Email,Role
+```
+
+`FullName`, `Email` and `Role` are required fields, while `FirstName` and `LastName` are optional. In case of missing or
+invalid fields, the user will not be imported and an error will be returned. Note that users with emails that already
+exist in the database will be skipped.
 
 ## Setup
 
@@ -417,10 +451,15 @@ To use WhatsApp as a chat provider, you need to set the `ktor.features.whatsApp`
 
 ## License
 
-This repository contains Kotlin API, a part of Ragu, covered under the [Apache License 2.0](LICENSE), except where noted (any Ragu logos or trademarks are not covered under the Apache License, and should be explicitly noted by a LICENSE file.)
+This repository contains Kotlin API, a part of Ragu, covered under the [Apache License 2.0](LICENSE), except where
+noted (any Ragu logos or trademarks are not covered under the Apache License, and should be explicitly noted by a
+LICENSE file.)
 
-Kotlin API, a part of Ragu, is a product produced from this open source software, exclusively by Barrage d.o.o. It is distributed under our commercial terms.
+Kotlin API, a part of Ragu, is a product produced from this open source software, exclusively by Barrage d.o.o. It is
+distributed under our commercial terms.
 
-Others are allowed to make their own distribution of the software, but they cannot use any of the Ragu trademarks, cloud services, etc.
+Others are allowed to make their own distribution of the software, but they cannot use any of the Ragu trademarks, cloud
+services, etc.
 
-We explicitly grant permission for you to make a build that includes our trademarks while developing Ragu itself. You may not publish or share the build, and you may not use that build to run Ragu for any other purpose.
+We explicitly grant permission for you to make a build that includes our trademarks while developing Ragu itself. You
+may not publish or share the build, and you may not use that build to run Ragu for any other purpose.
