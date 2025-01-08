@@ -30,6 +30,8 @@ open class AppError(val type: String, val reason: ErrorReason, val description: 
       ErrorReason.InvalidProvider -> HttpStatusCode.BadRequest
       ErrorReason.InvalidParameter -> HttpStatusCode.BadRequest
       ErrorReason.InvalidOperation -> HttpStatusCode.BadRequest
+      ErrorReason.PayloadTooLarge -> HttpStatusCode.PayloadTooLarge
+      ErrorReason.InvalidContentType -> HttpStatusCode.BadRequest
       else -> HttpStatusCode.InternalServerError
     }
   }
@@ -46,6 +48,8 @@ enum class ErrorReason(val reason: String) {
   InvalidProvider("Unsupported provider"),
   VectorDatabase("Vector database error"),
   InvalidOperation("Invalid operation"),
+  PayloadTooLarge("Payload too large"),
+  InvalidContentType("Invalid content type"),
 
   // Websocket errors
   Websocket("Unprocessable message"),

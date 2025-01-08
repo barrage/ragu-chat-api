@@ -1,6 +1,9 @@
 package net.barrage.llmao.core.services
 
+import io.ktor.utils.io.*
 import net.barrage.llmao.core.models.CreateUser
+import net.barrage.llmao.core.models.CsvImportUsersResult
+import net.barrage.llmao.core.models.CsvImportedUser
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
@@ -9,6 +12,7 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.utility.parseUsers
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
@@ -86,5 +90,23 @@ class UserService(
     } else {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
     }
+  }
+
+  suspend fun importUsersCsv(csv: ByteReadChannel): CsvImportUsersResult {
+    val (users, failed) = parseUsers(csv)
+
+    val inserted = usersRepository.insertUsers(users)
+
+    val successful =
+      users.map { user ->
+        CsvImportedUser(
+          email = user.email,
+          fullName = user.fullName,
+          role = user.role,
+          skipped = inserted.contains(user.email),
+        )
+      }
+
+    return CsvImportUsersResult(successful, failed)
   }
 }

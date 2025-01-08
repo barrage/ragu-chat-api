@@ -203,4 +203,28 @@ class UserRepository(private val dslContext: DSLContext) {
 
     return UserCounts(total, active, inactive, admin, user)
   }
+
+  suspend fun insertUsers(users: List<CreateUser>): List<String> {
+    return dslContext
+      .insertInto(
+        USERS,
+        USERS.EMAIL,
+        USERS.FULL_NAME,
+        USERS.FIRST_NAME,
+        USERS.LAST_NAME,
+        USERS.ROLE,
+        USERS.ACTIVE,
+      )
+      .apply {
+        users.forEach { user ->
+          values(user.email, user.fullName, user.firstName, user.lastName, user.role.name, true)
+        }
+      }
+      .onConflict(USERS.EMAIL)
+      .doNothing()
+      .returning()
+      .asFlow()
+      .map { it.email }
+      .toList()
+  }
 }

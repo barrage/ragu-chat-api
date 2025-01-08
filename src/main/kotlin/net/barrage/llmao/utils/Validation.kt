@@ -194,7 +194,7 @@ fun MutableList<ValidationError>.addSchemaErr(code: String = "schema", message: 
   add(ValidationError(code, message))
 }
 
-private fun validateEmail(email: String): Boolean {
+fun validateEmail(email: String): Boolean {
   return email.isNotBlank() && email.matches(Regex("^[\\w\\-.]+@([\\w-]+\\.)+[\\w-]{2,4}$"))
 }
 
