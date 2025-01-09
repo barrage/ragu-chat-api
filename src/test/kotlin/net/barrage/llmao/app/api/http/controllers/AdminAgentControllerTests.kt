@@ -48,7 +48,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   fun setup() {
     adminUser = postgres.testUser("foo@bar.com", admin = true)
     peasantUser = postgres.testUser("bar@foo.com", admin = false)
-    agentOne = postgres.testAgent()
+    agentOne = postgres.testAgent(name = "TestAgentOne")
     agentOneConfigurationV1 = postgres.testAgentConfiguration(agentOne.id, version = 1)
     agentOneConfigurationV2 = postgres.testAgentConfiguration(agentOne.id, version = 2)
     agentOneChat = postgres.testChat(peasantUser.id, agentOne.id)
@@ -74,7 +74,7 @@ class AdminAgentControllerTests : IntegrationTest() {
         responseTo = chatMessageTwo.id,
         evaluation = false,
       )
-    agentTwo = postgres.testAgent(active = false)
+    agentTwo = postgres.testAgent(name = "TestAgentTwo", active = false)
     agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id)
     adminSession = postgres.testSession(adminUser.id)
     peasantSession = postgres.testSession(peasantUser.id)
@@ -90,14 +90,14 @@ class AdminAgentControllerTests : IntegrationTest() {
 
     assertEquals(200, response.status.value)
     val body = response.body<CountedList<AgentWithConfiguration>>()
-    assertEquals(1, body.total)
+    assertEquals(2, body.total)
   }
 
   @Test
   fun listingAgentsWorksPagination() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/agents?page=2&perPage=1&showDeactivated=true") {
+      client.get("/admin/agents?page=2&perPage=1") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
@@ -108,16 +108,31 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun listingAgentsWorksDefaultPaginationIncludeInactive() = test {
+  fun listingAgentsWorksSearchByName() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/agents?showDeactivated=true") {
+      client.get("/admin/agents?name=tone") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
     assertEquals(200, response.status.value)
     val body = response.body<CountedList<AgentWithConfiguration>>()
-    assertEquals(2, body.total)
+    assertEquals(1, body.total)
+    assertEquals(agentOne.id, body.items.first().agent.id)
+  }
+
+  @Test
+  fun listingAgentsWorksFilterByStatus() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/admin/agents?active=false") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<CountedList<AgentWithConfiguration>>()
+    assertEquals(1, body.total)
+    assertEquals(agentTwo.id, body.items.first().agent.id)
   }
 
   @Test
