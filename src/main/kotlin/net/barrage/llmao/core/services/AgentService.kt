@@ -35,9 +35,10 @@ class AgentService(
 
   fun getAllAdmin(
     pagination: PaginationSort,
-    showDeactivated: Boolean,
+    name: String?,
+    active: Boolean?,
   ): CountedList<AgentWithConfiguration> {
-    return agentRepository.getAllAdmin(pagination, showDeactivated)
+    return agentRepository.getAllAdmin(pagination, name, active)
   }
 
   fun get(id: KUUID): AgentFull {

@@ -70,17 +70,21 @@ class AgentRepository(private val dslContext: DSLContext) {
 
   fun getAllAdmin(
     pagination: PaginationSort,
-    showDeactivated: Boolean,
+    name: String? = null,
+    active: Boolean? = null,
   ): CountedList<AgentWithConfiguration> {
     val order = getSortOrderAgent(pagination, admin = true)
     val (limit, offset) = pagination.limitOffset()
 
+    val searchCondition =
+      (if (name != null) AGENTS.NAME.likeIgnoreCase("%$name%")
+        else DSL.noCondition()) // filter by name
+        .and(
+          if (active != null) AGENTS.ACTIVE.eq(active) else DSL.noCondition()
+        ) // filter by status
+
     val total =
-      dslContext
-        .selectCount()
-        .from(AGENTS)
-        .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
-        .fetchOne(0, Int::class.java) ?: 0
+      dslContext.selectCount().from(AGENTS).where(searchCondition).fetchOne(0, Int::class.java) ?: 0
 
     val agents =
       dslContext
@@ -110,7 +114,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         .from(AGENTS)
         .leftJoin(AGENT_CONFIGURATIONS)
         .on(AGENT_CONFIGURATIONS.ID.eq(AGENTS.ACTIVE_CONFIGURATION_ID))
-        .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
+        .where(searchCondition)
         .orderBy(order)
         .limit(limit)
         .offset(offset)

@@ -33,8 +33,9 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
   route("/admin/agents") {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
-      val showDeactivated = call.queryParam("showDeactivated")?.toBoolean() == true
-      val agents = agentService.getAllAdmin(pagination, showDeactivated)
+      val name = call.queryParam("name")
+      val active = call.queryParam("active")?.toBoolean()
+      val agents = agentService.getAllAdmin(pagination, name, active)
       call.respond(HttpStatusCode.OK, agents)
     }
 
@@ -127,8 +128,13 @@ private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   description = "Retrieve list of all agents"
   request {
     queryPaginationSort()
-    queryParameter<Boolean>("showDeactivated") {
-      description = "Show deactivated agents"
+    queryParameter<String>("name") {
+      description = "Filter by name"
+      required = false
+      example("default") { value = "Agent" }
+    }
+    queryParameter<Boolean>("active") {
+      description = "Filter by agent status"
       required = false
       example("default") { value = true }
     }
