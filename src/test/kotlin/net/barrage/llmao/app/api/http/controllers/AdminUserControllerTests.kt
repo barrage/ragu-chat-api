@@ -5,6 +5,10 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.minio.PutObjectArgs
+import io.minio.RemoveObjectArgs
+import io.minio.StatObjectArgs
+import io.minio.errors.ErrorResponseException
 import java.util.*
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.runBlocking
@@ -22,9 +26,13 @@ import net.barrage.llmao.sessionCookie
 import net.barrage.llmao.tables.references.USERS
 import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 
 class AdminUserControllerTests : IntegrationTest() {
   private lateinit var adminUser: User
@@ -177,7 +185,7 @@ class AdminUserControllerTests : IntegrationTest() {
     val testUser = postgres.testUser("update@user.net", admin = true, active = false)
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.put("admin/users/${peasantUser.id}") {
+      client.put("admin/users/${testUser.id}") {
         header("Cookie", sessionCookie(adminSession.sessionId))
         header("Content-Type", "application/json")
         setBody(
@@ -194,7 +202,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(200, response.status.value)
     val result: User = response.body()!!
-    assertEquals(peasantUser.id, result.id)
+    assertEquals(testUser.id, result.id)
     assertEquals("updated@user.com", result.email)
     assertEquals("Updated User", result.fullName)
     assertEquals("Updated", result.firstName)
@@ -532,5 +540,230 @@ class AdminUserControllerTests : IntegrationTest() {
     assertEquals(400, response.status.value)
     assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().reason)
     assertEquals("Invalid CSV header", response.body<AppError>().description)
+  }
+
+  @Test
+  fun shouldUploadAvatarJpeg() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "image/jpeg")
+        setBody("test".toByteArray())
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<User>()
+    assertEquals(peasantUser.id, body.id)
+    assertEquals("image/jpeg", body.avatar?.contentType?.toString())
+
+    assertDoesNotThrow {
+      minio.client.removeObject(
+        RemoveObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.jpg").build()
+      )
+    }
+  }
+
+  @Test
+  fun shouldUploadAvatarPng() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "image/png")
+        setBody("test".toByteArray())
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<User>()
+    assertEquals(peasantUser.id, body.id)
+
+    assertDoesNotThrow {
+      minio.client.statObject(
+        StatObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.png").build()
+      )
+    }
+
+    assertDoesNotThrow {
+      minio.client.removeObject(
+        RemoveObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.png").build()
+      )
+    }
+  }
+
+  @Test
+  fun shouldDeleteAvatar() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+
+    val responseUpload =
+      client.post("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "image/jpeg")
+        setBody("test".toByteArray())
+      }
+
+    assertEquals(200, responseUpload.status.value)
+    val bodyUpload = responseUpload.body<User>()
+    assertEquals(peasantUser.id, bodyUpload.id)
+
+    assertDoesNotThrow {
+      minio.client.statObject(
+        StatObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.jpg").build()
+      )
+    }
+
+    val responseDelete =
+      client.delete("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(204, responseDelete.status.value)
+
+    assertThrows<ErrorResponseException> {
+      minio.client.statObject(
+        StatObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.jpg").build()
+      )
+    }
+  }
+
+  @Test
+  fun shouldFailUploadAvatarWrongContentType() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "text/plain")
+        setBody("test".toByteArray())
+      }
+
+    assertEquals(400, response.status.value)
+    val body = response.body<AppError>()
+    assertEquals("API", body.type)
+    assertEquals(ErrorReason.InvalidContentType, body.reason)
+  }
+
+  @Test
+  fun shouldFailUploadAvatarTooLarge() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.post("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "image/jpeg")
+        setBody("test123".repeat(1000000).toByteArray())
+      }
+
+    assertEquals(413, response.status.value)
+  }
+
+  @Test
+  fun shouldReplaceAvatar() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val responseUpload1 =
+      client.post("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "image/jpeg")
+        setBody("test".toByteArray())
+      }
+
+    assertEquals(200, responseUpload1.status.value)
+    val bodyUpload1 = responseUpload1.body<User>()
+    assertEquals(peasantUser.id, bodyUpload1.id)
+    assertEquals("image/jpeg", bodyUpload1.avatar?.contentType?.toString())
+
+    assertDoesNotThrow {
+      minio.client.statObject(
+        StatObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.jpg").build()
+      )
+    }
+
+    val responseUpload2 =
+      client.post("/admin/users/${peasantUser.id}/avatars") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Content-Type", "image/png")
+        setBody("test".toByteArray())
+      }
+
+    assertEquals(200, responseUpload2.status.value)
+    val bodyUpload2 = responseUpload2.body<User>()
+    assertEquals(peasantUser.id, bodyUpload2.id)
+    assertEquals("image/png", bodyUpload2.avatar?.contentType?.toString())
+
+    assertDoesNotThrow {
+      minio.client.statObject(
+        StatObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.png").build()
+      )
+    }
+
+    assertThrows<ErrorResponseException> {
+      minio.client.statObject(
+        StatObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.jpg").build()
+      )
+    }
+  }
+
+  @Test
+  fun getUsersWithAvatar() = test {
+    minio.client.putObject(
+      PutObjectArgs.builder()
+        .bucket("test")
+        .`object`("avatars/${peasantUser.id}.jpg")
+        .stream("test".byteInputStream(), 4, -1)
+        .build()
+    )
+
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val responseWithoutAvatar =
+      client.get("/admin/users") { header("Cookie", sessionCookie(adminSession.sessionId)) }
+    assertEquals(200, responseWithoutAvatar.status.value)
+    val bodyWithoutAvatar = responseWithoutAvatar.body<CountedList<User>>()
+    assertNull(bodyWithoutAvatar.items.first { it.id == peasantUser.id }.avatar)
+
+    val responseWithAvatar =
+      client.get("/admin/users") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        parameter("withAvatar", "true")
+      }
+    assertEquals(200, responseWithAvatar.status.value)
+    val bodyWithAvatar = responseWithAvatar.body<CountedList<User>>()
+    assertNotNull(bodyWithAvatar.items.first { it.id == peasantUser.id }.avatar)
+
+    minio.client.removeObject(
+      RemoveObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.jpg").build()
+    )
+  }
+
+  @Test
+  fun getUserByIdWithAvatar() = test {
+    minio.client.putObject(
+      PutObjectArgs.builder()
+        .bucket("test")
+        .`object`("avatars/${peasantUser.id}.jpg")
+        .stream("test".byteInputStream(), 4, -1)
+        .build()
+    )
+
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val responseWithoutAvatar =
+      client.get("/admin/users/${peasantUser.id}") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(200, responseWithoutAvatar.status.value)
+    val bodyWithoutAvatar = responseWithoutAvatar.body<User>()
+    assertNull(bodyWithoutAvatar.avatar)
+
+    val responseWithAvatar =
+      client.get("/admin/users/${peasantUser.id}") {
+        header("Cookie", sessionCookie(adminSession.sessionId))
+        parameter("withAvatar", "true")
+      }
+
+    assertEquals(200, responseWithAvatar.status.value)
+    val bodyWithAvatar = responseWithAvatar.body<User>()
+    assertNotNull(bodyWithAvatar.avatar)
+
+    minio.client.removeObject(
+      RemoveObjectArgs.builder().bucket("test").`object`("avatars/${peasantUser.id}.jpg").build()
+    )
   }
 }

@@ -31,6 +31,7 @@ data class Agent(
   /** Agents timestamps. */
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
+  var avatar: Image? = null,
 )
 
 fun AgentsRecord.toAgent() =

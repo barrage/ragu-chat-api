@@ -1,5 +1,7 @@
 package net.barrage.llmao.core.services
 
+import io.ktor.util.*
+import io.ktor.utils.io.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
@@ -19,6 +21,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
+import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -31,21 +34,39 @@ class AgentService(
   private val agentRepository: AgentRepository,
   private val chatRepository: ChatRepository,
   private val stateChangeListener: EventListener<StateChangeEvent>,
+  private val avatarStorage: ImageStorage,
 ) {
-  suspend fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
-    return agentRepository.getAll(pagination, showDeactivated)
+  suspend fun getAll(
+    pagination: PaginationSort,
+    showDeactivated: Boolean,
+    withAvatar: Boolean = false,
+  ): CountedList<Agent> {
+    return agentRepository.getAll(pagination, showDeactivated).apply {
+      if (withAvatar) {
+        items.forEach { it.avatar = avatarStorage.retrieve(it.id) }
+      }
+    }
   }
 
   suspend fun getAllAdmin(
     pagination: PaginationSort,
     name: String?,
     active: Boolean?,
+    withAvatar: Boolean = false,
   ): CountedList<AgentWithConfiguration> {
-    return agentRepository.getAllAdmin(pagination, name, active)
+    return agentRepository.getAllAdmin(pagination, name, active).apply {
+      if (withAvatar) {
+        items.forEach { it.agent.avatar = avatarStorage.retrieve(it.agent.id) }
+      }
+    }
   }
 
-  suspend fun get(id: KUUID): AgentFull {
-    return agentRepository.get(id)
+  suspend fun get(id: KUUID, withAvatar: Boolean = false): AgentFull {
+    return agentRepository.get(id).apply {
+      if (withAvatar) {
+        agent.avatar = avatarStorage.retrieve(id)
+      }
+    }
   }
 
   suspend fun getActive(id: KUUID): Agent {
@@ -56,8 +77,12 @@ class AgentService(
    * Get an agent with full configuration, with its instructions populated with placeholders for
    * display purposes.
    */
-  suspend fun getFull(id: KUUID): AgentFull {
-    return agentRepository.get(id)
+  suspend fun getFull(id: KUUID, withAvatar: Boolean = false): AgentFull {
+    return agentRepository.get(id).apply {
+      if (withAvatar) {
+        agent.avatar = avatarStorage.retrieve(id)
+      }
+    }
   }
 
   suspend fun create(create: CreateAgent): AgentWithConfiguration {
@@ -84,12 +109,15 @@ class AgentService(
 
   suspend fun delete(id: KUUID) {
     val count = agentRepository.delete(id)
+
     if (count == 0) {
       throw AppError.api(
         ErrorReason.InvalidParameter,
         "Cannot delete active agent or agent not found",
       )
     }
+
+    avatarStorage.delete(id)
   }
 
   suspend fun updateCollections(
@@ -140,8 +168,26 @@ class AgentService(
     return agentRepository.rollbackVersion(agentId, versionId)
   }
 
-  suspend fun getAgent(agentId: KUUID): Agent {
-    return agentRepository.getAgent(agentId)
+  suspend fun getAgent(agentId: KUUID, withAvatar: Boolean = false): Agent {
+    return agentRepository.getAgent(agentId).apply {
+      if (withAvatar) {
+        avatar = avatarStorage.retrieve(id)
+      }
+    }
+  }
+
+  suspend fun uploadAgentAvatar(id: KUUID, fileExtension: String, avatar: ByteReadChannel): Agent {
+    val agent = agentRepository.getAgent(id)
+
+    agent.avatar = avatarStorage.store(id, fileExtension, avatar.toByteArray())
+
+    return agent
+  }
+
+  suspend fun deleteAgentAvatar(id: KUUID) {
+    agentRepository.getAgent(id)
+
+    avatarStorage.delete(id)
   }
 }
 

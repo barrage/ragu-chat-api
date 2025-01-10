@@ -39,7 +39,8 @@ fun Route.adminChatsRoutes(service: ChatService) {
     route("/{chatId}") {
       get(adminGetChatWithUserAndAgent()) {
         val chatId = call.pathUuid("chatId")
-        val chat = service.getChatWithUserAndAgent(chatId)
+        val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+        val chat = service.getChatWithUserAndAgent(chatId, withAvatar)
         call.respond(HttpStatusCode.OK, chat)
       }
 

@@ -50,6 +50,7 @@ open class IntegrationTest(
   enableWhatsApp: Boolean = false,
 ) {
   val postgres: TestPostgres = TestPostgres()
+  var minio: TestMinio = TestMinio()
   var weaviate: TestWeaviate? = null
   var wiremock: WireMockServer? = null
   lateinit var app: ApplicationState
@@ -71,6 +72,17 @@ open class IntegrationTest(
           "db.r2dbcDatabase" to postgres.container.databaseName,
           "db.runMigrations" to "false", // We migrate manually on PG container initialization
           "oauth.apple.clientSecret" to generateP8PrivateKey(),
+        )
+      )
+
+    // Minio
+    cfg =
+      cfg.mergeWith(
+        MapApplicationConfig(
+          "minio.endpoint" to minio.container.s3URL,
+          "minio.accessKey" to "testMinio",
+          "minio.secretKey" to "testMinio",
+          "minio.bucket" to "test",
         )
       )
 

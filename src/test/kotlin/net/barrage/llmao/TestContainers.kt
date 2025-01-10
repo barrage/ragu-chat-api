@@ -1,5 +1,7 @@
 package net.barrage.llmao
 
+import io.minio.MakeBucketArgs
+import io.minio.MinioClient
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
 import io.r2dbc.spi.ConnectionFactories
@@ -61,6 +63,7 @@ import org.jooq.impl.DefaultConfiguration
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.postgresql.ds.PGSimpleDataSource
+import org.testcontainers.containers.MinIOContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.weaviate.WeaviateContainer
@@ -491,5 +494,24 @@ class TestWeaviate {
       .withClassName(collection)
       .withWhere(WhereFilter.builder().operator(Operator.Like).path("id").valueString("*").build())
       .run()
+  }
+}
+
+class TestMinio {
+  val container =
+    MinIOContainer("minio/minio:latest")
+      .withUserName("testMinio")
+      .withPassword("testMinio")
+      .waitingFor(Wait.defaultWaitStrategy())
+
+  val client: MinioClient
+
+  init {
+    container.start()
+
+    client =
+      MinioClient.builder().endpoint(container.s3URL).credentials("testMinio", "testMinio").build()
+
+    client.makeBucket(MakeBucketArgs.builder().bucket("test").build())
   }
 }

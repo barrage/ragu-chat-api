@@ -13,6 +13,7 @@ import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
+import net.barrage.llmao.app.storage.MinioImageStorage
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
@@ -26,6 +27,7 @@ import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.services.UserService
+import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.initDatabase
@@ -83,7 +85,13 @@ class AdapterState(
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       val whatsAppRepo = WhatsAppRepository(database)
       adapters[WhatsAppAdapter::class] =
-        WhatsAppAdapter(config, services.conversation, providers, whatsAppRepo)
+        WhatsAppAdapter(
+          config,
+          services.conversation,
+          providers,
+          whatsAppRepo,
+          providers.imageStorage,
+        )
     }
   }
 
@@ -112,6 +120,7 @@ class ProviderState(config: ApplicationConfig) {
   val llm: LlmProviderFactory = LlmProviderFactory(config)
   val vector: VectorDatabaseProviderFactory = VectorDatabaseProviderFactory(config)
   val embedding: EmbeddingProviderFactory = EmbeddingProviderFactory(config)
+  val imageStorage: ImageStorage = MinioImageStorage(config)
 
   fun list(): ProvidersResponse {
     val authProviders = auth.listProviders()
@@ -166,9 +175,10 @@ class ServiceState(
   repository: RepositoryState,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val chat = ChatService(repository.chat, repository.agent, repository.user)
-  val agent = AgentService(providers, repository.agent, repository.chat, listener)
-  val user = UserService(repository.user, repository.session)
+  val chat = ChatService(repository.chat, repository.agent, repository.user, providers.imageStorage)
+  val agent =
+    AgentService(providers, repository.agent, repository.chat, listener, providers.imageStorage)
+  val user = UserService(repository.user, repository.session, providers.imageStorage)
   val auth = AuthenticationService(providers.auth, repository.session, repository.user)
   val admin = AdministrationService(providers, repository.agent, repository.chat, repository.user)
   val conversation = ConversationService(providers, repository.agent, repository.chat)

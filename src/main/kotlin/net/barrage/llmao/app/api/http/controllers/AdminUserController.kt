@@ -23,6 +23,7 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
+import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 import net.barrage.llmao.string
 
@@ -30,7 +31,8 @@ fun Route.adminUserRoutes(userService: UserService) {
   route("/admin/users") {
     get(adminGetAllUsers()) {
       val pagination = call.query(PaginationSort::class)
-      val users = userService.getAll(pagination)
+      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+      val users = userService.getAll(pagination, withAvatar)
       call.respond(HttpStatusCode.OK, users)
     }
 
@@ -45,7 +47,9 @@ fun Route.adminUserRoutes(userService: UserService) {
         throw AppError.api(ErrorReason.InvalidContentType, "Expected type: text/csv")
       }
 
-      val contentLength = call.request.contentLength() ?: 0
+      val contentLength =
+        call.request.contentLength()
+          ?: throw AppError.api(ErrorReason.InvalidParameter, "Expected content in request body")
       val maxContentLength =
         application.environment.config.string("upload.csv.maxFileSize").toLong()
 
@@ -66,7 +70,8 @@ fun Route.adminUserRoutes(userService: UserService) {
     route("/{id}") {
       get(adminGetUser()) {
         val userId = call.pathUuid("id")
-        val user = userService.get(userId)
+        val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+        val user = userService.get(userId, withAvatar)
         call.respond(HttpStatusCode.OK, user)
       }
 
@@ -84,6 +89,46 @@ fun Route.adminUserRoutes(userService: UserService) {
         userService.delete(userId, loggedInUser.id)
         call.respond(HttpStatusCode.NoContent)
       }
+
+      route("/avatars") {
+        post(uploadUserAvatar()) {
+          val userId = call.pathUuid("id")
+          val fileExtension =
+            when (call.request.contentType()) {
+              ContentType.Image.JPEG -> "jpg"
+              ContentType.Image.PNG -> "png"
+              else ->
+                throw AppError.api(
+                  ErrorReason.InvalidContentType,
+                  "Expected type: image/jpeg or image/png",
+                )
+            }
+
+          val contentLength =
+            call.request.contentLength()
+              ?: throw AppError.api(
+                ErrorReason.InvalidParameter,
+                "Expected content in request body",
+              )
+          if (
+            contentLength >
+              application.environment.config.string("upload.image.maxFileSize").toLong()
+          ) {
+            call.respond(HttpStatusCode.PayloadTooLarge)
+            return@post
+          }
+
+          val avatar = call.receiveChannel()
+          val userUpdated = userService.setUserAvatar(userId, fileExtension, avatar)
+          call.respond(userUpdated)
+        }
+
+        delete(deleteUserAvatar()) {
+          val userId = call.pathUuid("id")
+          userService.deleteUserAvatar(userId)
+          call.respond(HttpStatusCode.NoContent)
+        }
+      }
     }
   }
 }
@@ -92,7 +137,14 @@ fun Route.adminUserRoutes(userService: UserService) {
 private fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
   tags("admin/users")
   description = "Retrieve list of all users"
-  request { queryPaginationSort() }
+  request {
+    queryPaginationSort()
+    queryParameter<Boolean>("withAvatar") {
+      description = "Include avatar in response"
+      required = false
+      example("default") { value = true }
+    }
+  }
   response {
     HttpStatusCode.OK to
       {
@@ -114,6 +166,11 @@ private fun adminGetUser(): OpenApiRoute.() -> Unit = {
     pathParameter<KUUID>("id") {
       description = "User ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    queryParameter<Boolean>("withAvatar") {
+      description = "Include avatar in response"
+      required = false
+      example("default") { value = true }
     }
   }
   response {
@@ -221,4 +278,39 @@ private fun importUsersCsv(): OpenApiRoute.() -> Unit = {
         body<List<AppError>> {}
       }
   }
+}
+
+private fun uploadUserAvatar(): OpenApiRoute.() -> Unit = {
+  tags("admin/users/avatars")
+  description = "Upload user avatar"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "User ID"
+      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    body<ByteArray> {
+      description = "Avatar image, .jpg or .png format"
+      mediaTypes = setOf(ContentType.Image.JPEG, ContentType.Image.PNG)
+      required = true
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "User with avatar"
+        body<User> {}
+      }
+  }
+}
+
+private fun deleteUserAvatar(): OpenApiRoute.() -> Unit = {
+  tags("admin/users/avatars")
+  description = "Delete user avatar"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "User ID"
+      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response { HttpStatusCode.NoContent to { description = "User avatar deleted successfully" } }
 }

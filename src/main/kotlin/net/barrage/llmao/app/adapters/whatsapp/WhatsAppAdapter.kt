@@ -34,6 +34,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.services.processAdditions
+import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -46,6 +47,7 @@ class WhatsAppAdapter(
   private val conversation: ConversationService,
   private val providers: ProviderState,
   private val repository: WhatsAppRepository,
+  private val avatarStorage: ImageStorage,
 ) {
   private var whatsAppApi: WhatsAppApi
 
@@ -120,8 +122,15 @@ class WhatsAppAdapter(
       ?: throw AppError.api(ErrorReason.Internal, "Something went wrong while creating agent")
   }
 
-  suspend fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
-    return repository.getAllChats(pagination)
+  suspend fun getAllChats(
+    pagination: PaginationSort,
+    withAvatar: Boolean = false,
+  ): CountedList<WhatsAppChatWithUserName> {
+    return repository.getAllChats(pagination).apply {
+      if (withAvatar) {
+        items.forEach { it.avatar = avatarStorage.retrieve(it.chat.userId) }
+      }
+    }
   }
 
   suspend fun getChatByUserId(userId: KUUID): WhatsAppChatWithUserAndMessages {
@@ -132,8 +141,15 @@ class WhatsAppAdapter(
     return getChatWithMessages(chat.id)
   }
 
-  suspend fun getChatWithMessages(id: KUUID): WhatsAppChatWithUserAndMessages {
-    return repository.getChatWithMessages(id)
+  suspend fun getChatWithMessages(
+    id: KUUID,
+    withAvatar: Boolean = false,
+  ): WhatsAppChatWithUserAndMessages {
+    return repository.getChatWithMessages(id).apply {
+      if (withAvatar) {
+        user.avatar = avatarStorage.retrieve(user.id)
+      }
+    }
   }
 
   suspend fun updateCollections(
@@ -166,6 +182,8 @@ class WhatsAppAdapter(
     if (agent.agent.active) {
       throw AppError.api(ErrorReason.InvalidOperation, "Cannot delete active agent")
     }
+
+    avatarStorage.delete(agentId)
 
     repository.deleteAgent(agentId)
   }
@@ -286,6 +304,7 @@ class WhatsAppAdapter(
       val id = KUUID.randomUUID()
       return repository.storeChat(id, userId)
     }
+
     LOG.trace("Found chat {}", chat)
     return chat
   }
