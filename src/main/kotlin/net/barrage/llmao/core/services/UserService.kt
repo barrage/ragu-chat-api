@@ -1,9 +1,11 @@
 package net.barrage.llmao.core.services
 
+import io.ktor.util.*
 import io.ktor.utils.io.*
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.CsvImportedUser
+import net.barrage.llmao.core.models.Image
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
@@ -11,6 +13,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
+import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.utility.parseUsers
 import net.barrage.llmao.error.AppError
@@ -19,14 +22,24 @@ import net.barrage.llmao.error.ErrorReason
 class UserService(
   private val usersRepository: UserRepository,
   private val sessionsRepository: SessionRepository,
+  private val avatarStorage: ImageStorage,
 ) {
-  suspend fun getAll(pagination: PaginationSort): CountedList<User> {
-    return usersRepository.getAll(pagination)
+  suspend fun getAll(pagination: PaginationSort, withAvatar: Boolean = false): CountedList<User> {
+    return usersRepository.getAll(pagination).apply {
+      items.forEach {
+        if (withAvatar) {
+          it.avatar = avatarStorage.retrieve(it.id)
+        }
+      }
+    }
   }
 
-  suspend fun get(id: KUUID): User {
-    return usersRepository.get(id)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+  suspend fun get(id: KUUID, withAvatar: Boolean = false): User {
+    return usersRepository.get(id)?.apply {
+      if (withAvatar) {
+        avatar = avatarStorage.retrieve(id)
+      }
+    } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
   }
 
   suspend fun create(user: CreateUser): User {
@@ -90,6 +103,8 @@ class UserService(
     } else {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
     }
+
+    avatarStorage.delete(id)
   }
 
   suspend fun importUsersCsv(csv: ByteReadChannel): CsvImportUsersResult {
@@ -108,5 +123,27 @@ class UserService(
       }
 
     return CsvImportUsersResult(successful, failed)
+  }
+
+  suspend fun setUserAvatar(id: KUUID, fileExtension: String, avatar: ByteReadChannel): User {
+    val user =
+      usersRepository.get(id)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+
+    user.avatar = avatarStorage.store(id, fileExtension, avatar.toByteArray())
+
+    return user
+  }
+
+  suspend fun deleteUserAvatar(id: KUUID) {
+    usersRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+
+    avatarStorage.delete(id)
+  }
+
+  suspend fun downloadUserAvatar(id: KUUID): Image? {
+    usersRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+
+    return avatarStorage.retrieve(id)
   }
 }

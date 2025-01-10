@@ -21,6 +21,7 @@ data class User(
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
   val deletedAt: KOffsetDateTime? = null,
+  var avatar: Image? = null,
 )
 
 fun UsersRecord.toUser() =

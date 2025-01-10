@@ -13,6 +13,7 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.UserRepository
+import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -24,6 +25,7 @@ class ChatService(
   private val chatRepository: ChatRepository,
   private val agentRepository: AgentRepository,
   private val userRepository: UserRepository,
+  private val avatarStorage: ImageStorage,
 ) {
   suspend fun listChatsAdmin(
     pagination: PaginationSort,
@@ -36,7 +38,11 @@ class ChatService(
     return chatRepository.getAll(pagination, userId)
   }
 
-  suspend fun getChatWithAgent(id: KUUID, userId: KUUID): ChatWithAgent {
+  suspend fun getChatWithAgent(
+    id: KUUID,
+    userId: KUUID,
+    withAvatar: Boolean = false,
+  ): ChatWithAgent {
     val chat =
       chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
@@ -44,20 +50,29 @@ class ChatService(
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
     }
 
-    val agent = agentRepository.get(chat.agentId)
+    val agent = agentRepository.getAgent(chat.agentId)
+    if (withAvatar) {
+      agent.avatar = avatarStorage.retrieve(agent.id)
+    }
 
-    return ChatWithAgent(chat, agent.agent)
+    return ChatWithAgent(chat, agent)
   }
 
-  suspend fun getChatWithUserAndAgent(id: KUUID): ChatWithUserAndAgent {
+  suspend fun getChatWithUserAndAgent(
+    id: KUUID,
+    withAvatar: Boolean = false,
+  ): ChatWithUserAndAgent {
     val chat =
       chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
-    val agent = agentRepository.get(chat.agentId)
-
+    val agent = agentRepository.getAgent(chat.agentId)
     val user = userRepository.get(chat.userId)!!
+    if (withAvatar) {
+      user.avatar = avatarStorage.retrieve(user.id)
+      agent.avatar = avatarStorage.retrieve(agent.id)
+    }
 
-    return ChatWithUserAndAgent(chat, user, agent.agent)
+    return ChatWithUserAndAgent(chat, user, agent)
   }
 
   suspend fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {

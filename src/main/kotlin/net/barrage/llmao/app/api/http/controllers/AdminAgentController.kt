@@ -11,6 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
@@ -25,9 +26,11 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.queryParam
+import net.barrage.llmao.string
 
 fun Route.adminAgentsRoutes(agentService: AgentService) {
   route("/admin/agents") {
@@ -35,7 +38,8 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
       val pagination = call.query(PaginationSort::class)
       val name = call.queryParam("name")
       val active = call.queryParam("active")?.toBoolean()
-      val agents = agentService.getAllAdmin(pagination, name, active)
+      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+      val agents = agentService.getAllAdmin(pagination, name, active, withAvatar)
       call.respond(HttpStatusCode.OK, agents)
     }
 
@@ -48,7 +52,8 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
-        val agent = agentService.getFull(id)
+        val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+        val agent = agentService.getFull(id, withAvatar)
         call.respond(HttpStatusCode.OK, agent)
       }
 
@@ -70,6 +75,46 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
         val update: UpdateCollections = call.receive()
         val updateResult = agentService.updateCollections(agentId, update)
         call.respond(HttpStatusCode.OK, updateResult)
+      }
+
+      route("/avatars") {
+        post(uploadAgentAvatar()) {
+          val agentId = call.pathUuid("id")
+          val fileExtension =
+            when (call.request.contentType()) {
+              ContentType.Image.JPEG -> "jpg"
+              ContentType.Image.PNG -> "png"
+              else ->
+                throw AppError.api(
+                  ErrorReason.InvalidContentType,
+                  "Expected type: image/jpeg or image/png",
+                )
+            }
+
+          val contentLength =
+            call.request.contentLength()
+              ?: throw AppError.api(
+                ErrorReason.InvalidParameter,
+                "Expected content in request body",
+              )
+          if (
+            contentLength >
+              application.environment.config.string("upload.image.maxFileSize").toLong()
+          ) {
+            call.respond(HttpStatusCode.PayloadTooLarge)
+            return@post
+          }
+
+          val avatar = call.receiveChannel()
+          val agentUpdated = agentService.uploadAgentAvatar(agentId, fileExtension, avatar)
+          call.respond(agentUpdated)
+        }
+
+        delete(deleteAgentAvatar()) {
+          val agentId = call.pathUuid("id")
+          agentService.deleteAgentAvatar(agentId)
+          call.respond(HttpStatusCode.NoContent)
+        }
       }
 
       route("/versions") {
@@ -138,6 +183,11 @@ private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
       required = false
       example("default") { value = true }
     }
+    queryParameter<Boolean>("withAvatar") {
+      description = "Include avatar in response"
+      required = false
+      example("default") { value = true }
+    }
   }
   response {
     HttpStatusCode.OK to
@@ -160,6 +210,11 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
     pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    queryParameter<Boolean>("withAvatar") {
+      description = "Include avatar in response"
+      required = false
+      example("default") { value = true }
     }
   }
   response {
@@ -438,6 +493,58 @@ private fun rollbackAgentVersion(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving agent version"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun uploadAgentAvatar(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents/avatars")
+  description = "Upload agent avatar"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    body<ByteArray> {
+      description = "Avatar image, .jpg or .png format"
+      mediaTypes = setOf(ContentType.Image.JPEG, ContentType.Image.PNG)
+      required = true
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Agent with avatar"
+        body<Agent> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while uploading avatar"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid input"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun deleteAgentAvatar(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents/avatars")
+  description = "Delete agent avatar"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Agent avatar deleted successfully" }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while deleting avatar"
         body<List<AppError>> {}
       }
   }

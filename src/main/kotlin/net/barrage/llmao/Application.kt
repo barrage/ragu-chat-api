@@ -48,3 +48,8 @@ fun Application.module() {
 fun ApplicationConfig.string(key: String): String {
   return property(key).getString()
 }
+
+/** Shorthand for `config.property(key).getString().toLong` */
+fun ApplicationConfig.long(key: String): Long {
+  return property(key).getString().toLong()
+}

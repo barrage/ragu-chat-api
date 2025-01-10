@@ -24,6 +24,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
+import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 
 fun Route.chatsRoutes(service: ChatService) {
@@ -39,7 +40,8 @@ fun Route.chatsRoutes(service: ChatService) {
       get(getChatWithAgent()) {
         val user = call.user()
         val chatId = call.pathUuid("chatId")
-        val chat = service.getChatWithAgent(chatId, user.id)
+        val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+        val chat = service.getChatWithAgent(chatId, user.id, withAvatar)
         call.respond(HttpStatusCode.OK, chat)
       }
 

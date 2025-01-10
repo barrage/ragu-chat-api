@@ -98,6 +98,7 @@ dependencies {
   testImplementation("org.postgresql:postgresql:$postgresVersion")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
+  testImplementation("org.testcontainers:minio:1.20.4")
 
   // Error handling
   implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
@@ -113,6 +114,9 @@ dependencies {
 
   // Weaviate client
   implementation("io.weaviate:client:4.8.3")
+
+  // MinIO
+  implementation("io.minio:minio:8.5.15")
 }
 
 // Ensures all properties are set in gradle.properties and throws a user friendly error if not

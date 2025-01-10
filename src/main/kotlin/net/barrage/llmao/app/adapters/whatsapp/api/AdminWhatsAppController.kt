@@ -112,13 +112,15 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
   route("/admin/whatsapp/chats") {
     get(adminGetAllWhatsAppChats()) {
       val pagination = call.query(PaginationSort::class)
-      val chats = whatsAppAdapter.getAllChats(pagination)
+      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+      val chats = whatsAppAdapter.getAllChats(pagination, withAvatar)
       call.respond(chats)
     }
 
     get("/{chatId}", adminGetWhatsAppChat()) {
       val chatId = call.pathUuid("chatId")
-      val chat = whatsAppAdapter.getChatWithMessages(chatId)
+      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
+      val chat = whatsAppAdapter.getChatWithMessages(chatId, withAvatar)
       call.respond(chat)
     }
   }
@@ -128,7 +130,14 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 private fun adminGetAllWhatsAppAgents(): OpenApiRoute.() -> Unit = {
   tags("admin/whatsapp/agents")
   description = "Retrieve list of all WhatsApp agents"
-  request { queryPaginationSort() }
+  request {
+    queryPaginationSort()
+    queryParameter<Boolean>("withAvatar") {
+      description = "Include avatar in response"
+      required = false
+      example("default") { value = true }
+    }
+  }
   response {
     HttpStatusCode.OK to
       {
@@ -168,6 +177,11 @@ private fun adminGetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
     pathParameter<KUUID>("agentId") {
       description = "Agent ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    queryParameter<Boolean>("withAvatar") {
+      description = "Include avatar in response"
+      required = false
+      example("default") { value = true }
     }
   }
   response {
@@ -427,6 +441,62 @@ private fun adminGetWhatsAppChat(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while retrieving chat"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun setWhatsAppAgentAvatar(): OpenApiRoute.() -> Unit = {
+  tags("admin/whatsapp/agents/avatars")
+  description = "Upload agent avatar"
+  request {
+    pathParameter<KUUID>("agentId") {
+      description = "Agent ID"
+      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    body<ByteArray> {
+      description = "Avatar image, .jpg or .png format"
+      mediaTypes = setOf(ContentType.Image.JPEG, ContentType.Image.PNG)
+      required = true
+    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Agent with avatar"
+        body<WhatsAppAgent> {}
+      }
+  }
+  response {
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while uploading avatar"
+        body<List<AppError>> {}
+      }
+  }
+  response {
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid input"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun deleteWhatsAppAgentAvatar(): OpenApiRoute.() -> Unit = {
+  tags("admin/whatsapp/agents/avatars")
+  description = "Delete agent avatar"
+  request {
+    pathParameter<KUUID>("agentId") {
+      description = "Agent ID"
+      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Agent avatar deleted successfully" }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while deleting avatar"
         body<List<AppError>> {}
       }
   }
