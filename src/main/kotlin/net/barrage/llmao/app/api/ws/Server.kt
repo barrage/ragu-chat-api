@@ -11,6 +11,9 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.onCompletion
@@ -50,6 +53,9 @@ fun Application.websocketServer(factory: ChatFactory) {
     // The websocket route is unprotected in regard to the regular HTTP auth mechanisms (read
     // cookies). We protect it manually with the TokenManager.
     webSocket {
+      // Used for debugging
+      val connectionStart = Instant.now()
+
       // Validate session
       val rawToken = call.queryParam("token")
 
@@ -103,8 +109,17 @@ fun Application.websocketServer(factory: ChatFactory) {
           }
         }
         .onFailure { e ->
-          e.printStackTrace()
-          LOG.error("Websocket exception occurred", e)
+          LOG.error("Websocket exception occurred {}", e.message)
+          val formatter =
+            DateTimeFormatter.ofPattern("yyyy/MM/dd:HH:mm:ss").withZone(ZoneId.systemDefault())
+          LOG.debug(
+            "Connection for user-token '{}'-'{}' closed. Start: {}, End: {}, Duration: {}ms",
+            userId,
+            token,
+            formatter.format(Instant.ofEpochMilli(connectionStart.toEpochMilli())),
+            formatter.format(Instant.now()),
+            Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
+          )
           messageHandler.removeChat(userId, token)
           return@webSocket
         }
