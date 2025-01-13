@@ -45,7 +45,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(200, response.status.value)
     val body: CountedList<User> = response.body()!!
-    assertEquals(2, body.total)
+    assertEquals(3, body.total) // default Admin user
     assertTrue { body.items.any { it.id == adminUser.id } }
     assertTrue { body.items.any { it.id == peasantUser.id } }
   }

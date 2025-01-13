@@ -142,10 +142,10 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
     Assertions.assertEquals(1, body.agent.providers["openai"])
     Assertions.assertEquals(1, body.agent.providers["azure"])
 
-    Assertions.assertEquals(3, body.user.total)
-    Assertions.assertEquals(2, body.user.active)
+    Assertions.assertEquals(4, body.user.total)
+    Assertions.assertEquals(3, body.user.active)
     Assertions.assertEquals(1, body.user.inactive)
-    Assertions.assertEquals(1, body.user.admin)
+    Assertions.assertEquals(2, body.user.admin)
     Assertions.assertEquals(1, body.user.user)
 
     Assertions.assertEquals(2, body.chat.total)

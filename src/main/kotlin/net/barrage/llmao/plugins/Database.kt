@@ -13,9 +13,14 @@ import io.r2dbc.spi.ConnectionFactoryOptions.PORT
 import io.r2dbc.spi.ConnectionFactoryOptions.USER
 import java.time.Duration
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.runBlocking
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
+import net.barrage.llmao.core.models.common.Role
+import net.barrage.llmao.string
+import net.barrage.llmao.tables.references.USERS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
@@ -60,6 +65,10 @@ fun initDatabase(config: ApplicationConfig, applicationStopping: Job): DSLContex
     runLiquibaseMigration(config)
   }
 
+  if (config.string("admin.email").isNotBlank() && config.string("admin.fullName").isNotBlank()) {
+    insertAdminUser(dslContext, config)
+  }
+
   return dslContext
 }
 
@@ -79,5 +88,30 @@ fun runLiquibaseMigration(config: ApplicationConfig) {
     val liquibase =
       Liquibase(changeLogFile, ClassLoaderResourceAccessor(), JdbcConnection(connection))
     liquibase.update("main")
+  }
+}
+
+fun insertAdminUser(dslContext: DSLContext, config: ApplicationConfig) {
+  val email = config.string("admin.email")
+  val fullName = config.string("admin.fullName")
+  val firstName = config.string("admin.firstName")
+  val lastName = config.string("admin.lastName")
+  val role = Role.ADMIN.name
+
+  runBlocking {
+    dslContext
+      .insertInto(USERS)
+      .columns(
+        USERS.EMAIL,
+        USERS.FULL_NAME,
+        USERS.FIRST_NAME,
+        USERS.LAST_NAME,
+        USERS.ROLE,
+        USERS.ACTIVE,
+      )
+      .values(email, fullName, firstName, lastName, role, true)
+      .onConflict(USERS.EMAIL)
+      .doNothing()
+      .awaitSingle()
   }
 }
