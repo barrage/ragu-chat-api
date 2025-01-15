@@ -10,12 +10,12 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
+import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Pagination
@@ -65,10 +65,10 @@ fun Route.adminChatsRoutes(service: ChatService) {
         }
 
         patch("/{messageId}", adminEvaluate()) {
-          val input: EvaluateMessageDTO = call.receive()
+          val input: EvaluateMessage = call.receive()
           val chatId = call.pathUuid("chatId")
           val messageId = call.pathUuid("messageId")
-          val message = service.evaluateMessage(chatId, messageId, input.evaluation)
+          val message = service.evaluateMessage(chatId, messageId, input)
           call.respond(HttpStatusCode.OK, message)
         }
       }
@@ -191,13 +191,13 @@ private fun adminEvaluate(): OpenApiRoute.() -> Unit = {
       description = "The ID of the message"
       example("default") { value = "eb771f1a-cd4a-4288-9eb4-bd2b33c58d48" }
     }
-    body<EvaluateMessageDTO>()
+    body<EvaluateMessage>()
   }
   response {
     HttpStatusCode.OK to
       {
         description = "Updated message retrieved successfully"
-        body<Message> {}
+        body<EvaluateMessage> {}
       }
     HttpStatusCode.InternalServerError to
       {

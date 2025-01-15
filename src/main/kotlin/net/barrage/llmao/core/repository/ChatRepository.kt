@@ -15,6 +15,7 @@ import net.barrage.llmao.core.models.ChatCount
 import net.barrage.llmao.core.models.ChatCounts
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
+import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.FailedMessage
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
@@ -24,6 +25,7 @@ import net.barrage.llmao.core.models.common.Period
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toChat
+import net.barrage.llmao.core.models.toEvaluateMessage
 import net.barrage.llmao.core.models.toFailedMessage
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toUser
@@ -33,6 +35,7 @@ import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.FAILED_MESSAGES
 import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.MESSAGE_EVALUATIONS
 import net.barrage.llmao.tables.references.USERS
 import org.jooq.DSLContext
 import org.jooq.SortField
@@ -182,17 +185,26 @@ class ChatRepository(private val dslContext: DSLContext) {
           MESSAGES.CONTENT,
           MESSAGES.CHAT_ID,
           MESSAGES.RESPONSE_TO,
-          MESSAGES.EVALUATION,
           MESSAGES.CREATED_AT,
           MESSAGES.UPDATED_AT,
+          MESSAGE_EVALUATIONS.EVALUATION,
+          MESSAGE_EVALUATIONS.FEEDBACK,
         )
         .from(MESSAGES)
+        .leftJoin(MESSAGE_EVALUATIONS)
+        .on(MESSAGES.ID.eq(MESSAGE_EVALUATIONS.MESSAGE_ID))
         .where(MESSAGES.CHAT_ID.eq(chatId))
         .orderBy(MESSAGES.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
         .asFlow()
-        .map { it.into(MESSAGES).toMessage() }
+        .map { record ->
+          val message = record.into(MESSAGES).toMessage()
+          message.copy(
+            evaluation = record.get(MESSAGE_EVALUATIONS.EVALUATION),
+            feedback = record.get(MESSAGE_EVALUATIONS.FEEDBACK),
+          )
+        }
         .toList()
 
     return CountedList(total, messages)
@@ -224,19 +236,24 @@ class ChatRepository(private val dslContext: DSLContext) {
           MESSAGES.CONTENT,
           MESSAGES.CHAT_ID,
           MESSAGES.RESPONSE_TO,
-          MESSAGES.EVALUATION,
           MESSAGES.CREATED_AT,
           MESSAGES.UPDATED_AT,
+          MESSAGE_EVALUATIONS.EVALUATION,
         )
         .from(MESSAGES)
         .join(CHATS)
         .on(MESSAGES.CHAT_ID.eq(CHATS.ID))
+        .leftJoin(MESSAGE_EVALUATIONS)
+        .on(MESSAGES.ID.eq(MESSAGE_EVALUATIONS.MESSAGE_ID))
         .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
         .orderBy(MESSAGES.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
         .asFlow()
-        .map { it.into(MESSAGES).toMessage() }
+        .map { record ->
+          val message = record.into(MESSAGES).toMessage()
+          message.copy(evaluation = record.get(MESSAGE_EVALUATIONS.EVALUATION))
+        }
         .toList()
 
     return CountedList(total, messages)
@@ -251,7 +268,6 @@ class ChatRepository(private val dslContext: DSLContext) {
         MESSAGES.CONTENT,
         MESSAGES.CHAT_ID,
         MESSAGES.RESPONSE_TO,
-        MESSAGES.EVALUATION,
         MESSAGES.CREATED_AT,
         MESSAGES.UPDATED_AT,
       )
@@ -262,28 +278,30 @@ class ChatRepository(private val dslContext: DSLContext) {
       ?.toMessage()
   }
 
-  suspend fun evaluateMessage(id: KUUID, evaluation: Boolean): Message? {
-    return dslContext
-      .update(MESSAGES)
-      .set(MESSAGES.EVALUATION, evaluation)
-      .set(MESSAGES.UPDATED_AT, OffsetDateTime.now())
-      .where(MESSAGES.ID.eq(id))
-      .returning()
-      .awaitFirstOrNull()
-      ?.into(MESSAGES)
-      ?.toMessage()
-  }
+  suspend fun evaluateMessage(messageId: KUUID, input: EvaluateMessage): EvaluateMessage? {
+    if (input.evaluation == null) {
+      val deletedCount =
+        dslContext
+          .deleteFrom(MESSAGE_EVALUATIONS)
+          .where(MESSAGE_EVALUATIONS.MESSAGE_ID.eq(messageId))
+          .awaitSingle()
 
-  suspend fun evaluateMessage(id: KUUID, userId: KUUID, evaluation: Boolean): Message? {
+      return if (deletedCount == 1) input else null
+    }
+
     return dslContext
-      .update(MESSAGES)
-      .set(MESSAGES.EVALUATION, evaluation)
-      .set(MESSAGES.UPDATED_AT, OffsetDateTime.now())
-      .where(MESSAGES.ID.eq(id).and(MESSAGES.SENDER.eq(userId)))
+      .insertInto(MESSAGE_EVALUATIONS)
+      .set(MESSAGE_EVALUATIONS.MESSAGE_ID, messageId)
+      .set(MESSAGE_EVALUATIONS.EVALUATION, input.evaluation)
+      .set(MESSAGE_EVALUATIONS.FEEDBACK, input.feedback)
+      .onConflict(MESSAGE_EVALUATIONS.MESSAGE_ID)
+      .doUpdate()
+      .set(MESSAGE_EVALUATIONS.EVALUATION, input.evaluation)
+      .set(MESSAGE_EVALUATIONS.FEEDBACK, input.feedback)
       .returning()
-      .awaitFirstOrNull()
-      ?.into(MESSAGES)
-      ?.toMessage()
+      .awaitSingle()
+      ?.into(MESSAGE_EVALUATIONS)
+      ?.toEvaluateMessage()
   }
 
   suspend fun updateTitle(id: KUUID, title: String): Chat? {
@@ -488,23 +506,24 @@ class ChatRepository(private val dslContext: DSLContext) {
   suspend fun getAgentConfigurationMessageCounts(
     versionId: KUUID
   ): AgentConfigurationEvaluatedMessageCounts {
-    val total =
+    val result =
       dslContext
-        .selectCount()
+        .select(
+          DSL.count(MESSAGES.ID).`as`("total"),
+          DSL.count(MESSAGE_EVALUATIONS.ID).`as`("evaluated"),
+          DSL.sum(DSL.`when`(MESSAGE_EVALUATIONS.EVALUATION.isTrue, 1).otherwise(0))
+            .`as`("positive"),
+        )
         .from(MESSAGES)
+        .leftJoin(MESSAGE_EVALUATIONS)
+        .on(MESSAGES.ID.eq(MESSAGE_EVALUATIONS.MESSAGE_ID))
         .where(MESSAGES.SENDER.eq(versionId))
         .awaitSingle()
-        .value1() ?: 0
 
-    val positive =
-      dslContext
-        .selectCount()
-        .from(MESSAGES)
-        .where(MESSAGES.SENDER.eq(versionId).and(MESSAGES.EVALUATION.isTrue))
-        .awaitSingle()
-        .value1() ?: 0
-
-    val negative = total - positive
+    val total = result.get("total", Int::class.java) ?: 0
+    val evaluated = result.get("evaluated", Int::class.java) ?: 0
+    val positive = result.get("positive", Int::class.java) ?: 0
+    val negative = evaluated - positive
 
     return AgentConfigurationEvaluatedMessageCounts(total, positive, negative)
   }
@@ -522,14 +541,22 @@ class ChatRepository(private val dslContext: DSLContext) {
       dslContext
         .selectCount()
         .from(MESSAGES)
+        .join(MESSAGE_EVALUATIONS)
+        .on(MESSAGES.ID.eq(MESSAGE_EVALUATIONS.MESSAGE_ID))
         .where(
           MESSAGES.SENDER.eq(versionId)
-            .and(MESSAGES.EVALUATION.isNotNull)
+            .and(
+              DSL.exists(
+                DSL.selectOne()
+                  .from(MESSAGE_EVALUATIONS)
+                  .where(MESSAGE_EVALUATIONS.MESSAGE_ID.eq(MESSAGES.ID))
+              )
+            )
             .and(
               if (evaluation == null) {
                 DSL.noCondition()
               } else {
-                MESSAGES.EVALUATION.eq(evaluation)
+                MESSAGE_EVALUATIONS.EVALUATION.eq(evaluation)
               }
             )
         )
@@ -545,19 +572,28 @@ class ChatRepository(private val dslContext: DSLContext) {
           MESSAGES.CONTENT,
           MESSAGES.CHAT_ID,
           MESSAGES.RESPONSE_TO,
-          MESSAGES.EVALUATION,
           MESSAGES.CREATED_AT,
           MESSAGES.UPDATED_AT,
+          MESSAGE_EVALUATIONS.EVALUATION,
+          MESSAGE_EVALUATIONS.FEEDBACK,
         )
         .from(MESSAGES)
+        .join(MESSAGE_EVALUATIONS)
+        .on(MESSAGES.ID.eq(MESSAGE_EVALUATIONS.MESSAGE_ID))
         .where(
           MESSAGES.SENDER.eq(versionId)
-            .and(MESSAGES.EVALUATION.isNotNull)
+            .and(
+              DSL.exists(
+                DSL.selectOne()
+                  .from(MESSAGE_EVALUATIONS)
+                  .where(MESSAGE_EVALUATIONS.MESSAGE_ID.eq(MESSAGES.ID))
+              )
+            )
             .and(
               if (evaluation == null) {
                 DSL.noCondition()
               } else {
-                MESSAGES.EVALUATION.eq(evaluation)
+                MESSAGE_EVALUATIONS.EVALUATION.eq(evaluation)
               }
             )
         )
@@ -565,7 +601,10 @@ class ChatRepository(private val dslContext: DSLContext) {
         .limit(limit)
         .offset(offset)
         .asFlow()
-        .map { it.into(MESSAGES).toMessage() }
+        .map { record ->
+          val message = record.into(MESSAGES).toMessage()
+          message.copy(evaluation = record.get(MESSAGE_EVALUATIONS.EVALUATION))
+        }
         .toList()
 
     return CountedList(count, messages)
@@ -577,7 +616,7 @@ class ChatRepository(private val dslContext: DSLContext) {
       when (sortBy) {
         "createdAt" -> MESSAGES.CREATED_AT
         "updatedAt" -> MESSAGES.UPDATED_AT
-        "evaluation" -> MESSAGES.EVALUATION
+        "evaluation" -> MESSAGE_EVALUATIONS.EVALUATION
         else -> MESSAGES.CREATED_AT
       }
 
