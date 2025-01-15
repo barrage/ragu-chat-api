@@ -46,6 +46,7 @@ import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.MESSAGE_EVALUATIONS
 import net.barrage.llmao.tables.references.SESSIONS
 import net.barrage.llmao.tables.references.USERS
 import net.barrage.llmao.tables.references.WHATS_APP_AGENTS
@@ -280,18 +281,30 @@ class TestPostgres {
     senderType: String = "user",
     responseTo: UUID? = null,
     evaluation: Boolean? = null,
+    feedback: String? = null,
   ): Message {
-    return dslContext
-      .insertInto(MESSAGES)
-      .set(MESSAGES.CHAT_ID, chatId)
-      .set(MESSAGES.SENDER, userId)
-      .set(MESSAGES.SENDER_TYPE, senderType)
-      .set(MESSAGES.CONTENT, content)
-      .set(MESSAGES.RESPONSE_TO, responseTo)
-      .set(MESSAGES.EVALUATION, evaluation)
-      .returning()
-      .awaitSingle()
-      .toMessage()
+    val message =
+      dslContext
+        .insertInto(MESSAGES)
+        .set(MESSAGES.CHAT_ID, chatId)
+        .set(MESSAGES.SENDER, userId)
+        .set(MESSAGES.SENDER_TYPE, senderType)
+        .set(MESSAGES.CONTENT, content)
+        .set(MESSAGES.RESPONSE_TO, responseTo)
+        .returning()
+        .awaitSingle()
+        .toMessage()
+
+    if (evaluation != null) {
+      dslContext
+        .insertInto(MESSAGE_EVALUATIONS)
+        .set(MESSAGE_EVALUATIONS.MESSAGE_ID, message.id)
+        .set(MESSAGE_EVALUATIONS.EVALUATION, evaluation)
+        .set(MESSAGE_EVALUATIONS.FEEDBACK, feedback)
+        .awaitSingle()
+    }
+
+    return message
   }
 
   suspend fun testWhatsAppNumber(userId: UUID, phoneNumber: String): WhatsAppNumber {

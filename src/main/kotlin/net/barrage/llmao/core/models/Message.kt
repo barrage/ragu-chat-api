@@ -32,6 +32,7 @@ data class Message(
 
   /** :( / :) */
   val evaluation: Boolean? = null,
+  val feedback: String? = null,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
@@ -44,7 +45,6 @@ fun MessagesRecord.toMessage() =
     content = this.content,
     chatId = this.chatId,
     responseTo = this.responseTo,
-    evaluation = this.evaluation,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

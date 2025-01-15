@@ -8,17 +8,19 @@ import io.ktor.serialization.kotlinx.json.*
 import java.util.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.app.api.http.dto.EvaluateMessageDTO
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
+import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.repository.ChatRepository
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
 import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -54,7 +56,14 @@ class AdminChatControllerTests : IntegrationTest() {
       chatTwo = postgres.testChat(user.id, agent.id)
       chatThree = postgres.testChat(userAdmin.id, agent.id)
       messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
-      messageTwo = postgres.testChatMessage(chatOne.id, user.id, "Second Message")
+      messageTwo =
+        postgres.testChatMessage(
+          chatOne.id,
+          UUID.randomUUID(),
+          "Second Message",
+          senderType = "assistant",
+          responseTo = messageOne.id,
+        )
       chatRepository = ChatRepository(postgres.dslContext)
     }
   }
@@ -163,18 +172,99 @@ class AdminChatControllerTests : IntegrationTest() {
   @Test
   fun shouldEvaluateMessageFromChat() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val evaluation = EvaluateMessageDTO(true)
+    val evaluation = EvaluateMessage(true)
+    val response =
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(evaluation)
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<EvaluateMessage>()
+    assertNotNull(body)
+    assertEquals(true, body.evaluation)
+  }
+
+  @Test
+  fun shouldFailEvaluateMessageFromChatNotAssistantMessage() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val evaluation = EvaluateMessage(true)
     val response =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageOne.id}") {
         header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
-    assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<Message>()
+    assertEquals(HttpStatusCode.BadRequest, response.status)
+    val body = response.body<AppError>()
     assertNotNull(body)
-    assertEquals(messageOne.id, body.id)
+    assertEquals(ErrorReason.InvalidParameter, body.reason)
+  }
+
+  @Test
+  fun shouldEvaluateMessageFromChatWithFeedback() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val evaluation = EvaluateMessage(true, "oh yes, what a splendid response")
+    val response =
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(evaluation)
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<EvaluateMessage>()
+    assertNotNull(body)
     assertEquals(true, body.evaluation)
+    assertEquals("oh yes, what a splendid response", body.feedback)
+  }
+
+  @Test
+  fun shouldRemoveEvaluateMessageFromChat() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val evaluationOne = EvaluateMessage(true, "what a marvelous response")
+    val responseOne =
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(evaluationOne)
+      }
+    assertEquals(HttpStatusCode.OK, responseOne.status)
+
+    val responseTwo =
+      client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=1") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+      }
+    assertEquals(HttpStatusCode.OK, responseTwo.status)
+
+    val bodyOne = responseTwo.body<List<Message>>()
+    assertEquals(1, bodyOne.size)
+    assertEquals(messageTwo.id, bodyOne[0].id)
+    assertEquals(true, bodyOne[0].evaluation)
+    assertEquals("what a marvelous response", bodyOne[0].feedback)
+
+    val evaluationTwo = EvaluateMessage(null)
+    val responseThree =
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(evaluationTwo)
+      }
+    assertEquals(HttpStatusCode.OK, responseThree.status)
+    val bodyTwo = responseThree.body<EvaluateMessage>()
+    assertEquals(null, bodyTwo.evaluation)
+    assertEquals(null, bodyTwo.feedback)
+
+    val responseFour =
+      client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=1") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+      }
+    assertEquals(HttpStatusCode.OK, responseFour.status)
+
+    val bodyThree = responseFour.body<List<Message>>()
+    assertEquals(1, bodyThree.size)
+    assertEquals(messageTwo.id, bodyThree[0].id)
+    assertEquals(null, bodyThree[0].evaluation)
+    assertEquals(null, bodyThree[0].feedback)
   }
 
   @Test

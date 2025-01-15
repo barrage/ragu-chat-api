@@ -5,6 +5,7 @@ import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
+import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Pagination
@@ -82,23 +83,47 @@ class ChatService(
     chatRepository.delete(id, userId)
   }
 
-  suspend fun evaluateMessage(chatId: KUUID, messageId: KUUID, evaluation: Boolean): Message {
-    chatRepository.getMessage(chatId, messageId)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
+  suspend fun evaluateMessage(
+    chatId: KUUID,
+    messageId: KUUID,
+    evaluation: EvaluateMessage,
+  ): EvaluateMessage {
+    val message =
+      chatRepository.getMessage(chatId, messageId)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
+
+    if (message.senderType != "assistant") {
+      throw AppError.api(ErrorReason.InvalidParameter, "Cannot evaluate non-assistant messages")
+    }
+
     return chatRepository.evaluateMessage(messageId, evaluation)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
+      ?: throw AppError.api(ErrorReason.Internal, "Failed to evaluate message")
   }
 
   suspend fun evaluateMessage(
     chatId: KUUID,
     messageId: KUUID,
     userId: KUUID,
-    evaluation: Boolean,
-  ): Message {
-    chatRepository.getMessage(chatId, messageId)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
-    return chatRepository.evaluateMessage(messageId, userId, evaluation)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
+    input: EvaluateMessage,
+  ): EvaluateMessage {
+    val assistantMessage =
+      chatRepository.getMessage(chatId, messageId)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
+
+    if (assistantMessage.senderType != "assistant" || assistantMessage.responseTo == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "Cannot evaluate non-assistant messages")
+    }
+
+    val userMessage =
+      chatRepository.getMessage(chatId, assistantMessage.responseTo)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Message not found")
+
+    if (userMessage.sender != userId) {
+      throw AppError.api(ErrorReason.Authentication, "Cannot evaluate message")
+    }
+
+    return chatRepository.evaluateMessage(messageId, input)
+      ?: throw AppError.api(ErrorReason.Internal, "Failed to evaluate message")
   }
 
   suspend fun getMessages(id: KUUID, userId: KUUID? = null, pagination: Pagination): List<Message> {
