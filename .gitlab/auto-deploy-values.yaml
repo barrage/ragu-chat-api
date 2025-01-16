@@ -11,7 +11,8 @@ image:
   pullPolicy: IfNotPresent
   secrets:
     - name: gitlab-registry-llmao-kotlin-api
-extraLabels: { }
+extraLabels:
+  minio-client: "true"
 lifecycle: { }
 # preStop:
 #   exec:
