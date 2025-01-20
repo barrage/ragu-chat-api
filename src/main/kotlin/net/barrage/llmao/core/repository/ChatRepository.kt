@@ -8,11 +8,13 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.core.CHAT_MAX_HISTORY
 import net.barrage.llmao.core.models.AgentChatsOnDate
 import net.barrage.llmao.core.models.AgentConfigurationEvaluatedMessageCounts
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatCount
 import net.barrage.llmao.core.models.ChatCounts
+import net.barrage.llmao.core.models.ChatMaxHistory
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.EvaluateMessage
@@ -26,6 +28,7 @@ import net.barrage.llmao.core.models.common.SearchFiltersAdminChats
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toChat
+import net.barrage.llmao.core.models.toChatMaxHistory
 import net.barrage.llmao.core.models.toEvaluateMessage
 import net.barrage.llmao.core.models.toFailedMessage
 import net.barrage.llmao.core.models.toMessage
@@ -33,6 +36,7 @@ import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
+import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.FAILED_MESSAGES
 import net.barrage.llmao.tables.references.MESSAGES
@@ -551,6 +555,28 @@ class ChatRepository(private val dslContext: DSLContext) {
         .toList()
 
     return CountedList(count, messages)
+  }
+
+  suspend fun getMaxHistory(): Int {
+    return dslContext
+      .select(APPLICATION_SETTINGS.VALUE.cast(Int::class.java))
+      .from(APPLICATION_SETTINGS)
+      .where(APPLICATION_SETTINGS.NAME.eq(CHAT_MAX_HISTORY))
+      .awaitFirstOrNull()
+      ?.value1() ?: 20
+  }
+
+  suspend fun setMaxHistory(input: ChatMaxHistory): ChatMaxHistory {
+    return dslContext
+      .insertInto(APPLICATION_SETTINGS)
+      .set(APPLICATION_SETTINGS.NAME, CHAT_MAX_HISTORY)
+      .set(APPLICATION_SETTINGS.VALUE, input.chatMaxHistory.toString())
+      .onConflict(APPLICATION_SETTINGS.NAME)
+      .doUpdate()
+      .set(APPLICATION_SETTINGS.VALUE, input.chatMaxHistory.toString())
+      .returning()
+      .awaitSingle()
+      .toChatMaxHistory()
   }
 
   private fun getSortOrderEvaluatedMessages(pagination: PaginationSort): SortField<out Any> {

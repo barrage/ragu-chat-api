@@ -23,6 +23,7 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatMaxHistory
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
@@ -153,6 +154,35 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
     assertEquals(HttpStatusCode.Unauthorized, response.status)
     val body = response.body<String>()
     assertNotNull(body)
+  }
+
+  @Test
+  fun shouldRetrieveChatMaxHistory() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/admin/chats/history") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<ChatMaxHistory>()
+    assertNotNull(body)
+    assertEquals(20, body.chatMaxHistory)
+  }
+
+  @Test
+  fun shouldSetChatMaxHistory() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val chatMaxHistory = ChatMaxHistory(15)
+    val response =
+      client.put("/admin/chats/history") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(chatMaxHistory)
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<ChatMaxHistory>()
+    assertNotNull(body)
+    assertEquals(15, body.chatMaxHistory)
   }
 
   @Test

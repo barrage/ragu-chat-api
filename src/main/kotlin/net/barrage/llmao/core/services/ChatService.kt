@@ -2,6 +2,7 @@ package net.barrage.llmao.core.services
 
 import io.ktor.util.logging.*
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatMaxHistory
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
@@ -141,5 +142,14 @@ class ChatService(
     }
 
     return messages.items
+  }
+
+  suspend fun getMaxHistory(): ChatMaxHistory {
+    val maxHistory = chatRepository.getMaxHistory()
+    return ChatMaxHistory(chatMaxHistory = maxHistory)
+  }
+
+  suspend fun setMaxHistory(input: ChatMaxHistory): ChatMaxHistory {
+    return chatRepository.setMaxHistory(input)
   }
 }
