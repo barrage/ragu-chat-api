@@ -153,7 +153,7 @@ class UserRepository(private val dslContext: DSLContext) {
       .awaitSingle() == 1
   }
 
-  private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
+  private fun getSortOrder(pagination: PaginationSort): List<SortField<*>> {
     val (sortBy, sortOrder) = pagination.sorting()
     val sortField =
       when (sortBy) {
@@ -166,12 +166,16 @@ class UserRepository(private val dslContext: DSLContext) {
         else -> USERS.LAST_NAME
       }
 
-    val order =
-      if (sortOrder == SortOrder.DESC) {
-        sortField.desc()
-      } else {
-        sortField.asc()
-      }
+    val order = mutableListOf<SortField<*>>()
+    if (sortOrder == SortOrder.DESC) {
+      order.add(sortField.desc())
+    } else {
+      order.add(sortField.asc())
+    }
+
+    if (sortField == USERS.CREATED_AT) {
+      order.add(USERS.FULL_NAME.asc())
+    }
 
     return order
   }
