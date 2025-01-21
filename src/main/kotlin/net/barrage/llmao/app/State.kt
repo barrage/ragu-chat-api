@@ -14,6 +14,8 @@ import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
+import net.barrage.llmao.core.EventListener
+import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.SessionRepository
@@ -33,7 +35,11 @@ import org.jooq.DSLContext
 const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
 const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
 
-class ApplicationState(config: ApplicationConfig, applicationStopping: Job) {
+class ApplicationState(
+  config: ApplicationConfig,
+  applicationStopping: Job,
+  listener: EventListener<StateChangeEvent>,
+) {
   val providers = ProviderState(config)
   val repository: RepositoryState
   val adapters: AdapterState
@@ -43,7 +49,7 @@ class ApplicationState(config: ApplicationConfig, applicationStopping: Job) {
     CookieFactory.init(config)
     val database = initDatabase(config, applicationStopping)
     repository = RepositoryState(database)
-    services = ServiceState(providers, repository)
+    services = ServiceState(providers, repository, listener)
     adapters = AdapterState(config, database, providers, services)
   }
 }
@@ -155,9 +161,13 @@ class ProviderState(config: ApplicationConfig) {
   }
 }
 
-class ServiceState(providers: ProviderState, repository: RepositoryState) {
+class ServiceState(
+  providers: ProviderState,
+  repository: RepositoryState,
+  listener: EventListener<StateChangeEvent>,
+) {
   val chat = ChatService(repository.chat, repository.agent, repository.user)
-  val agent = AgentService(providers, repository.agent, repository.chat)
+  val agent = AgentService(providers, repository.agent, repository.chat, listener)
   val user = UserService(repository.user, repository.session)
   val auth = AuthenticationService(providers.auth, repository.session, repository.user)
   val admin = AdministrationService(providers, repository.agent, repository.chat, repository.user)

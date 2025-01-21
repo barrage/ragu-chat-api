@@ -62,7 +62,7 @@ data class AgentFull(
 data class CreateAgent(
   @NotBlank val name: String,
   @NotBlank val description: String?,
-  val active: Boolean,
+  val active: Boolean = false,
   @NotBlank val language: String,
   val configuration: CreateAgentConfiguration,
 ) : Validation

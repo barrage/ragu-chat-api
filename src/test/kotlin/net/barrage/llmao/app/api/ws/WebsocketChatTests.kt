@@ -1,12 +1,16 @@
 package net.barrage.llmao.app.api.ws
 
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
+import java.lang.Thread.sleep
 import kotlin.random.Random
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
 import net.barrage.llmao.COMPLETIONS_STREAM_LONG_PROMPT
@@ -19,6 +23,7 @@ import net.barrage.llmao.chatSession
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.models.Session
+import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.error.AppError
@@ -27,10 +32,10 @@ import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.sendMessage
+import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -408,9 +413,8 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
     weaviate!!.deleteVectors(TEST_COLLECTION)
   }
 
-  @Disabled // TODO: Fix this test
   @Test
-  fun userMultipleChatsAtOnce() = wsTest { client ->
+  fun sameUserCanOpenMultipleChatsAtOnce() = test {
     var asserted = false
 
     insertVectors(COMPLETIONS_STREAM_PROMPT)
@@ -428,97 +432,141 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
     }
 
     val validAgent = createValidAgent()
-    val validAgent2 = createValidAgent()
 
-    val result = runCatching {
-      coroutineScope {
-        val res1 = async {
-          client1.chatSession(session.sessionId) {
-            openNewChat(validAgent.agent.id)
-
-            var buffer = ""
-            sendMessage("Will this trigger a stream response?") { incoming ->
-              for (frame in incoming) {
-                val response = (frame as Frame.Text).readText()
-                try {
-                  val finishEvent = json.decodeFromString<ServerMessage>(response)
-                  // React only to finish events since titles can also get sent
-                  if (finishEvent is ServerMessage.FinishEvent) {
-                    assert(finishEvent.reason == FinishReason.Stop)
-                    asserted = true
-                    break
-                  }
-                } catch (e: SerializationException) {
-                  val errMessage = e.message ?: throw e
-                  if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-                    throw e
-                  }
-                  buffer += response
-                } catch (e: Throwable) {
-                  e.printStackTrace()
+    coroutineScope {
+      launch {
+        var buffer = ""
+        client1.chatSession(session.sessionId) {
+          openNewChat(validAgent.agent.id)
+          // Wait a bit before actually sending the message
+          sleep(1000)
+          sendMessage("Will this trigger a stream response?") { incoming ->
+            for (frame in incoming) {
+              val response = (frame as Frame.Text).readText()
+              try {
+                val finishEvent = json.decodeFromString<ServerMessage>(response)
+                if (finishEvent is ServerMessage.FinishEvent) {
+                  assert(finishEvent.reason == FinishReason.Stop)
                   break
                 }
+              } catch (e: SerializationException) {
+                val errMessage = e.message ?: throw e
+                if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
+                  throw e
+                }
+                buffer += response
+              } catch (e: Throwable) {
+                e.printStackTrace()
+                break
               }
             }
-
-            assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
-
-            sendClientSystem(SystemMessage.CloseChat)
           }
+
+          assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+          sendClientSystem(SystemMessage.CloseChat)
         }
+      }
 
-        Thread.sleep(500)
+      launch {
+        var buffer2 = ""
+        client2.chatSession(session.sessionId) {
+          openNewChat(validAgent.agent.id)
 
-        val res2 = async {
-          var buffer = ""
+          sendMessage("Will this trigger a stream response?") { incoming ->
+            for (frame in incoming) {
+              val response = (frame as Frame.Text).readText()
 
-          client2.chatSession(session.sessionId) {
-            openNewChat(validAgent2.agent.id)
-
-            sendMessage("Will this trigger a stream response?") { incoming ->
-              for (frame in incoming) {
-                val response = (frame as Frame.Text).readText()
-
-                try {
-                  val finishEvent = json.decodeFromString<ServerMessage>(response)
-
-                  // React only to finish events since titles can also get sent
-                  if (finishEvent is ServerMessage.FinishEvent) {
-                    assert(finishEvent.reason == FinishReason.Stop)
-                    asserted = true
-                    break
-                  }
-                } catch (e: SerializationException) {
-                  val errMessage = e.message ?: throw e
-                  if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-                    throw e
-                  }
-                  buffer += response
-                } catch (e: Throwable) {
-                  e.printStackTrace()
+              try {
+                val finishEvent = json.decodeFromString<ServerMessage>(response)
+                if (finishEvent is ServerMessage.FinishEvent) {
+                  assert(finishEvent.reason == FinishReason.Stop)
+                  asserted = true
                   break
                 }
+              } catch (e: SerializationException) {
+                val errMessage = e.message ?: throw e
+                if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
+                  throw e
+                }
+                buffer2 += response
+              } catch (e: Throwable) {
+                e.printStackTrace()
+                break
               }
             }
-
-            assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
-
-            sendClientSystem(SystemMessage.CloseChat)
           }
-        }
 
-        listOf(res1, res2)
+          assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer2)
+
+          sendClientSystem(SystemMessage.CloseChat)
+        }
       }
     }
 
-    result
-      .onSuccess {
-        it.awaitAll()
-        asserted = true
-      }
-      .onFailure { LOG.error("Error in test", it) }
-
     deleteVectors()
+
+    assert(asserted)
+  }
+
+  @Test
+  fun removesChatWhenAgentIsDeactivated() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_STREAM_PROMPT)
+
+    val httpClient = createClient { install(ContentNegotiation) { json() } }
+    val agent = createValidAgent()
+
+    // Necessary for the agent update route
+    val admin = postgres.testUser(email = "chad@eternal.grind", admin = true)
+    val adminSession = postgres.testSession(admin.id)
+
+    client.chatSession(session.sessionId) {
+      openNewChat(agent.agent.id)
+      var buffer = ""
+      sendMessage("Will this trigger a stream response?") { incoming ->
+        // Block on this so we can see what happens.
+        runBlocking {
+          httpClient.put("/admin/agents/${agent.agent.id}") {
+            header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+            contentType(ContentType.Application.Json)
+            setBody(UpdateAgent(active = false))
+          }
+        }
+
+        for (frame in incoming) {
+          val response = (frame as Frame.Text).readText()
+          try {
+            val event = json.decodeFromString<ServerMessage>(response)
+
+            if (event is ServerMessage.AgentDeactivated) {
+              // Asserts the right agent was deactivated
+              assert(event.agentId == agent.agent.id)
+              asserted = true
+            }
+
+            // React only to finish events since titles can also get sent
+            if (event is ServerMessage.FinishEvent) {
+              assert(event.reason == FinishReason.Stop)
+              break
+            }
+          } catch (e: SerializationException) {
+            val errMessage = e.message ?: throw e
+            if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
+              throw e
+            }
+            buffer += response
+          } catch (e: Throwable) {
+            e.printStackTrace()
+            break
+          }
+        }
+      }
+
+      // Asserts the stream was completed successfully
+      assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+    }
 
     assert(asserted)
   }

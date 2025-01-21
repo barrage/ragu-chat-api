@@ -11,6 +11,7 @@ import io.weaviate.client.v1.filters.Operator
 import io.weaviate.client.v1.filters.WhereFilter
 import io.weaviate.client.v1.schema.model.Property
 import io.weaviate.client.v1.schema.model.WeaviateClass
+import java.lang.Thread.sleep
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.*
@@ -81,6 +82,10 @@ class TestPostgres {
 
   init {
     container.start()
+
+    // Fixes all errors related to container not being ready yet
+    sleep(100)
+
     initConnectionPool()
     initDslContext()
 

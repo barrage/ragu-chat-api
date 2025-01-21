@@ -19,16 +19,21 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.EventListener
+import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 
-fun Application.websocketServer(factory: ChatFactory) {
-  val messageHandler = MessageHandler(factory)
+fun Application.websocketServer(
+  factory: WebsocketChatFactory,
+  listener: EventListener<StateChangeEvent>,
+) {
+  val server = WebsocketServer(factory, listener)
 
-  val tokenManager = TokenManager()
+  val tokenManager = WebsocketTokenManager()
 
   install(WebSockets) {
     // FIXME: Shrink
@@ -64,13 +69,13 @@ fun Application.websocketServer(factory: ChatFactory) {
         return@webSocket
       }
 
-      val token: KUUID
-      try {
-        token = KUUID.fromString(rawToken)
-      } catch (e: IllegalArgumentException) {
-        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
-        return@webSocket
-      }
+      val token =
+        try {
+          KUUID.fromString(rawToken)
+        } catch (e: IllegalArgumentException) {
+          close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
+          return@webSocket
+        }
 
       val userId = tokenManager.removeToken(token)
 
@@ -79,7 +84,11 @@ fun Application.websocketServer(factory: ChatFactory) {
         return@webSocket
       }
 
+      // Start the WS connection.
+
       val channel = channel()
+
+      server.registerSession(userId, token, channel)
 
       LOG.debug("Websocket connection opened for '{}' with token '{}'", userId, token)
 
@@ -102,7 +111,7 @@ fun Application.websocketServer(factory: ChatFactory) {
               }
 
             try {
-              messageHandler.handleMessage(userId, token, message, channel)
+              server.handleMessage(userId, token, message, channel)
             } catch (error: AppError) {
               channel.emitError(error)
             }
@@ -120,27 +129,24 @@ fun Application.websocketServer(factory: ChatFactory) {
             formatter.format(Instant.now()),
             Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
           )
-          messageHandler.removeChat(userId, token)
+          server.removeSession(userId, token)
           return@webSocket
         }
 
       // From this point on, the websocket connection is closed
       LOG.debug("Websocket connection closed for '{}' with token '{}'", userId, token)
-      messageHandler.removeChat(userId, token)
-
-      // Has to be closed manually to stop the job from running
-      channel.close()
+      server.removeSession(userId, token)
     }
   }
 }
 
 /** Open a new channel and start running it in a coroutine. */
-private fun DefaultWebSocketServerSession.channel(): Channel {
+private fun DefaultWebSocketServerSession.channel(): WebsocketChannel {
   val flow = MutableSharedFlow<String>()
   val job = launch {
     flow.onCompletion { LOG.debug("Channel successfully closed") }.collect { send(it) }
   }
-  return Channel(flow, job)
+  return WebsocketChannel(flow, job)
 }
 
 private fun websocketGenerateToken(): OpenApiRoute.() -> Unit = {
