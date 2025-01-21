@@ -2,6 +2,7 @@ package net.barrage.llmao.app.api.ws
 
 import com.aallam.openai.api.exception.InvalidRequestException
 import io.ktor.util.logging.*
+import java.time.Instant
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,7 @@ import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws")
 
-class Chat(
+data class Chat(
   /** Chat ID. */
   val id: KUUID,
 
@@ -90,12 +91,13 @@ class Chat(
     streamActive = false
   }
 
-  private suspend fun stream(proompt: String) = coroutineScope {
+  private suspend fun stream(prompt: String) = coroutineScope {
     streamActive = true
 
+    val streamStart = Instant.now()
     val stream =
       try {
-        service.chatCompletionStream(proompt, history, agentId)
+        service.chatCompletionStream(prompt, history, agentId)
       } catch (e: AppError) {
         handleError(e)
         return@coroutineScope
@@ -103,11 +105,21 @@ class Chat(
 
     try {
       LOG.debug("Started stream for '{}'", id)
-      val response = collectStream(proompt, stream, channel)
-      LOG.debug("Chat '{}' got response: {}", id, response)
+      val (response, finishReason) = collectAndForwardStream(stream, channel)
+
+      LOG.debug(
+        "Stream in '{}' complete, took {}ms",
+        id,
+        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
+      )
+
+      if (response.isNotBlank()) {
+        processResponse(prompt = prompt, response = response, finishReason = finishReason)
+        LOG.debug("Chat '{}' got response: {}", id, response)
+      }
     } catch (e: InvalidRequestException) {
       // TODO: Failure
-      service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter)
+      service.processFailedMessage(id, userId, prompt, FinishReason.ContentFilter)
     } catch (e: Throwable) {
       LOG.error("Unexpected error in stream", e)
       handleError(e)
@@ -117,10 +129,15 @@ class Chat(
   }
 
   private suspend fun processResponse(
-    proompt: String,
+    prompt: String,
     response: String,
     finishReason: FinishReason,
   ) {
+    if (response.isEmpty()) {
+      channel.emitError(AppError.api(ErrorReason.Websocket, "Got empty response from LLM"))
+      return
+    }
+
     if (!messageReceived) {
       // TODO: Transaction for chat and initial message
       service.storeChat(id, userId, agentId, title)
@@ -128,15 +145,15 @@ class Chat(
     }
 
     if (title.isNullOrBlank()) {
-      generateTitle(proompt, response)
+      generateAndSetTitle(prompt, response)
     }
 
     val messages: List<ChatMessage> =
-      listOf(ChatMessage.user(proompt), ChatMessage.assistant(response))
+      listOf(ChatMessage.user(prompt), ChatMessage.assistant(response))
 
     addToHistory(messages)
 
-    val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, proompt, response)
+    val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, prompt, response)
 
     val emitPayload =
       ServerMessage.FinishEvent(id, messageId = assistantMsg.id, reason = finishReason)
@@ -144,7 +161,7 @@ class Chat(
     channel.emitServer(emitPayload)
   }
 
-  private suspend fun generateTitle(prompt: String, response: String) {
+  private suspend fun generateAndSetTitle(prompt: String, response: String) {
     title = service.createAndUpdateTitle(id, prompt, response, agentId)
     channel.emitServer(ServerMessage.ChatTitle(id, title!!))
   }
@@ -167,27 +184,18 @@ class Chat(
     }
   }
 
-  private suspend fun collectStream(
-    prompt: String,
+  private suspend fun collectAndForwardStream(
     stream: Flow<List<TokenChunk>>,
     channel: WebsocketChannel,
-  ): String = coroutineScope {
+  ): Pair<String, FinishReason> = coroutineScope {
     val buf: MutableList<String> = mutableListOf()
+    var finishReason: FinishReason = FinishReason.Stop
 
     stream.collect { tokens ->
       if (!streamActive) {
-        val response = buf.joinToString("")
-
-        LOG.debug(
-          "Stream in '{}' cancelled, aborting | storing response: {}",
-          id,
-          response.isNotBlank(),
-        )
-
-        if (response.isNotBlank()) {
-          processResponse(prompt, response, FinishReason.ManualStop)
-        }
-
+        // Stream was manually cancelled
+        LOG.debug("Stream in '{}' cancelled, aborting | storing response: {}", id, buf.isNotEmpty())
+        finishReason = FinishReason.ManualStop
         cancel("manual_cancel")
         return@collect
       }
@@ -209,15 +217,7 @@ class Chat(
       }
     }
 
-    val response = buf.joinToString("")
-
-    LOG.debug("Stream in '{}' complete", id)
-
-    if (response.isNotBlank()) {
-      processResponse(prompt, response, FinishReason.Stop)
-    }
-
-    response
+    Pair(buf.joinToString(""), finishReason)
   }
 
   /**

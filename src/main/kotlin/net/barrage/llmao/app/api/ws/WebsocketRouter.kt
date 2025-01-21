@@ -134,7 +134,16 @@ fun Application.websocketServer(
         }
 
       // From this point on, the websocket connection is closed
-      LOG.debug("Websocket connection closed for '{}' with token '{}'", userId, token)
+      val formatter =
+        DateTimeFormatter.ofPattern("yyyy/MM/dd:HH:mm:ss").withZone(ZoneId.systemDefault())
+      LOG.debug(
+        "Connection for user-token '{}'-'{}' closed. Start: {}, End: {}, Duration: {}ms",
+        userId,
+        token,
+        formatter.format(Instant.ofEpochMilli(connectionStart.toEpochMilli())),
+        formatter.format(Instant.now()),
+        Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
+      )
       server.removeSession(userId, token)
     }
   }

@@ -1,5 +1,6 @@
 package net.barrage.llmao.app.api.ws
 
+import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.types.KUUID
@@ -14,14 +15,14 @@ class WebsocketServer(
    * Maps user ID + token pairs to their chat instances. Chats encapsulate the websocket connection
    * with all the parameters necessary to maintain a chat instance.
    */
-  private val chats: MutableMap<Int, Chat> = mutableMapOf()
+  private val chats: MutableMap<Pair<KUUID, KUUID>, Chat> = ConcurrentHashMap()
 
   /**
    * Maps user ID + token pairs to their websocket channels. The websocket channels are stored
    * directly in the map (they use the same connection as their respective chats). The channels here
    * are used to broadcast system events to all connected clients.
    */
-  private val sessions: MutableMap<Int, WebsocketChannel> = mutableMapOf()
+  private val sessions: MutableMap<Pair<KUUID, KUUID>, WebsocketChannel> = ConcurrentHashMap()
 
   init {
     LOG.info("Starting WS server event listener")
@@ -71,6 +72,7 @@ class WebsocketServer(
 
   private fun handleChatMessage(userId: KUUID, token: KUUID, message: String) {
     LOG.info("Handling chat message from '{}' with token '{}': {}", userId, token, message)
+
     val chat =
       chats[key(userId, token)]
         ?: throw AppError.api(
@@ -140,7 +142,13 @@ class WebsocketServer(
         chats.remove(key(userId, token))?.let {
           channel.emitServer(ServerMessage.ChatClosed(it.id))
           it.cancelStream()
-          LOG.debug("Closed chat ('{}') for user '{}' with token '{}'", it.id, userId, token)
+          LOG.debug(
+            "Closed chat ('{}') for user '{}' with token '{}', total chats: {}",
+            it.id,
+            userId,
+            token,
+            chats.size,
+          )
         }
       }
       is SystemMessage.StopStream -> {
@@ -152,10 +160,5 @@ class WebsocketServer(
     }
   }
 
-  /**
-   * Generate a hash from the user ID and token pair. For reasons unbeknownst, very mysterious race
-   * conditions appear when using the pair directly. Using this fixes the issue. Don't ask me why,
-   * this should get called by Kotlin when hashing the pair, but for some reason it doesn't.
-   */
-  private fun key(userId: KUUID, token: KUUID) = Pair(userId, token).hashCode()
+  private fun key(userId: KUUID, token: KUUID) = Pair(userId, token)
 }
