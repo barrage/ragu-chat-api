@@ -4,6 +4,7 @@ ingress:
     cert-manager.io/cluster-issuer: barrage-dev
     # cert-manager.io/cluster-issuer: barrage-le-production
     ## The following annotation is to limit access to the ingress
+    nginx.org/websocket-services: llmao-kappi-master-barrage-autodeploy
 
 barrage:
   vault:
