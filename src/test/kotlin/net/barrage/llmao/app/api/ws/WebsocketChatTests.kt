@@ -7,9 +7,8 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
-import java.lang.Thread.sleep
 import kotlin.random.Random
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
@@ -36,6 +35,7 @@ import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -353,69 +353,10 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
     assert(asserted)
   }
 
-  // Valid and invalid here refer to configuration, not the actual models and objects.
-
-  private suspend fun createValidAgent(): AgentFull {
-    val validAgent = postgres.testAgent()
-
-    val validAgentConfiguration =
-      postgres.testAgentConfiguration(
-        agentId = validAgent.id,
-        llmProvider = "openai",
-        model = "gpt-4o",
-      )
-
-    val validAgentCollection =
-      postgres.testAgentCollection(
-        agentId = validAgent.id,
-        collection = TEST_COLLECTION,
-        amount = 2,
-        instruction = "Use the valuable information below to solve the three body problem.",
-        embeddingProvider = "openai",
-        embeddingModel = "text-embedding-ada-002", // 1536
-        vectorProvider = "weaviate",
-      )
-
-    return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection))
-  }
-
-  private suspend fun createInvalidAgent(): AgentFull {
-    val invalidAgent = postgres.testAgent()
-
-    val invalidAgentConfiguration =
-      postgres.testAgentConfiguration(
-        agentId = invalidAgent.id,
-        llmProvider = "openai",
-        model = "gpt-4o",
-      )
-
-    val invalidAgentCollection =
-      postgres.testAgentCollection(
-        invalidAgent.id,
-        TEST_COLLECTION,
-        2,
-        "Use the valuable information below to pass the butter.",
-        embeddingProvider = "openai",
-        embeddingModel = "text-embedding-3-large", // 3072
-        vectorProvider = "weaviate",
-      )
-
-    return AgentFull(invalidAgent, invalidAgentConfiguration, listOf(invalidAgentCollection))
-  }
-
-  private fun insertVectors(content: String) {
-    // Contains the necessary string to trigger the stream response from Wiremock.
-    val streamResponsePrompt = Pair(content, List(SIZE) { Random.nextFloat() })
-    weaviate!!.insertVectors(TEST_COLLECTION, listOf(streamResponsePrompt))
-  }
-
-  private fun deleteVectors() {
-    weaviate!!.deleteVectors(TEST_COLLECTION)
-  }
-
-  @Test
+  @RepeatedTest(10)
   fun sameUserCanOpenMultipleChatsAtOnce() = test {
-    var asserted = false
+    var assertedFirst = false
+    var assertedSecond = false
 
     insertVectors(COMPLETIONS_STREAM_PROMPT)
 
@@ -433,13 +374,13 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
 
     val validAgent = createValidAgent()
 
-    coroutineScope {
+    runBlocking {
       launch {
         var buffer = ""
         client1.chatSession(session.sessionId) {
           openNewChat(validAgent.agent.id)
           // Wait a bit before actually sending the message
-          sleep(1000)
+          delay(500)
           sendMessage("Will this trigger a stream response?") { incoming ->
             for (frame in incoming) {
               val response = (frame as Frame.Text).readText()
@@ -447,6 +388,7 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
                 val finishEvent = json.decodeFromString<ServerMessage>(response)
                 if (finishEvent is ServerMessage.FinishEvent) {
                   assert(finishEvent.reason == FinishReason.Stop)
+                  assertedFirst = true
                   break
                 }
               } catch (e: SerializationException) {
@@ -460,53 +402,53 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
                 break
               }
             }
+
+            assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+            sendClientSystem(SystemMessage.CloseChat)
           }
-
-          assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
-
-          sendClientSystem(SystemMessage.CloseChat)
         }
       }
 
-      launch {
-        var buffer2 = ""
-        client2.chatSession(session.sessionId) {
-          openNewChat(validAgent.agent.id)
+      delay(500)
 
-          sendMessage("Will this trigger a stream response?") { incoming ->
-            for (frame in incoming) {
-              val response = (frame as Frame.Text).readText()
+      var buffer = ""
+      client2.chatSession(session.sessionId) {
+        openNewChat(validAgent.agent.id)
+        sendMessage("Will this trigger a stream response?") { incoming ->
+          for (frame in incoming) {
+            val response = (frame as Frame.Text).readText()
 
-              try {
-                val finishEvent = json.decodeFromString<ServerMessage>(response)
-                if (finishEvent is ServerMessage.FinishEvent) {
-                  assert(finishEvent.reason == FinishReason.Stop)
-                  asserted = true
-                  break
-                }
-              } catch (e: SerializationException) {
-                val errMessage = e.message ?: throw e
-                if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-                  throw e
-                }
-                buffer2 += response
-              } catch (e: Throwable) {
-                e.printStackTrace()
+            try {
+              val finishEvent = json.decodeFromString<ServerMessage>(response)
+              if (finishEvent is ServerMessage.FinishEvent) {
+                assert(finishEvent.reason == FinishReason.Stop)
+                assertedSecond = true
                 break
               }
+            } catch (e: SerializationException) {
+              val errMessage = e.message ?: throw e
+              if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
+                throw e
+              }
+              buffer += response
+            } catch (e: Throwable) {
+              e.printStackTrace()
+              break
             }
           }
-
-          assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer2)
-
-          sendClientSystem(SystemMessage.CloseChat)
         }
+
+        assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+        sendClientSystem(SystemMessage.CloseChat)
       }
     }
 
     deleteVectors()
 
-    assert(asserted)
+    assert(assertedFirst)
+    assert(assertedSecond)
   }
 
   @Test
@@ -569,5 +511,65 @@ class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = tru
     }
 
     assert(asserted)
+  }
+
+  // Valid and invalid here refer to configuration, not the actual models and objects.
+
+  private suspend fun createValidAgent(): AgentFull {
+    val validAgent = postgres.testAgent()
+
+    val validAgentConfiguration =
+      postgres.testAgentConfiguration(
+        agentId = validAgent.id,
+        llmProvider = "openai",
+        model = "gpt-4o",
+      )
+
+    val validAgentCollection =
+      postgres.testAgentCollection(
+        agentId = validAgent.id,
+        collection = TEST_COLLECTION,
+        amount = 2,
+        instruction = "Use the valuable information below to solve the three body problem.",
+        embeddingProvider = "openai",
+        embeddingModel = "text-embedding-ada-002", // 1536
+        vectorProvider = "weaviate",
+      )
+
+    return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection))
+  }
+
+  private suspend fun createInvalidAgent(): AgentFull {
+    val invalidAgent = postgres.testAgent()
+
+    val invalidAgentConfiguration =
+      postgres.testAgentConfiguration(
+        agentId = invalidAgent.id,
+        llmProvider = "openai",
+        model = "gpt-4o",
+      )
+
+    val invalidAgentCollection =
+      postgres.testAgentCollection(
+        invalidAgent.id,
+        TEST_COLLECTION,
+        2,
+        "Use the valuable information below to pass the butter.",
+        embeddingProvider = "openai",
+        embeddingModel = "text-embedding-3-large", // 3072
+        vectorProvider = "weaviate",
+      )
+
+    return AgentFull(invalidAgent, invalidAgentConfiguration, listOf(invalidAgentCollection))
+  }
+
+  private fun insertVectors(content: String) {
+    // Contains the necessary string to trigger the stream response from Wiremock.
+    val streamResponsePrompt = Pair(content, List(SIZE) { Random.nextFloat() })
+    weaviate!!.insertVectors(TEST_COLLECTION, listOf(streamResponsePrompt))
+  }
+
+  private fun deleteVectors() {
+    weaviate!!.deleteVectors(TEST_COLLECTION)
   }
 }
