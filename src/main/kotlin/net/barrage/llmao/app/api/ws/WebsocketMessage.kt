@@ -38,17 +38,20 @@ sealed class SystemMessage {
 /** Outgoing WS messages. */
 @Serializable
 sealed class ServerMessage {
+  /** Sent when a chat is opened. */
   @SerialName("chat_open") @Serializable data class ChatOpen(val chatId: KUUID) : ServerMessage()
 
+  /** Sent when a chat's title is generated. */
   @SerialName("chat_title")
   @Serializable
   data class ChatTitle(val chatId: KUUID, val title: String) : ServerMessage()
 
+  /** Sent when a chat is closed manually. */
   @SerialName("chat_closed")
   @Serializable
   data class ChatClosed(val chatId: KUUID) : ServerMessage()
 
-  /** Event sent when a chats gets a response fro m an LLM. */
+  /** Sent when a chats gets a complete response from an LLM. */
   @SerialName("finish_event")
   @Serializable
   data class FinishEvent(
@@ -64,6 +67,14 @@ sealed class ServerMessage {
      */
     val messageId: KUUID? = null,
   ) : ServerMessage()
+
+  /**
+   * Sent when an administrator deactivates an agent via the service and is used to indicate the
+   * chat is no longer available.
+   */
+  @SerialName("agent_deactivated")
+  @Serializable
+  data class AgentDeactivated(val agentId: KUUID) : ServerMessage()
 }
 
 val ClientMessageSerializer = Json {

@@ -19,6 +19,7 @@ import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.app.api.ws.ClientMessageSerializer
+import net.barrage.llmao.core.EventListener
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -120,7 +121,7 @@ open class IntegrationTest(
       loadWiremock()
     }
 
-    app = ApplicationState(cfg, applicationStoppingJob)
+    app = ApplicationState(cfg, applicationStoppingJob, EventListener())
   }
 
   @AfterAll

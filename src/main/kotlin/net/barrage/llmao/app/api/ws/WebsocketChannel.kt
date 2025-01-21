@@ -16,7 +16,7 @@ import net.barrage.llmao.error.AppError
  * @param flow The flow to emit messages to the client.
  * @param job The shared flow emitter job to cancel when the client disconnects.
  */
-class Channel(private val flow: MutableSharedFlow<String>, private val job: Job) {
+class WebsocketChannel(private val flow: MutableSharedFlow<String>, private val job: Job) {
   /** Emit the textual content of a chunk obtained from streaming LLM inference. */
   suspend fun emitChunk(chunk: TokenChunk) {
     chunk.content?.let { flow.emit(it) }

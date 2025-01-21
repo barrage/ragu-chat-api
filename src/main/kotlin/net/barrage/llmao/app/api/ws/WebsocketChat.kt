@@ -23,14 +23,17 @@ class Chat(
   /** Chat ID. */
   val id: KUUID,
 
-  /** The main business logic delegate. */
-  private val service: ConversationService,
-
   /** The proompter. */
-  private val userId: KUUID,
+  val userId: KUUID,
 
   /** Who the user is chatting with. */
-  private val agentId: KUUID,
+  val agentId: KUUID,
+
+  /** Websocket handle. Only chat related events are sent via this reference. */
+  private val channel: WebsocketChannel,
+
+  /** The main business logic delegate. */
+  private val service: ConversationService,
 
   /** Used to reason about storing the chat. */
   private var messageReceived: Boolean = false,
@@ -52,9 +55,6 @@ class Chat(
 
   /** Chat message history. */
   private val history: MutableList<ChatMessage> = mutableListOf(),
-
-  /** Websocket handle. */
-  private val channel: Channel,
 ) {
   /** True if the chat is streaming, false otherwise. */
   private var streamActive: Boolean = false
@@ -109,6 +109,7 @@ class Chat(
       // TODO: Failure
       service.processFailedMessage(id, userId, proompt, FinishReason.ContentFilter)
     } catch (e: Throwable) {
+      LOG.error("Unexpected error in stream", e)
       handleError(e)
     } finally {
       streamActive = false
@@ -169,7 +170,7 @@ class Chat(
   private suspend fun collectStream(
     prompt: String,
     stream: Flow<List<TokenChunk>>,
-    channel: Channel,
+    channel: WebsocketChannel,
   ): String = coroutineScope {
     val buf: MutableList<String> = mutableListOf()
 

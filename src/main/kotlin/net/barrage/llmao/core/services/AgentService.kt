@@ -1,6 +1,8 @@
 package net.barrage.llmao.core.services
 
 import net.barrage.llmao.app.ProviderState
+import net.barrage.llmao.core.EventListener
+import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
@@ -28,6 +30,7 @@ class AgentService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
   private val chatRepository: ChatRepository,
+  private val stateChangeListener: EventListener<StateChangeEvent>,
 ) {
   suspend fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
     return agentRepository.getAll(pagination, showDeactivated)
@@ -64,7 +67,6 @@ class AgentService(
     )
 
     return agentRepository.create(create)
-      ?: throw AppError.api(ErrorReason.Internal, "Something went wrong while creating agent")
   }
 
   suspend fun update(id: KUUID, update: UpdateAgent): Any {
@@ -72,6 +74,10 @@ class AgentService(
       llmProvider = update.configuration?.llmProvider,
       model = update.configuration?.model,
     )
+
+    if (update.active == false) {
+      stateChangeListener.dispatch(StateChangeEvent.AgentDeactivated(id))
+    }
 
     return agentRepository.update(id, update)
   }

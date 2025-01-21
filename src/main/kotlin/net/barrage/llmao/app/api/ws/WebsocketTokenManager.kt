@@ -3,7 +3,7 @@ package net.barrage.llmao.app.api.ws
 import net.barrage.llmao.core.types.KUUID
 
 /** Handles the registration and removal of WS tokens. */
-class TokenManager {
+class WebsocketTokenManager {
   /** Maps one time tokens to user IDs. */
   private val tokens: MutableMap<KUUID, KUUID> = mutableMapOf()
 
