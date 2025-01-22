@@ -243,13 +243,17 @@ class ConversationService(
     LOG.trace("Created title prompt:\n{}", titlePrompt)
 
     val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
-    val title =
+    var title =
       llm
         .generateChatTitle(
           titlePrompt,
           LlmConfig(agentFull.configuration.model, agentFull.configuration.temperature),
         )
         .trim()
+
+    while (title.startsWith("\"") && title.endsWith("\"") && title.length > 1) {
+      title = title.substring(1, title.length - 1)
+    }
 
     LOG.trace("Title generated: {}", title)
     chatRepository.updateTitle(chatId, title)

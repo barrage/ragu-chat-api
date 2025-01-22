@@ -40,7 +40,7 @@ data class AgentInstructions(
 
   fun title(proompt: String, response: String): String {
     if (titleInstruction != null) {
-      return "$titleInstruction\nPrompt: \"\"\"$proompt\"\"\"\nResponse: \"\"\"$response\"\"\"\nTitle:"
+      return "$titleInstruction\nPrompt: $proompt\nResponse: $response\nTitle:"
     }
 
     return """
