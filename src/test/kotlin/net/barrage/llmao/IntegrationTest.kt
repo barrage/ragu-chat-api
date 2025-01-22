@@ -54,7 +54,6 @@ open class IntegrationTest(
   var wiremock: WireMockServer? = null
   lateinit var app: ApplicationState
 
-  // Always load example config so we are 1:1 with deployments.
   private var cfg = ConfigLoader.load("application.example.conf")
 
   private val applicationStoppingJob: CompletableJob = Job()
