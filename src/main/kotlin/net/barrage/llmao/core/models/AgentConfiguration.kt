@@ -31,6 +31,15 @@ data class AgentConfiguration(
   /** LLM LSD consumption amount. */
   val temperature: Double,
 
+  /** Maximum number of tokens to generate. */
+  val maxCompletionTokens: Int?,
+
+  /**
+   * Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear
+   * in the text so far, increasing the model's likelihood to talk about new topics.
+   */
+  val presencePenalty: Double,
+
   /** Instructions for the agent to use. */
   val agentInstructions: AgentInstructions,
 
@@ -50,6 +59,9 @@ fun AgentConfigurationsRecord.toAgentConfiguration() =
     temperature = this.temperature!!,
     agentInstructions =
       AgentInstructions(this.titleInstruction, this.summaryInstruction, this.errorMessage),
+    maxCompletionTokens = this.maxCompletionTokens,
+    presencePenalty = this.presencePenalty!!,
+    agentInstructions = AgentInstructions(this.titleInstruction, this.summaryInstruction),
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
@@ -60,6 +72,8 @@ data class CreateAgentConfiguration(
   @NotBlank val llmProvider: String,
   @NotBlank val model: String,
   @Range(min = 0.0, max = 1.0) val temperature: Double? = 0.1,
+  val maxCompletionTokens: Int? = null,
+  @Range(min = -2.0, max = 2.0) val presencePenalty: Double? = 0.0,
   val instructions: AgentInstructions? = null,
 ) : Validation
 
@@ -69,7 +83,9 @@ data class UpdateAgentConfiguration(
   @NotBlank val context: String? = null,
   @NotBlank val llmProvider: String? = null,
   @NotBlank val model: String? = null,
-  @Range(min = 0.0, max = 1.0) val temperature: Double? = null,
+  @Range(min = 0.0, max = 1.0) val temperature: Double? = 0.1,
+  val maxCompletionTokens: Int? = null,
+  @Range(min = -2.0, max = 2.0) val presencePenalty: Double? = 0.0,
   val instructions: AgentInstructions? = null,
 ) : Validation {
   fun validateCombinations(): List<ValidationError> {

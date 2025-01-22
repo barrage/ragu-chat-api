@@ -70,6 +70,8 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
         temperature = config.temperature,
         streamOptions = StreamOptions(true),
         tools = config.tools?.map { it.toOpenAiTool() },
+        maxTokens = config.maxCompletionTokens,
+        presencePenalty = config.presencePenalty,
       )
 
     return this.client.chatCompletions(chatRequest).map { chunk -> chunk.toNativeMessageChunk() }

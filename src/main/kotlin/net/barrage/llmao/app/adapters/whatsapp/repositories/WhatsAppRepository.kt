@@ -164,6 +164,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.LLM_PROVIDER,
           WHATS_APP_AGENTS.MODEL,
           WHATS_APP_AGENTS.TEMPERATURE,
+          WHATS_APP_AGENTS.MAX_COMPLETION_TOKENS,
+          WHATS_APP_AGENTS.PRESENCE_PENALTY,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
           WHATS_APP_AGENTS.AVATAR,
@@ -193,6 +195,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.LLM_PROVIDER,
           WHATS_APP_AGENTS.MODEL,
           WHATS_APP_AGENTS.TEMPERATURE,
+          WHATS_APP_AGENTS.MAX_COMPLETION_TOKENS,
+          WHATS_APP_AGENTS.PRESENCE_PENALTY,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
           WHATS_APP_AGENTS.AVATAR,
@@ -241,6 +245,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.LLM_PROVIDER,
           WHATS_APP_AGENTS.MODEL,
           WHATS_APP_AGENTS.TEMPERATURE,
+          WHATS_APP_AGENTS.MAX_COMPLETION_TOKENS,
+          WHATS_APP_AGENTS.PRESENCE_PENALTY,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
           WHATS_APP_AGENTS.AVATAR,
@@ -299,6 +305,8 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .set(WHATS_APP_AGENTS.LLM_PROVIDER, create.configuration.llmProvider)
         .set(WHATS_APP_AGENTS.MODEL, create.configuration.model)
         .set(WHATS_APP_AGENTS.TEMPERATURE, create.configuration.temperature)
+        .set(WHATS_APP_AGENTS.MAX_COMPLETION_TOKENS, create.configuration.maxCompletionTokens)
+        .set(WHATS_APP_AGENTS.PRESENCE_PENALTY, create.configuration.presencePenalty)
         .set(WHATS_APP_AGENTS.LANGUAGE, create.language)
         .set(WHATS_APP_AGENTS.ACTIVE, create.active)
         .set(
@@ -476,6 +484,20 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           .set(
             WHATS_APP_AGENTS.TEMPERATURE,
             DSL.coalesce(DSL.`val`(update.configuration?.temperature), WHATS_APP_AGENTS.TEMPERATURE),
+          )
+          .set(
+            WHATS_APP_AGENTS.MAX_COMPLETION_TOKENS,
+            DSL.coalesce(
+              DSL.`val`(update.configuration?.maxCompletionTokens),
+              WHATS_APP_AGENTS.MAX_COMPLETION_TOKENS,
+            ),
+          )
+          .set(
+            WHATS_APP_AGENTS.PRESENCE_PENALTY,
+            DSL.coalesce(
+              DSL.`val`(update.configuration?.presencePenalty),
+              WHATS_APP_AGENTS.PRESENCE_PENALTY,
+            ),
           )
           .set(
             WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,

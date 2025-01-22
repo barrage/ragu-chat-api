@@ -64,6 +64,8 @@ class AzureAI(
         maxTokens = config.maxTokens,
         tools = config.tools?.map { it.toOpenAiTool() },
         streamOptions = StreamOptions(true),
+        maxTokens = config.maxCompletionTokens,
+        presencePenalty = config.presencePenalty,
       )
 
     return client(config.model).chatCompletions(chatRequest).map { it.toNativeMessageChunk() }
