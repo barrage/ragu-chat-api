@@ -99,9 +99,29 @@ interface Validation {
     val fields = clazz.declaredMemberProperties
 
     for (field in fields) {
+      // First validate the field's annotations
       for (annotation in field.annotations) {
         val error = validateInternal(this, field, annotation)
         error?.let { errors.addAll(it) }
+      }
+
+      // Then validate nested object's fields
+      val value = field.getter.call(this)
+      if (value != null && value is Validation) {
+
+        when (val result = value.validate()) {
+          is ValidationResult.Valid -> {}
+          is ValidationResult.Invalid ->
+            errors.addAll(
+              result.reasons.map {
+                Json.decodeFromString<ValidationError>(it)
+                  .copy(
+                    fieldName =
+                      "${field.name}.${Json.decodeFromString<ValidationError>(it).fieldName ?: ""}"
+                  )
+              }
+            )
+        }
       }
     }
 
