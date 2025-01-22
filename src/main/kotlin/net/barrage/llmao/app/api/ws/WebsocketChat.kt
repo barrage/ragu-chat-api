@@ -6,7 +6,6 @@ import java.time.Instant
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -196,7 +195,6 @@ data class Chat(
         // Stream was manually cancelled
         LOG.debug("Stream in '{}' cancelled, aborting | storing response: {}", id, buf.isNotEmpty())
         finishReason = FinishReason.ManualStop
-        cancel("manual_cancel")
         return@collect
       }
 

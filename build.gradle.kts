@@ -168,7 +168,7 @@ liquibase {
         "username" to dbUser,
         "password" to dbPassword,
         "changelogFile" to dbChangelog,
-        "logLevel" to "info",
+        "logLevel" to "error",
       )
   }
   runList = "main"
