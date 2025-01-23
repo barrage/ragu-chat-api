@@ -38,9 +38,7 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
           agent.id,
           llmProvider = "openai",
           model = "gpt-4o",
-          promptInstruction = "Custom prompt instruction",
           titleInstruction = "Custom title instruction",
-          languageInstruction = "Custom language instruction",
           summaryInstruction = "Custom summary instruction",
         )
       chat = postgres.testChat(admin.id, agent.id, null)
@@ -83,10 +81,6 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
 
     val preparedPrompt = service.prepareChatPrompt(prompt, agentConfiguration, emptyList(), history)
 
-    assertTrue(preparedPrompt[0].content.contains("Custom language instruction"))
-
-    assertTrue(preparedPrompt[1].content.contains("Custom prompt instruction"))
-
     assertTrue(preparedPrompt[1].content.contains("What is the capital of Croatia?"))
   }
 
@@ -100,18 +94,6 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
 
     val preparedPrompt =
       service.prepareChatPrompt(prompt, defaultAgentConfiguration, emptyList(), history)
-
-    assertTrue(
-      preparedPrompt[0].content.contains("You do not speak any language other than english.")
-    )
-
-    assertTrue(
-      preparedPrompt[1]
-        .content
-        .contains(
-          "Use the instructions surrounded by triple quotes to respond to the prompt surrounded by triple quotes."
-        )
-    )
 
     assertTrue(preparedPrompt[1].content.contains("What is the capital of Croatia?"))
   }

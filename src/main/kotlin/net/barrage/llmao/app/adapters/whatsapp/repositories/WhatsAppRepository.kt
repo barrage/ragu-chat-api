@@ -166,8 +166,6 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.TEMPERATURE,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
-          WHATS_APP_AGENTS.PROMPT_INSTRUCTION,
-          WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENTS.CREATED_AT,
           WHATS_APP_AGENTS.UPDATED_AT,
@@ -196,8 +194,6 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.TEMPERATURE,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
-          WHATS_APP_AGENTS.PROMPT_INSTRUCTION,
-          WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENTS.CREATED_AT,
           WHATS_APP_AGENTS.UPDATED_AT,
@@ -245,8 +241,6 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.TEMPERATURE,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
-          WHATS_APP_AGENTS.PROMPT_INSTRUCTION,
-          WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENTS.CREATED_AT,
           WHATS_APP_AGENTS.UPDATED_AT,
@@ -304,14 +298,6 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
         .set(WHATS_APP_AGENTS.TEMPERATURE, create.configuration.temperature)
         .set(WHATS_APP_AGENTS.LANGUAGE, create.language)
         .set(WHATS_APP_AGENTS.ACTIVE, create.active)
-        .set(
-          WHATS_APP_AGENTS.PROMPT_INSTRUCTION,
-          create.configuration.instructions?.promptInstruction,
-        )
-        .set(
-          WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
-          create.configuration.instructions?.languageInstruction,
-        )
         .set(
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           create.configuration.instructions?.summaryInstruction,
@@ -487,20 +473,6 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           .set(
             WHATS_APP_AGENTS.TEMPERATURE,
             DSL.coalesce(DSL.`val`(update.configuration?.temperature), WHATS_APP_AGENTS.TEMPERATURE),
-          )
-          .set(
-            WHATS_APP_AGENTS.PROMPT_INSTRUCTION,
-            DSL.coalesce(
-              DSL.`val`(update.configuration?.instructions?.promptInstruction),
-              WHATS_APP_AGENTS.PROMPT_INSTRUCTION,
-            ),
-          )
-          .set(
-            WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
-            DSL.coalesce(
-              DSL.`val`(update.configuration?.instructions?.languageInstruction),
-              WHATS_APP_AGENTS.LANGUAGE_INSTRUCTION,
-            ),
           )
           .set(
             WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,

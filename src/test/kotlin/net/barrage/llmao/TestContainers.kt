@@ -204,9 +204,7 @@ class TestPostgres {
     context: String = "Test",
     llmProvider: String = "openai",
     model: String = "gpt-4",
-    promptInstruction: String? = null,
     titleInstruction: String? = null,
-    languageInstruction: String? = null,
     summaryInstruction: String? = null,
   ): AgentConfiguration {
     val configuration =
@@ -218,22 +216,10 @@ class TestPostgres {
           AGENT_CONFIGURATIONS.CONTEXT,
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
-          AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-          AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
         )
-        .values(
-          agentId,
-          version,
-          context,
-          llmProvider,
-          model,
-          promptInstruction,
-          titleInstruction,
-          languageInstruction,
-          summaryInstruction,
-        )
+        .values(agentId, version, context, llmProvider, model, titleInstruction, summaryInstruction)
         .returning()
         .awaitSingle()
         .toAgentConfiguration()
