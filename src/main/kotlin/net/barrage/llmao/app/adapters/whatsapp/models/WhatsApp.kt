@@ -143,12 +143,7 @@ fun WhatsAppAgentsRecord.toWhatsAppAgent() =
     temperature = this.temperature!!,
     language = this.language!!,
     active = this.active!!,
-    agentInstructions =
-      AgentInstructions(
-        promptInstruction = this.promptInstruction,
-        languageInstruction = this.languageInstruction,
-        summaryInstruction = this.summaryInstruction,
-      ),
+    agentInstructions = AgentInstructions(summaryInstruction = this.summaryInstruction),
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

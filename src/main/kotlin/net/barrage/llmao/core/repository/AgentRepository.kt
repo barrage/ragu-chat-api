@@ -112,9 +112,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
           AGENT_CONFIGURATIONS.TEMPERATURE,
-          AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-          AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
           AGENT_CONFIGURATIONS.CREATED_AT,
           AGENT_CONFIGURATIONS.UPDATED_AT,
@@ -156,9 +154,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.LLM_PROVIDER,
         AGENT_CONFIGURATIONS.MODEL,
         AGENT_CONFIGURATIONS.TEMPERATURE,
-        AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-        AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
         AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
         AGENT_CONFIGURATIONS.CREATED_AT,
         AGENT_CONFIGURATIONS.UPDATED_AT,
@@ -221,16 +217,8 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENT_CONFIGURATIONS.MODEL, create.configuration.model)
           .set(AGENT_CONFIGURATIONS.TEMPERATURE, create.configuration.temperature)
           .set(
-            AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
-            create.configuration.instructions?.promptInstruction,
-          )
-          .set(
             AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
             create.configuration.instructions?.titleInstruction,
-          )
-          .set(
-            AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
-            create.configuration.instructions?.languageInstruction,
           )
           .set(
             AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
@@ -292,19 +280,9 @@ class AgentRepository(private val dslContext: DSLContext) {
             .set(AGENT_CONFIGURATIONS.MODEL, update.configuration.model)
             .set(AGENT_CONFIGURATIONS.TEMPERATURE, update.configuration.temperature)
             .set(
-              AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
-              update.configuration.instructions?.promptInstruction
-                ?: currentConfiguration.agentInstructions.promptInstruction,
-            )
-            .set(
               AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
               update.configuration.instructions?.titleInstruction
                 ?: currentConfiguration.agentInstructions.titleInstruction,
-            )
-            .set(
-              AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
-              update.configuration.instructions?.languageInstruction
-                ?: currentConfiguration.agentInstructions.languageInstruction,
             )
             .set(
               AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
@@ -540,9 +518,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
           AGENT_CONFIGURATIONS.TEMPERATURE,
-          AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-          AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
           AGENT_CONFIGURATIONS.CREATED_AT,
           AGENT_CONFIGURATIONS.UPDATED_AT,
@@ -569,9 +545,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.LLM_PROVIDER,
         AGENT_CONFIGURATIONS.MODEL,
         AGENT_CONFIGURATIONS.TEMPERATURE,
-        AGENT_CONFIGURATIONS.PROMPT_INSTRUCTION,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-        AGENT_CONFIGURATIONS.LANGUAGE_INSTRUCTION,
         AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
         AGENT_CONFIGURATIONS.CREATED_AT,
         AGENT_CONFIGURATIONS.UPDATED_AT,

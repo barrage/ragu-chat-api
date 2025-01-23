@@ -4,9 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AgentInstructions(
-  /** Base instructions to tell the LLM how to respond to prompts. */
-  val promptInstruction: String? = null,
-
   /**
    * Used in chats - specifies the instructions for an LLM on how to generate a chat title. Usually
    * the default directive will be fine, but it's nice to have an option to change this if the
@@ -15,29 +12,11 @@ data class AgentInstructions(
   val titleInstruction: String? = null,
 
   /**
-   * If present, the LLM will receive instructions on what language to generate responses in. The
-   * instructions will be contained in this field.
-   */
-  val languageInstruction: String? = null,
-
-  /**
    * If present, contains instructions for the LLM on how to summarize conversations when a chat's
    * maximum history is reached.
    */
   val summaryInstruction: String? = null,
 ) {
-  fun basePrompt(): String {
-    if (promptInstruction != null) {
-      return promptInstruction
-    }
-
-    return """
-        |Use the instructions surrounded by triple quotes to respond to the prompt surrounded by triple quotes.
-        |Also use the information from the current conversation to respond if it is relevant.
-        |If you do not know something, admit so."""
-      .trimMargin()
-  }
-
   fun title(proompt: String, response: String): String {
     if (titleInstruction != null) {
       return "$titleInstruction\nPrompt: $proompt\nResponse: $response\nTitle:"
@@ -57,18 +36,6 @@ data class AgentInstructions(
        |Prompt: $proompt
        |Response: $response
        |Title:
-    """
-      .trimMargin()
-  }
-
-  fun language(): String {
-    if (languageInstruction != null) {
-      return languageInstruction
-    }
-
-    return """
-      |You do not speak any language other than english.
-      |You will disregard the original prompt language and answer exclusively in english language.
     """
       .trimMargin()
   }

@@ -48,13 +48,7 @@ fun AgentConfigurationsRecord.toAgentConfiguration() =
     llmProvider = this.llmProvider,
     model = this.model,
     temperature = this.temperature!!,
-    agentInstructions =
-      AgentInstructions(
-        this.promptInstruction,
-        this.titleInstruction,
-        this.languageInstruction,
-        this.summaryInstruction,
-      ),
+    agentInstructions = AgentInstructions(this.titleInstruction, this.summaryInstruction),
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

@@ -142,8 +142,7 @@ class ConversationService(
     collections: List<AgentCollection>,
     history: List<ChatMessage>,
   ): List<ChatMessage> {
-    val systemMessage =
-      ChatMessage.system("${agentConfig.context}\n${agentConfig.agentInstructions.language()}")
+    val systemMessage = ChatMessage.system(agentConfig.context)
 
     LOG.trace("Created system message {}", systemMessage)
 
@@ -191,7 +190,7 @@ class ConversationService(
       }
     }
 
-    val message = userMessage(agentConfig, prompt, collectionInstructions)
+    val message = userMessage(prompt, collectionInstructions)
 
     LOG.trace("Created user message {}", message)
 
@@ -200,18 +199,12 @@ class ConversationService(
     return messages
   }
 
-  private fun userMessage(
-    agentConfig: AgentConfiguration,
-    prompt: String,
-    collectionInstructions: String,
-  ): ChatMessage {
-    val base = agentConfig.agentInstructions.basePrompt()
-
+  private fun userMessage(prompt: String, collectionInstructions: String): ChatMessage {
     val instructions =
       if (collectionInstructions.isEmpty()) ""
       else "Instructions: ${"\"\"\""}\n$collectionInstructions\n${"\"\"\""}\n"
 
-    val message = "$base\n${instructions}Prompt: ${"\"\"\""}\n$prompt\n${"\"\"\""}"
+    val message = "${instructions}Prompt: ${"\"\"\""}\n$prompt\n${"\"\"\""}"
 
     return ChatMessage.user(message)
   }
