@@ -7,12 +7,12 @@
     <root level="debug">
         <appender-ref ref="STDOUT"/>
     </root>
-    <logger name="liquibase" level="INFO"/>
+    <logger name="org.liquibase" level="OFF"/>
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
     <logger name="io.ktor.routing" level="INFO"/>
     <logger name="io.ktor.websocket" level="INFO"/>
-    <logger name="org.jooq" level="INFO"/>
+    <logger name="org.jooq" level="ERROR"/>
     <logger name="io.ktor.client.plugins" level="INFO"/>
     <logger name="org.testcontainers" level="INFO"/>
     <!-- The following logger can be used for containers logs since 1.18.0 -->

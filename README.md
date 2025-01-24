@@ -23,6 +23,7 @@
         - [Chatting](#chatting)
         - [Changing chats](#changing-chats)
 - [WhatsApp](#whatsapp)
+- [Agent tools](#agent-tools)
 
 ## Overview
 
@@ -470,6 +471,39 @@ More info can be found [here](https://www.infobip.com/docs/whatsapp/message-type
 ### Activation
 
 To use WhatsApp as a chat provider, you need to set the `ktor.features.whatsApp` configuration to `true`.
+
+## Agent tools
+
+Agent tools are functions whose definitions are included in the prompt to the underlying LLM. The LLM can use the
+definitions to determine whether to call the function or not. For example, given the user query "What is the weather
+like today?", the LLM can decide to call the function "getWeather" to get the weather information. You can read more
+about it [here](https://platform.openai.com/docs/guides/gpt/function-calling).
+
+Every tool must be defined as a [JSON schema](https://json-schema.org/understanding-json-schema/).
+Predefined agents will use predefined tools, such as agents from the agent packs. These tools cannot
+be modified and are fixed to the agent.
+
+Most of the flexibility comes from defining custom tools. Custom tools are defined in python.
+These tools are defined globally and are assigned to agents as necessary.
+
+### Defining custom tools
+
+Each custom tool can contain an `imports`, `environment` and `functions` section.
+
+The `imports` section contains a list of python modules to import. The imports are available to all functions.
+The `environment` section contains a list of environment variables to set in the python process.
+The `functions` section contains a list of function definitions to use as tools. Each function must also
+have its corresponding JSON schema. LLMs should be used to generate the JSON schema on client apps to speed
+this process up and this API exposes a route to do so.
+
+Each of these sections will ultimately end up in a single python script. A `main` function will be appended to the end
+of the script and a separate process will be used run the script. The script will also contain plumbing for unix sockets
+to communicate with the main process.
+
+Since the python process will run in the same container as the main process, it can access the same environment
+variables and files. The script can import any python libraries, so long as they are installed in the container.
+
+### Python execution
 
 ## License
 
