@@ -117,12 +117,18 @@ class ConversationService(
         return@joinToString "$s: ${it.content}"
       }
 
-    val summaryPrompt = agentFull.configuration.agentInstructions.summary(conversation)
+    val summaryPrompt = agentFull.configuration.agentInstructions.formatSummaryPrompt(conversation)
+
+    val messages = listOf(ChatMessage.user(summaryPrompt))
 
     val summary =
-      llm.summarizeConversation(
-        summaryPrompt,
-        LlmConfig(agentFull.configuration.model, agentFull.configuration.temperature),
+      llm.chatCompletion(
+        messages,
+        LlmConfig(
+          model = agentFull.configuration.model,
+          temperature = agentFull.configuration.temperature,
+          maxTokens = 2000
+        ),
       )
 
     chatRepository.insertSystemMessage(chatId, summary)
@@ -231,15 +237,19 @@ class ConversationService(
   ): String {
     val agentFull = agentRepository.get(agentId)
 
-    val titlePrompt = agentFull.configuration.agentInstructions.title(prompt, response)
-
-    LOG.trace("Created title prompt:\n{}", titlePrompt)
-
     val llm = providers.llm.getProvider(agentFull.configuration.llmProvider)
+
+    val titleInstruction =
+      agentFull.configuration.agentInstructions.formatTitlePrompt(prompt, response)
+
+    LOG.trace("Created title prompt:\n{}", titleInstruction)
+
+    val messages = listOf(ChatMessage.user(prompt))
+
     var title =
       llm
-        .generateChatTitle(
-          titlePrompt,
+        .chatCompletion(
+          messages,
           LlmConfig(agentFull.configuration.model, agentFull.configuration.temperature),
         )
         .trim()

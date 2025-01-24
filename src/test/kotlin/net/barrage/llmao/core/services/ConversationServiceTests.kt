@@ -109,7 +109,8 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
       """
         .trimIndent()
 
-    val summaryPrompt = agentConfiguration.agentInstructions.summary(conversationHistory)
+    val summaryPrompt =
+      agentConfiguration.agentInstructions.formatSummaryPrompt(conversationHistory)
 
     assertTrue(summaryPrompt.contains("Custom summary instruction"))
     assertTrue(summaryPrompt.contains(conversationHistory))
@@ -129,7 +130,8 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
       """
         .trimIndent()
 
-    val summaryPrompt = defaultAgentConfiguration.agentInstructions.summary(conversationHistory)
+    val summaryPrompt =
+      defaultAgentConfiguration.agentInstructions.formatSummaryPrompt(conversationHistory)
 
     assertTrue(
       summaryPrompt.contains(
@@ -146,7 +148,7 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
     val response =
       "The Eiffel Tower, the Louvre, and the Notre-Dame Cathedral are some of the best places to visit in Paris."
 
-    val titlePrompt = agentConfiguration.agentInstructions.title(prompt, response)
+    val titlePrompt = agentConfiguration.agentInstructions.formatTitlePrompt(prompt, response)
 
     assertTrue(titlePrompt.contains("Custom title instruction"))
     assertTrue(titlePrompt.contains(prompt))
@@ -163,7 +165,8 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
     val response =
       "The Eiffel Tower, the Louvre, and the Notre-Dame Cathedral are some of the best places to visit in Paris."
 
-    val titlePrompt = defaultAgentConfiguration.agentInstructions.title(prompt, response)
+    val titlePrompt =
+      defaultAgentConfiguration.agentInstructions.formatTitlePrompt(prompt, response)
 
     assertTrue(titlePrompt.contains("Create a short title based on the examples below"))
     assertTrue(titlePrompt.contains(prompt))

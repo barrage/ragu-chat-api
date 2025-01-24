@@ -1,22 +1,28 @@
 package net.barrage.llmao.app.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
+import com.aallam.openai.api.chat.FunctionTool
 import com.aallam.openai.api.chat.StreamOptions
+import com.aallam.openai.api.chat.Tool
+import com.aallam.openai.api.chat.ToolType
+import com.aallam.openai.api.core.Parameters
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ConversationLlm
 import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.llm.ToolDefinition
 
 private const val TITLE_GENERATION_MODEL = "gpt-4"
 private val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
 
-class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
+class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
   private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
 
   override fun id(): String {
@@ -29,6 +35,8 @@ class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
         model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
         temperature = config.temperature,
+        maxTokens = config.maxTokens,
+        tools = config.tools?.map { it.toOpenAiTool() },
       )
 
     // TODO: Remove yelling
@@ -59,37 +67,6 @@ class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
     }
   }
 
-  override suspend fun generateChatTitle(proompt: String, config: LlmConfig): String {
-    val chatRequest =
-      ChatCompletionRequest(
-        model = ModelId(TITLE_GENERATION_MODEL),
-        messages = listOf(OpenAiChatMessage.User(proompt)),
-        temperature = config.temperature,
-      )
-
-    val response = this.client.chatCompletion(chatRequest)
-
-    // TODO: Remove yelling
-    return response.choices[0].message.content!!
-  }
-
-  override suspend fun summarizeConversation(
-    proompt: String,
-    config: LlmConfig,
-    maxTokens: Int?,
-  ): String {
-    val chatRequest =
-      ChatCompletionRequest(
-        model = ModelId(config.model),
-        messages = listOf(OpenAiChatMessage.User(proompt)),
-        maxTokens = maxTokens,
-        temperature = config.temperature,
-      )
-
-    // TODO: Remove yelling
-    return this.client.chatCompletion(chatRequest).choices[0].message.content!!
-  }
-
   override suspend fun supportsModel(model: String): Boolean {
     return SUPPORTED_MODELS.contains(model)
   }
@@ -97,4 +74,16 @@ class OpenAI(endpoint: String, apiKey: String) : ConversationLlm {
   override suspend fun listModels(): List<String> {
     return SUPPORTED_MODELS
   }
+}
+
+fun ToolDefinition.toOpenAiTool(): Tool {
+  return Tool(
+    type = ToolType.Function,
+    function =
+      FunctionTool(
+        name = function.name,
+        description = function.description,
+        parameters = Parameters.fromJsonString(Json.encodeToString(function.parameters)),
+      ),
+  )
 }

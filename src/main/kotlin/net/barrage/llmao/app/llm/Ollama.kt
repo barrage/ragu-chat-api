@@ -15,12 +15,12 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.types.KOffsetDateTime
 
-class Ollama(private val endpoint: String) : ConversationLlm {
+class Ollama(private val endpoint: String) : LlmProvider {
   private val client: HttpClient = httpClient()
 
   override fun id(): String {

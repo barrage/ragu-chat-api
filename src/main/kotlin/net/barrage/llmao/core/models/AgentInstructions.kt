@@ -17,7 +17,7 @@ data class AgentInstructions(
    */
   val summaryInstruction: String? = null,
 ) {
-  fun title(proompt: String, response: String): String {
+  fun formatTitlePrompt(proompt: String, response: String): String {
     if (titleInstruction != null) {
       return "$titleInstruction\nPrompt: $proompt\nResponse: $response\nTitle:"
     }
@@ -40,7 +40,7 @@ data class AgentInstructions(
       .trimMargin()
   }
 
-  fun summary(history: String): String {
+  fun formatSummaryPrompt(history: String): String {
     if (summaryInstruction != null) {
       return "$summaryInstruction\nConversation: \"\"\"\n$history\n\"\"\""
     }
