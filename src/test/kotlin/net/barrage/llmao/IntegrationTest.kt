@@ -218,6 +218,7 @@ open class IntegrationTest(
           "oauth.carnet.tokenEndpoint" to "$url/$CARNET_WM/auth/token",
           "oauth.carnet.keysEndpoint" to "$url/$CARNET_WM/auth/jwks",
           "oauth.carnet.userInfoEndpoint" to "$url/$CARNET_WM/auth/userinfo",
+          "oauth.carnet.logoutEndpoint" to "$url/$CARNET_WM/auth/logout",
           "llm.ollama.endpoint" to "$url/$OLLAMA_WM",
         )
       )
