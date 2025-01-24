@@ -2,7 +2,7 @@ package net.barrage.llmao.app.llm
 
 import io.ktor.server.config.*
 import net.barrage.llmao.core.ProviderFactory
-import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string

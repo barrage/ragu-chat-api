@@ -10,7 +10,7 @@ import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ConversationLlm
+import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.error.AppError
@@ -25,7 +25,7 @@ class AzureAI(
 
   /** Which version of the API to use. */
   private val apiVersion: String,
-) : ConversationLlm {
+) : LlmProvider {
   /** Maps LLM identifiers to Azure deployment names. */
   private var deploymentMap =
     mapOf("gpt-3.5-turbo" to "gpt-35-turbo", "gpt-4" to "gpt-4", "gpt-4o" to "gpt-4o")
