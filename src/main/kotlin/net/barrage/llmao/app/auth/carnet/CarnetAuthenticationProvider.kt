@@ -25,6 +25,7 @@ class CarnetAuthenticationProvider(
   private val tokenIssuer: String,
   private val clientId: String,
   private val clientSecret: String,
+  private val logoutEndpoint: String,
 ) : AuthenticationProvider {
   override fun id(): String {
     return "carnet"
@@ -82,6 +83,12 @@ class CarnetAuthenticationProvider(
     val email = carnetUserData.email
     if (email.isBlank()) {
       throw AppError.api(ErrorReason.Authentication, "Email not found")
+    }
+
+    // Invalidate user application token
+    client.get {
+      url(logoutEndpoint)
+      parameter("id_token_hint", response.idToken)
     }
 
     return UserInfo(id = carnetId, email = email)

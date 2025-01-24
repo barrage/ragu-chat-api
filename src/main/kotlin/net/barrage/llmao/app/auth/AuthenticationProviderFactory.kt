@@ -90,6 +90,7 @@ class AuthenticationProviderFactory(val config: ApplicationConfig) :
     val tokenEp = config.string("oauth.carnet.tokenEndpoint")
     val userInfoEp = config.string("oauth.carnet.userInfoEndpoint")
     val keysEp = config.string("oauth.carnet.keysEndpoint")
+    val logoutEndpoint = config.string("oauth.carnet.logoutEndpoint")
     return CarnetAuthenticationProvider(
       client,
       tokenEp,
@@ -98,6 +99,7 @@ class AuthenticationProviderFactory(val config: ApplicationConfig) :
       tokenIssuer,
       clientId,
       clientSecret,
+      logoutEndpoint,
     )
   }
 }
