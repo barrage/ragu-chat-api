@@ -15,17 +15,14 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.session.ClientMessage
-import net.barrage.llmao.core.session.ClientMessageSerializer
-import net.barrage.llmao.core.session.LOG
+import net.barrage.llmao.core.session.IncomingMessage
+import net.barrage.llmao.core.session.IncomingMessageSerializer
+import net.barrage.llmao.core.session.OutgoingSystemMessage
 import net.barrage.llmao.core.session.SessionFactory
-import net.barrage.llmao.core.session.SessionManager
+import net.barrage.llmao.core.session.chat.LOG
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -36,7 +33,7 @@ fun Application.websocketServer(
   factory: SessionFactory,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val server = SessionManager(factory, listener)
+  val server = WebsocketSessionManager(factory, listener)
 
   val tokenManager = WebsocketTokenManager()
 
@@ -44,7 +41,7 @@ fun Application.websocketServer(
     // FIXME: Shrink
     maxFrameSize = Long.MAX_VALUE
     masking = false
-    contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+    contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
     pingPeriod = Duration.ofSeconds(5)
   }
 
@@ -89,11 +86,8 @@ fun Application.websocketServer(
         return@webSocket
       }
 
-      // Start the WS connection.
-
-      val channel = channel()
-
-      server.registerSession(userId, token, channel)
+      val emitter = WebsocketEmitter.new<OutgoingSystemMessage>(this)
+      server.registerSystemSession(userId, token, emitter)
 
       LOG.debug("Websocket connection opened for '{}' with token '{}'", userId, token)
 
@@ -106,19 +100,19 @@ fun Application.websocketServer(
 
             val message =
               try {
-                Json.decodeFromString<ClientMessage>(frame.readText())
+                Json.decodeFromString<IncomingMessage>(frame.readText())
               } catch (e: Throwable) {
                 e.printStackTrace()
-                channel.emitError(
+                emitter.emitError(
                   AppError.api(ErrorReason.InvalidParameter, "Message format malformed")
                 )
                 continue
               }
 
             try {
-              server.handleMessage(userId, token, message, channel)
+              server.handleMessage(userId, token, message, this)
             } catch (error: AppError) {
-              channel.emitError(error)
+              emitter.emitError(error)
             }
           }
         }
@@ -134,7 +128,7 @@ fun Application.websocketServer(
             formatter.format(Instant.now()),
             Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
           )
-          server.removeSession(userId, token)
+          server.removeAllSessions(userId, token)
           return@webSocket
         }
 
@@ -149,18 +143,9 @@ fun Application.websocketServer(
         formatter.format(Instant.now()),
         Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
       )
-      server.removeSession(userId, token)
+      server.removeAllSessions(userId, token)
     }
   }
-}
-
-/** Open a new channel and start running it in a coroutine. */
-private fun DefaultWebSocketServerSession.channel(): WebsocketChannel {
-  val flow = MutableSharedFlow<String>()
-  val job = launch {
-    flow.onCompletion { LOG.debug("Channel successfully closed") }.collect { send(it) }
-  }
-  return WebsocketChannel(flow, job)
 }
 
 private fun websocketGenerateToken(): OpenApiRoute.() -> Unit = {

@@ -9,8 +9,8 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.session.ServerMessage
-import net.barrage.llmao.core.session.SystemMessage
+import net.barrage.llmao.core.session.IncomingSystemMessage
+import net.barrage.llmao.core.session.OutgoingSystemMessage
 import net.barrage.llmao.core.types.KUUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 
@@ -24,7 +24,7 @@ suspend fun HttpClient.chatSession(
   webSocket("/?token=$token") { block() }
 }
 
-suspend fun ClientWebSocketSession.sendClientSystem(message: SystemMessage) {
+suspend fun ClientWebSocketSession.sendClientSystem(message: IncomingSystemMessage) {
   val jsonMessage = Json.encodeToString(message)
   val msg = "{ \"type\": \"system\", \"payload\": $jsonMessage }"
   send(Frame.Text(msg))
@@ -33,11 +33,11 @@ suspend fun ClientWebSocketSession.sendClientSystem(message: SystemMessage) {
 /** Send the `chat_open_new` system message and wait for the chat_open response. */
 suspend fun ClientWebSocketSession.openNewChat(agentId: KUUID): KUUID {
   // Open a chat and confirm it's open
-  sendClientSystem(SystemMessage.OpenNewChat(agentId))
+  sendClientSystem(IncomingSystemMessage.CreateNewSession(agentId))
   val chatOpen = (incoming.receive() as Frame.Text).readText()
-  val chatOpenMessage = json.decodeFromString<ServerMessage.ChatOpen>(chatOpen)
-  assertNotNull(chatOpenMessage.chatId)
-  return chatOpenMessage.chatId
+  val sessionOpenMessage = json.decodeFromString<OutgoingSystemMessage.SessionOpen>(chatOpen)
+  assertNotNull(sessionOpenMessage.chatId)
+  return sessionOpenMessage.chatId
 }
 
 /** Send a chat message and wait for the response. */

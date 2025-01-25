@@ -9,8 +9,8 @@ import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.core.session.ServerMessage
-import net.barrage.llmao.core.session.SystemMessage
+import net.barrage.llmao.core.session.IncomingSystemMessage
+import net.barrage.llmao.core.session.OutgoingSystemMessage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class WebsocketSystemMessageTests : IntegrationTest() {
+class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
   private lateinit var user: User
@@ -106,9 +106,9 @@ class WebsocketSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      sendClientSystem(SystemMessage.OpenNewChat(agent.id))
+      sendClientSystem(IncomingSystemMessage.CreateNewSession(agent.id))
       val response = (incoming.receive() as Frame.Text).readText()
-      val message = receiveJson<ServerMessage.ChatOpen>(response)
+      val message = receiveJson<OutgoingSystemMessage.SessionOpen>(response)
       assertNotNull(message.chatId)
       asserted = true
     }
@@ -121,16 +121,16 @@ class WebsocketSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      val openChat = SystemMessage.OpenNewChat(agent.id)
+      val openChat = IncomingSystemMessage.CreateNewSession(agent.id)
 
       sendClientSystem(openChat)
       val first = (incoming.receive() as Frame.Text).readText()
-      val firstMessage = receiveJson<ServerMessage.ChatOpen>(first)
+      val firstMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(first)
       assertNotNull(firstMessage.chatId)
 
       sendClientSystem(openChat)
       val second = (incoming.receive() as Frame.Text).readText()
-      val secondMessage = receiveJson<ServerMessage.ChatOpen>(second)
+      val secondMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(second)
       assertNotNull(secondMessage.chatId)
 
       assertNotEquals(firstMessage.chatId, secondMessage.chatId)
@@ -145,16 +145,16 @@ class WebsocketSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      sendClientSystem(SystemMessage.OpenNewChat(agent.id))
+      sendClientSystem(IncomingSystemMessage.CreateNewSession(agent.id))
 
       val first = (incoming.receive() as Frame.Text).readText()
-      val firstMessage = receiveJson<ServerMessage.ChatOpen>(first)
+      val firstMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(first)
       assertNotNull(firstMessage.chatId)
 
-      sendClientSystem(SystemMessage.OpenExistingChat(firstMessage.chatId))
+      sendClientSystem(IncomingSystemMessage.LoadExistingSession(firstMessage.chatId))
 
       val second = (incoming.receive() as Frame.Text).readText()
-      val secondMessage = receiveJson<ServerMessage.ChatOpen>(second)
+      val secondMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(second)
       assertNotNull(secondMessage.chatId)
 
       assertEquals(firstMessage.chatId, secondMessage.chatId)
@@ -169,7 +169,7 @@ class WebsocketSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      val openChat = SystemMessage.OpenExistingChat(KUUID.randomUUID())
+      val openChat = IncomingSystemMessage.LoadExistingSession(KUUID.randomUUID())
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()
@@ -201,7 +201,7 @@ class WebsocketSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      val openChat = SystemMessage.OpenNewChat(KUUID.randomUUID())
+      val openChat = IncomingSystemMessage.CreateNewSession(KUUID.randomUUID())
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()

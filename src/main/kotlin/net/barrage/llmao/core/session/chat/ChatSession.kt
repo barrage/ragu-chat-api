@@ -1,9 +1,11 @@
-package net.barrage.llmao.core.session
+package net.barrage.llmao.core.session.chat
 
 import io.ktor.util.logging.*
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -11,6 +13,10 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.services.ConversationService
+import net.barrage.llmao.core.session.Emitter
+import net.barrage.llmao.core.session.Session
+import net.barrage.llmao.core.session.SessionEntity
+import net.barrage.llmao.core.session.SessionId
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -29,7 +35,7 @@ class ChatSession(
   val agentId: KUUID,
 
   /** Output handle. Only chat related events are sent via this reference. */
-  private val channel: Channel,
+  private val emitter: Emitter<ChatSessionMessage>,
 
   /** The main business logic delegate for chatting. */
   private val service: ConversationService,
@@ -107,24 +113,68 @@ class ChatSession(
       }
 
     try {
+      var finishReason = FinishReason.Stop
+      val response = StringBuilder()
       LOG.debug("Started stream for '{}'", id)
-      val (response, finishReason) = collectAndForwardStream(stream, channel)
+      try {
+        collectAndForwardStream(stream, response, emitter)
+        LOG.debug("Chat '{}' got response: {}", id, response)
+      } catch (e: CancellationException) {
+        LOG.debug(
+          "Stream in '{}' cancelled, took {}ms, storing response: {}",
+          id,
+          Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
+          response.isNotBlank(),
+        )
+        finishReason = FinishReason.ManualStop
+      }
+
+      if (response.isNotBlank()) {
+        processResponse(
+          prompt = prompt,
+          response = response.toString(),
+          finishReason = finishReason,
+        )
+      }
 
       LOG.debug(
         "Stream in '{}' complete, took {}ms",
         id,
         Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
       )
-
-      if (response.isNotBlank()) {
-        processResponse(prompt = prompt, response = response, finishReason = finishReason)
-        LOG.debug("Chat '{}' got response: {}", id, response)
-      }
     } catch (e: Throwable) {
       LOG.error("Unexpected error in stream", e)
       handleError(e)
     } finally {
       streamActive = false
+    }
+  }
+
+  private suspend fun collectAndForwardStream(
+    stream: Flow<List<TokenChunk>>,
+    response: StringBuilder,
+    emitter: Emitter<ChatSessionMessage>,
+  ) = coroutineScope {
+    stream.collect { tokens ->
+      if (!streamActive) {
+        // Stream was manually cancelled, cancel the streaming job
+        cancel()
+      }
+
+      for (chunk in tokens) {
+        if (chunk.content.isNullOrEmpty() && chunk.stopReason?.value != FinishReason.Stop.value) {
+          continue
+        }
+
+        if (!chunk.content.isNullOrEmpty()) {
+          emitter.emit(ChatSessionMessage.StreamChunk(chunk.content))
+          response.append(chunk.content)
+        }
+
+        if (chunk.stopReason?.value == FinishReason.Stop.value) {
+          break
+        }
+      }
     }
   }
 
@@ -134,7 +184,7 @@ class ChatSession(
     finishReason: FinishReason,
   ) {
     if (response.isEmpty()) {
-      channel.emitError(AppError.api(ErrorReason.Websocket, "Got empty response from LLM"))
+      emitter.emitError(AppError.api(ErrorReason.Websocket, "Got empty response from LLM"))
       return
     }
 
@@ -151,15 +201,17 @@ class ChatSession(
 
     val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, prompt, response)
 
-    val emitPayload =
-      ServerMessage.FinishEvent(id, messageId = assistantMsg.id, reason = finishReason)
+    LOG.debug("Emitting stream complete for '{}', finish reason: {}", id, finishReason)
 
-    channel.emitServer(emitPayload)
+    val emitPayload =
+      ChatSessionMessage.StreamComplete(id, messageId = assistantMsg.id, reason = finishReason)
+
+    emitter.emit(emitPayload)
   }
 
   private suspend fun generateAndSetTitle(prompt: String, response: String) {
     title = service.createAndUpdateTitle(id, prompt, response, agentId)
-    channel.emitServer(ServerMessage.ChatTitle(id, title!!))
+    emitter.emit(ChatSessionMessage.ChatTitleUpdated(id, title!!))
   }
 
   private suspend fun addToHistory(messages: List<ChatMessage>) {
@@ -180,41 +232,6 @@ class ChatSession(
     }
   }
 
-  private suspend fun collectAndForwardStream(
-    stream: Flow<List<TokenChunk>>,
-    channel: Channel,
-  ): Pair<String, FinishReason> = coroutineScope {
-    val buf: MutableList<String> = mutableListOf()
-    var finishReason: FinishReason = FinishReason.Stop
-
-    stream.collect { tokens ->
-      if (!streamActive) {
-        // Stream was manually cancelled
-        LOG.debug("Stream in '{}' cancelled, aborting | storing response: {}", id, buf.isNotEmpty())
-        finishReason = FinishReason.ManualStop
-        return@collect
-      }
-
-      for (chunk in tokens) {
-        if (chunk.content.isNullOrEmpty() && chunk.stopReason?.value != FinishReason.Stop.value) {
-          continue
-        }
-
-        // Sometimes the first and last chunks are only one whitespace
-        if (!chunk.content.isNullOrEmpty()) {
-          channel.emitChunk(chunk)
-          buf.add(chunk.content)
-        }
-
-        if (chunk.stopReason?.value == FinishReason.Stop.value) {
-          break
-        }
-      }
-    }
-
-    Pair(buf.joinToString(""), finishReason)
-  }
-
   /**
    * Stops streaming and emits an error message.
    *
@@ -225,11 +242,11 @@ class ChatSession(
   private suspend fun handleError(e: Throwable) {
     when (e) {
       is AppError -> {
-        channel.emitError(e)
+        emitter.emitError(e)
       }
       else -> {
         LOG.error("Error in chat", e)
-        channel.emitError(AppError.internal())
+        emitter.emitError(AppError.internal())
       }
     }
   }
