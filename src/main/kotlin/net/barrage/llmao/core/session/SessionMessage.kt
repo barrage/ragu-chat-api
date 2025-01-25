@@ -5,68 +5,48 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import net.barrage.llmao.core.models.FinishReason
+import net.barrage.llmao.core.session.chat.ChatSessionMessage
 import net.barrage.llmao.core.types.KUUID
 
-/** Incoming WS messages. */
+/** Incoming messages. */
 @Serializable
-sealed class ClientMessage {
+sealed class IncomingMessage {
   @Serializable
   @SerialName("system")
-  data class System(val payload: SystemMessage) : ClientMessage()
+  data class System(val payload: IncomingSystemMessage) : IncomingMessage()
 
-  @Serializable @SerialName("chat") data class Chat(val text: String) : ClientMessage()
+  @Serializable @SerialName("chat") data class Chat(val text: String) : IncomingMessage()
 }
 
-/** WS command messages. */
+/** System messages used to control sessions. */
 @Serializable
-sealed class SystemMessage {
+sealed class IncomingSystemMessage {
   @Serializable
   @SerialName("chat_open_new")
-  data class OpenNewChat(val agentId: KUUID) : SystemMessage()
+  data class CreateNewSession(val agentId: KUUID) : IncomingSystemMessage()
 
   @Serializable
   @SerialName("chat_open_existing")
-  data class OpenExistingChat(val chatId: KUUID, val initialHistorySize: Int = 10) :
-    SystemMessage()
+  data class LoadExistingSession(val chatId: KUUID, val initialHistorySize: Int = 10) :
+    IncomingSystemMessage()
 
-  @Serializable @SerialName("chat_close") data object CloseChat : SystemMessage()
+  @Serializable @SerialName("chat_close") data object CloseSession : IncomingSystemMessage()
 
-  @Serializable @SerialName("chat_stop_stream") data object StopStream : SystemMessage()
+  @Serializable @SerialName("chat_stop_stream") data object StopStream : IncomingSystemMessage()
 }
 
 /** Outgoing session messages. */
 @Serializable
-sealed class ServerMessage {
+sealed class OutgoingSystemMessage {
   /** Sent when a chat is opened. */
-  @SerialName("chat_open") @Serializable data class ChatOpen(val chatId: KUUID) : ServerMessage()
-
-  /** Sent when a chat's title is generated. */
-  @SerialName("chat_title")
+  @SerialName("chat_open")
   @Serializable
-  data class ChatTitle(val chatId: KUUID, val title: String) : ServerMessage()
+  data class SessionOpen(val chatId: KUUID) : OutgoingSystemMessage()
 
   /** Sent when a chat is closed manually. */
   @SerialName("chat_closed")
   @Serializable
-  data class ChatClosed(val chatId: KUUID) : ServerMessage()
-
-  /** Sent when a chats gets a complete response from an LLM. */
-  @SerialName("finish_event")
-  @Serializable
-  data class FinishEvent(
-    /** The streaming chat ID */
-    val chatId: KUUID,
-
-    /** What caused the stream to finish. */
-    val reason: FinishReason,
-
-    /**
-     * Optional message ID, present only when the finish reason is STOP. Failed message IDs are not
-     * sent.
-     */
-    val messageId: KUUID? = null,
-  ) : ServerMessage()
+  data class SessionClosed(val chatId: KUUID) : OutgoingSystemMessage()
 
   /**
    * Sent when an administrator deactivates an agent via the service and is used to indicate the
@@ -74,22 +54,59 @@ sealed class ServerMessage {
    */
   @SerialName("agent_deactivated")
   @Serializable
-  data class AgentDeactivated(val agentId: KUUID) : ServerMessage()
+  data class AgentDeactivated(val agentId: KUUID) : OutgoingSystemMessage()
 }
 
-val ClientMessageSerializer = Json {
+val IncomingMessageSerializer = Json {
   // Register all the polymorphic subclasses
   classDiscriminator = "type" // Use "type" field for the discriminator
   serializersModule = SerializersModule {
-    polymorphic(ClientMessage::class) {
-      subclass(ClientMessage.System::class, ClientMessage.System.serializer())
-      subclass(ClientMessage.Chat::class, ClientMessage.Chat.serializer())
+    polymorphic(IncomingMessage::class) {
+      subclass(IncomingMessage.System::class, IncomingMessage.System.serializer())
+      subclass(IncomingMessage.Chat::class, IncomingMessage.Chat.serializer())
     }
-    polymorphic(SystemMessage::class) {
-      subclass(SystemMessage.OpenNewChat::class, SystemMessage.OpenNewChat.serializer())
-      subclass(SystemMessage.OpenExistingChat::class, SystemMessage.OpenExistingChat.serializer())
-      subclass(SystemMessage.CloseChat::class, SystemMessage.CloseChat.serializer())
-      subclass(SystemMessage.StopStream::class, SystemMessage.StopStream.serializer())
+    polymorphic(IncomingSystemMessage::class) {
+      subclass(
+        IncomingSystemMessage.CreateNewSession::class,
+        IncomingSystemMessage.CreateNewSession.serializer(),
+      )
+      subclass(
+        IncomingSystemMessage.LoadExistingSession::class,
+        IncomingSystemMessage.LoadExistingSession.serializer(),
+      )
+      subclass(
+        IncomingSystemMessage.CloseSession::class,
+        IncomingSystemMessage.CloseSession.serializer(),
+      )
+      subclass(
+        IncomingSystemMessage.StopStream::class,
+        IncomingSystemMessage.StopStream.serializer(),
+      )
+    }
+    polymorphic(OutgoingSystemMessage::class) {
+      subclass(
+        OutgoingSystemMessage.SessionOpen::class,
+        OutgoingSystemMessage.SessionOpen.serializer(),
+      )
+      subclass(
+        OutgoingSystemMessage.SessionClosed::class,
+        OutgoingSystemMessage.SessionClosed.serializer(),
+      )
+      subclass(
+        OutgoingSystemMessage.AgentDeactivated::class,
+        OutgoingSystemMessage.AgentDeactivated.serializer(),
+      )
+    }
+    polymorphic(ChatSessionMessage::class) {
+      subclass(ChatSessionMessage.StreamChunk::class, ChatSessionMessage.StreamChunk.serializer())
+      subclass(
+        ChatSessionMessage.StreamComplete::class,
+        ChatSessionMessage.StreamComplete.serializer(),
+      )
+      subclass(
+        ChatSessionMessage.ChatTitleUpdated::class,
+        ChatSessionMessage.ChatTitleUpdated.serializer(),
+      )
     }
   }
 }

@@ -25,9 +25,10 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Pagination
-import net.barrage.llmao.core.session.ClientMessageSerializer
-import net.barrage.llmao.core.session.ServerMessage
-import net.barrage.llmao.core.session.SystemMessage
+import net.barrage.llmao.core.session.IncomingMessageSerializer
+import net.barrage.llmao.core.session.IncomingSystemMessage
+import net.barrage.llmao.core.session.OutgoingSystemMessage
+import net.barrage.llmao.core.session.chat.ChatSessionMessage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.json
@@ -84,24 +85,16 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val finishEvent = json.decodeFromString<ServerMessage>(response)
+            val message = json.decodeFromString<ChatSessionMessage.StreamChunk>(response)
+            buffer += message.chunk
+          } catch (_: SerializationException) {}
 
-            // React only to finish events since titles can also get sent
-            if (finishEvent is ServerMessage.FinishEvent) {
-              assert(finishEvent.reason == FinishReason.Stop)
-              asserted = true
-              break
-            }
-          } catch (e: SerializationException) {
-            val errMessage = e.message ?: throw e
-            if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-              throw e
-            }
-            buffer += response
-          } catch (e: Throwable) {
-            e.printStackTrace()
+          try {
+            val message = json.decodeFromString<ChatSessionMessage.StreamComplete>(response)
+            assert(message.reason == FinishReason.Stop)
+            asserted = true
             break
-          }
+          } catch (_: SerializationException) {}
         }
       }
 
@@ -134,31 +127,16 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val finishEvent = json.decodeFromString<ServerMessage>(response)
+            val message = json.decodeFromString<ChatSessionMessage.StreamChunk>(response)
+            buffer += message.chunk
+          } catch (_: SerializationException) {}
 
-            // React only to finish events since titles can also get sent
-            if (finishEvent is ServerMessage.FinishEvent) {
-              assert(finishEvent.reason == FinishReason.Stop)
-              asserted = true
-              break
-            }
-          } catch (e: SerializationException) {
-            val errMessage = e.message ?: throw e
-            if (
-              // Happens when strings are received
-              !errMessage.startsWith("Expected JsonObject, but had JsonLiteral") &&
-                // Happens when strings containing only whitespace are received
-                !errMessage.startsWith(
-                  "Cannot read Json element because of unexpected end of the input"
-                )
-            ) {
-              throw e
-            }
-            buffer += response
-          } catch (e: Throwable) {
-            e.printStackTrace()
+          try {
+            val message = json.decodeFromString<ChatSessionMessage.StreamComplete>(response)
+            assert(message.reason == FinishReason.Stop)
+            asserted = true
             break
-          }
+          } catch (_: SerializationException) {}
         }
 
         assertEquals(COMPLETIONS_STREAM_WHITESPACE_RESPONSE, buffer)
@@ -227,31 +205,16 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val finishEvent = json.decodeFromString<ServerMessage>(response)
+            val message = json.decodeFromString<ChatSessionMessage.StreamChunk>(response)
+            buffer += message.chunk
+          } catch (_: SerializationException) {}
 
-            // React only to finish events since titles can also get sent
-            if (finishEvent is ServerMessage.FinishEvent) {
-              assert(finishEvent.reason == FinishReason.Stop)
-              asserted = true
-              break
-            }
-          } catch (e: SerializationException) {
-            val errMessage = e.message ?: throw e
-            if (
-              // Happens when strings are received
-              !errMessage.startsWith("Expected JsonObject, but had JsonLiteral") &&
-                // Happens when strings containing only whitespace are received
-                !errMessage.startsWith(
-                  "Cannot read Json element because of unexpected end of the input"
-                )
-            ) {
-              throw e
-            }
-            buffer += response
-          } catch (e: Throwable) {
-            e.printStackTrace()
+          try {
+            val message = json.decodeFromString<ChatSessionMessage.StreamComplete>(response)
+            assert(message.reason == FinishReason.Stop)
+            asserted = true
             break
-          }
+          } catch (_: SerializationException) {}
         }
       }
 
@@ -307,44 +270,29 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
       assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
 
-      val message = "{ \"type\": \"chat\", \"text\": \"Will this trigger a stream response?\" }"
+      val msg = "{ \"type\": \"chat\", \"text\": \"Will this trigger a stream response?\" }"
 
-      send(Frame.Text(message))
+      send(Frame.Text(msg))
 
       var cancelSent = false
 
       for (frame in incoming) {
         val response = (frame as Frame.Text).readText()
         try {
-          val finishEvent = json.decodeFromString<ServerMessage>(response)
-
-          // React only to finish events since titles can also get sent
-          if (finishEvent is ServerMessage.FinishEvent) {
-            assert(finishEvent.reason == FinishReason.ManualStop)
-            asserted = true
-            break
-          }
-        } catch (e: SerializationException) {
-          val errMessage = e.message ?: throw e
-          if (
-            // Happens when strings are received
-            !errMessage.startsWith("Expected JsonObject, but had JsonLiteral") &&
-              // Happens when strings containing only whitespace are received
-              !errMessage.startsWith(
-                "Cannot read Json element because of unexpected end of the input"
-              )
-          ) {
-            throw e
-          }
+          json.decodeFromString<ChatSessionMessage.StreamChunk>(response)
           // Send cancel immediately after first chunk
           if (!cancelSent) {
             cancelSent = true
-            sendClientSystem(SystemMessage.StopStream)
+            sendClientSystem(IncomingSystemMessage.StopStream)
           }
-        } catch (e: Throwable) {
-          e.printStackTrace()
+        } catch (_: SerializationException) {}
+
+        try {
+          val message = json.decodeFromString<ChatSessionMessage.StreamComplete>(response)
+          assert(message.reason == FinishReason.ManualStop)
+          asserted = true
           break
-        }
+        } catch (_: SerializationException) {}
       }
 
       val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
@@ -365,13 +313,13 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
 
     val client1 = createClient {
       install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+        contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
       }
     }
 
     val client2 = createClient {
       install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+        contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
       }
     }
 
@@ -388,27 +336,20 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
             for (frame in incoming) {
               val response = (frame as Frame.Text).readText()
               try {
-                val finishEvent = json.decodeFromString<ServerMessage>(response)
-                if (finishEvent is ServerMessage.FinishEvent) {
-                  assert(finishEvent.reason == FinishReason.Stop)
-                  assertedFirst = true
-                  break
-                }
-              } catch (e: SerializationException) {
-                val errMessage = e.message ?: throw e
-                if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-                  throw e
-                }
-                buffer += response
-              } catch (e: Throwable) {
-                e.printStackTrace()
+                val message = json.decodeFromString<ChatSessionMessage.StreamChunk>(response)
+                buffer += message.chunk
+              } catch (_: SerializationException) {}
+              try {
+                val message = json.decodeFromString<ChatSessionMessage.StreamComplete>(response)
+                assert(message.reason == FinishReason.Stop)
+                assertedFirst = true
                 break
-              }
+              } catch (_: SerializationException) {}
             }
 
             assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-            sendClientSystem(SystemMessage.CloseChat)
+            sendClientSystem(IncomingSystemMessage.CloseSession)
           }
         }
       }
@@ -421,30 +362,22 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
         sendMessage("Will this trigger a stream response?") { incoming ->
           for (frame in incoming) {
             val response = (frame as Frame.Text).readText()
-
             try {
-              val finishEvent = json.decodeFromString<ServerMessage>(response)
-              if (finishEvent is ServerMessage.FinishEvent) {
-                assert(finishEvent.reason == FinishReason.Stop)
-                assertedSecond = true
-                break
-              }
-            } catch (e: SerializationException) {
-              val errMessage = e.message ?: throw e
-              if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-                throw e
-              }
-              buffer += response
-            } catch (e: Throwable) {
-              e.printStackTrace()
+              val message = json.decodeFromString<ChatSessionMessage.StreamChunk>(response)
+              buffer += message.chunk
+            } catch (_: SerializationException) {}
+            try {
+              val message = json.decodeFromString<ChatSessionMessage.StreamComplete>(response)
+              assert(message.reason == FinishReason.Stop)
+              assertedSecond = true
               break
-            }
+            } catch (_: SerializationException) {}
           }
         }
 
         assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-        sendClientSystem(SystemMessage.CloseChat)
+        sendClientSystem(IncomingSystemMessage.CloseSession)
       }
     }
 
@@ -483,29 +416,23 @@ class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviat
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val event = json.decodeFromString<ServerMessage>(response)
+            val event = json.decodeFromString<ChatSessionMessage>(response)
 
-            if (event is ServerMessage.AgentDeactivated) {
-              // Asserts the right agent was deactivated
-              assert(event.agentId == agent.agent.id)
-              asserted = true
+            if (event is ChatSessionMessage.StreamChunk) {
+              buffer += event.chunk
             }
 
-            // React only to finish events since titles can also get sent
-            if (event is ServerMessage.FinishEvent) {
-              assert(event.reason == FinishReason.Stop)
+            if (event is ChatSessionMessage.StreamComplete) {
               break
             }
-          } catch (e: SerializationException) {
-            val errMessage = e.message ?: throw e
-            if (!errMessage.startsWith("Expected JsonObject, but had JsonLiteral")) {
-              throw e
-            }
-            buffer += response
-          } catch (e: Throwable) {
-            e.printStackTrace()
-            break
-          }
+          } catch (_: SerializationException) {}
+
+          try {
+            val message = json.decodeFromString<OutgoingSystemMessage.AgentDeactivated>(response)
+            // Asserts the right agent was deactivated
+            assert(message.agentId == agent.agent.id)
+            asserted = true
+          } catch (_: SerializationException) {}
         }
       }
 

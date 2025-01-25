@@ -19,7 +19,7 @@ import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.core.EventListener
-import net.barrage.llmao.core.session.ClientMessageSerializer
+import net.barrage.llmao.core.session.IncomingMessageSerializer
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -116,7 +116,7 @@ open class IntegrationTest(
     environment { config = cfg }
     val client = createClient {
       install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(ClientMessageSerializer)
+        contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
       }
     }
     block(client)
