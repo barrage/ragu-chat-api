@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.api.ws
+package net.barrage.llmao.core.session
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -35,7 +35,7 @@ sealed class SystemMessage {
   @Serializable @SerialName("chat_stop_stream") data object StopStream : SystemMessage()
 }
 
-/** Outgoing WS messages. */
+/** Outgoing session messages. */
 @Serializable
 sealed class ServerMessage {
   /** Sent when a chat is opened. */

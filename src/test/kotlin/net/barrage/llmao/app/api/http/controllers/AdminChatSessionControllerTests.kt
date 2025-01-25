@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class AdminChatControllerTests : IntegrationTest() {
+class AdminChatSessionControllerTests : IntegrationTest() {
   private lateinit var user: User
   private lateinit var userAdmin: User
   private lateinit var userSession: Session

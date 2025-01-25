@@ -1,54 +1,45 @@
-package net.barrage.llmao.app.api.ws
+package net.barrage.llmao.core.session
 
-import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import java.util.concurrent.ConcurrentHashMap
 
-class WebsocketServer(
-  private val factory: WebsocketChatFactory,
+class SessionManager(
+  private val factory: SessionFactory,
   listener: EventListener<StateChangeEvent>,
 ) {
-  /**
-   * Maps user ID + token pairs to their chat instances. Chats encapsulate the websocket connection
-   * with all the parameters necessary to maintain a chat instance.
-   */
-  private val chats: MutableMap<Pair<KUUID, KUUID>, Chat> = ConcurrentHashMap()
+  /** Maps user ID + token pairs to their sessions. */
+  private val sessions: MutableMap<Pair<KUUID, KUUID>, Session> = ConcurrentHashMap()
 
   /**
-   * Maps user ID + token pairs to their websocket channels. The websocket channels are stored
-   * directly in the map (they use the same connection as their respective chats). The channels here
-   * are used to broadcast system events to all connected clients.
+   * Maps user ID + token pairs directly to their output channels. The channels here are used to
+   * broadcast system events to all connected clients.
    */
-  private val sessions: MutableMap<Pair<KUUID, KUUID>, WebsocketChannel> = ConcurrentHashMap()
+  private val channels: MutableMap<Pair<KUUID, KUUID>, Channel> = ConcurrentHashMap()
 
   init {
     LOG.info("Starting WS server event listener")
     listener.start { event -> handleEvent(event) }
   }
 
-  fun registerSession(userId: KUUID, token: KUUID, channel: WebsocketChannel) {
-    sessions[key(userId, token)] = channel
+  fun registerSession(userId: KUUID, token: KUUID, channel: Channel) {
+    channels[key(userId, token)] = channel
   }
 
   /** Removes the session and its corresponding chat associated with the user and token pair. */
   fun removeSession(userId: KUUID, token: KUUID) {
     LOG.info("Removing session for '{}' with token '{}", userId, token)
-    val channel = sessions.remove(key(userId, token))
-    chats.remove(key(userId, token))
+    val channel = channels.remove(key(userId, token))
+    sessions.remove(key(userId, token))
 
     // Has to be closed manually to stop the job from running
     channel?.close()
   }
 
-  suspend fun handleMessage(
-    userId: KUUID,
-    token: KUUID,
-    message: ClientMessage,
-    channel: WebsocketChannel,
-  ) {
+  suspend fun handleMessage(userId: KUUID, token: KUUID, message: ClientMessage, channel: Channel) {
     when (message) {
       is ClientMessage.Chat -> handleChatMessage(userId, token, message.text)
       is ClientMessage.System -> handleSystemMessage(userId, token, message.payload, channel)
@@ -61,9 +52,9 @@ class WebsocketServer(
       is StateChangeEvent.AgentDeactivated -> {
         LOG.info("Handling agent deactivated event ({})", event.agentId)
 
-        chats.values.retainAll { chat -> chat.agentId != event.agentId }
+        sessions.values.retainAll { chat -> chat.entityId().id != event.agentId }
 
-        for (channel in sessions.values) {
+        for (channel in channels.values) {
           channel.emitServer(ServerMessage.AgentDeactivated(event.agentId))
         }
       }
@@ -74,7 +65,7 @@ class WebsocketServer(
     LOG.info("Handling chat message from '{}' with token '{}': {}", userId, token, message)
 
     val chat =
-      chats[key(userId, token)]
+      sessions[key(userId, token)]
         ?: throw AppError.api(
           ErrorReason.Websocket,
           "Chat not open for user '$userId' with token '$token'",
@@ -84,20 +75,21 @@ class WebsocketServer(
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
-    LOG.debug("Starting stream in '{}' for user '{}' with token '{}'", chat.id, userId, token)
-    chat.startStreaming(message)
+    LOG.debug("Starting stream in '{}' for user '{}' with token '{}'", chat.id().id, userId, token)
+    chat.start(message)
   }
 
   private suspend fun handleSystemMessage(
     userId: KUUID,
     token: KUUID,
     message: SystemMessage,
-    channel: WebsocketChannel,
+    channel: Channel,
   ) {
     when (message) {
       is SystemMessage.OpenNewChat -> {
-        val chat = factory.new(userId = userId, agentId = message.agentId, channel = channel)
-        chats[key(userId, token)] = chat
+        val chat =
+          factory.newChatSession(userId = userId, agentId = message.agentId, channel = channel)
+        sessions[key(userId, token)] = chat
         channel.emitServer(ServerMessage.ChatOpen(chat.id))
 
         LOG.debug(
@@ -105,29 +97,29 @@ class WebsocketServer(
           chat.id,
           userId,
           token,
-          chats.size,
+          sessions.size,
         )
       }
       is SystemMessage.OpenExistingChat -> {
-        val chat = chats[key(userId, token)]
+        val session = sessions[key(userId, token)]
 
         // Prevent loading the same chat
-        if (chat != null && chat.id == message.chatId) {
-          LOG.debug("Existing chat has same ID as opened chat '{}'", chat.id)
-          channel.emitServer(ServerMessage.ChatOpen(chat.id))
+        if (session != null && session.id().id == message.chatId) {
+          LOG.debug("Existing chat has same ID as opened chat '{}'", session.id())
+          channel.emitServer(ServerMessage.ChatOpen(session.id().id))
           return
         }
 
-        chat?.cancelStream()
+        session?.cancelStream()
 
         val existingChat =
-          factory.fromExisting(
+          factory.fromExistingChat(
             id = message.chatId,
             channel = channel,
             initialHistorySize = message.initialHistorySize,
           )
 
-        chats[key(userId, token)] = existingChat
+        sessions[key(userId, token)] = existingChat
 
         channel.emitServer(ServerMessage.ChatOpen(message.chatId))
 
@@ -139,21 +131,26 @@ class WebsocketServer(
         )
       }
       is SystemMessage.CloseChat -> {
-        chats.remove(key(userId, token))?.let {
-          channel.emitServer(ServerMessage.ChatClosed(it.id))
+        sessions.remove(key(userId, token))?.let {
+          channel.emitServer(ServerMessage.ChatClosed(it.id().id))
           it.cancelStream()
           LOG.debug(
             "Closed chat ('{}') for user '{}' with token '{}', total chats: {}",
-            it.id,
+            it.id().id,
             userId,
             token,
-            chats.size,
+            sessions.size,
           )
         }
       }
       is SystemMessage.StopStream -> {
-        chats[key(userId, token)]?.let {
-          LOG.debug("Stopping stream in '{}' for user '{}' with token '{}'", it.id, userId, token)
+        sessions[key(userId, token)]?.let {
+          LOG.debug(
+            "Stopping stream in '{}' for user '{}' with token '{}'",
+            it.id().id,
+            userId,
+            token,
+          )
           it.cancelStream()
         }
       }

@@ -25,7 +25,7 @@ import net.barrage.llmao.error.ErrorReason
 
 private val LOG = KtorSimpleLogger("net.barrage.llmao.core.services.ConversationService")
 
-/** Handles LLM interactions. */
+/** Handles LLM interactions for direct prompts. Uses RAG when completing chats */
 class ConversationService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
@@ -127,7 +127,7 @@ class ConversationService(
         LlmConfig(
           model = agentFull.configuration.model,
           temperature = agentFull.configuration.temperature,
-          maxTokens = 2000
+          maxTokens = 2000,
         ),
       )
 
@@ -210,7 +210,7 @@ class ConversationService(
       if (collectionInstructions.isEmpty()) ""
       else "Instructions: ${"\"\"\""}\n$collectionInstructions\n${"\"\"\""}\n"
 
-    val message = "${instructions}Prompt: ${"\"\"\""}\n$prompt\n${"\"\"\""}"
+    val message = "${instructions}$prompt"
 
     return ChatMessage.user(message)
   }

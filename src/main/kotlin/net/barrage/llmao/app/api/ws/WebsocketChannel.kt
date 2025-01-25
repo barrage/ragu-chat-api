@@ -5,6 +5,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.session.Channel
+import net.barrage.llmao.core.session.LOG
+import net.barrage.llmao.core.session.ServerMessage
 import net.barrage.llmao.error.AppError
 
 /**
@@ -16,26 +19,27 @@ import net.barrage.llmao.error.AppError
  * @param flow The flow to emit messages to the client.
  * @param job The shared flow emitter job to cancel when the client disconnects.
  */
-class WebsocketChannel(private val flow: MutableSharedFlow<String>, private val job: Job) {
+class WebsocketChannel(private val flow: MutableSharedFlow<String>, private val job: Job) :
+  Channel {
   /** Emit the textual content of a chunk obtained from streaming LLM inference. */
-  suspend fun emitChunk(chunk: TokenChunk) {
+  override suspend fun emitChunk(chunk: TokenChunk) {
     chunk.content?.let { flow.emit(it) }
   }
 
   /** Emit an application error. */
-  suspend fun emitError(error: AppError) {
+  override suspend fun emitError(error: AppError) {
     LOG.error("Emitting error", error)
     flow.emitJson(error)
   }
 
   /** Emit a server message. */
-  suspend fun emitServer(message: ServerMessage) {
+  override suspend fun emitServer(message: ServerMessage) {
     LOG.debug("Emitting server message: {}", message)
     flow.emitJson(message)
   }
 
   /** Cancel the job containing the shared flow. Called on disconnects. */
-  fun close() {
+  override fun close() {
     job.cancel()
   }
 }

@@ -9,6 +9,8 @@ import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.session.ServerMessage
+import net.barrage.llmao.core.session.SystemMessage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
