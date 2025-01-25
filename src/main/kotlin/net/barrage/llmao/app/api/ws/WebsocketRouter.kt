@@ -21,6 +21,11 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.session.ClientMessage
+import net.barrage.llmao.core.session.ClientMessageSerializer
+import net.barrage.llmao.core.session.LOG
+import net.barrage.llmao.core.session.SessionFactory
+import net.barrage.llmao.core.session.SessionManager
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -28,10 +33,10 @@ import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 
 fun Application.websocketServer(
-  factory: WebsocketChatFactory,
+  factory: SessionFactory,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val server = WebsocketServer(factory, listener)
+  val server = SessionManager(factory, listener)
 
   val tokenManager = WebsocketTokenManager()
 

@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class ChatControllerTests : IntegrationTest() {
+class ChatSessionControllerTests : IntegrationTest() {
   private lateinit var user: User
   private lateinit var userSession: Session
   private lateinit var agent: Agent

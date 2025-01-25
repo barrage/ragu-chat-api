@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.api.ws
+package net.barrage.llmao.core.session
 
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.common.Pagination
@@ -6,16 +6,16 @@ import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.types.KUUID
 
-class WebsocketChatFactory(
+class SessionFactory(
   private val agentService: AgentService,
   private val conversationService: ConversationService,
 ) {
 
-  suspend fun new(userId: KUUID, agentId: KUUID, channel: WebsocketChannel): Chat {
+  suspend fun newChatSession(userId: KUUID, agentId: KUUID, channel: Channel): ChatSession {
     val id = KUUID.randomUUID()
     // Throws if the agent does not exist or is inactive
     agentService.getActive(agentId)
-    return Chat(
+    return ChatSession(
       id = id,
       userId = userId,
       agentId = agentId,
@@ -24,14 +24,14 @@ class WebsocketChatFactory(
     )
   }
 
-  suspend fun fromExisting(id: KUUID, channel: WebsocketChannel, initialHistorySize: Int): Chat {
+  suspend fun fromExistingChat(id: KUUID, channel: Channel, initialHistorySize: Int): ChatSession {
     val chat = conversationService.getChat(id, Pagination(1, initialHistorySize))
 
     agentService.getActive(chat.chat.agentId)
 
     val history = chat.messages.map(ChatMessage::fromModel)
 
-    return Chat(
+    return ChatSession(
       id = chat.chat.id,
       userId = chat.chat.userId,
       agentId = chat.chat.agentId,

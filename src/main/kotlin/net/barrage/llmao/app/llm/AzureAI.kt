@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.llm
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.aallam.openai.api.chat.ChatMessage as OpenAIChatMessage
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
@@ -10,8 +9,8 @@ import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.TokenChunk
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -55,6 +54,8 @@ class AzureAI(
         model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
         temperature = config.temperature,
+        maxTokens = config.maxTokens,
+        tools = config.tools?.map { it.toOpenAiTool() },
         streamOptions = StreamOptions(true),
       )
 
@@ -68,37 +69,6 @@ class AzureAI(
         )
       )
     }
-  }
-
-  override suspend fun generateChatTitle(proompt: String, config: LlmConfig): String {
-    val chatRequest =
-      ChatCompletionRequest(
-        model = ModelId(config.model),
-        messages = listOf(OpenAIChatMessage.User(proompt)),
-        temperature = config.temperature,
-      )
-
-    val response = client(config.model).chatCompletion(chatRequest)
-
-    // TODO: Remove yelling
-    return response.choices[0].message.content!!
-  }
-
-  override suspend fun summarizeConversation(
-    proompt: String,
-    config: LlmConfig,
-    maxTokens: Int?,
-  ): String {
-    val chatRequest =
-      ChatCompletionRequest(
-        model = ModelId(config.model),
-        messages = listOf(OpenAIChatMessage.User(proompt)),
-        maxTokens = maxTokens,
-        temperature = config.temperature,
-      )
-
-    // TODO: Remove yelling
-    return client(config.model).chatCompletion(chatRequest).choices[0].message.content!!
   }
 
   override suspend fun supportsModel(model: String): Boolean {

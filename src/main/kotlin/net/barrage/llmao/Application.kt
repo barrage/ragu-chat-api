@@ -5,10 +5,10 @@ import io.ktor.server.config.*
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.api.ws.WebsocketChatFactory
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.session.SessionFactory
 import net.barrage.llmao.plugins.configureCors
 import net.barrage.llmao.plugins.configureErrorHandling
 import net.barrage.llmao.plugins.configureOpenApi
@@ -35,7 +35,7 @@ fun Application.module() {
   extendSession(state.services.auth)
   configureOpenApi()
   websocketServer(
-    WebsocketChatFactory(state.services.agent, state.services.conversation),
+    SessionFactory(state.services.agent, state.services.conversation),
     stateChangeListener,
   )
   configureRouting(state)

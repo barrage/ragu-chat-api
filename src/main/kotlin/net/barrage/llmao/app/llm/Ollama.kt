@@ -15,9 +15,10 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.types.KOffsetDateTime
 
 class Ollama(private val endpoint: String) : LlmProvider {
@@ -29,7 +30,16 @@ class Ollama(private val endpoint: String) : LlmProvider {
 
   override suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String {
     val request =
-      ChatRequest(config.model, messages, CompletionRequestOptions(config.temperature), false)
+      ChatRequest(
+        config.model,
+        messages,
+        CompletionRequestOptions(
+          config.temperature,
+          maxTokens = config.maxTokens,
+          tools = config.tools,
+        ),
+        false,
+      )
     val response =
       client.post("$endpoint/api/chat") {
         contentType(ContentType.Application.Json)
@@ -44,7 +54,16 @@ class Ollama(private val endpoint: String) : LlmProvider {
     config: LlmConfig,
   ): Flow<List<TokenChunk>> {
     val request =
-      ChatRequest(config.model, messages, CompletionRequestOptions(config.temperature), true)
+      ChatRequest(
+        config.model,
+        messages,
+        CompletionRequestOptions(
+          config.temperature,
+          maxTokens = config.maxTokens,
+          tools = config.tools,
+        ),
+        true,
+      )
     val response =
       client.post("$endpoint/api/chat") {
         contentType(ContentType.Application.Json)
@@ -95,26 +114,6 @@ class Ollama(private val endpoint: String) : LlmProvider {
     }
   }
 
-  override suspend fun generateChatTitle(proompt: String, config: LlmConfig): String {
-    val request =
-      CompletionRequest(config.model, proompt, CompletionRequestOptions(config.temperature), false)
-    val response =
-      client.post("$endpoint/api/generate") {
-        contentType(ContentType.Application.Json)
-        setBody(request)
-      }
-    val body: CompletionResponse = response.body()
-    return body.response
-  }
-
-  override suspend fun summarizeConversation(
-    proompt: String,
-    config: LlmConfig,
-    maxTokens: Int?,
-  ): String {
-    TODO("Not yet implemented")
-  }
-
   override suspend fun supportsModel(model: String): Boolean {
     val response = client.get("$endpoint/api/tags")
     val models = response.body<ModelResponse>()
@@ -144,7 +143,12 @@ private data class ChatRequest(
   val stream: Boolean,
 )
 
-@Serializable private data class CompletionRequestOptions(val temperature: Double)
+@Serializable
+private data class CompletionRequestOptions(
+  val temperature: Double,
+  val maxTokens: Int? = null,
+  val tools: List<ToolDefinition>? = null,
+)
 
 @Serializable
 private data class ChatCompletionResponse(

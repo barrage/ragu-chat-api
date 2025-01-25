@@ -9,8 +9,8 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.api.ws.ServerMessage
-import net.barrage.llmao.app.api.ws.SystemMessage
+import net.barrage.llmao.core.session.ServerMessage
+import net.barrage.llmao.core.session.SystemMessage
 import net.barrage.llmao.core.types.KUUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 

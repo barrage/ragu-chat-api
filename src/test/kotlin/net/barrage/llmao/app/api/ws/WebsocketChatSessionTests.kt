@@ -25,6 +25,9 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Pagination
+import net.barrage.llmao.core.session.ClientMessageSerializer
+import net.barrage.llmao.core.session.ServerMessage
+import net.barrage.llmao.core.session.SystemMessage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.json
@@ -43,7 +46,7 @@ private const val TEST_COLLECTION = "KusturicaChatTests"
 
 private const val SIZE = 1536
 
-class WebsocketChatTests : IntegrationTest(useWiremock = true, useWeaviate = true) {
+class WebsocketChatSessionTests : IntegrationTest(useWiremock = true, useWeaviate = true) {
   private lateinit var user: User
   private lateinit var session: Session
 

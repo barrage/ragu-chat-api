@@ -1,9 +1,7 @@
-package net.barrage.llmao.app.api.ws
+package net.barrage.llmao.core.session
 
-import com.aallam.openai.api.exception.InvalidRequestException
 import io.ktor.util.logging.*
 import java.time.Instant
-import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -17,9 +15,10 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.session.ChatSession")
 
-data class Chat(
+/** Implementation of a workflow with a single agent. */
+class ChatSession(
   /** Chat ID. */
   val id: KUUID,
 
@@ -29,10 +28,10 @@ data class Chat(
   /** Who the user is chatting with. */
   val agentId: KUUID,
 
-  /** Websocket handle. Only chat related events are sent via this reference. */
-  private val channel: WebsocketChannel,
+  /** Output handle. Only chat related events are sent via this reference. */
+  private val channel: Channel,
 
-  /** The main business logic delegate. */
+  /** The main business logic delegate for chatting. */
   private val service: ConversationService,
 
   /** Used to reason about storing the chat. */
@@ -55,17 +54,19 @@ data class Chat(
 
   /** Chat message history. */
   private val history: MutableList<ChatMessage> = mutableListOf(),
-) {
+) : Session {
   /** True if the chat is streaming, false otherwise. */
   private var streamActive: Boolean = false
 
-  /**
-   * Start streaming from an LLM and forward its generated chunks to the client via the emitter.
-   * Creates a new coroutine to stream the response.
-   *
-   * @param message The proompt.
-   */
-  fun startStreaming(message: String) {
+  override fun id(): SessionId {
+    return SessionId.Chat(id)
+  }
+
+  override fun entityId(): SessionEntity {
+    return SessionEntity.Agent(id)
+  }
+
+  override fun start(message: String) {
     if (isStreaming()) {
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
@@ -73,23 +74,26 @@ data class Chat(
     CoroutineScope(Dispatchers.Default).launch { stream(message) }
   }
 
-  /**
-   * Check if the chat is streaming.
-   *
-   * @return True if the chat is streaming, false otherwise.
-   */
-  fun isStreaming(): Boolean {
+  override fun isStreaming(): Boolean {
     return streamActive
   }
 
-  /** Close the stream and cancel its job, if it exists. */
-  fun cancelStream() {
+  override fun cancelStream() {
     if (streamActive) {
       LOG.debug("Closing stream for '{}'", id)
     }
     streamActive = false
   }
 
+  override suspend fun persist() {
+    if (!messageReceived) {
+      // TODO: Transaction for chat and initial message
+      service.storeChat(id, userId, agentId, title)
+      messageReceived = true
+    }
+  }
+
+  /** The actual streaming implementation. */
   private suspend fun stream(prompt: String) = coroutineScope {
     streamActive = true
 
@@ -116,9 +120,6 @@ data class Chat(
         processResponse(prompt = prompt, response = response, finishReason = finishReason)
         LOG.debug("Chat '{}' got response: {}", id, response)
       }
-    } catch (e: InvalidRequestException) {
-      // TODO: Failure
-      service.processFailedMessage(id, userId, prompt, FinishReason.ContentFilter)
     } catch (e: Throwable) {
       LOG.error("Unexpected error in stream", e)
       handleError(e)
@@ -137,11 +138,7 @@ data class Chat(
       return
     }
 
-    if (!messageReceived) {
-      // TODO: Transaction for chat and initial message
-      service.storeChat(id, userId, agentId, title)
-      messageReceived = true
-    }
+    persist()
 
     if (title.isNullOrBlank()) {
       generateAndSetTitle(prompt, response)
@@ -185,7 +182,7 @@ data class Chat(
 
   private suspend fun collectAndForwardStream(
     stream: Flow<List<TokenChunk>>,
-    channel: WebsocketChannel,
+    channel: Channel,
   ): Pair<String, FinishReason> = coroutineScope {
     val buf: MutableList<String> = mutableListOf()
     var finishReason: FinishReason = FinishReason.Stop
@@ -229,14 +226,6 @@ data class Chat(
     when (e) {
       is AppError -> {
         channel.emitError(e)
-      }
-      is CancellationException -> {
-        LOG.debug("Chat '{}' - stream cancelled", id)
-        if (e.message == "manual_cancel") {
-          return
-        }
-        e.printStackTrace()
-        channel.emitError(AppError.internal())
       }
       else -> {
         LOG.error("Error in chat", e)
