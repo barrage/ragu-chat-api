@@ -204,6 +204,7 @@ class TestPostgres {
     context: String = "Test",
     llmProvider: String = "openai",
     model: String = "gpt-4",
+    temperature: Double = 0.1,
     titleInstruction: String? = null,
     summaryInstruction: String? = null,
   ): AgentConfiguration {
@@ -216,10 +217,20 @@ class TestPostgres {
           AGENT_CONFIGURATIONS.CONTEXT,
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
+          AGENT_CONFIGURATIONS.TEMPERATURE,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
         )
-        .values(agentId, version, context, llmProvider, model, titleInstruction, summaryInstruction)
+        .values(
+          agentId,
+          version,
+          context,
+          llmProvider,
+          model,
+          temperature,
+          titleInstruction,
+          summaryInstruction,
+        )
         .returning()
         .awaitSingle()
         .toAgentConfiguration()

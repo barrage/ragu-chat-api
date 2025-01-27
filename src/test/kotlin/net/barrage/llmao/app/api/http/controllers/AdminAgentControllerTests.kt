@@ -237,7 +237,7 @@ class AdminAgentControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val updateAgent =
       UpdateAgent(
-        name = "TestAgentUpdated",
+        name = "TestAgentOneUpdated",
         description = "description",
         active = true,
         language = "english",
@@ -260,8 +260,67 @@ class AdminAgentControllerTests : IntegrationTest() {
 
     assertEquals(200, response.status.value)
     val body = response.body<AgentWithConfiguration>()
-    assertEquals("TestAgentUpdated", body.agent.name)
+    assertEquals("TestAgentOneUpdated", body.agent.name)
+    assertEquals(0.5, body.configuration.temperature)
     assertEquals(3, body.configuration.version)
+  }
+
+  @Test
+  fun updateAgentNameNoConfigurationSameVersionWorks() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val updateAgent =
+      UpdateAgent(
+        name = "TestAgentOneUpdated",
+        description = "description",
+        active = true,
+        language = "english",
+      )
+
+    val response =
+      client.put("/admin/agents/${agentOne.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(updateAgent)
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<AgentWithConfiguration>()
+    assertEquals("TestAgentOneUpdated", body.agent.name)
+    assertEquals(2, body.configuration.version)
+    assertEquals(0.1, body.configuration.temperature)
+  }
+
+  @Test
+  fun updateAgentNameSameConfigurationSameVersionWorks() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val updateAgent =
+      UpdateAgent(
+        name = "TestAgentOneUpdated",
+        description = "description",
+        active = true,
+        language = "english",
+        configuration =
+          UpdateAgentConfiguration(
+            context = "Test",
+            llmProvider = "openai",
+            model = "gpt-4",
+            temperature = 0.1,
+            instructions = null,
+          ),
+      )
+
+    val response =
+      client.put("/admin/agents/${agentOne.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(updateAgent)
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<AgentWithConfiguration>()
+    assertEquals("TestAgentOneUpdated", body.agent.name)
+    assertEquals(2, body.configuration.version)
+    assertEquals(0.1, body.configuration.temperature)
   }
 
   @Test
@@ -269,7 +328,7 @@ class AdminAgentControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val updateAgent =
       UpdateAgent(
-        name = "TestAgentUpdated",
+        name = "TestAgentOneUpdated",
         description = "description",
         active = true,
         language = "english",
