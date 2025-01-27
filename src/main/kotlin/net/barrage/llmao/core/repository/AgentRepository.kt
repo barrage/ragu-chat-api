@@ -18,6 +18,7 @@ import net.barrage.llmao.core.models.CollectionInsert
 import net.barrage.llmao.core.models.CollectionRemove
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
+import net.barrage.llmao.core.models.UpdateAgentConfiguration
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SortOrder
@@ -261,7 +262,10 @@ class AgentRepository(private val dslContext: DSLContext) {
 
       val configuration =
         // if configuration or instructions are updated, create a new version
-        if (update.configuration != null) {
+        if (
+          update.configuration != null &&
+            isConfigurationDifferent(currentConfiguration, update.configuration)
+        ) {
           // get the total number of versions
           val count =
             context
@@ -313,6 +317,19 @@ class AgentRepository(private val dslContext: DSLContext) {
 
       return@transactionCoroutine AgentWithConfiguration(agent, configuration)
     }
+  }
+
+  private fun isConfigurationDifferent(
+    current: AgentConfiguration,
+    update: UpdateAgentConfiguration,
+  ): Boolean {
+    return update.context != null && update.context != current.context ||
+      update.llmProvider != null && update.llmProvider != current.llmProvider ||
+      update.model != null && update.model != current.model ||
+      update.temperature != null && update.temperature != current.temperature ||
+      update.instructions != null &&
+        (update.instructions.titleInstruction != current.agentInstructions.titleInstruction ||
+          update.instructions.summaryInstruction != current.agentInstructions.summaryInstruction)
   }
 
   suspend fun delete(id: KUUID): Int {
