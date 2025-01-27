@@ -7,7 +7,6 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
-import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -19,8 +18,8 @@ import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.chatSession
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.AgentFull
-import net.barrage.llmao.core.models.FinishReason
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.User
@@ -42,6 +41,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.random.Random
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 

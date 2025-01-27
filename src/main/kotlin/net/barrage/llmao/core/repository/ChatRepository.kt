@@ -325,19 +325,6 @@ class ChatRepository(private val dslContext: DSLContext) {
       ?.toChat()
   }
 
-  suspend fun insert(id: KUUID, userId: KUUID, agentId: KUUID, title: String?): Chat? {
-    return dslContext
-      .insertInto(CHATS)
-      .set(CHATS.ID, id)
-      .set(CHATS.USER_ID, userId)
-      .set(CHATS.AGENT_ID, agentId)
-      .set(CHATS.TITLE, title)
-      .returning()
-      .awaitFirstOrNull()
-      ?.into(CHATS)
-      ?.toChat()
-  }
-
   suspend fun insertFailedMessage(
     chatId: KUUID,
     userId: KUUID,

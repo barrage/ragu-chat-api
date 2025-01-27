@@ -2,7 +2,7 @@ package net.barrage.llmao.core.session.chat
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.models.FinishReason
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.types.KUUID
 
 @Serializable

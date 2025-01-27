@@ -8,6 +8,7 @@ import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.session.SessionFactory
 import net.barrage.llmao.plugins.configureCors
 import net.barrage.llmao.plugins.configureErrorHandling
@@ -29,13 +30,19 @@ fun Application.module() {
   val stateChangeListener = EventListener<StateChangeEvent>()
 
   val state = ApplicationState(environment.config, applicationStoppingJob, stateChangeListener)
+  val toolchainFactory = ToolchainFactory(state.services, state.repository.agent)
 
   configureSerialization()
   configureSession(state.services.auth)
   extendSession(state.services.auth)
   configureOpenApi()
   websocketServer(
-    SessionFactory(state.services.agent, state.services.conversation),
+    SessionFactory(
+      state.providers,
+      state.services.agent,
+      state.repository.chatSession,
+      toolchainFactory,
+    ),
     stateChangeListener,
   )
   configureRouting(state)

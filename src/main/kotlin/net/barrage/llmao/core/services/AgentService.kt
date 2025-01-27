@@ -5,10 +5,12 @@ import io.ktor.utils.io.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.llm.ToolRegistry
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
+import net.barrage.llmao.core.models.AgentTool
 import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CollectionInsert
 import net.barrage.llmao.core.models.CreateAgent
@@ -17,6 +19,7 @@ import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsFailure
 import net.barrage.llmao.core.models.UpdateCollectionsResult
+import net.barrage.llmao.core.models.UpdateTools
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SearchFiltersAdminAgents
@@ -186,8 +189,24 @@ class AgentService(
 
   suspend fun deleteAgentAvatar(id: KUUID) {
     agentRepository.getAgent(id)
-
     avatarStorage.delete(id)
+  }
+
+  fun listAvailableAgentTools(): List<String> {
+    return ToolRegistry.listToolNames()
+  }
+
+  suspend fun listAgentTools(agentId: KUUID): List<AgentTool> {
+    return agentRepository.getAgentTools(agentId)
+  }
+
+  suspend fun updateAgentTools(agentId: KUUID, update: UpdateTools) {
+    for (toolName in update.add) {
+      if (ToolRegistry.getToolDefinition(toolName) == null) {
+        throw AppError.api(ErrorReason.EntityDoesNotExist, "Tool '$toolName' does not exist")
+      }
+    }
+    agentRepository.updateAgentTools(agentId, update)
   }
 }
 

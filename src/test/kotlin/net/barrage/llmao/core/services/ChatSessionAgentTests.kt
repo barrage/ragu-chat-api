@@ -11,15 +11,18 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
+import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.toSessionAgent
+import net.barrage.llmao.core.session.chat.ChatSessionAgent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class ConversationServiceTests : IntegrationTest(useWiremock = true) {
-  private lateinit var service: ConversationService
+class ChatSessionAgentTests : IntegrationTest(useWiremock = true) {
+  private lateinit var service: ChatSessionAgent
 
   private lateinit var admin: User
   private lateinit var agent: Agent
@@ -29,8 +32,6 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
   @BeforeAll
   fun setup() {
     runBlocking {
-      service = app.services.conversation
-
       admin = postgres.testUser(admin = true)
       agent = postgres.testAgent()
       agentConfiguration =
@@ -42,26 +43,24 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
           summaryInstruction = "Custom summary instruction",
         )
       chat = postgres.testChat(admin.id, agent.id, null)
+      val sessionAgent =
+        AgentFull(agent, configuration = agentConfiguration, collections = listOf())
+          .toSessionAgent()
+      service = ChatSessionAgent(app.providers, sessionAgent)
     }
   }
 
   @Test
   fun successfullyGeneratesChatTitle() = test {
     // Title responses are always the same regardless of the prompt
-    val response =
-      service.createAndUpdateTitle(
-        chat.id,
-        "Test prompt - title",
-        "Test response - title",
-        agent.id,
-      )
+    val response = service.createTitle("Test prompt - title", "Test response - title")
     assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
   }
 
   @Test
   fun successfullyStreamsChat() = test {
     // To trigger streams, the following prompt has to be somewhere the message
-    val stream = service.chatCompletionStream(COMPLETIONS_STREAM_PROMPT, listOf(), agent.id)
+    val stream = service.chatCompletionStreamWithRag(COMPLETIONS_STREAM_PROMPT, listOf())
     val response =
       stream.toList().joinToString("") { chunk -> chunk.joinToString { it.content ?: "" } }
     assertEquals(COMPLETIONS_STREAM_RESPONSE, response)
@@ -70,30 +69,26 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyCompletesChat() = test {
     // To trigger direct responses, the following prompt has to be somewhere the message
-    val response = service.chatCompletion(COMPLETIONS_COMPLETION_PROMPT, listOf(), agent.id)
-    assertEquals(COMPLETIONS_RESPONSE, response)
+    val response = service.chatCompletionWithRag(COMPLETIONS_COMPLETION_PROMPT, listOf())
+    assertEquals(COMPLETIONS_RESPONSE, response.content)
   }
 
   @Test
-  fun prepareChatPromptCorrectlyIncorporatesAgentInstructions() = test {
+  fun prepareChatPromptWithRagCorrectlyIncorporatesAgentInstructions() = test {
     val prompt = "What is the capital of Croatia?"
     val history = listOf<ChatMessage>()
 
-    val preparedPrompt = service.prepareChatPrompt(prompt, agentConfiguration, emptyList(), history)
+    val preparedPrompt = service.prepareChatPromptWithRag(prompt, history)
 
     assertTrue(preparedPrompt[1].content.contains("What is the capital of Croatia?"))
   }
 
   @Test
-  fun prepareChatPromptUsesDefaultAgentInstructions() = test {
-    val defaultAgentConfiguration =
-      postgres.testAgentConfiguration(agent.id, llmProvider = "openai", model = "gpt-4o")
-
+  fun prepareChatPromptWithRagUsesDefaultAgentInstructions() = test {
     val prompt = "What is the capital of Croatia?"
     val history = listOf<ChatMessage>()
 
-    val preparedPrompt =
-      service.prepareChatPrompt(prompt, defaultAgentConfiguration, emptyList(), history)
+    val preparedPrompt = service.prepareChatPromptWithRag(prompt, history)
 
     assertTrue(preparedPrompt[1].content.contains("What is the capital of Croatia?"))
   }
@@ -142,7 +137,7 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
   }
 
   @Test
-  fun createAndUpdateTitleCorrectlyIncorporatesAgentInstructions() = test {
+  fun createTitleCorrectlyIncorporatesAgentInstructions() = test {
     val prompt = "What are the best places to visit in Paris?"
 
     val response =
@@ -156,7 +151,7 @@ class ConversationServiceTests : IntegrationTest(useWiremock = true) {
   }
 
   @Test
-  fun createAndUpdateTitleUsesDefaultAgentInstructions() = test {
+  fun createTitleUsesDefaultAgentInstructions() = test {
     val defaultAgentConfiguration =
       postgres.testAgentConfiguration(agent.id, llmProvider = "openai", model = "gpt-4o")
 

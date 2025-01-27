@@ -1,6 +1,5 @@
 package net.barrage.llmao.app.llm
 
-import com.aallam.openai.api.core.FinishReason
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -14,10 +13,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.httpClient
+import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.LlmConfig
+import net.barrage.llmao.core.llm.FinishReason
+import net.barrage.llmao.core.llm.FunctionCall
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.llm.MessageChunk
+import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.types.KOffsetDateTime
 
@@ -28,7 +30,10 @@ class Ollama(private val endpoint: String) : LlmProvider {
     return "ollama"
   }
 
-  override suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String {
+  override suspend fun chatCompletion(
+    messages: List<ChatMessage>,
+    config: ChatCompletionParameters,
+  ): ChatMessage {
     val request =
       ChatRequest(
         config.model,
@@ -40,19 +45,22 @@ class Ollama(private val endpoint: String) : LlmProvider {
         ),
         false,
       )
+
     val response =
       client.post("$endpoint/api/chat") {
         contentType(ContentType.Application.Json)
         setBody(request)
       }
+
     val body = response.body<ChatCompletionResponse>()
-    return body.message.content
+
+    return body.message.toNativeChatMessage()
   }
 
   override suspend fun completionStream(
     messages: List<ChatMessage>,
-    config: LlmConfig,
-  ): Flow<List<TokenChunk>> {
+    config: ChatCompletionParameters,
+  ): Flow<List<MessageChunk>> {
     val request =
       ChatRequest(
         config.model,
@@ -64,6 +72,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
         ),
         true,
       )
+
     val response =
       client.post("$endpoint/api/chat") {
         contentType(ContentType.Application.Json)
@@ -89,7 +98,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
         // Chunks come in newline delimited JSONs
         val chunkStream = chunks.split("\n")
 
-        val chunkBuffer = mutableListOf<TokenChunk>()
+        val chunkBuffer = mutableListOf<MessageChunk>()
         var offset = 0
 
         for (chunk in chunkStream) {
@@ -154,7 +163,7 @@ private data class CompletionRequestOptions(
 private data class ChatCompletionResponse(
   val model: String,
   @SerialName("created_at") val createdAt: KOffsetDateTime,
-  val message: ChatMessage,
+  val message: OllamaChatMessage,
   val done: Boolean,
   @SerialName("total_duration") val totalDuration: Long,
   @SerialName("load_duration") val loadDuration: Long,
@@ -205,8 +214,8 @@ private data class ChatStreamChunk(
   val message: ChatMessage,
   val done: Boolean,
 ) {
-  fun toTokenChunk(): TokenChunk {
-    return TokenChunk(
+  fun toTokenChunk(): MessageChunk {
+    return MessageChunk(
       "ID",
       createdAt.toEpochSecond(),
       message.content,
@@ -217,4 +226,25 @@ private data class ChatStreamChunk(
       },
     )
   }
+}
+
+@Serializable
+private data class OllamaChatMessage(
+  val role: String,
+  val content: String,
+  @SerialName("tool_calls") val toolCalls: List<OllamaToolCall>? = null,
+)
+
+private fun OllamaChatMessage.toNativeChatMessage(): ChatMessage {
+  return ChatMessage(
+    role = role,
+    content = content,
+    toolCalls = toolCalls?.map { it.toToolCallData() },
+  )
+}
+
+@Serializable private data class OllamaToolCall(val name: String, val parameters: String)
+
+private fun OllamaToolCall.toToolCallData(): ToolCallData {
+  return ToolCallData(id = name, function = FunctionCall(name, parameters))
 }

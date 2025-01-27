@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.tables.records.AgentToolCallsRecord
 import net.barrage.llmao.tables.records.MessagesRecord
 
 @Serializable
@@ -57,27 +58,21 @@ data class AgentConfigurationEvaluatedMessages(
   val evaluatedMessages: CountedList<Message>,
 )
 
-/** Mimics the OpenAI finish reason enum, adding additional application specific stop reasons. */
+/** Represents an agent's request to call a tool, as well as the response for that tool. */
 @Serializable
-@JvmInline
-value class FinishReason(val value: String) {
-  companion object {
-    val ManualStop = FinishReason("manual_stop")
-    val Stop = FinishReason("stop")
-    val Length = FinishReason("length")
-    val FunctionCall = FinishReason("function_call")
-    val ToolCalls = FinishReason("tool_calls")
-    val ContentFilter = FinishReason("content_filter")
-  }
+data class AgentToolCall(
+  val id: KUUID,
+  val messageId: KUUID,
+  val toolName: String,
+  val toolArguments: String,
+  val toolResult: String,
+)
 
-  fun from(value: com.aallam.openai.api.core.FinishReason): FinishReason {
-    return when (value) {
-      com.aallam.openai.api.core.FinishReason.Stop -> Stop
-      com.aallam.openai.api.core.FinishReason.Length -> Length
-      com.aallam.openai.api.core.FinishReason.FunctionCall -> FunctionCall
-      com.aallam.openai.api.core.FinishReason.ToolCalls -> ToolCalls
-      com.aallam.openai.api.core.FinishReason.ContentFilter -> ContentFilter
-      else -> TODO()
-    }
-  }
-}
+fun AgentToolCallsRecord.toAgentToolCall() =
+  AgentToolCall(
+    id = id!!,
+    messageId = messageId,
+    toolName = toolName,
+    toolArguments = toolArguments,
+    toolResult = toolResult,
+  )

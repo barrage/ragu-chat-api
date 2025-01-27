@@ -5,14 +5,12 @@ import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.TokenChunk
-import net.barrage.llmao.core.models.FinishReason
-import net.barrage.llmao.core.services.ConversationService
+import net.barrage.llmao.core.llm.FinishReason
+import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.session.Emitter
 import net.barrage.llmao.core.session.Session
 import net.barrage.llmao.core.session.SessionEntity
@@ -31,14 +29,17 @@ class ChatSession(
   /** The proompter. */
   val userId: KUUID,
 
-  /** Who the user is chatting with. */
-  val agentId: KUUID,
+  /** LLM tools. */
+  private val toolchain: Toolchain? = null,
 
   /** Output handle. Only chat related events are sent via this reference. */
   private val emitter: Emitter<ChatSessionMessage>,
 
-  /** The main business logic delegate for chatting. */
-  private val service: ConversationService,
+  /** Encapsulates the agent and its LLM functionality. */
+  private val sessionAgent: ChatSessionAgent,
+
+  /**  */
+  private val repository: ChatSessionRepository,
 
   /** Used to reason about storing the chat. */
   private var messageReceived: Boolean = false,
@@ -62,7 +63,10 @@ class ChatSession(
   private val history: MutableList<ChatMessage> = mutableListOf(),
 ) : Session {
   /** True if the chat is streaming, false otherwise. */
-  private var streamActive: Boolean = false
+  private var stream: Job? = null
+
+  /** The scope in which streams will be processed. */
+  private var streamScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
   override fun id(): SessionId {
     return SessionId.Chat(id)
@@ -72,110 +76,97 @@ class ChatSession(
     return SessionEntity.Agent(id)
   }
 
-  override fun start(message: String) {
+  override fun startStream(message: String) {
     if (isStreaming()) {
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
-    CoroutineScope(Dispatchers.Default).launch { stream(message) }
+    stream =
+      streamScope.launch {
+        val streamStart = Instant.now()
+        val llmStream =
+          try {
+            if (toolchain != null) {
+              sessionAgent.chatCompletionStreamWithTools(message, history)
+            } else {
+              sessionAgent.chatCompletionStreamWithRag(message, history)
+            }
+          } catch (e: AppError) {
+            handleError(e)
+            return@launch
+          }
+
+        LOG.debug("{} - starting stream", id)
+        val response = StringBuilder()
+        var finishReason = FinishReason.Stop
+
+        try {
+          llmStream.collect { chunks ->
+            for (chunk in chunks) {
+              if (
+                chunk.content.isNullOrEmpty() && chunk.stopReason?.value != FinishReason.Stop.value
+              ) {
+                continue
+              }
+
+              if (!chunk.content.isNullOrEmpty()) {
+                emitter.emit(ChatSessionMessage.StreamChunk(chunk.content))
+                response.append(chunk.content)
+              }
+
+              if (chunk.stopReason?.value == FinishReason.Stop.value) {
+                break
+              }
+            }
+          }
+
+          LOG.debug(
+            "{} - stream complete, took {}ms",
+            id,
+            Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
+          )
+        } catch (e: CancellationException) {
+          if (e.message != "manual_cancel") {
+            LOG.error("Unexpected cancellation exception", e)
+          }
+
+          finishReason = FinishReason.ManualStop
+
+          LOG.debug(
+            "{} - stream cancelled, took {}ms, storing response: {}",
+            id,
+            Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
+            response.isNotBlank(),
+          )
+        } catch (e: Throwable) {
+          LOG.error("Unexpected error in stream", e)
+          handleError(e)
+        } finally {
+          if (response.isNotBlank()) {
+            streamScope.launch {
+              processResponse(
+                prompt = message,
+                response = response.toString(),
+                finishReason = finishReason,
+              )
+            }
+          }
+
+          stream = null
+        }
+      }
   }
 
   override fun isStreaming(): Boolean {
-    return streamActive
+    return stream != null
   }
 
   override fun cancelStream() {
-    if (streamActive) {
-      LOG.debug("Closing stream for '{}'", id)
+    if (stream == null) {
+      return
     }
-    streamActive = false
-  }
-
-  override suspend fun persist() {
-    if (!messageReceived) {
-      // TODO: Transaction for chat and initial message
-      service.storeChat(id, userId, agentId, title)
-      messageReceived = true
-    }
-  }
-
-  /** The actual streaming implementation. */
-  private suspend fun stream(prompt: String) = coroutineScope {
-    streamActive = true
-
-    val streamStart = Instant.now()
-    val stream =
-      try {
-        service.chatCompletionStream(prompt, history, agentId)
-      } catch (e: AppError) {
-        handleError(e)
-        return@coroutineScope
-      }
-
-    try {
-      var finishReason = FinishReason.Stop
-      val response = StringBuilder()
-      LOG.debug("Started stream for '{}'", id)
-      try {
-        collectAndForwardStream(stream, response, emitter)
-        LOG.debug("Chat '{}' got response: {}", id, response)
-      } catch (e: CancellationException) {
-        LOG.debug(
-          "Stream in '{}' cancelled, took {}ms, storing response: {}",
-          id,
-          Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-          response.isNotBlank(),
-        )
-        finishReason = FinishReason.ManualStop
-      }
-
-      if (response.isNotBlank()) {
-        processResponse(
-          prompt = prompt,
-          response = response.toString(),
-          finishReason = finishReason,
-        )
-      }
-
-      LOG.debug(
-        "Stream in '{}' complete, took {}ms",
-        id,
-        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-      )
-    } catch (e: Throwable) {
-      LOG.error("Unexpected error in stream", e)
-      handleError(e)
-    } finally {
-      streamActive = false
-    }
-  }
-
-  private suspend fun collectAndForwardStream(
-    stream: Flow<List<TokenChunk>>,
-    response: StringBuilder,
-    emitter: Emitter<ChatSessionMessage>,
-  ) = coroutineScope {
-    stream.collect { tokens ->
-      if (!streamActive) {
-        // Stream was manually cancelled, cancel the streaming job
-        cancel()
-      }
-
-      for (chunk in tokens) {
-        if (chunk.content.isNullOrEmpty() && chunk.stopReason?.value != FinishReason.Stop.value) {
-          continue
-        }
-
-        if (!chunk.content.isNullOrEmpty()) {
-          emitter.emit(ChatSessionMessage.StreamChunk(chunk.content))
-          response.append(chunk.content)
-        }
-
-        if (chunk.stopReason?.value == FinishReason.Stop.value) {
-          break
-        }
-      }
-    }
+    LOG.debug("{} - cancelling stream", id)
+    stream!!.cancel("manual_cancel")
   }
 
   private suspend fun processResponse(
@@ -183,15 +174,27 @@ class ChatSession(
     response: String,
     finishReason: FinishReason,
   ) {
-    if (response.isEmpty()) {
-      emitter.emitError(AppError.api(ErrorReason.Websocket, "Got empty response from LLM"))
-      return
-    }
-
-    persist()
+    val assistantMessageId =
+      if (!messageReceived) {
+        LOG.debug("{} - persisting chat with message pair", id)
+        messageReceived = true
+        repository.insertChat(id, userId, prompt, sessionAgent.agent.id, response)
+      } else {
+        LOG.debug("{} - persisting message pair", id)
+        repository.insertMessagePair(
+          chatId = id,
+          userId = userId,
+          prompt = prompt,
+          agentConfigurationId = sessionAgent.agent.configurationId,
+          response,
+        )
+      }
 
     if (title.isNullOrBlank()) {
-      generateAndSetTitle(prompt, response)
+      LOG.debug("{} - generating title", id)
+      title = sessionAgent.createTitle(prompt, response)
+      repository.updateTitle(id, userId, title!!)
+      emitter.emit(ChatSessionMessage.ChatTitleUpdated(id, title!!))
     }
 
     val messages: List<ChatMessage> =
@@ -199,28 +202,22 @@ class ChatSession(
 
     addToHistory(messages)
 
-    val (_, assistantMsg) = service.processMessagePair(id, userId, agentId, prompt, response)
-
-    LOG.debug("Emitting stream complete for '{}', finish reason: {}", id, finishReason)
+    LOG.debug("{} - emitting stream complete, finish reason: {}", id, finishReason)
 
     val emitPayload =
-      ChatSessionMessage.StreamComplete(id, messageId = assistantMsg.id, reason = finishReason)
+      ChatSessionMessage.StreamComplete(id, messageId = assistantMessageId, reason = finishReason)
 
     emitter.emit(emitPayload)
-  }
-
-  private suspend fun generateAndSetTitle(prompt: String, response: String) {
-    title = service.createAndUpdateTitle(id, prompt, response, agentId)
-    emitter.emit(ChatSessionMessage.ChatTitleUpdated(id, title!!))
   }
 
   private suspend fun addToHistory(messages: List<ChatMessage>) {
     history.addAll(messages)
 
     summarizeAfterTokens?.let {
-      val tokenCount = service.countHistoryTokens(history, agentId)
+      val tokenCount = sessionAgent.countHistoryTokens(history)
       if (tokenCount >= it) {
-        val summary = service.summarizeConversation(id, history, agentId)
+        val summary = sessionAgent.summarizeConversation(history)
+        repository.insertSystemMessage(id, summary)
         history.clear()
         history.add(ChatMessage.system(summary))
       }
