@@ -1,9 +1,9 @@
 package net.barrage.llmao.app.api.ws
 
 import io.ktor.server.websocket.*
-import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.session.Emitter
 import net.barrage.llmao.core.session.IncomingMessage
 import net.barrage.llmao.core.session.IncomingSystemMessage
@@ -15,7 +15,11 @@ import net.barrage.llmao.core.session.chat.LOG
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * The session manage creates sessions and is responsible for broadcasting system events to clients.
+ */
 class WebsocketSessionManager(
   private val factory: SessionFactory,
   listener: EventListener<StateChangeEvent>,
@@ -92,7 +96,7 @@ class WebsocketSessionManager(
 
     LOG.debug("Starting stream in '{}' for user '{}' with token '{}'", chat.id().id, userId, token)
 
-    chat.start(message)
+    chat.startStream(message)
   }
 
   private suspend fun handleSystemMessage(
@@ -104,8 +108,9 @@ class WebsocketSessionManager(
     when (message) {
       is IncomingSystemMessage.CreateNewSession -> {
         val emitter: Emitter<ChatSessionMessage> = WebsocketEmitter.new(ws)
+        val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
         val chat =
-          factory.newChatSession(userId = userId, agentId = message.agentId, emitter = emitter)
+          factory.newChatSession(userId = userId, agentId = message.agentId, emitter = emitter, toolEmitter = toolEmitter)
         workflowSessions[key(userId, token)] = chat
 
         systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionOpen(chat.id))

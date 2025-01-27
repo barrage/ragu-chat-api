@@ -23,6 +23,7 @@ import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsResult
+import net.barrage.llmao.core.models.UpdateTools
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
@@ -69,6 +70,21 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
         val agentId = call.pathUuid("id")
         agentService.delete(agentId)
         call.respond(HttpStatusCode.NoContent)
+      }
+
+      route("/tools") {
+        get(getAgentTools()) {
+          val agentId = call.pathUuid("id")
+          val tools = agentService.listAgentTools(agentId)
+          call.respond(HttpStatusCode.OK, tools)
+        }
+
+        post(updateAgentTools()) {
+          val agentId = call.pathUuid("id")
+          val updateTools = call.receive<UpdateTools>()
+          agentService.updateAgentTools(agentId, updateTools)
+          call.respond(HttpStatusCode.OK)
+        }
       }
 
       put("/collections", updateAgentCollections()) {
@@ -165,10 +181,56 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
       agentService.removeCollectionFromAllAgents(collection, provider)
       call.respond(HttpStatusCode.NoContent)
     }
+
+    get("/tools", getAgentTools()) {
+      val tools = agentService.listAvailableAgentTools()
+      call.respond(HttpStatusCode.OK, tools)
+    }
   }
 }
 
 // OpenAPI documentation
+
+private fun getAgentTools(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents")
+  description = "Retrieve list of all available agent tools"
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "A list of available agent tools"
+        body<List<String>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving agent tools"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun updateAgentTools(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents")
+  description = "Add a tool to an agent"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    queryParameter<String>("toolName") {
+      description = "Tool name"
+      example("example") { value = "get_birthday" }
+    }
+  }
+  response {
+    HttpStatusCode.OK to { description = "Tool added successfully" }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while adding tool"
+        body<List<AppError>> {}
+      }
+  }
+}
+
 private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve list of all agents"

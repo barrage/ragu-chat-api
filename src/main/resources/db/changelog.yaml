@@ -89,6 +89,7 @@ databaseChangeLog:
             path: migration/5_message_evaluations_table/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
   - changeSet:
       id: 6
       author: barrage
@@ -104,5 +105,23 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: migration/6_remove_extra_instructions/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+
+  - changeSet:
+      id: 7
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 7.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/7_agent_tools/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/7_agent_tools/down.sql
             relativeToChangelogFile: true
             splitStatements: false

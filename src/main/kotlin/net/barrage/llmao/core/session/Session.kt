@@ -1,11 +1,13 @@
 package net.barrage.llmao.core.session
 
+import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.types.KUUID
 
 /**
  * A session represents interactions between a user and a communication entity. The entity can be an
  * agent or a workflow (a chain of agents). The simplest implementation of a session is a chat (see
- * [ChatSession]).
+ * ChatSession).
  */
 interface Session {
   /** Get the session's ID (primary key). */
@@ -18,7 +20,7 @@ interface Session {
    *
    * @param message The proompt.
    */
-  fun start(message: String)
+  fun startStream(message: String)
 
   /**
    * Check if the session is streaming.
@@ -29,10 +31,32 @@ interface Session {
 
   /** Cancel the current stream. */
   fun cancelStream()
-
-  /** Persist the session. */
-  suspend fun persist()
 }
+
+/** A stripped version of Agent down to the parameters required for a session. */
+data class SessionAgent(
+  val id: KUUID,
+  val name: String,
+  val model: String,
+  val llmProvider: String,
+  val context: String,
+  val collections: List<SessionAgentCollection>,
+  val instructions: AgentInstructions,
+  val toolchain: Toolchain? = null,
+  val temperature: Double,
+
+  /** The agent configuration ID. */
+  val configurationId: KUUID,
+)
+
+data class SessionAgentCollection(
+  val name: String,
+  val amount: Int,
+  val instruction: String,
+  val embeddingProvider: String,
+  val embeddingModel: String,
+  val vectorProvider: String,
+)
 
 /** A wrapper used to indicate the type of session. */
 sealed class SessionId(open val id: KUUID) {

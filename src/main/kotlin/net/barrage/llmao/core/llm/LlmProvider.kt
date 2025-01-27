@@ -6,13 +6,13 @@ interface LlmProvider {
   fun id(): String
 
   /** Execute chat completion on an LLM. */
-  suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String
+  suspend fun chatCompletion(messages: List<ChatMessage>, config: ChatCompletionParameters): ChatMessage
 
-  /** Create a stream that emits [TokenChunk]s. */
+  /** Create a stream that emits [MessageChunk]s. */
   suspend fun completionStream(
     messages: List<ChatMessage>,
-    config: LlmConfig,
-  ): Flow<List<TokenChunk>>
+    config: ChatCompletionParameters,
+  ): Flow<List<MessageChunk>>
 
   /** Return `true` if the implementor supports the model, `false` otherwise. */
   suspend fun supportsModel(model: String): Boolean

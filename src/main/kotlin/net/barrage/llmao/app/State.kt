@@ -25,8 +25,8 @@ import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
-import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.services.UserService
+import net.barrage.llmao.core.session.chat.ChatSessionRepository
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -61,6 +61,7 @@ class RepositoryState(database: DSLContext) {
   val session: SessionRepository = SessionRepository(database)
   val agent: AgentRepository = AgentRepository(database)
   val chat: ChatRepository = ChatRepository(database)
+  val chatSession: ChatSessionRepository = ChatSessionRepository(database)
 }
 
 /**
@@ -85,13 +86,7 @@ class AdapterState(
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       val whatsAppRepo = WhatsAppRepository(database)
       adapters[WhatsAppAdapter::class] =
-        WhatsAppAdapter(
-          config,
-          services.conversation,
-          providers,
-          whatsAppRepo,
-          providers.imageStorage,
-        )
+        WhatsAppAdapter(config, providers, whatsAppRepo, providers.imageStorage)
     }
   }
 
@@ -181,7 +176,6 @@ class ServiceState(
   val user = UserService(repository.user, repository.session, providers.imageStorage)
   val auth = AuthenticationService(providers.auth, repository.session, repository.user)
   val admin = AdministrationService(providers, repository.agent, repository.chat, repository.user)
-  val conversation = ConversationService(providers, repository.agent, repository.chat)
 }
 
 @Serializable

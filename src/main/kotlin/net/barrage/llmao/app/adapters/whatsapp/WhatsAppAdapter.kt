@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
 import com.infobip.ApiClient
+import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
@@ -13,6 +14,7 @@ import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
 import io.ktor.server.config.*
+import io.ktor.util.logging.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
@@ -25,26 +27,26 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
-import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
-import net.barrage.llmao.core.services.ConversationService
 import net.barrage.llmao.core.services.processAdditions
+import net.barrage.llmao.core.session.SessionAgent
+import net.barrage.llmao.core.session.SessionAgentCollection
+import net.barrage.llmao.core.session.chat.ChatSessionAgent
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
 
-internal val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
 
 class WhatsAppAdapter(
   private val config: ApplicationConfig,
-  private val conversation: ConversationService,
   private val providers: ProviderState,
   private val repository: WhatsAppRepository,
   private val avatarStorage: ImageStorage,
@@ -238,12 +240,35 @@ class WhatsAppAdapter(
     val agentConfig = agentFull.getConfiguration()
     val agentCollections = agentFull.collections
 
-    val query = conversation.prepareChatPrompt(message, agentConfig, agentCollections, history)
+    val sessionAgent =
+      SessionAgent(
+        id = agentFull.agent.id,
+        name = agentFull.agent.name,
+        model = agentFull.agent.model,
+        llmProvider = agentFull.agent.llmProvider,
+        context = agentFull.agent.context,
+        collections =
+          agentCollections.map {
+            SessionAgentCollection(
+              name = it.collection,
+              amount = it.amount,
+              instruction = it.instruction,
+              embeddingProvider = it.embeddingProvider,
+              embeddingModel = it.embeddingModel,
+              vectorProvider = it.vectorProvider,
+            )
+          },
+        instructions = agentConfig.agentInstructions,
+        toolchain = null,
+        temperature = agentConfig.temperature,
+        configurationId = agentConfig.id,
+      )
 
-    val llm = providers.llm.getProvider(agentConfig.llmProvider)
+    val conversation = ChatSessionAgent(providers, sessionAgent)
 
-    val output = llm.chatCompletion(query, LlmConfig(agentConfig.model, agentConfig.temperature))
-    return ProcessedInput(output, chat.id, whatsAppNumber.userId, agentFull.agent.id)
+    val response = conversation.chatCompletionWithRag(message, history)
+
+    return ProcessedInput(response.content, chat.id, whatsAppNumber.userId, agentFull.agent.id)
   }
 
   private fun createWhatsAppMessage(
@@ -290,7 +315,7 @@ class WhatsAppAdapter(
         to,
         messageInfo.messages[0].status.description,
       )
-    } catch (e: com.infobip.ApiException) {
+    } catch (e: ApiException) {
       LOG.error("Failed to send WhatsApp welcome message to: $to", e)
       LOG.error("Response body: ${e.rawResponseBody()}")
     } catch (e: Exception) {

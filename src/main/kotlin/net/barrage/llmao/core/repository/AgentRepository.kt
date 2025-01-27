@@ -13,12 +13,15 @@ import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentCounts
 import net.barrage.llmao.core.models.AgentFull
+import net.barrage.llmao.core.models.AgentTool
+import net.barrage.llmao.core.models.AgentToolCall
 import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CollectionInsert
 import net.barrage.llmao.core.models.CollectionRemove
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateAgentConfiguration
+import net.barrage.llmao.core.models.UpdateTools
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SearchFiltersAdminAgents
@@ -26,6 +29,8 @@ import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toAgentCollection
 import net.barrage.llmao.core.models.toAgentConfiguration
+import net.barrage.llmao.core.models.toAgentTool
+import net.barrage.llmao.core.models.toAgentToolCall
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -33,6 +38,8 @@ import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import org.jooq.Condition
+import net.barrage.llmao.tables.references.AGENT_TOOLS
+import net.barrage.llmao.tables.references.AGENT_TOOL_CALLS
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.exception.DataAccessException
@@ -609,6 +616,61 @@ class AgentRepository(private val dslContext: DSLContext) {
       .awaitSingle()
       ?.into(AGENTS)
       ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+  }
+
+  suspend fun getAgentTools(agentId: KUUID): List<AgentTool> {
+    return dslContext
+      .selectFrom(AGENT_TOOLS)
+      .where(AGENT_TOOLS.AGENT_ID.eq(agentId))
+      .asFlow()
+      .map { it.toAgentTool() }
+      .toList()
+  }
+
+  suspend fun updateAgentTools(agentId: KUUID, update: UpdateTools) {
+    for (tool in update.add) {
+      dslContext
+        .insertInto(AGENT_TOOLS)
+        .set(AGENT_TOOLS.AGENT_ID, agentId)
+        .set(AGENT_TOOLS.TOOL_NAME, tool)
+        .returning()
+        .awaitSingle()
+        .toAgentTool()
+    }
+    for (tool in update.remove) {
+      dslContext
+        .deleteFrom(AGENT_TOOLS)
+        .where(AGENT_TOOLS.AGENT_ID.eq(agentId))
+        .and(AGENT_TOOLS.TOOL_NAME.eq(tool))
+        .awaitSingle()
+    }
+  }
+
+  // Message Tool Calls methods
+  suspend fun recordToolCall(
+    messageId: KUUID,
+    toolName: String,
+    arguments: String,
+    result: String,
+  ): AgentToolCall {
+    return dslContext
+      .insertInto(AGENT_TOOL_CALLS)
+      .set(AGENT_TOOL_CALLS.MESSAGE_ID, messageId)
+      .set(AGENT_TOOL_CALLS.TOOL_NAME, toolName)
+      .set(AGENT_TOOL_CALLS.TOOL_ARGUMENTS, arguments)
+      .set(AGENT_TOOL_CALLS.TOOL_RESULT, result)
+      .returning()
+      .awaitSingle()
+      .toAgentToolCall()
+  }
+
+  suspend fun getMessageToolCalls(messageId: KUUID): List<AgentToolCall> {
+    return dslContext
+      .selectFrom(AGENT_TOOL_CALLS)
+      .where(AGENT_TOOL_CALLS.MESSAGE_ID.eq(messageId))
+      .asFlow()
+      .map { it.toAgentToolCall() }
+      .toList()
   }
 }
 

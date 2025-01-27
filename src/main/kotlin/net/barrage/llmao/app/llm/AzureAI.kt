@@ -8,10 +8,10 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.LlmConfig
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.core.llm.TokenChunk
+import net.barrage.llmao.core.llm.MessageChunk
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
@@ -33,7 +33,10 @@ class AzureAI(
     return "azure"
   }
 
-  override suspend fun chatCompletion(messages: List<ChatMessage>, config: LlmConfig): String {
+  override suspend fun chatCompletion(
+    messages: List<ChatMessage>,
+    config: ChatCompletionParameters,
+  ): ChatMessage {
     val chatRequest =
       ChatCompletionRequest(
         model = ModelId(config.model),
@@ -41,14 +44,18 @@ class AzureAI(
         temperature = config.temperature,
       )
 
-    // TODO: Remove yelling
-    return client(config.model).chatCompletion(chatRequest).choices[0].message.content!!
+    return client(config.model)
+      .chatCompletion(chatRequest)
+      .toNativeChatCompletion()
+      .choices
+      .first()
+      .message
   }
 
   override suspend fun completionStream(
     messages: List<ChatMessage>,
-    config: LlmConfig,
-  ): Flow<List<TokenChunk>> {
+    config: ChatCompletionParameters,
+  ): Flow<List<MessageChunk>> {
     val chatRequest =
       ChatCompletionRequest(
         model = ModelId(config.model),
@@ -61,11 +68,11 @@ class AzureAI(
 
     return client(config.model).chatCompletions(chatRequest).map {
       listOf(
-        TokenChunk(
+        MessageChunk(
           it.id,
           it.created.toLong(),
           it.choices.firstOrNull()?.delta?.content,
-          it.choices.firstOrNull()?.finishReason,
+          it.choices.firstOrNull()?.finishReason?.toNativeFinishReason(),
         )
       )
     }

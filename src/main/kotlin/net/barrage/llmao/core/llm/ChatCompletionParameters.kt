@@ -1,8 +1,8 @@
 package net.barrage.llmao.core.llm
 
 /** Ephemeral data class used for prompting LLMs. */
-data class LlmConfig(
-  /** LLM to use. */
+data class ChatCompletionParameters(
+  /** Which LLM to use. */
   val model: String,
 
   /** How much milligrams of LSD the LLM consumes before generating the response */

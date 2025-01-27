@@ -1,6 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import nu.studer.gradle.jooq.JooqEdition
 import org.jooq.meta.jaxb.Logging
+import org.liquibase.gradle.LiquibaseTask
 import org.testcontainers.containers.PostgreSQLContainer
 
 val ktorVersion = "2.3.12"
@@ -173,6 +174,7 @@ liquibase {
         "password" to dbPassword,
         "changelogFile" to dbChangelog,
         "logLevel" to "error",
+        "showBanner" to "false",
       )
   }
   runList = "main"
@@ -234,3 +236,13 @@ tasks.matching { it.name != "stopBuildDb" }.all { finalizedBy("stopBuildDb") }
 tasks.withType<Jar> { exclude("application.conf") }
 
 tasks.withType<ShadowJar> { mergeServiceFiles() }
+
+tasks.withType<LiquibaseTask> {
+  logging.captureStandardError(LogLevel.QUIET)
+  logging.captureStandardOutput(LogLevel.QUIET)
+}
+
+tasks.named("liquibaseUpdate") {
+  logging.captureStandardError(LogLevel.QUIET)
+  logging.captureStandardOutput(LogLevel.QUIET)
+}

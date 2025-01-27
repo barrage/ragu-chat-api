@@ -3,8 +3,11 @@ package net.barrage.llmao.core.models
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.common.TimeSeries
+import net.barrage.llmao.core.session.SessionAgent
+import net.barrage.llmao.core.session.SessionAgentCollection
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.tables.records.AgentToolsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.utils.NotBlank
 import net.barrage.llmao.utils.Validation
@@ -58,6 +61,29 @@ data class AgentFull(
   val collections: List<AgentCollection>,
 )
 
+fun AgentFull.toSessionAgent() =
+  SessionAgent(
+    id = agent.id,
+    name = agent.name,
+    model = configuration.model,
+    llmProvider = configuration.llmProvider,
+    context = configuration.context,
+    collections =
+      collections.map {
+        SessionAgentCollection(
+          it.collection,
+          it.amount,
+          it.instruction,
+          it.embeddingProvider,
+          it.embeddingModel,
+          it.vectorProvider,
+        )
+      },
+    instructions = configuration.agentInstructions,
+    temperature = configuration.temperature,
+    configurationId = configuration.id,
+  )
+
 /** DTO for creating an agent. */
 @Serializable
 data class CreateAgent(
@@ -96,3 +122,7 @@ data class AgentChatsOnDate(
  * Here * `Long` represents the amount of chats and `String` represents the agent name.
  */
 typealias AgentChatTimeSeries = @Serializable TimeSeries<Long, String>
+
+@Serializable data class AgentTool(val id: KUUID, val agentId: KUUID, val toolName: String)
+
+fun AgentToolsRecord.toAgentTool() = AgentTool(id = id!!, agentId = agentId, toolName = toolName)
