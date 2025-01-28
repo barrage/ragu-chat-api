@@ -3,12 +3,14 @@ package net.barrage.llmao.app.api.http.controllers
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.minio.PutObjectArgs
 import io.minio.RemoveObjectArgs
 import io.minio.StatObjectArgs
 import io.minio.errors.ErrorResponseException
+import java.time.OffsetDateTime
 import java.util.*
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.runBlocking
@@ -37,13 +39,25 @@ import org.junit.jupiter.api.assertThrows
 class AdminUserControllerTests : IntegrationTest() {
   private lateinit var adminUser: User
   private lateinit var peasantUser: User
+  private lateinit var inactivePeasantUser: User
+  private lateinit var deletedUser: User
   private lateinit var adminSession: Session
 
   @BeforeAll
   fun setup() {
     runBlocking {
-      adminUser = postgres.testUser("foo@bar.com", admin = true)
+      adminUser =
+        postgres.testUser(
+          "foo@bar.com",
+          admin = true,
+          fullName = "adminko test",
+          firstName = "adminko",
+          lastName = "test",
+        )
       peasantUser = postgres.testUser("bar@foo.com", admin = false)
+      inactivePeasantUser = postgres.testUser("inactive@foo.com", admin = false, active = false)
+      deletedUser = // added for testing list users
+        postgres.testUser("deleted@user.me", admin = false, deletedAt = OffsetDateTime.now())
       adminSession = postgres.testSession(adminUser.id)
     }
   }
@@ -56,9 +70,55 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(200, response.status.value)
     val body: CountedList<User> = response.body()!!
-    assertEquals(3, body.total) // default Admin user
+    assertEquals(4, body.total) // default Admin user
     assertTrue { body.items.any { it.id == adminUser.id } }
     assertTrue { body.items.any { it.id == peasantUser.id } }
+  }
+
+  @Test
+  fun listAllUsersFilterByName() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("admin/users") {
+        parameter("name", "adminko")
+        header("Cookie", sessionCookie(adminSession.sessionId))
+      }
+    println(response.bodyAsText())
+    assertEquals(200, response.status.value)
+    val body: CountedList<User> = response.body()!!
+    assertEquals(1, body.total)
+    assertTrue { body.items.any { it.id == adminUser.id } }
+  }
+
+  @Test
+  fun listAllUsersFilterByRole() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("admin/users") {
+        parameter("role", "user")
+        header("Cookie", sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(200, response.status.value)
+    val body: CountedList<User> = response.body()!!
+    assertEquals(2, body.total)
+    assertTrue { body.items.any { it.id == peasantUser.id } }
+    assertTrue { body.items.any { it.id == inactivePeasantUser.id } }
+  }
+
+  @Test
+  fun listAllUsersFilterByActive() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("admin/users") {
+        parameter("active", "false")
+        header("Cookie", sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(200, response.status.value)
+    val body: CountedList<User> = response.body()!!
+    assertEquals(1, body.total)
+    assertTrue { body.items.any { it.id == inactivePeasantUser.id } }
   }
 
   @Test

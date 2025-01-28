@@ -19,6 +19,7 @@ import net.barrage.llmao.core.models.UpdateCollectionsFailure
 import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.models.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.storage.ImageStorage
@@ -50,11 +51,10 @@ class AgentService(
 
   suspend fun getAllAdmin(
     pagination: PaginationSort,
-    name: String?,
-    active: Boolean?,
+    filters: SearchFiltersAdminAgents,
     withAvatar: Boolean = false,
   ): CountedList<AgentWithConfiguration> {
-    return agentRepository.getAllAdmin(pagination, name, active).apply {
+    return agentRepository.getAllAdmin(pagination, filters).apply {
       if (withAvatar) {
         items.forEach { it.agent.avatar = avatarStorage.retrieve(it.agent.id) }
       }

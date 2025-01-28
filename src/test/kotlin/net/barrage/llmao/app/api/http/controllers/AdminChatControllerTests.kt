@@ -79,6 +79,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val body = response.body<CountedList<ChatWithUserAndAgent>>()
     assertNotNull(body)
     assertEquals(3, body.total)
+    assertEquals(3, body.items.size)
   }
 
   @Test
@@ -93,6 +94,37 @@ class AdminChatControllerTests : IntegrationTest() {
     val body = response.body<CountedList<ChatWithUserAndAgent>>()
     assertNotNull(body)
     assertEquals(2, body.total)
+    assertEquals(2, body.items.size)
+  }
+
+  @Test
+  fun shouldRetrieveAllChatsFilterByAgentId() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/admin/chats") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        parameter("agentId", agent.id)
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<CountedList<ChatWithUserAndAgent>>()
+    assertNotNull(body)
+    assertEquals(3, body.total)
+    assertEquals(3, body.items.size)
+  }
+
+  @Test
+  fun shouldRetrieveAllChatsFilterByTitle() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+    val response =
+      client.get("/admin/chats") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        parameter("title", "Chat")
+      }
+    assertEquals(HttpStatusCode.OK, response.status)
+    val body = response.body<CountedList<ChatWithUserAndAgent>>()
+    assertNotNull(body)
+    assertEquals(3, body.total)
+    assertEquals(3, body.items.size)
   }
 
   @Test

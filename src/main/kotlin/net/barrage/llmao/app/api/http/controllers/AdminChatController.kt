@@ -10,7 +10,9 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminChatQuery
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.app.api.http.queryListChatsFilters
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Chat
@@ -31,8 +33,8 @@ fun Route.adminChatsRoutes(service: ChatService) {
   route("/admin/chats") {
     get(adminGetAllChats()) {
       val pagination = call.query(PaginationSort::class)
-      val userId = call.queryParam("userId")?.let(KUUID::fromString)
-      val chats = service.listChatsAdmin(pagination, userId)
+      val filters = call.query(SearchFiltersAdminChatQuery::class).toSearchFiltersAdminChats()
+      val chats = service.listChatsAdmin(pagination, filters)
       call.respond(HttpStatusCode.OK, chats)
     }
 
@@ -83,11 +85,7 @@ private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   description = "Retrieve list of all chats"
   request {
     queryPaginationSort()
-    queryParameter<KUUID>("userId") {
-      description = "Filter by user ID"
-      required = false
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
+    queryListChatsFilters()
   }
   response {
     HttpStatusCode.OK to

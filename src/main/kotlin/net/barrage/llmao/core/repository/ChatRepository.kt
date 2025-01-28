@@ -22,6 +22,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.Period
+import net.barrage.llmao.core.models.common.SearchFiltersAdminChats
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toChat
@@ -37,6 +38,7 @@ import net.barrage.llmao.tables.references.FAILED_MESSAGES
 import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_EVALUATIONS
 import net.barrage.llmao.tables.references.USERS
+import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
@@ -79,19 +81,14 @@ class ChatRepository(private val dslContext: DSLContext) {
 
   suspend fun getAllAdmin(
     pagination: PaginationSort,
-    userId: KUUID? = null,
+    filters: SearchFiltersAdminChats,
   ): CountedList<ChatWithUserAndAgent> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()
 
+    val conditions = filters.toConditions()
     val total =
-      dslContext
-        .selectCount()
-        .from(CHATS)
-        .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-        .awaitSingle()
-        .value1()
-        ?.toInt() ?: 0
+      dslContext.selectCount().from(CHATS).where(conditions).awaitSingle().value1()?.toInt() ?: 0
 
     val chats =
       dslContext
@@ -125,7 +122,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         .on(CHATS.AGENT_ID.eq(AGENTS.ID))
         .leftJoin(USERS)
         .on(CHATS.USER_ID.eq(USERS.ID))
-        .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+        .where(conditions)
         .orderBy(order)
         .limit(limit)
         .offset(offset)
@@ -629,4 +626,12 @@ class ChatRepository(private val dslContext: DSLContext) {
 
     return order
   }
+}
+
+private fun SearchFiltersAdminChats.toConditions(): Condition {
+  val userIdCondition = userId?.let { CHATS.USER_ID.eq(it) } ?: DSL.noCondition()
+  val agentIdCondition = agentId?.let { CHATS.AGENT_ID.eq(it) } ?: DSL.noCondition()
+  val titleCondition = title?.let { CHATS.TITLE.containsIgnoreCase(it) } ?: DSL.noCondition()
+
+  return DSL.and(userIdCondition, agentIdCondition, titleCondition)
 }
