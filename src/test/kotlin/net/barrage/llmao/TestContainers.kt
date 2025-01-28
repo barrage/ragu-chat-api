@@ -87,7 +87,7 @@ class TestPostgres {
     container.start()
 
     // Fixes all errors related to container not being ready yet
-    sleep(100)
+    sleep(150)
 
     initConnectionPool()
     initDslContext()

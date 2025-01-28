@@ -42,7 +42,7 @@ data class SessionAgent(
   val context: String,
   val collections: List<SessionAgentCollection>,
   val instructions: AgentInstructions,
-  val toolchain: Toolchain? = null,
+  var toolchain: Toolchain? = null,
   val temperature: Double,
 
   /** The agent configuration ID. */

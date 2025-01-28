@@ -22,10 +22,11 @@ class Toolchain(
   suspend fun processToolCall(data: ToolCallData): ToolCallResult {
     emitter?.emit(ToolEvent.ToolCall(data))
 
-    val handler = handlers[data.function.name]
+    // TODO: Use already complete input for tool calling, ToolCallData represents a chunk
+    val handler = handlers[data.function?.name]
     val result =
       handler?.invoke(services, data)
-        ?: throw IllegalStateException("No handler for tool call '${data.function.name}'")
+        ?: throw IllegalStateException("No handler for tool call '${data.function!!.name}'")
 
     emitter?.emit(ToolEvent.ToolResult(result))
 
@@ -63,9 +64,11 @@ sealed class ToolEvent {
   data class ToolResult(val result: ToolCallResult) : ToolEvent()
 }
 
-@Serializable data class ToolCallData(val id: String, val function: FunctionCall)
+/** Used as a native application model for mapping tool call streams. */
+@Serializable data class ToolCallData(val id: String?, val function: FunctionCall?)
 
-@Serializable data class FunctionCall(val name: String, val arguments: String)
+/** Used as a native application model for mapping function call arguments. */
+@Serializable data class FunctionCall(val name: String?, val arguments: String?)
 
 @Serializable data class ToolCallResult(val id: String, val result: String)
 

@@ -61,8 +61,7 @@ class ChatSessionAgentTests : IntegrationTest(useWiremock = true) {
   fun successfullyStreamsChat() = test {
     // To trigger streams, the following prompt has to be somewhere the message
     val stream = service.chatCompletionStreamWithRag(COMPLETIONS_STREAM_PROMPT, listOf())
-    val response =
-      stream.toList().joinToString("") { chunk -> chunk.joinToString { it.content ?: "" } }
+    val response = stream.toList().joinToString("") { chunk -> chunk.content ?: "" }
     assertEquals(COMPLETIONS_STREAM_RESPONSE, response)
   }
 

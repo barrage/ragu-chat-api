@@ -2,6 +2,7 @@ package net.barrage.llmao.app.llm
 
 import com.aallam.openai.api.chat.ChatChoice as OpenAiChatChoice
 import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
+import com.aallam.openai.api.chat.ChatCompletionChunk as OpenAiChatChunk
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 import com.aallam.openai.api.chat.FunctionTool
@@ -23,8 +24,10 @@ import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.FinishReason
+import net.barrage.llmao.core.llm.FunctionCall
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.MessageChunk
+import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -57,7 +60,7 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
   override suspend fun completionStream(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): Flow<List<MessageChunk>> {
+  ): Flow<MessageChunk> {
     val chatRequest =
       ChatCompletionRequest(
         model = ModelId(config.model),
@@ -67,17 +70,7 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
         tools = config.tools?.map { it.toOpenAiTool() },
       )
 
-    return this.client.chatCompletions(chatRequest).map {
-      println(it)
-      listOf(
-        MessageChunk(
-          it.id,
-          it.created.toLong(),
-          it.choices.firstOrNull()?.delta?.content,
-          it.choices.firstOrNull()?.finishReason?.toNativeFinishReason(),
-        )
-      )
-    }
+    return this.client.chatCompletions(chatRequest).map { chunk -> chunk.toNativeMessageChunk() }
   }
 
   override suspend fun supportsModel(model: String): Boolean {
@@ -114,6 +107,20 @@ fun ChatMessage.toOpenAiChatMessage(): OpenAiChatMessage {
     }
     else -> throw AppError.api(ErrorReason.InvalidParameter, "Invalid message role '$role'")
   }
+}
+
+fun OpenAiChatChunk.toNativeMessageChunk(): MessageChunk {
+  val choice = choices.firstOrNull()
+  return MessageChunk(
+    id = id,
+    created = created.toLong(),
+    content = choice?.delta?.content,
+    stopReason = choice?.finishReason?.toNativeFinishReason(),
+    toolCalls =
+      choice?.delta?.toolCalls?.map {
+        ToolCallData(it.id?.id, FunctionCall(it.function?.nameOrNull, it.function?.arguments))
+      },
+  )
 }
 
 fun OpenAiChatMessage.toNativeChatMessage(): ChatMessage {
