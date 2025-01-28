@@ -10,6 +10,8 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminAgentsQuery
+import net.barrage.llmao.app.api.http.queryListAgentsFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -36,10 +38,9 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
   route("/admin/agents") {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
-      val name = call.queryParam("name")
-      val active = call.queryParam("active")?.toBoolean()
+      val filters = call.query(SearchFiltersAdminAgentsQuery::class).toSearchFiltersAdminAgents()
       val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-      val agents = agentService.getAllAdmin(pagination, name, active, withAvatar)
+      val agents = agentService.getAllAdmin(pagination, filters, withAvatar)
       call.respond(HttpStatusCode.OK, agents)
     }
 
@@ -173,21 +174,7 @@ private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   description = "Retrieve list of all agents"
   request {
     queryPaginationSort()
-    queryParameter<String>("name") {
-      description = "Filter by name"
-      required = false
-      example("default") { value = "Agent" }
-    }
-    queryParameter<Boolean>("active") {
-      description = "Filter by agent status"
-      required = false
-      example("default") { value = true }
-    }
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
-    }
+    queryListAgentsFilters()
   }
   response {
     HttpStatusCode.OK to

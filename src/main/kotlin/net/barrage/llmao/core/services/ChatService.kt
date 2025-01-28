@@ -10,6 +10,7 @@ import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.models.common.SearchFiltersAdminChats
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.UserRepository
@@ -29,9 +30,9 @@ class ChatService(
 ) {
   suspend fun listChatsAdmin(
     pagination: PaginationSort,
-    userId: KUUID?,
+    filters: SearchFiltersAdminChats,
   ): CountedList<ChatWithUserAndAgent> {
-    return chatRepository.getAllAdmin(pagination, userId)
+    return chatRepository.getAllAdmin(pagination, filters)
   }
 
   suspend fun listChats(pagination: PaginationSort, userId: KUUID): CountedList<Chat> {

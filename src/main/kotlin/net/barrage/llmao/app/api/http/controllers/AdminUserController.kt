@@ -10,6 +10,8 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminUsersQuery
+import net.barrage.llmao.app.api.http.queryListUsersFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.CsvImportUsersResult
@@ -31,8 +33,9 @@ fun Route.adminUserRoutes(userService: UserService) {
   route("/admin/users") {
     get(adminGetAllUsers()) {
       val pagination = call.query(PaginationSort::class)
+      val filters = call.query(SearchFiltersAdminUsersQuery::class).toSearchFiltersAdminUsers()
       val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-      val users = userService.getAll(pagination, withAvatar)
+      val users = userService.getAll(pagination, filters, withAvatar)
       call.respond(HttpStatusCode.OK, users)
     }
 
@@ -139,6 +142,7 @@ private fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
   description = "Retrieve list of all users"
   request {
     queryPaginationSort()
+    queryListUsersFilters()
     queryParameter<Boolean>("withAvatar") {
       description = "Include avatar in response"
       required = false

@@ -153,6 +153,10 @@ class TestPostgres {
     email: String = "test@user.me",
     admin: Boolean,
     active: Boolean = true,
+    fullName: String = "Test User",
+    firstName: String = "Test",
+    lastName: String = "User",
+    deletedAt: OffsetDateTime? = null,
   ): User {
     return dslContext
       .insertInto(USERS)
@@ -163,8 +167,17 @@ class TestPostgres {
         USERS.LAST_NAME,
         USERS.ROLE,
         USERS.ACTIVE,
+        USERS.DELETED_AT,
       )
-      .values(email, "Test", "Test", "Test", if (admin) "ADMIN" else "USER", active)
+      .values(
+        email,
+        fullName,
+        firstName,
+        lastName,
+        if (admin) "ADMIN" else "USER",
+        active,
+        deletedAt,
+      )
       .returning()
       .awaitSingle()
       .toUser()

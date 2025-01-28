@@ -11,6 +11,7 @@ import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.models.common.SearchFiltersAdminUsers
 import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.storage.ImageStorage
@@ -24,8 +25,12 @@ class UserService(
   private val sessionsRepository: SessionRepository,
   private val avatarStorage: ImageStorage,
 ) {
-  suspend fun getAll(pagination: PaginationSort, withAvatar: Boolean = false): CountedList<User> {
-    return usersRepository.getAll(pagination).apply {
+  suspend fun getAll(
+    pagination: PaginationSort,
+    filters: SearchFiltersAdminUsers,
+    withAvatar: Boolean = false,
+  ): CountedList<User> {
+    return usersRepository.getAll(pagination, filters).apply {
       items.forEach {
         if (withAvatar) {
           it.avatar = avatarStorage.retrieve(it.id)

@@ -14,20 +14,25 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.UserCounts
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.models.common.SearchFiltersAdminUsers
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.tables.references.USERS
+import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.impl.DSL
 
 class UserRepository(private val dslContext: DSLContext) {
-  suspend fun getAll(pagination: PaginationSort): CountedList<User> {
+  suspend fun getAll(
+    pagination: PaginationSort,
+    filters: SearchFiltersAdminUsers,
+  ): CountedList<User> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()
-    val total =
-      dslContext.selectCount().from(USERS).where(USERS.DELETED_AT.isNull).awaitSingle().value1()
-        ?: 0
+
+    val conditions = filters.toConditions()
+    val total = dslContext.selectCount().from(USERS).where(conditions).awaitSingle().value1() ?: 0
 
     val users =
       dslContext
@@ -44,7 +49,7 @@ class UserRepository(private val dslContext: DSLContext) {
           USERS.DELETED_AT,
         )
         .from(USERS)
-        .where(USERS.DELETED_AT.isNull)
+        .where(conditions)
         .orderBy(order)
         .limit(limit)
         .offset(offset)
@@ -231,4 +236,17 @@ class UserRepository(private val dslContext: DSLContext) {
       .map { it.email }
       .toList()
   }
+}
+
+private fun SearchFiltersAdminUsers.toConditions(): Condition {
+  val deletedCondition = USERS.DELETED_AT.isNull // Only get users that are not deleted
+  val nameCondition =
+    name?.let {
+      USERS.FULL_NAME.containsIgnoreCase(it)
+        .or(USERS.FIRST_NAME.containsIgnoreCase(it).or(USERS.LAST_NAME.containsIgnoreCase(it)))
+    } ?: DSL.noCondition()
+  val roleCondition = role?.let { USERS.ROLE.eq(role.name) } ?: DSL.noCondition()
+  val activeCondition = active?.let { USERS.ACTIVE.eq(it) } ?: DSL.noCondition()
+
+  return DSL.and(deletedCondition, nameCondition, roleCondition, activeCondition)
 }

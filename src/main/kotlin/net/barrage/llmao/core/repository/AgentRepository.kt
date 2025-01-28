@@ -21,6 +21,7 @@ import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateAgentConfiguration
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
+import net.barrage.llmao.core.models.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.models.common.SortOrder
 import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toAgentCollection
@@ -31,6 +32,7 @@ import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
+import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.exception.DataAccessException
@@ -79,21 +81,13 @@ class AgentRepository(private val dslContext: DSLContext) {
 
   suspend fun getAllAdmin(
     pagination: PaginationSort,
-    name: String? = null,
-    active: Boolean? = null,
+    filters: SearchFiltersAdminAgents,
   ): CountedList<AgentWithConfiguration> {
     val order = getSortOrderAgent(pagination, admin = true)
     val (limit, offset) = pagination.limitOffset()
 
-    val searchCondition =
-      (if (name != null) AGENTS.NAME.likeIgnoreCase("%$name%")
-        else DSL.noCondition()) // filter by name
-        .and(
-          if (active != null) AGENTS.ACTIVE.eq(active) else DSL.noCondition()
-        ) // filter by status
-
-    val total =
-      dslContext.selectCount().from(AGENTS).where(searchCondition).awaitSingle().value1() ?: 0
+    val conditions = filters.generateConditions()
+    val total = dslContext.selectCount().from(AGENTS).where(conditions).awaitSingle().value1() ?: 0
 
     val agents =
       dslContext
@@ -121,7 +115,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         .from(AGENTS)
         .leftJoin(AGENT_CONFIGURATIONS)
         .on(AGENT_CONFIGURATIONS.ID.eq(AGENTS.ACTIVE_CONFIGURATION_ID))
-        .where(searchCondition)
+        .where(conditions)
         .orderBy(order)
         .limit(limit)
         .offset(offset)
@@ -616,4 +610,11 @@ class AgentRepository(private val dslContext: DSLContext) {
       ?.into(AGENTS)
       ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
   }
+}
+
+private fun SearchFiltersAdminAgents.generateConditions(): Condition {
+  val nameCondition = name?.let { AGENTS.NAME.containsIgnoreCase(name) } ?: DSL.noCondition()
+  val activeCondition = if (active == null) DSL.noCondition() else AGENTS.ACTIVE.eq(active)
+
+  return DSL.and(nameCondition, activeCondition)
 }
