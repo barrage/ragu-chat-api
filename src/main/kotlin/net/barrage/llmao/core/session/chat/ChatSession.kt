@@ -87,8 +87,10 @@ class ChatSession(
         val llmStream =
           try {
             if (toolchain != null) {
+              LOG.debug("{} - starting stream with tools", id)
               sessionAgent.chatCompletionStreamWithTools(message, history)
             } else {
+              LOG.debug("{} - starting stream with RAG", id)
               sessionAgent.chatCompletionStreamWithRag(message, history)
             }
           } catch (e: AppError) {
@@ -96,27 +98,16 @@ class ChatSession(
             return@launch
           }
 
-        LOG.debug("{} - starting stream", id)
         val response = StringBuilder()
         var finishReason = FinishReason.Stop
 
         try {
-          llmStream.collect { chunks ->
-            for (chunk in chunks) {
-              if (
-                chunk.content.isNullOrEmpty() && chunk.stopReason?.value != FinishReason.Stop.value
-              ) {
-                continue
-              }
+          llmStream.collect { chunk ->
+            println(chunk)
 
-              if (!chunk.content.isNullOrEmpty()) {
-                emitter.emit(ChatSessionMessage.StreamChunk(chunk.content))
-                response.append(chunk.content)
-              }
-
-              if (chunk.stopReason?.value == FinishReason.Stop.value) {
-                break
-              }
+            if (!chunk.content.isNullOrEmpty()) {
+              emitter.emit(ChatSessionMessage.StreamChunk(chunk.content))
+              response.append(chunk.content)
             }
           }
 

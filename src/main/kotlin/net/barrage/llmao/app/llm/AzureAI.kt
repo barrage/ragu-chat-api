@@ -55,7 +55,7 @@ class AzureAI(
   override suspend fun completionStream(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): Flow<List<MessageChunk>> {
+  ): Flow<MessageChunk> {
     val chatRequest =
       ChatCompletionRequest(
         model = ModelId(config.model),
@@ -67,14 +67,7 @@ class AzureAI(
       )
 
     return client(config.model).chatCompletions(chatRequest).map {
-      listOf(
-        MessageChunk(
-          it.id,
-          it.created.toLong(),
-          it.choices.firstOrNull()?.delta?.content,
-          it.choices.firstOrNull()?.finishReason?.toNativeFinishReason(),
-        )
-      )
+      it.toNativeMessageChunk()
     }
   }
 

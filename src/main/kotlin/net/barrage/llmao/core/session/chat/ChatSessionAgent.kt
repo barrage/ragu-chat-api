@@ -20,7 +20,7 @@ class ChatSessionAgent(private val providers: ProviderState, val agent: SessionA
   suspend fun chatCompletionStreamWithTools(
     input: String,
     history: List<ChatMessage>,
-  ): Flow<List<MessageChunk>> {
+  ): Flow<MessageChunk> {
 
     val messages = history.toMutableList()
     messages.add(ChatMessage.user(input))
@@ -45,7 +45,7 @@ class ChatSessionAgent(private val providers: ProviderState, val agent: SessionA
   suspend fun chatCompletionStreamWithRag(
     input: String,
     history: List<ChatMessage>,
-  ): Flow<List<MessageChunk>> {
+  ): Flow<MessageChunk> {
     val query = prepareChatPromptWithRag(input, history)
 
     val llm = providers.llm.getProvider(agent.llmProvider)
@@ -191,7 +191,10 @@ class ChatSessionAgent(private val providers: ProviderState, val agent: SessionA
     val messages = listOf(ChatMessage.user(prompt))
 
     val completion =
-      llm.chatCompletion(messages, ChatCompletionParameters(agent.model, agent.temperature))
+      llm.chatCompletion(
+        messages,
+        ChatCompletionParameters(agent.model, agent.temperature, maxTokens = 50),
+      )
 
     var title = completion.content.trim()
 

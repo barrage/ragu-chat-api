@@ -31,10 +31,13 @@ class SessionFactory(
 
     // TODO: Skip above check with single call
     val agent = agentService.getFull(agentId)
-    val sessionAgent = agent.toSessionAgent()
-    val chatSessionAgent = ChatSessionAgent(providerState, sessionAgent)
 
+    val sessionAgent = agent.toSessionAgent()
     val toolchain = toolchainFactory.createAgentToolchain(agentId, toolEmitter)
+
+    sessionAgent.toolchain = toolchain
+
+    val chatSessionAgent = ChatSessionAgent(providerState, sessionAgent)
 
     return ChatSession(
       id = id,
@@ -57,10 +60,13 @@ class SessionFactory(
     agentService.getActive(chat.chat.agentId)
 
     val agent = agentService.getFull(chat.chat.agentId)
-    val sessionAgent = agent.toSessionAgent()
-    val chatSessionAgent = ChatSessionAgent(providerState, sessionAgent)
 
+    val sessionAgent = agent.toSessionAgent()
     val toolchain = toolchainFactory.createAgentToolchain(chat.chat.agentId, toolEmitter)
+
+    sessionAgent.toolchain = toolchain
+
+    val chatSessionAgent = ChatSessionAgent(providerState, sessionAgent)
 
     val history = chat.messages.map(ChatMessage::fromModel)
 

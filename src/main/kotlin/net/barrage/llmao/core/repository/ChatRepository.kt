@@ -375,18 +375,6 @@ class ChatRepository(private val dslContext: DSLContext) {
       ?.toMessage()!!
   }
 
-  suspend fun insertSystemMessage(id: KUUID, message: String): Message {
-    return dslContext
-      .insertInto(MESSAGES)
-      .set(MESSAGES.CHAT_ID, id)
-      .set(MESSAGES.SENDER_TYPE, "system")
-      .set(MESSAGES.CONTENT, message)
-      .returning()
-      .awaitSingle()
-      ?.into(MESSAGES)
-      ?.toMessage()!!
-  }
-
   suspend fun delete(id: KUUID): Int {
     return dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).awaitSingle()
   }

@@ -9,7 +9,8 @@ data class MessageChunk(
   val created: Long,
   val content: String? = null,
   val stopReason: FinishReason? = null,
-  val type: String? = null,
+  // val type: String? = null,
+  val toolCalls: List<ToolCallData>? = null,
 )
 
 @Serializable
@@ -36,15 +37,6 @@ data class ChatChoice(
 
   /** The reason why OpenAI stopped generating. */
   val finishReason: FinishReason? = null,
-  val delta: ChatChoiceDelta? = null,
-)
-
-@Serializable
-data class ChatChoiceDelta(
-  val index: Int,
-  val content: String? = null,
-  val stopReason: FinishReason? = null,
-  val toolCalls: List<ToolCallData>? = null,
 )
 
 /**

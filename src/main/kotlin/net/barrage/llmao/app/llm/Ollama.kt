@@ -60,7 +60,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
   override suspend fun completionStream(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): Flow<List<MessageChunk>> {
+  ): Flow<MessageChunk> {
     val request =
       ChatRequest(
         config.model,
@@ -117,7 +117,9 @@ class Ollama(private val endpoint: String) : LlmProvider {
         }
 
         if (chunkBuffer.isNotEmpty()) {
-          emit(chunkBuffer)
+          for (chunk in chunkBuffer) {
+            emit(chunk)
+          }
         }
       }
     }
