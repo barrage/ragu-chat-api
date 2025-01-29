@@ -17,23 +17,14 @@ import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DEFAULT_TITLE_INSTRUCTION
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.toSessionAgent
-<<<<<<<< HEAD:src/test/kotlin/net/barrage/llmao/core/services/ChatWorkflowAgentTests.kt
-import net.barrage.llmao.core.workflow.chat.ChatWorkflowAgent
-========
 import net.barrage.llmao.core.workflow.chat.ChatAgent
->>>>>>>> 78f03af (Add recursive stream calls for tools and fix title generation):src/test/kotlin/net/barrage/llmao/core/services/ChatAgentTests.kt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-<<<<<<<< HEAD:src/test/kotlin/net/barrage/llmao/core/services/ChatWorkflowAgentTests.kt
-class ChatWorkflowAgentTests : IntegrationTest(useWiremock = true) {
-  private lateinit var workflow: ChatWorkflowAgent
-========
 class ChatAgentTests : IntegrationTest(useWiremock = true) {
   private lateinit var workflow: ChatAgent
->>>>>>>> 78f03af (Add recursive stream calls for tools and fix title generation):src/test/kotlin/net/barrage/llmao/core/services/ChatAgentTests.kt
 
   private lateinit var admin: User
   private lateinit var agent: Agent
@@ -57,11 +48,7 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
       val sessionAgent =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
           .toSessionAgent()
-<<<<<<<< HEAD:src/test/kotlin/net/barrage/llmao/core/services/ChatWorkflowAgentTests.kt
-      workflow = ChatWorkflowAgent(app.providers, sessionAgent)
-========
       workflow = ChatAgent(app.providers, sessionAgent)
->>>>>>>> 78f03af (Add recursive stream calls for tools and fix title generation):src/test/kotlin/net/barrage/llmao/core/services/ChatAgentTests.kt
     }
   }
 

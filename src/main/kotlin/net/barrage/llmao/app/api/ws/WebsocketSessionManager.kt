@@ -5,7 +5,6 @@ import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.IncomingMessage
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
@@ -25,13 +24,13 @@ class WebsocketSessionManager(
   listener: EventListener<StateChangeEvent>,
 ) {
   /** Maps user ID + token pairs to their sessions. */
-  private val workflowSessions: MutableMap<Pair<KUUID, KUUID>, Workflow> = ConcurrentHashMap()
+  private val workflows: MutableMap<WebsocketSession, Workflow> = ConcurrentHashMap()
 
   /**
    * Maps user ID + token pairs directly to their output emitters. Used to broadcast system events
    * to all connected clients.
    */
-  private val systemSessions: MutableMap<Pair<KUUID, KUUID>, Emitter<OutgoingSystemMessage>> =
+  private val systemSessions: MutableMap<WebsocketSession, Emitter<OutgoingSystemMessage>> =
     ConcurrentHashMap()
 
   init {
@@ -39,29 +38,28 @@ class WebsocketSessionManager(
     listener.start { event -> handleEvent(event) }
   }
 
-  fun registerSystemSession(userId: KUUID, token: KUUID, emitter: Emitter<OutgoingSystemMessage>) {
-    systemSessions[key(userId, token)] = emitter
+  fun registerSystemEmitter(session: WebsocketSession, emitter: Emitter<OutgoingSystemMessage>) {
+    systemSessions[session] = emitter
+  }
+
+  fun removeSystemEmitter(session: WebsocketSession) {
+    systemSessions.remove(session)
   }
 
   /** Removes the session and its corresponding chat associated with the user and token pair. */
-  fun removeAllSessions(userId: KUUID, token: KUUID) {
-    LOG.info("Removing session for '{}' with token '{}", userId, token)
-    val channel = systemSessions.remove(key(userId, token))
-    workflowSessions.remove(key(userId, token))
-
-    // Has to be closed manually to stop the job from running
-    channel?.close()
+  fun removeWorkflow(session: WebsocketSession) {
+    LOG.info("Removing session {}", session)
+    workflows.remove(session)
   }
 
   suspend fun handleMessage(
-    userId: KUUID,
-    token: KUUID,
+    session: WebsocketSession,
     message: IncomingMessage,
     ws: WebSocketServerSession,
   ) {
     when (message) {
-      is IncomingMessage.Chat -> handleChatMessage(userId, token, message.text)
-      is IncomingMessage.System -> handleSystemMessage(userId, token, message.payload, ws)
+      is IncomingMessage.Chat -> handleChatMessage(session, message.text)
+      is IncomingMessage.System -> handleSystemMessage(session, message.payload, ws)
     }
   }
 
@@ -71,7 +69,7 @@ class WebsocketSessionManager(
       is StateChangeEvent.AgentDeactivated -> {
         LOG.info("Handling agent deactivated event ({})", event.agentId)
 
-        workflowSessions.values.retainAll { chat -> chat.entityId() != event.agentId }
+        workflows.values.retainAll { chat -> chat.entityId() != event.agentId }
 
         for (channel in systemSessions.values) {
           channel.emit(OutgoingSystemMessage.AgentDeactivated(event.agentId))
@@ -80,105 +78,93 @@ class WebsocketSessionManager(
     }
   }
 
-  private fun handleChatMessage(userId: KUUID, token: KUUID, message: String) {
-    LOG.info("Handling chat message from '{}' with token '{}': {}", userId, token, message)
-
-    val chat =
-      workflowSessions[key(userId, token)]
+  private fun handleChatMessage(session: WebsocketSession, message: String) {
+    val workflow =
+      workflows[session]
         ?: throw AppError.api(
           ErrorReason.Websocket,
-          "Chat not open for user '$userId' with token '$token'",
+          "Chat not open for session '{}'".format(session),
         )
 
-    if (chat.isStreaming()) {
+    if (workflow.isStreaming()) {
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
-    LOG.debug("Starting stream in '{}' for user '{}' with token '{}'", chat.id(), userId, token)
+    LOG.debug("{} - sending input to workflow '{}'", session, workflow.id())
 
-    chat.send(message)
+    workflow.send(message)
   }
 
   private suspend fun handleSystemMessage(
-    userId: KUUID,
-    token: KUUID,
+    session: WebsocketSession,
     message: IncomingSystemMessage,
     ws: WebSocketServerSession,
   ) {
     when (message) {
-      is IncomingSystemMessage.CreateNewSession -> {
+      is IncomingSystemMessage.CreateNewWorkflow -> {
         val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
         val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
-        val chat =
+        val workflow =
           factory.newChatWorkflow(
-            userId = userId,
+            userId = session.userId,
             agentId = message.agentId,
             emitter = emitter,
             toolEmitter = toolEmitter,
           )
-        workflowSessions[key(userId, token)] = chat
+        workflows[session] = workflow
 
-        systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionOpen(chat.id))
+        systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
 
         LOG.debug(
-          "Opened new chat ('{}') for '{}' with token '{}', total chats: {}",
-          chat.id,
-          userId,
-          token,
-          workflowSessions.size,
+          "{} - started workflow ({}) total workflows in manager: {}",
+          session,
+          workflow.id,
+          workflows.size,
         )
       }
-      is IncomingSystemMessage.LoadExistingSession -> {
-        val session = workflowSessions[key(userId, token)]
+      is IncomingSystemMessage.LoadExistingWorkflow -> {
+        val workflow = workflows[session]
 
         // Prevent loading the same chat
-        if (session != null && session.id() == message.chatId) {
-          LOG.debug("Existing chat has same ID as opened chat '{}'", session.id())
-          systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionOpen(session.id()))
+        if (workflow != null && workflow.id() == message.chatId) {
+          LOG.debug("{} - workflow already open ({})", session, workflow.id())
+          systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id()))
           return
         }
 
-        session?.cancelStream()
+        workflow?.cancelStream()
 
         val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
-        val existingChat =
+        val existingWorkflow =
           factory.fromExistingChatWorkflow(
             id = message.chatId,
             emitter = emitter,
             initialHistorySize = message.initialHistorySize,
           )
 
-        workflowSessions[key(userId, token)] = existingChat
-        systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionOpen(message.chatId))
+        workflows[session] = existingWorkflow
+        systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(message.chatId))
 
-        LOG.debug(
-          "Opened existing chat ('{}') for '{}' with token '{}'",
-          existingChat.id,
-          userId,
-          token,
-        )
+        LOG.debug("{} - opened workflow {}", session, existingWorkflow.id)
       }
       is IncomingSystemMessage.CloseSession -> {
-        workflowSessions.remove(key(userId, token))?.let {
-          systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionClosed(it.id()))
+        workflows.remove(session)?.let {
+          systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowClosed(it.id()))
           it.cancelStream()
           LOG.debug(
-            "Closed chat ('{}') for user '{}' with token '{}', total chats: {}",
+            "{} - closed workflow ({}) total workflows in manager: {}",
+            session,
             it.id(),
-            userId,
-            token,
-            workflowSessions.size,
+            workflows.size,
           )
         }
       }
       is IncomingSystemMessage.StopStream -> {
-        workflowSessions[key(userId, token)]?.let {
-          LOG.debug("Stopping stream in '{}' for user '{}' with token '{}'", it.id(), userId, token)
+        workflows[session]?.let {
+          LOG.debug("{} - cancelling stream in workflow '{}'", session, it.id())
           it.cancelStream()
         }
       }
     }
   }
-
-  private fun key(userId: KUUID, token: KUUID) = Pair(userId, token)
 }
