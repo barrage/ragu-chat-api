@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.session.chat
+package net.barrage.llmao.core.workflow.chat
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -6,15 +6,15 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.types.KUUID
 
 @Serializable
-sealed class ChatSessionMessage {
+sealed class ChatWorkflowMessage {
   /** Sent when a chat's title is generated. */
   @Serializable
   @SerialName("chat_title")
-  data class ChatTitleUpdated(val chatId: KUUID, val title: String) : ChatSessionMessage()
+  data class ChatTitleUpdated(val chatId: KUUID, val title: String) : ChatWorkflowMessage()
 
   @Serializable
   @SerialName("stream_chunk")
-  data class StreamChunk(val chunk: String) : ChatSessionMessage()
+  data class StreamChunk(val chunk: String) : ChatWorkflowMessage()
 
   /** Sent when a chats gets a complete response from an LLM. */
   @Serializable
@@ -31,5 +31,5 @@ sealed class ChatSessionMessage {
      * sent.
      */
     val messageId: KUUID? = null,
-  ) : ChatSessionMessage()
+  ) : ChatWorkflowMessage()
 }

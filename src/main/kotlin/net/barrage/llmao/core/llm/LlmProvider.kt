@@ -11,11 +11,11 @@ interface LlmProvider {
     config: ChatCompletionParameters,
   ): ChatMessage
 
-  /** Create a stream that emits [MessageChunk]s. */
+  /** Create a stream that emits [ChatMessageChunk]s. */
   suspend fun completionStream(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): Flow<MessageChunk>
+  ): Flow<ChatMessageChunk>
 
   /** Return `true` if the implementor supports the model, `false` otherwise. */
   suspend fun supportsModel(model: String): Boolean

@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.session.Emitter
+import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.error.AppError
 
 internal val LOG =
@@ -35,11 +35,6 @@ class WebsocketEmitter<T>(ws: WebSocketServerSession, private val serialize: (T)
   override suspend fun emit(message: T) {
     LOG.debug("Emitting server message: {}", message)
     flow.emit(serialize(message))
-  }
-
-  /** Cancel the job containing the shared flow. Called on disconnects. */
-  override fun close() {
-    collector.cancel()
   }
 
   companion object {

@@ -5,9 +5,11 @@ import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk as OpenAiChatChunk
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
+import com.aallam.openai.api.chat.FunctionCall as OpenAiFunctionCall
 import com.aallam.openai.api.chat.FunctionTool
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.chat.Tool
+import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
 import com.aallam.openai.api.chat.ToolId
 import com.aallam.openai.api.chat.ToolType
 import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
@@ -23,11 +25,11 @@ import net.barrage.llmao.core.llm.ChatChoice
 import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.FunctionCall
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.core.llm.MessageChunk
-import net.barrage.llmao.core.llm.ToolCallData
+import net.barrage.llmao.core.llm.ToolCallChunk
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -60,7 +62,7 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
   override suspend fun completionStream(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): Flow<MessageChunk> {
+  ): Flow<ChatMessageChunk> {
     val chatRequest =
       ChatCompletionRequest(
         model = ModelId(config.model),
@@ -96,8 +98,21 @@ fun ToolDefinition.toOpenAiTool(): Tool {
 
 fun ChatMessage.toOpenAiChatMessage(): OpenAiChatMessage {
   return when (role) {
-    "user" -> OpenAiChatMessage.User(content)
-    "assistant" -> OpenAiChatMessage.Assistant(content)
+    "user" ->
+      OpenAiChatMessage.User(
+        content ?: throw AppError.api(ErrorReason.InvalidParameter, "User message content is null")
+      )
+    "assistant" ->
+      OpenAiChatMessage.Assistant(
+        content,
+        toolCalls =
+          toolCalls?.map {
+            OpenAiToolCall.Function(
+              ToolId(it.id!!),
+              OpenAiFunctionCall(nameOrNull = it.name, argumentsOrNull = it.arguments),
+            )
+          },
+      )
     "system" -> OpenAiChatMessage.System(content)
     "tool" -> {
       val callId =
@@ -109,16 +124,20 @@ fun ChatMessage.toOpenAiChatMessage(): OpenAiChatMessage {
   }
 }
 
-fun OpenAiChatChunk.toNativeMessageChunk(): MessageChunk {
+fun OpenAiChatChunk.toNativeMessageChunk(): ChatMessageChunk {
   val choice = choices.firstOrNull()
-  return MessageChunk(
+  return ChatMessageChunk(
     id = id,
     created = created.toLong(),
     content = choice?.delta?.content,
     stopReason = choice?.finishReason?.toNativeFinishReason(),
     toolCalls =
       choice?.delta?.toolCalls?.map {
-        ToolCallData(it.id?.id, FunctionCall(it.function?.nameOrNull, it.function?.arguments))
+        ToolCallChunk(
+          index = it.index,
+          id = it.id?.id,
+          function = FunctionCall(it.function?.nameOrNull, it.function?.arguments),
+        )
       },
   )
 }

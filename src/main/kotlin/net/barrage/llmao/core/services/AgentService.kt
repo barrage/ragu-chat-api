@@ -5,6 +5,7 @@ import io.ktor.utils.io.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolRegistry
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -192,8 +193,8 @@ class AgentService(
     avatarStorage.delete(id)
   }
 
-  fun listAvailableAgentTools(): List<String> {
-    return ToolRegistry.listToolNames()
+  fun listAvailableAgentTools(): List<ToolDefinition> {
+    return ToolRegistry.listToolDefinitions()
   }
 
   suspend fun listAgentTools(agentId: KUUID): List<AgentTool> {

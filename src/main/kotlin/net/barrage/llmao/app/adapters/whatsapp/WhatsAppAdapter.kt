@@ -27,6 +27,7 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
+import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
@@ -34,11 +35,11 @@ import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.processAdditions
-import net.barrage.llmao.core.session.SessionAgent
-import net.barrage.llmao.core.session.SessionAgentCollection
-import net.barrage.llmao.core.session.chat.ChatSessionAgent
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.WorkflowAgent
+import net.barrage.llmao.core.workflow.WorkflowAgentCollection
+import net.barrage.llmao.core.workflow.chat.ChatAgent
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
@@ -235,13 +236,13 @@ class WhatsAppAdapter(
     val agentFull = repository.getActiveAgentFull()
     val chat = getChat(whatsAppNumber.userId)
     val chatMessages = repository.getMessages(chat.id, 20)
-    val history = chatMessages.map(WhatsAppMessage::toChatMessage)
+    val history = chatMessages.map(WhatsAppMessage::toChatMessage).toMutableList()
 
     val agentConfig = agentFull.getConfiguration()
     val agentCollections = agentFull.collections
 
-    val sessionAgent =
-      SessionAgent(
+    val workflowAgent =
+      WorkflowAgent(
         id = agentFull.agent.id,
         name = agentFull.agent.name,
         model = agentFull.agent.model,
@@ -249,7 +250,7 @@ class WhatsAppAdapter(
         context = agentFull.agent.context,
         collections =
           agentCollections.map {
-            SessionAgentCollection(
+            WorkflowAgentCollection(
               name = it.collection,
               amount = it.amount,
               instruction = it.instruction,
@@ -259,16 +260,20 @@ class WhatsAppAdapter(
             )
           },
         instructions = agentConfig.agentInstructions,
-        toolchain = null,
+        tools = null,
         temperature = agentConfig.temperature,
         configurationId = agentConfig.id,
       )
 
-    val conversation = ChatSessionAgent(providers, sessionAgent)
+    val conversation = ChatAgent(providers, workflowAgent)
 
-    val response = conversation.chatCompletionWithRag(message, history)
+    history.add(ChatMessage.user(message))
 
-    return ProcessedInput(response.content, chat.id, whatsAppNumber.userId, agentFull.agent.id)
+    val response = conversation.chatCompletionWithRag(history)
+
+    // Safe to !! because we are not sending any tools in the message, which means the content
+    // is always present
+    return ProcessedInput(response.content!!, chat.id, whatsAppNumber.userId, agentFull.agent.id)
   }
 
   private fun createWhatsAppMessage(

@@ -9,9 +9,9 @@ import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.core.session.IncomingSystemMessage
-import net.barrage.llmao.core.session.OutgoingSystemMessage
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.IncomingSystemMessage
+import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.receiveJson
@@ -106,10 +106,10 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      sendClientSystem(IncomingSystemMessage.CreateNewSession(agent.id))
+      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
       val response = (incoming.receive() as Frame.Text).readText()
-      val message = receiveJson<OutgoingSystemMessage.SessionOpen>(response)
-      assertNotNull(message.chatId)
+      val message = receiveJson<OutgoingSystemMessage.WorkflowOpen>(response)
+      assertNotNull(message.id)
       asserted = true
     }
 
@@ -121,19 +121,19 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      val openChat = IncomingSystemMessage.CreateNewSession(agent.id)
+      val openChat = IncomingSystemMessage.CreateNewWorkflow(agent.id)
 
       sendClientSystem(openChat)
       val first = (incoming.receive() as Frame.Text).readText()
-      val firstMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(first)
-      assertNotNull(firstMessage.chatId)
+      val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
+      assertNotNull(firstMessage.id)
 
       sendClientSystem(openChat)
       val second = (incoming.receive() as Frame.Text).readText()
-      val secondMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(second)
-      assertNotNull(secondMessage.chatId)
+      val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
+      assertNotNull(secondMessage.id)
 
-      assertNotEquals(firstMessage.chatId, secondMessage.chatId)
+      assertNotEquals(firstMessage.id, secondMessage.id)
       asserted = true
     }
 
@@ -145,19 +145,19 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      sendClientSystem(IncomingSystemMessage.CreateNewSession(agent.id))
+      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
 
       val first = (incoming.receive() as Frame.Text).readText()
-      val firstMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(first)
-      assertNotNull(firstMessage.chatId)
+      val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
+      assertNotNull(firstMessage.id)
 
-      sendClientSystem(IncomingSystemMessage.LoadExistingSession(firstMessage.chatId))
+      sendClientSystem(IncomingSystemMessage.LoadExistingWorkflow(firstMessage.id))
 
       val second = (incoming.receive() as Frame.Text).readText()
-      val secondMessage = receiveJson<OutgoingSystemMessage.SessionOpen>(second)
-      assertNotNull(secondMessage.chatId)
+      val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
+      assertNotNull(secondMessage.id)
 
-      assertEquals(firstMessage.chatId, secondMessage.chatId)
+      assertEquals(firstMessage.id, secondMessage.id)
       asserted = true
     }
 
@@ -169,7 +169,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      val openChat = IncomingSystemMessage.LoadExistingSession(KUUID.randomUUID())
+      val openChat = IncomingSystemMessage.LoadExistingWorkflow(KUUID.randomUUID())
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()
@@ -201,7 +201,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.chatSession(session.sessionId) {
-      val openChat = IncomingSystemMessage.CreateNewSession(KUUID.randomUUID())
+      val openChat = IncomingSystemMessage.CreateNewWorkflow(KUUID.randomUUID())
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()

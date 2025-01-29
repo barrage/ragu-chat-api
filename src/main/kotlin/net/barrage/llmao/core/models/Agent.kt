@@ -3,10 +3,10 @@ package net.barrage.llmao.core.models
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.common.TimeSeries
-import net.barrage.llmao.core.session.SessionAgent
-import net.barrage.llmao.core.session.SessionAgentCollection
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.WorkflowAgent
+import net.barrage.llmao.core.workflow.WorkflowAgentCollection
 import net.barrage.llmao.tables.records.AgentToolsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.utils.NotBlank
@@ -62,7 +62,7 @@ data class AgentFull(
 )
 
 fun AgentFull.toSessionAgent() =
-  SessionAgent(
+  WorkflowAgent(
     id = agent.id,
     name = agent.name,
     model = configuration.model,
@@ -70,7 +70,7 @@ fun AgentFull.toSessionAgent() =
     context = configuration.context,
     collections =
       collections.map {
-        SessionAgentCollection(
+        WorkflowAgentCollection(
           it.collection,
           it.amount,
           it.instruction,

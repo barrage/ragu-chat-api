@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.session.chat
+package net.barrage.llmao.core.workflow.chat
 
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
@@ -13,7 +13,7 @@ import net.barrage.llmao.tables.references.MESSAGES
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 
-class ChatSessionRepository(private val dslContext: DSLContext) {
+class ChatWorkflowRepository(private val dslContext: DSLContext) {
   suspend fun getChatWithMessages(id: KUUID, historySize: Int): ChatWithMessages {
     val chat =
       dslContext

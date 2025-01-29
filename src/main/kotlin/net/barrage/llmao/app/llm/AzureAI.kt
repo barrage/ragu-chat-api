@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.core.llm.MessageChunk
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
@@ -55,7 +55,7 @@ class AzureAI(
   override suspend fun completionStream(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): Flow<MessageChunk> {
+  ): Flow<ChatMessageChunk> {
     val chatRequest =
       ChatCompletionRequest(
         model = ModelId(config.model),
@@ -66,9 +66,7 @@ class AzureAI(
         streamOptions = StreamOptions(true),
       )
 
-    return client(config.model).chatCompletions(chatRequest).map {
-      it.toNativeMessageChunk()
-    }
+    return client(config.model).chatCompletions(chatRequest).map { it.toNativeMessageChunk() }
   }
 
   override suspend fun supportsModel(model: String): Boolean {

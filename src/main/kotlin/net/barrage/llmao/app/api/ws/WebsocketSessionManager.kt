@@ -1,31 +1,31 @@
 package net.barrage.llmao.app.api.ws
 
 import io.ktor.server.websocket.*
+import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.session.Emitter
-import net.barrage.llmao.core.session.IncomingMessage
-import net.barrage.llmao.core.session.IncomingSystemMessage
-import net.barrage.llmao.core.session.OutgoingSystemMessage
-import net.barrage.llmao.core.session.Session
-import net.barrage.llmao.core.session.SessionFactory
-import net.barrage.llmao.core.session.chat.ChatSessionMessage
-import net.barrage.llmao.core.session.chat.LOG
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.core.workflow.IncomingMessage
+import net.barrage.llmao.core.workflow.IncomingSystemMessage
+import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.core.workflow.WorkflowFactory
+import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
+import net.barrage.llmao.core.workflow.chat.LOG
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The session manage creates sessions and is responsible for broadcasting system events to clients.
  */
 class WebsocketSessionManager(
-  private val factory: SessionFactory,
+  private val factory: WorkflowFactory,
   listener: EventListener<StateChangeEvent>,
 ) {
   /** Maps user ID + token pairs to their sessions. */
-  private val workflowSessions: MutableMap<Pair<KUUID, KUUID>, Session> = ConcurrentHashMap()
+  private val workflowSessions: MutableMap<Pair<KUUID, KUUID>, Workflow> = ConcurrentHashMap()
 
   /**
    * Maps user ID + token pairs directly to their output emitters. Used to broadcast system events
@@ -71,7 +71,7 @@ class WebsocketSessionManager(
       is StateChangeEvent.AgentDeactivated -> {
         LOG.info("Handling agent deactivated event ({})", event.agentId)
 
-        workflowSessions.values.retainAll { chat -> chat.entityId().id != event.agentId }
+        workflowSessions.values.retainAll { chat -> chat.entityId() != event.agentId }
 
         for (channel in systemSessions.values) {
           channel.emit(OutgoingSystemMessage.AgentDeactivated(event.agentId))
@@ -94,9 +94,9 @@ class WebsocketSessionManager(
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
     }
 
-    LOG.debug("Starting stream in '{}' for user '{}' with token '{}'", chat.id().id, userId, token)
+    LOG.debug("Starting stream in '{}' for user '{}' with token '{}'", chat.id(), userId, token)
 
-    chat.startStream(message)
+    chat.send(message)
   }
 
   private suspend fun handleSystemMessage(
@@ -107,10 +107,15 @@ class WebsocketSessionManager(
   ) {
     when (message) {
       is IncomingSystemMessage.CreateNewSession -> {
-        val emitter: Emitter<ChatSessionMessage> = WebsocketEmitter.new(ws)
+        val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
         val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
         val chat =
-          factory.newChatSession(userId = userId, agentId = message.agentId, emitter = emitter, toolEmitter = toolEmitter)
+          factory.newChatWorkflow(
+            userId = userId,
+            agentId = message.agentId,
+            emitter = emitter,
+            toolEmitter = toolEmitter,
+          )
         workflowSessions[key(userId, token)] = chat
 
         systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionOpen(chat.id))
@@ -127,19 +132,17 @@ class WebsocketSessionManager(
         val session = workflowSessions[key(userId, token)]
 
         // Prevent loading the same chat
-        if (session != null && session.id().id == message.chatId) {
+        if (session != null && session.id() == message.chatId) {
           LOG.debug("Existing chat has same ID as opened chat '{}'", session.id())
-          systemSessions[key(userId, token)]?.emit(
-            OutgoingSystemMessage.SessionOpen(session.id().id)
-          )
+          systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionOpen(session.id()))
           return
         }
 
         session?.cancelStream()
 
-        val emitter: Emitter<ChatSessionMessage> = WebsocketEmitter.new(ws)
+        val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
         val existingChat =
-          factory.fromExistingChat(
+          factory.fromExistingChatWorkflow(
             id = message.chatId,
             emitter = emitter,
             initialHistorySize = message.initialHistorySize,
@@ -157,11 +160,11 @@ class WebsocketSessionManager(
       }
       is IncomingSystemMessage.CloseSession -> {
         workflowSessions.remove(key(userId, token))?.let {
-          systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionClosed(it.id().id))
+          systemSessions[key(userId, token)]?.emit(OutgoingSystemMessage.SessionClosed(it.id()))
           it.cancelStream()
           LOG.debug(
             "Closed chat ('{}') for user '{}' with token '{}', total chats: {}",
-            it.id().id,
+            it.id(),
             userId,
             token,
             workflowSessions.size,
@@ -170,12 +173,7 @@ class WebsocketSessionManager(
       }
       is IncomingSystemMessage.StopStream -> {
         workflowSessions[key(userId, token)]?.let {
-          LOG.debug(
-            "Stopping stream in '{}' for user '{}' with token '{}'",
-            it.id().id,
-            userId,
-            token,
-          )
+          LOG.debug("Stopping stream in '{}' for user '{}' with token '{}'", it.id(), userId, token)
           it.cancelStream()
         }
       }

@@ -8,7 +8,13 @@
       {
         "matchesJsonPath": {
           "expression": "$.messages[0].role",
-          "equalTo": "user"
+          "equalTo": "system"
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[0].content",
+          "contains": "v1_chat_completions_title"
         }
       }
     ]

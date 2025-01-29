@@ -1,12 +1,12 @@
-package net.barrage.llmao.core.session
+package net.barrage.llmao.core.workflow
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import net.barrage.llmao.core.session.chat.ChatSessionMessage
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
 
 /** Incoming messages. */
 @Serializable
@@ -23,11 +23,11 @@ sealed class IncomingMessage {
 sealed class IncomingSystemMessage {
   @Serializable
   @SerialName("chat_open_new")
-  data class CreateNewSession(val agentId: KUUID) : IncomingSystemMessage()
+  data class CreateNewWorkflow(val agentId: KUUID) : IncomingSystemMessage()
 
   @Serializable
   @SerialName("chat_open_existing")
-  data class LoadExistingSession(val chatId: KUUID, val initialHistorySize: Int = 10) :
+  data class LoadExistingWorkflow(val chatId: KUUID, val initialHistorySize: Int = 10) :
     IncomingSystemMessage()
 
   @Serializable @SerialName("chat_close") data object CloseSession : IncomingSystemMessage()
@@ -41,12 +41,12 @@ sealed class OutgoingSystemMessage {
   /** Sent when a chat is opened. */
   @SerialName("chat_open")
   @Serializable
-  data class SessionOpen(val chatId: KUUID) : OutgoingSystemMessage()
+  data class WorkflowOpen(val id: KUUID) : OutgoingSystemMessage()
 
   /** Sent when a chat is closed manually. */
   @SerialName("chat_closed")
   @Serializable
-  data class SessionClosed(val chatId: KUUID) : OutgoingSystemMessage()
+  data class WorkflowClosed(val id: KUUID) : OutgoingSystemMessage()
 
   /**
    * Sent when an administrator deactivates an agent via the service and is used to indicate the
@@ -67,12 +67,12 @@ val IncomingMessageSerializer = Json {
     }
     polymorphic(IncomingSystemMessage::class) {
       subclass(
-        IncomingSystemMessage.CreateNewSession::class,
-        IncomingSystemMessage.CreateNewSession.serializer(),
+        IncomingSystemMessage.CreateNewWorkflow::class,
+        IncomingSystemMessage.CreateNewWorkflow.serializer(),
       )
       subclass(
-        IncomingSystemMessage.LoadExistingSession::class,
-        IncomingSystemMessage.LoadExistingSession.serializer(),
+        IncomingSystemMessage.LoadExistingWorkflow::class,
+        IncomingSystemMessage.LoadExistingWorkflow.serializer(),
       )
       subclass(
         IncomingSystemMessage.CloseSession::class,
@@ -85,27 +85,27 @@ val IncomingMessageSerializer = Json {
     }
     polymorphic(OutgoingSystemMessage::class) {
       subclass(
-        OutgoingSystemMessage.SessionOpen::class,
-        OutgoingSystemMessage.SessionOpen.serializer(),
+        OutgoingSystemMessage.WorkflowOpen::class,
+        OutgoingSystemMessage.WorkflowOpen.serializer(),
       )
       subclass(
-        OutgoingSystemMessage.SessionClosed::class,
-        OutgoingSystemMessage.SessionClosed.serializer(),
+        OutgoingSystemMessage.WorkflowClosed::class,
+        OutgoingSystemMessage.WorkflowClosed.serializer(),
       )
       subclass(
         OutgoingSystemMessage.AgentDeactivated::class,
         OutgoingSystemMessage.AgentDeactivated.serializer(),
       )
     }
-    polymorphic(ChatSessionMessage::class) {
-      subclass(ChatSessionMessage.StreamChunk::class, ChatSessionMessage.StreamChunk.serializer())
+    polymorphic(ChatWorkflowMessage::class) {
+      subclass(ChatWorkflowMessage.StreamChunk::class, ChatWorkflowMessage.StreamChunk.serializer())
       subclass(
-        ChatSessionMessage.StreamComplete::class,
-        ChatSessionMessage.StreamComplete.serializer(),
+        ChatWorkflowMessage.StreamComplete::class,
+        ChatWorkflowMessage.StreamComplete.serializer(),
       )
       subclass(
-        ChatSessionMessage.ChatTitleUpdated::class,
-        ChatSessionMessage.ChatTitleUpdated.serializer(),
+        ChatWorkflowMessage.ChatTitleUpdated::class,
+        ChatWorkflowMessage.ChatTitleUpdated.serializer(),
       )
     }
   }

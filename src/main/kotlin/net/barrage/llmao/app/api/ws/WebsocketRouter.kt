@@ -18,19 +18,19 @@ import java.util.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.session.IncomingMessage
-import net.barrage.llmao.core.session.IncomingMessageSerializer
-import net.barrage.llmao.core.session.OutgoingSystemMessage
-import net.barrage.llmao.core.session.SessionFactory
-import net.barrage.llmao.core.session.chat.LOG
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.IncomingMessage
+import net.barrage.llmao.core.workflow.IncomingMessageSerializer
+import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.core.workflow.WorkflowFactory
+import net.barrage.llmao.core.workflow.chat.LOG
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 
 fun Application.websocketServer(
-  factory: SessionFactory,
+  factory: WorkflowFactory,
   listener: EventListener<StateChangeEvent>,
 ) {
   val server = WebsocketSessionManager(factory, listener)

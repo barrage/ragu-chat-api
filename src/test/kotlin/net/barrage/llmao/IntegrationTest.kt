@@ -19,7 +19,7 @@ import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.core.EventListener
-import net.barrage.llmao.core.session.IncomingMessageSerializer
+import net.barrage.llmao.core.workflow.IncomingMessageSerializer
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -248,6 +248,12 @@ const val COMPLETIONS_COMPLETION_PROMPT = "v1_chat_completions_completion"
 const val COMPLETIONS_STREAM_PROMPT = "v1_chat_completions_stream"
 
 /**
+ * Instruction configured to make wiremock return the default title response. This should be used in
+ * agent instructions as the title instruction
+ */
+const val COMPLETIONS_TITLE_PROMPT = "v1_chat_completions_title"
+
+/**
  * Prompt configured to make wiremock return a stream response with additional whitespace for
  * testing purposes.
  */
@@ -261,7 +267,7 @@ const val COMPLETIONS_STREAM_LONG_PROMPT = "v1_chat_completions_long_stream"
 /** Returned on [COMPLETIONS_COMPLETION_PROMPT]. */
 const val COMPLETIONS_RESPONSE = "v1_chat_completions_completion_response"
 
-/** Wiremock response for a stream response. */
+/** Wiremock response for a title response. */
 const val COMPLETIONS_TITLE_RESPONSE = "v1_chat_completions_title_response"
 
 /** Returned on [COMPLETIONS_STREAM_PROMPT]. */

@@ -26,8 +26,8 @@ import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
-import net.barrage.llmao.core.session.chat.ChatSessionRepository
 import net.barrage.llmao.core.storage.ImageStorage
+import net.barrage.llmao.core.workflow.chat.ChatWorkflowRepository
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.initDatabase
@@ -52,7 +52,7 @@ class ApplicationState(
     val database = initDatabase(config, applicationStopping)
     repository = RepositoryState(database)
     services = ServiceState(providers, repository, listener)
-    adapters = AdapterState(config, database, providers, services)
+    adapters = AdapterState(config, database, providers)
   }
 }
 
@@ -61,19 +61,14 @@ class RepositoryState(database: DSLContext) {
   val session: SessionRepository = SessionRepository(database)
   val agent: AgentRepository = AgentRepository(database)
   val chat: ChatRepository = ChatRepository(database)
-  val chatSession: ChatSessionRepository = ChatSessionRepository(database)
+  val chatSession: ChatWorkflowRepository = ChatWorkflowRepository(database)
 }
 
 /**
  * Keeps the state of optional modules. Modules are configured via the `ktor.features` flags.
  * Whenever a flag is enabled, the corresponding adapter is enabled for use.
  */
-class AdapterState(
-  config: ApplicationConfig,
-  database: DSLContext,
-  providers: ProviderState,
-  services: ServiceState,
-) {
+class AdapterState(config: ApplicationConfig, database: DSLContext, providers: ProviderState) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 
   init {

@@ -2,8 +2,8 @@ package net.barrage.llmao.core.llm
 
 import net.barrage.llmao.app.ServiceState
 import net.barrage.llmao.core.repository.AgentRepository
-import net.barrage.llmao.core.session.Emitter
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.Emitter
 
 internal val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.llm.ToolchainFactory")
@@ -13,7 +13,10 @@ class ToolchainFactory(
   private val agentRepository: AgentRepository,
 ) {
 
-  suspend fun createAgentToolchain(agentId: KUUID, emitter: Emitter<ToolEvent>? = null): Toolchain? {
+  suspend fun createAgentToolchain(
+    agentId: KUUID,
+    emitter: Emitter<ToolEvent>? = null,
+  ): Toolchain? {
     val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
 
     if (agentTools.isEmpty()) {
