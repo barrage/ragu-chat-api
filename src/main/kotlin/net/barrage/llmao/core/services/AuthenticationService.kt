@@ -1,7 +1,8 @@
 package net.barrage.llmao.core.services
 
 import java.util.*
-import net.barrage.llmao.app.auth.AuthenticationProviderFactory
+import net.barrage.llmao.core.ProviderFactory
+import net.barrage.llmao.core.auth.AuthenticationProvider
 import net.barrage.llmao.core.auth.AuthenticationResult
 import net.barrage.llmao.core.auth.LoginPayload
 import net.barrage.llmao.core.models.Session
@@ -14,7 +15,7 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
 class AuthenticationService(
-  private val providers: AuthenticationProviderFactory,
+  private val providers: ProviderFactory<AuthenticationProvider>,
   private val sessionRepo: SessionRepository,
   private val userRepo: UserRepository,
 ) {

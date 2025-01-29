@@ -6,7 +6,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
-/** Initialize Ktor's [HttpClient] with JSON content negotiation. */
+/** Initialize Ktor's [HttpClient] with JSON content negotiation. TODO: Move to app */
 fun httpClient(): HttpClient {
   return HttpClient(Apache) {
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }

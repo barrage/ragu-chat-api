@@ -2,6 +2,15 @@ package net.barrage.llmao.core.models
 
 import kotlinx.serialization.Serializable
 
+const val DEFAULT_TITLE_INSTRUCTION =
+  """
+      |You answer only with short and concise titles that you create based on the inputs you receive.
+      |The inputs will always be in the form of a prompt, followed by a response from an agent.
+      |Use the prompt content and the response content to generate a single sentence that describes the interaction.
+      |For example, given the input \"PROMPT: What is the capital of Croatia?\nAGENT: The capital of Croatia is Zagreb.\"
+      |you will generate the title \"The capital of Croatia\".
+    """
+
 @Serializable
 data class AgentInstructions(
   /**
@@ -17,27 +26,12 @@ data class AgentInstructions(
    */
   val summaryInstruction: String? = null,
 ) {
-  fun formatTitlePrompt(proompt: String, response: String): String {
+  fun titleInstruction(): String {
     if (titleInstruction != null) {
-      return "$titleInstruction\nPrompt: $proompt\nResponse: $response\nTitle:"
+      return titleInstruction
     }
 
-    return """
-       |Create a short title based on the examples below.
-       |The examples below are in english language.
-       |Generate the title as a single statement in english language.
-
-       |Prompt: What is TCP?
-       |Response: Transmission Control Protocol is a protocol used for reliable data transmission over the internet. It is used to ensure that data is not lost or corrupted during transmission.
-       |Title: Explaining TCP
-       |Prompt: I am Bedga
-       |Response: Bedga is a person. Bedga writes code, creates music, and is a great person. Bedga is born in Croatia.
-       |Title: Conversation about Bedga
-       |Prompt: $proompt
-       |Response: $response
-       |Title:
-    """
-      .trimMargin()
+    return DEFAULT_TITLE_INSTRUCTION.trimMargin()
   }
 
   fun formatSummaryPrompt(history: String): String {

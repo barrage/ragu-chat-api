@@ -5,6 +5,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import java.util.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
@@ -27,9 +28,8 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.util.*
 
-class AdminChatSessionControllerTests : IntegrationTest() {
+class AdminChatWorkflowControllerTests : IntegrationTest() {
   private lateinit var user: User
   private lateinit var userAdmin: User
   private lateinit var userSession: Session

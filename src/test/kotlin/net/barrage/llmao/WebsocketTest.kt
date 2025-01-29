@@ -9,9 +9,9 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.session.IncomingSystemMessage
-import net.barrage.llmao.core.session.OutgoingSystemMessage
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.IncomingSystemMessage
+import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import org.junit.jupiter.api.Assertions.assertNotNull
 
 val json = Json { ignoreUnknownKeys = true }
@@ -33,11 +33,11 @@ suspend fun ClientWebSocketSession.sendClientSystem(message: IncomingSystemMessa
 /** Send the `chat_open_new` system message and wait for the chat_open response. */
 suspend fun ClientWebSocketSession.openNewChat(agentId: KUUID): KUUID {
   // Open a chat and confirm it's open
-  sendClientSystem(IncomingSystemMessage.CreateNewSession(agentId))
+  sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agentId))
   val chatOpen = (incoming.receive() as Frame.Text).readText()
-  val sessionOpenMessage = json.decodeFromString<OutgoingSystemMessage.SessionOpen>(chatOpen)
-  assertNotNull(sessionOpenMessage.chatId)
-  return sessionOpenMessage.chatId
+  val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
+  assertNotNull(workflowOpenMessage.id)
+  return workflowOpenMessage.id
 }
 
 /** Send a chat message and wait for the response. */

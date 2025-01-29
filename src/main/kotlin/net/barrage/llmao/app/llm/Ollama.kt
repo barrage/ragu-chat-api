@@ -15,10 +15,9 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.llm.FunctionCall
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.core.llm.MessageChunk
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.types.KOffsetDateTime
@@ -60,7 +59,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
   override suspend fun completionStream(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): Flow<MessageChunk> {
+  ): Flow<ChatMessageChunk> {
     val request =
       ChatRequest(
         config.model,
@@ -98,7 +97,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
         // Chunks come in newline delimited JSONs
         val chunkStream = chunks.split("\n")
 
-        val chunkBuffer = mutableListOf<MessageChunk>()
+        val chunkBuffer = mutableListOf<ChatMessageChunk>()
         var offset = 0
 
         for (chunk in chunkStream) {
@@ -216,8 +215,8 @@ private data class ChatStreamChunk(
   val message: ChatMessage,
   val done: Boolean,
 ) {
-  fun toTokenChunk(): MessageChunk {
-    return MessageChunk(
+  fun toTokenChunk(): ChatMessageChunk {
+    return ChatMessageChunk(
       "ID",
       createdAt.toEpochSecond(),
       message.content,
@@ -248,5 +247,5 @@ private fun OllamaChatMessage.toNativeChatMessage(): ChatMessage {
 @Serializable private data class OllamaToolCall(val name: String, val parameters: String)
 
 private fun OllamaToolCall.toToolCallData(): ToolCallData {
-  return ToolCallData(id = name, function = FunctionCall(name, parameters))
+  return ToolCallData(name = name, arguments = parameters)
 }

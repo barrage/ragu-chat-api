@@ -1,17 +1,56 @@
 package net.barrage.llmao.core.llm
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.Message
 
 @Serializable
-data class MessageChunk(
+data class ChatMessageChunk(
   val id: String? = null,
   val created: Long,
   val content: String? = null,
   val stopReason: FinishReason? = null,
   // val type: String? = null,
-  val toolCalls: List<ToolCallData>? = null,
+  val toolCalls: List<ToolCallChunk>? = null,
 )
+
+/**
+ * Data class representing incoming and outgoing chat messages.
+ *
+ * The `role` and `content` are always present.
+ *
+ * The `toolCalls` are present only if the LLM is configured to use function calling and is only
+ * expected to be present on incoming messages.
+ */
+@Serializable
+data class ChatMessage(
+  val role: String,
+  var content: String?,
+  @SerialName("tool_calls") val toolCalls: List<ToolCallData>? = null,
+  @SerialName("tool_call_id") val toolCallId: String? = null,
+) {
+  companion object {
+    fun fromModel(model: Message): ChatMessage {
+      return ChatMessage(model.senderType, model.content)
+    }
+
+    fun user(content: String): ChatMessage {
+      return ChatMessage("user", content)
+    }
+
+    fun assistant(content: String?, toolCalls: List<ToolCallData>? = null): ChatMessage {
+      return ChatMessage("assistant", content, toolCalls = toolCalls)
+    }
+
+    fun system(content: String): ChatMessage {
+      return ChatMessage("system", content)
+    }
+
+    fun toolResult(content: String, toolCallId: String?): ChatMessage {
+      return ChatMessage("tool", content, toolCallId = toolCallId)
+    }
+  }
+}
 
 @Serializable
 data class ChatCompletion(
@@ -38,39 +77,6 @@ data class ChatChoice(
   /** The reason why OpenAI stopped generating. */
   val finishReason: FinishReason? = null,
 )
-
-/**
- * Data class representing incoming and outgoing chat messages.
- *
- * The `role` and `content` are always present. The `functionCall` and tool calls are present only
- * if the LLM is configured to use function calling and is only expected to be present on incoming
- * messages.
- */
-@Serializable
-data class ChatMessage(
-  val role: String,
-  val content: String,
-  val toolCalls: List<ToolCallData>? = null,
-  val toolCallId: String? = null,
-) {
-  companion object {
-    fun fromModel(model: Message): ChatMessage {
-      return ChatMessage(model.senderType, model.content)
-    }
-
-    fun user(content: String): ChatMessage {
-      return ChatMessage("user", content)
-    }
-
-    fun assistant(content: String): ChatMessage {
-      return ChatMessage("assistant", content)
-    }
-
-    fun system(content: String): ChatMessage {
-      return ChatMessage("system", content)
-    }
-  }
-}
 
 /** Mimics the OpenAI finish reason enum, adding additional application specific stop reasons. */
 @Serializable

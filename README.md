@@ -24,6 +24,7 @@
         - [Changing chats](#changing-chats)
 - [WhatsApp](#whatsapp)
 - [Agent tools](#agent-tools)
+    - [Defining custom tools](#defining-custom-tools)
 
 ## Overview
 
@@ -479,14 +480,22 @@ definitions to determine whether to call the function or not. For example, given
 like today?", the LLM can decide to call the function "getWeather" to get the weather information. You can read more
 about it [here](https://platform.openai.com/docs/guides/gpt/function-calling).
 
+### Predefined tools
+
+Predefined tools are compiled into the application and are available to all agents.
+Tools can be assigned to agents as necessary. All predefined tools are defined in
+the [ToolRegistry.kt](src/main/kotlin/net/barrage/llmao/core/llm/ToolRegistry.kt).
+
+The registry is responsible for providing tool definitions and implementations to the rest of the application.
+Whenever a workflow agent is created, a [Toolchain](src/main/kotlin/net/barrage/llmao/core/llm/Toolchain.kt) is
+constructed based on its configuration.
+
 Every tool must be defined as a [JSON schema](https://json-schema.org/understanding-json-schema/).
-Predefined agents will use predefined tools, such as agents from the agent packs. These tools cannot
-be modified and are fixed to the agent.
+
+### Defining custom tools (TODO)
 
 Most of the flexibility comes from defining custom tools. Custom tools are defined in python.
-These tools are defined globally and are assigned to agents as necessary.
-
-### Defining custom tools
+These tools are defined globally and are also assigned to agents as necessary.
 
 Each custom tool can contain an `imports`, `environment` and `functions` section.
 
@@ -500,7 +509,7 @@ Each of these sections will ultimately end up in a single python script. A `main
 of the script and a separate process will be used run the script. The script will also contain plumbing for unix sockets
 to communicate with the main process.
 
-Since the python process will run in the same container as the main process, it can access the same environment
+Since the python process will run as a child process of the main process, it can access the same environment
 variables and files. The script can import any python libraries, so long as they are installed in the container.
 
 ### Python execution

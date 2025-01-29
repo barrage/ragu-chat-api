@@ -9,7 +9,7 @@ import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
-import net.barrage.llmao.core.session.SessionFactory
+import net.barrage.llmao.core.workflow.WorkflowFactory
 import net.barrage.llmao.plugins.configureCors
 import net.barrage.llmao.plugins.configureErrorHandling
 import net.barrage.llmao.plugins.configureOpenApi
@@ -37,7 +37,7 @@ fun Application.module() {
   extendSession(state.services.auth)
   configureOpenApi()
   websocketServer(
-    SessionFactory(
+    WorkflowFactory(
       state.providers,
       state.services.agent,
       state.repository.chatSession,

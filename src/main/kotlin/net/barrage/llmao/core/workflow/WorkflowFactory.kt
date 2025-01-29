@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.session
+package net.barrage.llmao.core.workflow
 
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatMessage
@@ -6,25 +6,25 @@ import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.models.toSessionAgent
 import net.barrage.llmao.core.services.AgentService
-import net.barrage.llmao.core.session.chat.ChatSession
-import net.barrage.llmao.core.session.chat.ChatSessionAgent
-import net.barrage.llmao.core.session.chat.ChatSessionMessage
-import net.barrage.llmao.core.session.chat.ChatSessionRepository
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.chat.ChatAgent
+import net.barrage.llmao.core.workflow.chat.ChatWorkflow
+import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
+import net.barrage.llmao.core.workflow.chat.ChatWorkflowRepository
 
-class SessionFactory(
+class WorkflowFactory(
   private val providerState: ProviderState,
   private val agentService: AgentService,
-  private val chatSessionRepository: ChatSessionRepository,
+  private val chatWorkflowRepository: ChatWorkflowRepository,
   private val toolchainFactory: ToolchainFactory,
 ) {
 
-  suspend fun newChatSession(
+  suspend fun newChatWorkflow(
     userId: KUUID,
     agentId: KUUID,
-    emitter: Emitter<ChatSessionMessage>,
+    emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
-  ): ChatSession {
+  ): ChatWorkflow {
     val id = KUUID.randomUUID()
     // Throws if the agent does not exist or is inactive
     agentService.getActive(agentId)
@@ -35,27 +35,27 @@ class SessionFactory(
     val sessionAgent = agent.toSessionAgent()
     val toolchain = toolchainFactory.createAgentToolchain(agentId, toolEmitter)
 
-    sessionAgent.toolchain = toolchain
+    sessionAgent.tools = toolchain?.listToolSchemas()
 
-    val chatSessionAgent = ChatSessionAgent(providerState, sessionAgent)
+    val chatAgent = ChatAgent(providerState, sessionAgent)
 
-    return ChatSession(
+    return ChatWorkflow(
       id = id,
       userId = userId,
-      sessionAgent = chatSessionAgent,
+      agent = chatAgent,
       emitter = emitter,
       toolchain = toolchain,
-      repository = chatSessionRepository,
+      repository = chatWorkflowRepository,
     )
   }
 
-  suspend fun fromExistingChat(
+  suspend fun fromExistingChatWorkflow(
     id: KUUID,
-    emitter: Emitter<ChatSessionMessage>,
+    emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
     initialHistorySize: Int,
-  ): ChatSession {
-    val chat = chatSessionRepository.getChatWithMessages(id, initialHistorySize)
+  ): ChatWorkflow {
+    val chat = chatWorkflowRepository.getChatWithMessages(id, initialHistorySize)
 
     agentService.getActive(chat.chat.agentId)
 
@@ -64,22 +64,22 @@ class SessionFactory(
     val sessionAgent = agent.toSessionAgent()
     val toolchain = toolchainFactory.createAgentToolchain(chat.chat.agentId, toolEmitter)
 
-    sessionAgent.toolchain = toolchain
+    sessionAgent.tools = toolchain?.listToolSchemas()
 
-    val chatSessionAgent = ChatSessionAgent(providerState, sessionAgent)
+    val chatAgent = ChatAgent(providerState, sessionAgent)
 
     val history = chat.messages.map(ChatMessage::fromModel)
 
-    return ChatSession(
+    return ChatWorkflow(
       id = chat.chat.id,
       userId = chat.chat.userId,
-      sessionAgent = chatSessionAgent,
+      agent = chatAgent,
       title = chat.chat.title,
       messageReceived = history.isNotEmpty(),
       history = history as MutableList<ChatMessage>,
       emitter = emitter,
       toolchain = toolchain,
-      repository = chatSessionRepository,
+      repository = chatWorkflowRepository,
     )
   }
 }

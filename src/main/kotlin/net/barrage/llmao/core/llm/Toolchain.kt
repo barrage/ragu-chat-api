@@ -1,8 +1,9 @@
 package net.barrage.llmao.core.llm
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.ServiceState
-import net.barrage.llmao.core.session.Emitter
+import net.barrage.llmao.core.workflow.Emitter
 
 /**
  * Container for all available tools an agent can use. Holds all tool definitions and their handlers
@@ -20,17 +21,24 @@ class Toolchain(
 ) {
 
   suspend fun processToolCall(data: ToolCallData): ToolCallResult {
+    LOG.debug("Tool call '{}' - start", data.name)
+
     emitter?.emit(ToolEvent.ToolCall(data))
 
-    // TODO: Use already complete input for tool calling, ToolCallData represents a chunk
-    val handler = handlers[data.function?.name]
+    if (data.id == null) {
+      LOG.debug("Tool call '{}' - ID is null, result will not be correlated with call", data.name)
+    }
+
+    val handler = handlers[data.name]
     val result =
-      handler?.invoke(services, data)
-        ?: throw IllegalStateException("No handler for tool call '${data.function!!.name}'")
+      handler?.invoke(services, data.arguments)
+        ?: throw IllegalStateException("No handler for tool call '${data.name}'")
 
-    emitter?.emit(ToolEvent.ToolResult(result))
+    val toolResult = ToolCallResult(data.id, result)
 
-    return result
+    emitter?.emit(ToolEvent.ToolResult(toolResult))
+
+    return toolResult
   }
 
   fun listToolSchemas(): List<ToolDefinition> {
@@ -56,21 +64,64 @@ class ToolchainBuilder {
 }
 
 /** Used to notify clients of tool calls and results. */
+@Serializable
 sealed class ToolEvent {
   /** Sent whenever an agent calls a tool. */
-  data class ToolCall(val data: ToolCallData) : ToolEvent()
+  @Serializable @SerialName("tool_call") data class ToolCall(val data: ToolCallData) : ToolEvent()
 
   /** Sent whenever an agent receives a tool result. */
+  @Serializable
+  @SerialName("tool_result")
   data class ToolResult(val result: ToolCallResult) : ToolEvent()
 }
 
+/**
+ * Represents a finalized tool call. This can be obtained directly from LLM responses if not
+ * streaming. If streaming, this is obtained by collecting the tool call chunks.
+ */
+@Serializable
+data class ToolCallData(val id: String? = null, val name: String, var arguments: String)
+
+@Serializable
+data class ToolCallMessage(
+  val id: String? = null,
+  val type: String = "function",
+  val function: FunctionCall,
+)
+
 /** Used as a native application model for mapping tool call streams. */
-@Serializable data class ToolCallData(val id: String?, val function: FunctionCall?)
+@Serializable
+data class ToolCallChunk(
+  /** The index of the tool call, used to differentiate multiple tool calls. */
+  val index: Int,
+  /**
+   * The tool call ID that needs to be sent back to the LLM to associate the tool response to the
+   * call.
+   */
+  val id: String?,
+
+  /**
+   * Contains the function name and arguments.
+   *
+   * If streaming, the name is usually in the first tool call chunk.
+   *
+   * Argument chunks are then subsequently sent via `argumentsOrNull`. The arguments must be
+   * collected into a JSON object.
+   */
+  val function: FunctionCall?,
+)
 
 /** Used as a native application model for mapping function call arguments. */
 @Serializable data class FunctionCall(val name: String?, val arguments: String?)
 
-@Serializable data class ToolCallResult(val id: String, val result: String)
+@Serializable
+data class ToolCallResult(
+  /** Tool correlation ID. Used on some LLMs to associate the tool result to the tool call. */
+  val id: String?,
+
+  /** The result of the tool call. */
+  val content: String,
+)
 
 @Serializable data class ToolDefinition(val type: String, val function: ToolFunctionDefinition)
 

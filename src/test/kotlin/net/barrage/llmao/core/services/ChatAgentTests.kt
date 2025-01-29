@@ -6,6 +6,7 @@ import net.barrage.llmao.COMPLETIONS_COMPLETION_PROMPT
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
+import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.llm.ChatMessage
@@ -13,16 +14,26 @@ import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.DEFAULT_TITLE_INSTRUCTION
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.toSessionAgent
-import net.barrage.llmao.core.session.chat.ChatSessionAgent
+<<<<<<<< HEAD:src/test/kotlin/net/barrage/llmao/core/services/ChatWorkflowAgentTests.kt
+import net.barrage.llmao.core.workflow.chat.ChatWorkflowAgent
+========
+import net.barrage.llmao.core.workflow.chat.ChatAgent
+>>>>>>>> 78f03af (Add recursive stream calls for tools and fix title generation):src/test/kotlin/net/barrage/llmao/core/services/ChatAgentTests.kt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class ChatSessionAgentTests : IntegrationTest(useWiremock = true) {
-  private lateinit var service: ChatSessionAgent
+<<<<<<<< HEAD:src/test/kotlin/net/barrage/llmao/core/services/ChatWorkflowAgentTests.kt
+class ChatWorkflowAgentTests : IntegrationTest(useWiremock = true) {
+  private lateinit var workflow: ChatWorkflowAgent
+========
+class ChatAgentTests : IntegrationTest(useWiremock = true) {
+  private lateinit var workflow: ChatAgent
+>>>>>>>> 78f03af (Add recursive stream calls for tools and fix title generation):src/test/kotlin/net/barrage/llmao/core/services/ChatAgentTests.kt
 
   private lateinit var admin: User
   private lateinit var agent: Agent
@@ -39,28 +50,32 @@ class ChatSessionAgentTests : IntegrationTest(useWiremock = true) {
           agent.id,
           llmProvider = "openai",
           model = "gpt-4o",
-          titleInstruction = "Custom title instruction",
+          titleInstruction = COMPLETIONS_TITLE_PROMPT,
           summaryInstruction = "Custom summary instruction",
         )
       chat = postgres.testChat(admin.id, agent.id, null)
       val sessionAgent =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
           .toSessionAgent()
-      service = ChatSessionAgent(app.providers, sessionAgent)
+<<<<<<<< HEAD:src/test/kotlin/net/barrage/llmao/core/services/ChatWorkflowAgentTests.kt
+      workflow = ChatWorkflowAgent(app.providers, sessionAgent)
+========
+      workflow = ChatAgent(app.providers, sessionAgent)
+>>>>>>>> 78f03af (Add recursive stream calls for tools and fix title generation):src/test/kotlin/net/barrage/llmao/core/services/ChatAgentTests.kt
     }
   }
 
   @Test
   fun successfullyGeneratesChatTitle() = test {
     // Title responses are always the same regardless of the prompt
-    val response = service.createTitle("Test prompt - title", "Test response - title")
+    val response = workflow.createTitle("Test prompt - title", "Test response - title")
     assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
   }
 
   @Test
   fun successfullyStreamsChat() = test {
     // To trigger streams, the following prompt has to be somewhere the message
-    val stream = service.chatCompletionStreamWithRag(COMPLETIONS_STREAM_PROMPT, listOf())
+    val stream = workflow.chatCompletionStream(listOf(ChatMessage.user(COMPLETIONS_STREAM_PROMPT)))
     val response = stream.toList().joinToString("") { chunk -> chunk.content ?: "" }
     assertEquals(COMPLETIONS_STREAM_RESPONSE, response)
   }
@@ -68,28 +83,9 @@ class ChatSessionAgentTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyCompletesChat() = test {
     // To trigger direct responses, the following prompt has to be somewhere the message
-    val response = service.chatCompletionWithRag(COMPLETIONS_COMPLETION_PROMPT, listOf())
+    val response =
+      workflow.chatCompletionWithRag(listOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT)))
     assertEquals(COMPLETIONS_RESPONSE, response.content)
-  }
-
-  @Test
-  fun prepareChatPromptWithRagCorrectlyIncorporatesAgentInstructions() = test {
-    val prompt = "What is the capital of Croatia?"
-    val history = listOf<ChatMessage>()
-
-    val preparedPrompt = service.prepareChatPromptWithRag(prompt, history)
-
-    assertTrue(preparedPrompt[1].content.contains("What is the capital of Croatia?"))
-  }
-
-  @Test
-  fun prepareChatPromptWithRagUsesDefaultAgentInstructions() = test {
-    val prompt = "What is the capital of Croatia?"
-    val history = listOf<ChatMessage>()
-
-    val preparedPrompt = service.prepareChatPromptWithRag(prompt, history)
-
-    assertTrue(preparedPrompt[1].content.contains("What is the capital of Croatia?"))
   }
 
   @Test
@@ -136,34 +132,17 @@ class ChatSessionAgentTests : IntegrationTest(useWiremock = true) {
   }
 
   @Test
-  fun createTitleCorrectlyIncorporatesAgentInstructions() = test {
-    val prompt = "What are the best places to visit in Paris?"
-
-    val response =
-      "The Eiffel Tower, the Louvre, and the Notre-Dame Cathedral are some of the best places to visit in Paris."
-
-    val titlePrompt = agentConfiguration.agentInstructions.formatTitlePrompt(prompt, response)
-
-    assertTrue(titlePrompt.contains("Custom title instruction"))
-    assertTrue(titlePrompt.contains(prompt))
-    assertTrue(titlePrompt.contains(response))
+  fun createTitleCustom() = test {
+    val titleInstruction = agentConfiguration.agentInstructions.titleInstruction()
+    assertEquals(COMPLETIONS_TITLE_PROMPT, titleInstruction)
   }
 
   @Test
-  fun createTitleUsesDefaultAgentInstructions() = test {
+  fun createTitleDefault() = test {
     val defaultAgentConfiguration =
       postgres.testAgentConfiguration(agent.id, llmProvider = "openai", model = "gpt-4o")
 
-    val prompt = "What are the best places to visit in Paris?"
-
-    val response =
-      "The Eiffel Tower, the Louvre, and the Notre-Dame Cathedral are some of the best places to visit in Paris."
-
-    val titlePrompt =
-      defaultAgentConfiguration.agentInstructions.formatTitlePrompt(prompt, response)
-
-    assertTrue(titlePrompt.contains("Create a short title based on the examples below"))
-    assertTrue(titlePrompt.contains(prompt))
-    assertTrue(titlePrompt.contains(response))
+    val titleInstruction = defaultAgentConfiguration.agentInstructions.titleInstruction()
+    assertEquals(DEFAULT_TITLE_INSTRUCTION.trimMargin(), titleInstruction)
   }
 }
