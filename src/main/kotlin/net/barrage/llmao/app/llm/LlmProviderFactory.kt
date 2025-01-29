@@ -8,28 +8,33 @@ import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
 
 class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<ConversationLlm>() {
-  private val openai: OpenAI
-  private val azure: AzureAI
-  private val ollama: Ollama
+  private val providers = mutableMapOf<String, ConversationLlm>()
 
   init {
-    openai = initOpenAi(config)
-    azure = initAzure(config)
-    ollama = initOllama(config)
-  }
-
-  override fun getProvider(providerId: String): ConversationLlm {
-    return when (providerId) {
-      openai.id() -> openai
-      azure.id() -> azure
-      ollama.id() -> ollama
-      else ->
-        throw AppError.api(ErrorReason.InvalidProvider, "Unsupported LLM provider '$providerId'")
+    config.tryGetString("ktor.features.llm.openai")?.toBoolean()?.let { enabled ->
+      if (enabled) {
+        providers["openai"] = initOpenAi(config)
+      }
+    }
+    config.tryGetString("ktor.features.llm.azure")?.toBoolean()?.let { enabled ->
+      if (enabled) {
+        providers["azure"] = initAzure(config)
+      }
+    }
+    config.tryGetString("ktor.features.llm.ollama")?.toBoolean()?.let { enabled ->
+      if (enabled) {
+        providers["ollama"] = initOllama(config)
+      }
     }
   }
 
+  override fun getProvider(providerId: String): ConversationLlm {
+    return providers[providerId]
+      ?: throw AppError.api(ErrorReason.InvalidProvider, "Unsupported LLM provider '$providerId'")
+  }
+
   override fun listProviders(): List<String> {
-    return listOf(openai.id(), azure.id(), ollama.id())
+    return providers.keys.toList()
   }
 
   private fun initOpenAi(config: ApplicationConfig): OpenAI {
