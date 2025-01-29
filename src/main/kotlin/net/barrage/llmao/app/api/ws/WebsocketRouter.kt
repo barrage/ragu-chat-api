@@ -86,8 +86,10 @@ fun Application.websocketServer(
         return@webSocket
       }
 
+      val session = WebsocketSession(userId, token)
+
       val emitter = WebsocketEmitter.new<OutgoingSystemMessage>(this)
-      server.registerSystemSession(userId, token, emitter)
+      server.registerSystemEmitter(session, emitter)
 
       LOG.debug("Websocket connection opened for '{}' with token '{}'", userId, token)
 
@@ -110,7 +112,7 @@ fun Application.websocketServer(
               }
 
             try {
-              server.handleMessage(userId, token, message, this)
+              server.handleMessage(session, message, this)
             } catch (error: AppError) {
               emitter.emitError(error)
             }
@@ -128,7 +130,8 @@ fun Application.websocketServer(
             formatter.format(Instant.now()),
             Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
           )
-          server.removeAllSessions(userId, token)
+          server.removeWorkflow(session)
+          server.removeSystemEmitter(session)
           return@webSocket
         }
 
@@ -143,7 +146,8 @@ fun Application.websocketServer(
         formatter.format(Instant.now()),
         Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
       )
-      server.removeAllSessions(userId, token)
+      server.removeWorkflow(session)
+      server.removeSystemEmitter(session)
     }
   }
 }

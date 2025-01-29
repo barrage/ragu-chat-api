@@ -79,7 +79,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
           call.respond(HttpStatusCode.OK, tools)
         }
 
-        post(updateAgentTools()) {
+        put(updateAgentTools()) {
           val agentId = call.pathUuid("id")
           val updateTools = call.receive<UpdateTools>()
           agentService.updateAgentTools(agentId, updateTools)
@@ -210,22 +210,27 @@ private fun getAgentTools(): OpenApiRoute.() -> Unit = {
 
 private fun updateAgentTools(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")
-  description = "Add a tool to an agent"
+  description = "Update an agent's tools"
   request {
     pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    queryParameter<String>("toolName") {
-      description = "Tool name"
-      example("example") { value = "get_birthday" }
+    body<UpdateTools> {
+      description = "The updated tools for the agent"
+      required = true
     }
   }
   response {
-    HttpStatusCode.OK to { description = "Tool added successfully" }
+    HttpStatusCode.OK to { description = "Tools updated successfully" }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid input or agent ID"
+        body<List<AppError>> {}
+      }
     HttpStatusCode.InternalServerError to
       {
-        description = "Internal server error occurred while adding tool"
+        description = "Internal server error occurred while updating tools"
         body<List<AppError>> {}
       }
   }

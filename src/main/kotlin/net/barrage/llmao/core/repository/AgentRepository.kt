@@ -37,9 +37,9 @@ import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
-import org.jooq.Condition
 import net.barrage.llmao.tables.references.AGENT_TOOLS
 import net.barrage.llmao.tables.references.AGENT_TOOL_CALLS
+import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.SortField
 import org.jooq.exception.DataAccessException

@@ -86,7 +86,6 @@ class ChatWorkflow(
         val response = StringBuilder()
         var finishReason = FinishReason.Stop
 
-        println("HISTORY PRE: $history")
         try {
           // Copy the history so we can modify it without affecting the original
           executeStreamRecursive(input, response)
@@ -113,8 +112,6 @@ class ChatWorkflow(
             if (response.isNotBlank()) {
               processResponse(prompt = message, response = response.toString())
             }
-
-            println("HISTORY POST: $history")
 
             LOG.debug("{} - emitting stream complete, finish reason: {}", id, finishReason.value)
             val emitPayload = ChatWorkflowMessage.StreamComplete(id, reason = finishReason)

@@ -7,8 +7,8 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
 
-class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<ConversationLlm>() {
-  private val providers = mutableMapOf<String, ConversationLlm>()
+class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<LlmProvider>() {
+  private val providers = mutableMapOf<String, LlmProvider>()
 
   init {
     config.tryGetString("ktor.features.llm.openai")?.toBoolean()?.let { enabled ->
@@ -28,7 +28,7 @@ class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<Conversati
     }
   }
 
-  override fun getProvider(providerId: String): ConversationLlm {
+  override fun getProvider(providerId: String): LlmProvider {
     return providers[providerId]
       ?: throw AppError.api(ErrorReason.InvalidProvider, "Unsupported LLM provider '$providerId'")
   }
