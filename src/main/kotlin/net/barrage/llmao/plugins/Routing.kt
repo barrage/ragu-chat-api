@@ -23,6 +23,7 @@ import net.barrage.llmao.app.api.http.controllers.agentsRoutes
 import net.barrage.llmao.app.api.http.controllers.authRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
 import net.barrage.llmao.app.api.http.controllers.devController
+import net.barrage.llmao.app.api.http.controllers.imageRoutes
 import net.barrage.llmao.app.api.http.controllers.thirdPartyRoutes
 import net.barrage.llmao.app.api.http.controllers.userRoutes
 import net.barrage.llmao.core.types.KUUID
@@ -60,6 +61,7 @@ fun Application.configureRouting(state: ApplicationState) {
       chatsRoutes(state.services.chat)
     }
 
+    imageRoutes(state.providers.imageStorage)
     // WhatsApp API routes
     state.adapters.runIfEnabled<WhatsAppAdapter, Unit> { whatsAppAdapter ->
       whatsAppHookRoutes(whatsAppAdapter)

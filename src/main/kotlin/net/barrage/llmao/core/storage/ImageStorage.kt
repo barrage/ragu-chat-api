@@ -1,21 +1,17 @@
 package net.barrage.llmao.core.storage
 
 import net.barrage.llmao.core.models.Image
-import net.barrage.llmao.core.types.KUUID
 
 interface ImageStorage {
   /** Store the given bytes at the given path. */
-  fun store(id: KUUID, imageFormat: String, bytes: ByteArray): Image
+  fun store(imageName: String, bytes: ByteArray): String
 
   /** Retrieve the bytes at the given path. */
-  fun retrieve(id: KUUID): Image?
+  fun retrieve(imageName: String): Image?
 
-  /** Delete the file for given ID. */
-  fun delete(id: KUUID)
+  /** Delete the file for given name. */
+  fun delete(name: String)
 
   /** Check if the given path exists. */
   fun exists(path: String): Boolean
-
-  /** Format the path for the given ID. */
-  fun formatPath(id: KUUID): String?
 }

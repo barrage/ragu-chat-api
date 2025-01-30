@@ -10,9 +10,9 @@ import io.minio.RemoveObjectArgs
 import io.minio.StatObjectArgs
 import io.minio.errors.ErrorResponseException
 import io.minio.errors.MinioException
+import net.barrage.llmao.core.BUCKET_AVATARS_PATH
 import net.barrage.llmao.core.models.Image
 import net.barrage.llmao.core.storage.ImageStorage
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.string
 
@@ -39,10 +39,8 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
     }
   }
 
-  override fun store(id: KUUID, imageFormat: String, bytes: ByteArray): Image {
-    delete(id)
-
-    val path = "avatars/$id.$imageFormat"
+  override fun store(imageName: String, bytes: ByteArray): String {
+    val path = "$BUCKET_AVATARS_PATH/$imageName"
 
     try {
       LOG.debug("Uploading file to Minio")
@@ -58,28 +56,30 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
       throw AppError.internal("Failed to upload file")
     }
 
-    val contentType =
-      when (imageFormat) {
-        "jpg" -> "image/jpeg"
-        else -> "image/png"
-      }
-
-    return Image(contentType, bytes)
+    return imageName
   }
 
-  override fun retrieve(id: KUUID): Image? {
-    val path = formatPath(id) ?: return null
+  override fun retrieve(imageName: String): Image? {
+    val nameWithPath = "$BUCKET_AVATARS_PATH/$imageName"
+
+    if (!exists(nameWithPath)) {
+      LOG.debug("File does not exist in Minio: $nameWithPath")
+      return null
+    }
+
     val contentType =
-      when (path) {
-        "avatars/$id.jpg" -> "image/jpeg"
-        "avatars/$id.png" -> "image/png"
+      when (imageName.substringAfterLast('.', "").lowercase()) {
+        "jpg" -> "image/jpeg"
+        "png" -> "image/png"
         else -> return null
       }
 
     try {
       LOG.debug("Downloading file from Minio")
       val bytes =
-        client.getObject(GetObjectArgs.builder().bucket(bucket).`object`(path).build()).readBytes()
+        client
+          .getObject(GetObjectArgs.builder().bucket(bucket).`object`(nameWithPath).build())
+          .readBytes()
 
       return Image(contentType, bytes)
     } catch (e: MinioException) {
@@ -88,8 +88,9 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
     }
   }
 
-  override fun delete(id: KUUID) {
-    val path = formatPath(id) ?: return
+  override fun delete(name: String) {
+    val path = "$BUCKET_AVATARS_PATH/$name"
+
     try {
       LOG.debug("Deleting file from Minio")
       client.removeObject(RemoveObjectArgs.builder().bucket(bucket).`object`(path).build())
@@ -116,16 +117,6 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
     } catch (e: MinioException) {
       LOG.error("Failed to check object", e)
       throw AppError.internal("Failed to check object")
-    }
-  }
-
-  override fun formatPath(id: KUUID): String? {
-    return if (exists("avatars/$id.jpg")) {
-      "avatars/$id.jpg"
-    } else if (exists("avatars/$id.png")) {
-      "avatars/$id.png"
-    } else {
-      null
     }
   }
 }

@@ -2,10 +2,10 @@ package net.barrage.llmao.core.services
 
 import io.ktor.util.*
 import io.ktor.utils.io.*
+import java.util.*
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.CsvImportedUser
-import net.barrage.llmao.core.models.Image
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
@@ -28,23 +28,13 @@ class UserService(
   suspend fun getAll(
     pagination: PaginationSort,
     filters: SearchFiltersAdminUsers,
-    withAvatar: Boolean = false,
   ): CountedList<User> {
-    return usersRepository.getAll(pagination, filters).apply {
-      items.forEach {
-        if (withAvatar) {
-          it.avatar = avatarStorage.retrieve(it.id)
-        }
-      }
-    }
+    return usersRepository.getAll(pagination, filters)
   }
 
-  suspend fun get(id: KUUID, withAvatar: Boolean = false): User {
-    return usersRepository.get(id)?.apply {
-      if (withAvatar) {
-        avatar = avatarStorage.retrieve(id)
-      }
-    } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+  suspend fun get(id: KUUID): User {
+    return usersRepository.get(id)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
   }
 
   suspend fun create(user: CreateUser): User {
@@ -100,16 +90,22 @@ class UserService(
       throw AppError.api(ErrorReason.CannotDeleteSelf, "Cannot delete self")
     }
 
+    val user =
+      usersRepository.get(id)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+
     if (usersRepository.delete(id)) {
       val activeSessions = sessionsRepository.getActiveByUserId(id)
       activeSessions.forEach { session ->
         session?.let { sessionsRepository.expire(session.sessionId) }
       }
+
+      if (user.avatar != null) {
+        avatarStorage.delete(user.avatar)
+      }
     } else {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
     }
-
-    avatarStorage.delete(id)
   }
 
   suspend fun importUsersCsv(csv: ByteReadChannel): CsvImportUsersResult {
@@ -135,20 +131,27 @@ class UserService(
       usersRepository.get(id)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
 
-    user.avatar = avatarStorage.store(id, fileExtension, avatar.toByteArray())
+    val imageName = UUID.randomUUID().toString() + "." + fileExtension
 
-    return user
+    avatarStorage.store(imageName, avatar.toByteArray())
+
+    if (user.avatar != null) {
+      avatarStorage.delete(user.avatar)
+    }
+
+    return usersRepository.updateAvatar(id, imageName)
   }
 
   suspend fun deleteUserAvatar(id: KUUID) {
-    usersRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
+    val user =
+      usersRepository.get(id)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
 
-    avatarStorage.delete(id)
-  }
+    if (user.avatar == null) {
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "User avatar not found")
+    }
 
-  suspend fun downloadUserAvatar(id: KUUID): Image? {
-    usersRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
-
-    return avatarStorage.retrieve(id)
+    avatarStorage.delete(user.avatar)
+    usersRepository.updateAvatar(id, null)
   }
 }

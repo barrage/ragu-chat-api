@@ -5,7 +5,6 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentInstructions
-import net.barrage.llmao.core.models.Image
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
@@ -47,10 +46,10 @@ data class WhatsAppAgent(
   val temperature: Double,
   val language: String,
   val active: Boolean,
+  val avatar: String? = null,
   val agentInstructions: AgentInstructions,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
-  var avatar: Image? = null,
 )
 
 @Serializable
@@ -98,7 +97,7 @@ data class WhatsAppChatWithUserAndMessages(
 data class WhatsAppChatWithUserName(
   val chat: WhatsAppChat,
   val fullName: String,
-  var avatar: Image? = null,
+  val avatar: String? = null,
 )
 
 @Serializable data class WhatsAppAgentCurrent(val id: KUUID?, val active: Boolean)
@@ -143,6 +142,7 @@ fun WhatsAppAgentsRecord.toWhatsAppAgent() =
     temperature = this.temperature!!,
     language = this.language!!,
     active = this.active!!,
+    avatar = this.avatar,
     agentInstructions = AgentInstructions(summaryInstruction = this.summaryInstruction),
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,

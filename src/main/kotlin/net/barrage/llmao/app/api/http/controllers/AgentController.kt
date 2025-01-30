@@ -15,21 +15,18 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
-import net.barrage.llmao.plugins.queryParam
 
 fun Route.agentsRoutes(agentService: AgentService) {
   route("/agents") {
     get(getAllAgents()) {
       val pagination = call.query(PaginationSort::class)
-      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-      val agents = agentService.getAll(pagination, showDeactivated = false, withAvatar)
+      val agents = agentService.getAll(pagination, showDeactivated = false)
       call.respond(HttpStatusCode.OK, agents)
     }
 
     get("/{id}", getAgent()) {
       val agentId = call.pathUuid("id")
-      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-      val agent = agentService.getAgent(agentId, withAvatar)
+      val agent = agentService.getAgent(agentId)
       call.respond(HttpStatusCode.OK, agent)
     }
   }
@@ -39,14 +36,7 @@ fun Route.agentsRoutes(agentService: AgentService) {
 private fun getAllAgents(): OpenApiRoute.() -> Unit = {
   tags("agents")
   description = "Retrieve list of all agents"
-  request {
-    queryPaginationSort()
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
-    }
-  }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {
@@ -68,11 +58,6 @@ private fun getAgent(): OpenApiRoute.() -> Unit = {
     pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
     }
   }
   response {

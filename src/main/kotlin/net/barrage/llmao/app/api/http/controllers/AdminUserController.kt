@@ -25,7 +25,6 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
-import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 import net.barrage.llmao.string
 
@@ -34,8 +33,7 @@ fun Route.adminUserRoutes(userService: UserService) {
     get(adminGetAllUsers()) {
       val pagination = call.query(PaginationSort::class)
       val filters = call.query(SearchFiltersAdminUsersQuery::class).toSearchFiltersAdminUsers()
-      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-      val users = userService.getAll(pagination, filters, withAvatar)
+      val users = userService.getAll(pagination, filters)
       call.respond(HttpStatusCode.OK, users)
     }
 
@@ -73,8 +71,7 @@ fun Route.adminUserRoutes(userService: UserService) {
     route("/{id}") {
       get(adminGetUser()) {
         val userId = call.pathUuid("id")
-        val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-        val user = userService.get(userId, withAvatar)
+        val user = userService.get(userId)
         call.respond(HttpStatusCode.OK, user)
       }
 
@@ -143,11 +140,6 @@ private fun adminGetAllUsers(): OpenApiRoute.() -> Unit = {
   request {
     queryPaginationSort()
     queryListUsersFilters()
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
-    }
   }
   response {
     HttpStatusCode.OK to
@@ -170,11 +162,6 @@ private fun adminGetUser(): OpenApiRoute.() -> Unit = {
     pathParameter<KUUID>("id") {
       description = "User ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
     }
   }
   response {

@@ -166,6 +166,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.TEMPERATURE,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
+          WHATS_APP_AGENTS.AVATAR,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENTS.CREATED_AT,
           WHATS_APP_AGENTS.UPDATED_AT,
@@ -194,6 +195,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.TEMPERATURE,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
+          WHATS_APP_AGENTS.AVATAR,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENTS.CREATED_AT,
           WHATS_APP_AGENTS.UPDATED_AT,
@@ -241,6 +243,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_AGENTS.TEMPERATURE,
           WHATS_APP_AGENTS.LANGUAGE,
           WHATS_APP_AGENTS.ACTIVE,
+          WHATS_APP_AGENTS.AVATAR,
           WHATS_APP_AGENTS.SUMMARY_INSTRUCTION,
           WHATS_APP_AGENTS.CREATED_AT,
           WHATS_APP_AGENTS.UPDATED_AT,
@@ -499,6 +502,16 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
     dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(agentId)).awaitSingle()
   }
 
+  suspend fun updateAgentAvatar(id: KUUID, avatar: String? = null): WhatsAppAgent {
+    return dslContext
+      .update(WHATS_APP_AGENTS)
+      .set(WHATS_APP_AGENTS.AVATAR, avatar)
+      .where(WHATS_APP_AGENTS.ID.eq(id))
+      .returning()
+      .awaitSingle()
+      ?.toWhatsAppAgent() ?: throw AppError.internal("Failed to update WhatsApp agent avatar")
+  }
+
   suspend fun deleteAllCollections(agentId: KUUID) {
     val deleted =
       dslContext
@@ -523,6 +536,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           WHATS_APP_CHATS.CREATED_AT,
           WHATS_APP_CHATS.UPDATED_AT,
           USERS.FULL_NAME,
+          USERS.AVATAR,
         )
         .from(WHATS_APP_CHATS)
         .leftJoin(USERS)
@@ -579,6 +593,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
           USERS.LAST_NAME,
           USERS.ACTIVE,
           USERS.ROLE,
+          USERS.AVATAR,
           USERS.CREATED_AT,
           USERS.UPDATED_AT,
         )
@@ -720,5 +735,6 @@ private fun Record.toWhatsAppChatWithUserName(): WhatsAppChatWithUserName {
       updatedAt = this[WHATS_APP_CHATS.UPDATED_AT] as KOffsetDateTime,
     ),
     fullName = this[USERS.FULL_NAME]!!,
+    avatar = this[USERS.AVATAR],
   )
 }

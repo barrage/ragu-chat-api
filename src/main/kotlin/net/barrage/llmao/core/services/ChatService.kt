@@ -39,11 +39,7 @@ class ChatService(
     return chatRepository.getAll(pagination, userId)
   }
 
-  suspend fun getChatWithAgent(
-    id: KUUID,
-    userId: KUUID,
-    withAvatar: Boolean = false,
-  ): ChatWithAgent {
+  suspend fun getChatWithAgent(id: KUUID, userId: KUUID): ChatWithAgent {
     val chat =
       chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
@@ -52,26 +48,16 @@ class ChatService(
     }
 
     val agent = agentRepository.getAgent(chat.agentId)
-    if (withAvatar) {
-      agent.avatar = avatarStorage.retrieve(agent.id)
-    }
 
     return ChatWithAgent(chat, agent)
   }
 
-  suspend fun getChatWithUserAndAgent(
-    id: KUUID,
-    withAvatar: Boolean = false,
-  ): ChatWithUserAndAgent {
+  suspend fun getChatWithUserAndAgent(id: KUUID): ChatWithUserAndAgent {
     val chat =
       chatRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     val agent = agentRepository.getAgent(chat.agentId)
     val user = userRepository.get(chat.userId)!!
-    if (withAvatar) {
-      user.avatar = avatarStorage.retrieve(user.id)
-      agent.avatar = avatarStorage.retrieve(agent.id)
-    }
 
     return ChatWithUserAndAgent(chat, user, agent)
   }
