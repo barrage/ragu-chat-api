@@ -124,51 +124,6 @@ class WhatsAppAdapter(
       ?: throw AppError.api(ErrorReason.Internal, "Something went wrong while creating agent")
   }
 
-  suspend fun getAllChats(
-    pagination: PaginationSort,
-    withAvatar: Boolean = false,
-  ): CountedList<WhatsAppChatWithUserName> {
-    return repository.getAllChats(pagination).apply {
-      if (withAvatar) {
-        items.forEach { it.avatar = avatarStorage.retrieve(it.chat.userId) }
-      }
-    }
-  }
-
-  suspend fun getChatByUserId(userId: KUUID): WhatsAppChatWithUserAndMessages {
-    val chat =
-      repository.getChatByUserId(userId)
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp chat not found")
-
-    return getChatWithMessages(chat.id)
-  }
-
-  suspend fun getChatWithMessages(
-    id: KUUID,
-    withAvatar: Boolean = false,
-  ): WhatsAppChatWithUserAndMessages {
-    return repository.getChatWithMessages(id).apply {
-      if (withAvatar) {
-        user.avatar = avatarStorage.retrieve(user.id)
-      }
-    }
-  }
-
-  suspend fun updateCollections(
-    agentId: KUUID,
-    update: UpdateCollections,
-  ): UpdateCollectionsResult {
-    val (additions, failures) = processAdditions(providers, update)
-
-    repository.updateCollections(agentId, additions, update.remove)
-
-    return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
-  }
-
-  suspend fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
-    repository.removeCollectionFromAllAgents(collectionName, provider)
-  }
-
   suspend fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgent {
     providers.validateSupportedConfigurationParams(
       llmProvider = update.configuration?.llmProvider,
@@ -185,9 +140,71 @@ class WhatsAppAdapter(
       throw AppError.api(ErrorReason.InvalidOperation, "Cannot delete active agent")
     }
 
-    avatarStorage.delete(agentId)
+    if (agent.agent.avatar != null) {
+      avatarStorage.delete(agent.agent.avatar)
+    }
 
     repository.deleteAgent(agentId)
+  }
+
+  suspend fun uploadAgentAvatar(
+    id: KUUID,
+    fileExtension: String,
+    avatar: ByteReadChannel,
+  ): WhatsAppAgent {
+    val agent = repository.getAgent(id)
+
+    val imageName = java.util.UUID.randomUUID().toString() + "." + fileExtension
+
+    avatarStorage.store(imageName, avatar.toByteArray())
+
+    if (agent.agent.avatar != null) {
+      avatarStorage.delete(agent.agent.avatar)
+    }
+
+    return repository.updateAgentAvatar(id, imageName)
+  }
+
+  suspend fun deleteAgentAvatar(id: KUUID): WhatsAppAgent {
+    val agent = repository.getAgent(id)
+
+    if (agent.agent.avatar == null) {
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent avatar not found")
+    }
+
+    avatarStorage.delete(agent.agent.avatar)
+    return repository.updateAgentAvatar(id, null)
+  }
+
+  suspend fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
+    return repository.getAllChats(pagination)
+  }
+
+  suspend fun getChatByUserId(userId: KUUID): WhatsAppChatWithUserAndMessages {
+    val chat =
+      repository.getChatByUserId(userId)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp chat not found")
+
+    return getChatWithMessages(chat.id)
+  }
+
+  suspend fun getChatWithMessages(id: KUUID): WhatsAppChatWithUserAndMessages {
+    return repository.getChatWithMessages(id)
+  }
+
+  suspend fun updateCollections(
+    agentId: KUUID,
+    update: UpdateCollections,
+  ): UpdateCollectionsResult {
+    val (additions, failures) = processAdditions(providers, update)
+
+    repository.updateCollections(agentId, additions, update.remove)
+
+    return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
+  }
+
+  suspend fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
+    repository.removeCollectionFromAllAgents(collectionName, provider)
   }
 
   suspend fun handleIncomingMessage(input: InfobipResponseDTO) {

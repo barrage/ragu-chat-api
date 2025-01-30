@@ -18,10 +18,10 @@ data class User(
   @NotBlank val lastName: String?,
   val active: Boolean,
   val role: Role,
+  val avatar: String? = null,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
   val deletedAt: KOffsetDateTime? = null,
-  var avatar: Image? = null,
 )
 
 fun UsersRecord.toUser() =
@@ -33,6 +33,7 @@ fun UsersRecord.toUser() =
     lastName = this.lastName,
     role = Role.valueOf(this.role),
     active = this.active!!,
+    avatar = this.avatar,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
     deletedAt = this.deletedAt,

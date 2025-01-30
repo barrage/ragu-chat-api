@@ -71,6 +71,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENTS.ACTIVE,
           AGENTS.ACTIVE_CONFIGURATION_ID,
           AGENTS.LANGUAGE,
+          AGENTS.AVATAR,
           AGENTS.CREATED_AT,
           AGENTS.UPDATED_AT,
         )
@@ -105,6 +106,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENTS.ACTIVE,
           AGENTS.ACTIVE_CONFIGURATION_ID,
           AGENTS.LANGUAGE,
+          AGENTS.AVATAR,
           AGENTS.CREATED_AT,
           AGENTS.UPDATED_AT,
           AGENT_CONFIGURATIONS.ID,
@@ -148,6 +150,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENTS.ACTIVE,
         AGENTS.ACTIVE_CONFIGURATION_ID,
         AGENTS.LANGUAGE,
+        AGENTS.AVATAR,
         AGENTS.CREATED_AT,
         AGENTS.UPDATED_AT,
         AGENT_CONFIGURATIONS.ID,
@@ -177,6 +180,26 @@ class AgentRepository(private val dslContext: DSLContext) {
       } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
   }
 
+  suspend fun getAgent(agentId: KUUID): Agent {
+    return dslContext
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME,
+        AGENTS.DESCRIPTION,
+        AGENTS.ACTIVE,
+        AGENTS.ACTIVE_CONFIGURATION_ID,
+        AGENTS.LANGUAGE,
+        AGENTS.AVATAR,
+        AGENTS.CREATED_AT,
+        AGENTS.UPDATED_AT,
+      )
+      .from(AGENTS)
+      .where(AGENTS.ID.eq(agentId))
+      .awaitSingle()
+      ?.into(AGENTS)
+      ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+  }
+
   suspend fun getActive(id: KUUID): Agent {
     return dslContext
       .select(
@@ -186,6 +209,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENTS.ACTIVE,
         AGENTS.ACTIVE_CONFIGURATION_ID,
         AGENTS.LANGUAGE,
+        AGENTS.AVATAR,
         AGENTS.CREATED_AT,
         AGENTS.UPDATED_AT,
       )
@@ -350,6 +374,16 @@ class AgentRepository(private val dslContext: DSLContext) {
       .awaitSingle()
   }
 
+  suspend fun updateAvatar(id: KUUID, avatar: String? = null): Agent {
+    return dslContext
+      .update(AGENTS)
+      .set(AGENTS.AVATAR, avatar)
+      .where(AGENTS.ID.eq(id))
+      .returning()
+      .awaitSingle()
+      .toAgent()
+  }
+
   suspend fun updateCollections(
     agentId: KUUID,
     add: List<CollectionInsert>?,
@@ -458,33 +492,6 @@ class AgentRepository(private val dslContext: DSLContext) {
       .asFlow()
       .map { it.into(AGENT_COLLECTIONS).toAgentCollection() }
       .toList()
-  }
-
-  private fun getSortOrderAgent(
-    pagination: PaginationSort,
-    admin: Boolean = false,
-  ): SortField<out Any> {
-    val (sortBy, sortOrder) = pagination.sorting()
-    val sortField =
-      when (sortBy) {
-        "name" -> AGENTS.NAME
-        "description" -> AGENTS.DESCRIPTION
-        "context" -> if (admin) AGENT_CONFIGURATIONS.CONTEXT else AGENTS.NAME
-        "llmProvider" -> if (admin) AGENT_CONFIGURATIONS.LLM_PROVIDER else AGENTS.NAME
-        "createdAt" -> AGENTS.CREATED_AT
-        "updatedAt" -> AGENTS.UPDATED_AT
-        "active" -> AGENTS.ACTIVE
-        else -> AGENTS.NAME
-      }
-
-    val order =
-      if (sortOrder == SortOrder.DESC) {
-        sortField.desc()
-      } else {
-        sortField.asc()
-      }
-
-    return order
   }
 
   suspend fun getAgentCounts(): AgentCounts {
@@ -611,23 +618,31 @@ class AgentRepository(private val dslContext: DSLContext) {
     }
   }
 
-  suspend fun getAgent(agentId: KUUID): Agent {
-    return dslContext
-      .select(
-        AGENTS.ID,
-        AGENTS.NAME,
-        AGENTS.DESCRIPTION,
-        AGENTS.ACTIVE,
-        AGENTS.ACTIVE_CONFIGURATION_ID,
-        AGENTS.LANGUAGE,
-        AGENTS.CREATED_AT,
-        AGENTS.UPDATED_AT,
-      )
-      .from(AGENTS)
-      .where(AGENTS.ID.eq(agentId))
-      .awaitSingle()
-      ?.into(AGENTS)
-      ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+  private fun getSortOrderAgent(
+    pagination: PaginationSort,
+    admin: Boolean = false,
+  ): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "name" -> AGENTS.NAME
+        "description" -> AGENTS.DESCRIPTION
+        "context" -> if (admin) AGENT_CONFIGURATIONS.CONTEXT else AGENTS.NAME
+        "llmProvider" -> if (admin) AGENT_CONFIGURATIONS.LLM_PROVIDER else AGENTS.NAME
+        "createdAt" -> AGENTS.CREATED_AT
+        "updatedAt" -> AGENTS.UPDATED_AT
+        "active" -> AGENTS.ACTIVE
+        else -> AGENTS.NAME
+      }
+
+    val order =
+      if (sortOrder == SortOrder.DESC) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return order
   }
 
   suspend fun getAgentTools(agentId: KUUID): List<AgentTool> {

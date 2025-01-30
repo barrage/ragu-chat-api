@@ -40,8 +40,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val filters = call.query(SearchFiltersAdminAgentsQuery::class).toSearchFiltersAdminAgents()
-      val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-      val agents = agentService.getAllAdmin(pagination, filters, withAvatar)
+      val agents = agentService.getAllAdmin(pagination, filters)
       call.respond(HttpStatusCode.OK, agents)
     }
 
@@ -54,8 +53,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
-        val withAvatar = call.queryParam("withAvatar")?.toBoolean() == true
-        val agent = agentService.getFull(id, withAvatar)
+        val agent = agentService.getFull(id)
         call.respond(HttpStatusCode.OK, agent)
       }
 
@@ -264,11 +262,6 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
     pathParameter<KUUID>("id") {
       description = "Agent ID"
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
     }
   }
   response {

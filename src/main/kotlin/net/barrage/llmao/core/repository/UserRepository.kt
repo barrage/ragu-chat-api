@@ -70,6 +70,7 @@ class UserRepository(private val dslContext: DSLContext) {
         USERS.LAST_NAME,
         USERS.ROLE,
         USERS.ACTIVE,
+        USERS.AVATAR,
         USERS.CREATED_AT,
         USERS.UPDATED_AT,
         USERS.DELETED_AT,
@@ -158,31 +159,38 @@ class UserRepository(private val dslContext: DSLContext) {
       .awaitSingle() == 1
   }
 
-  private fun getSortOrder(pagination: PaginationSort): List<SortField<*>> {
-    val (sortBy, sortOrder) = pagination.sorting()
-    val sortField =
-      when (sortBy) {
-        "email" -> USERS.EMAIL
-        "firstName" -> USERS.FIRST_NAME
-        "lastName" -> USERS.LAST_NAME
-        "role" -> USERS.ROLE
-        "createdAt" -> USERS.CREATED_AT
-        "updatedAt" -> USERS.UPDATED_AT
-        else -> USERS.LAST_NAME
+  suspend fun updateAvatar(id: UUID, avatar: String? = null): User {
+    return dslContext
+      .update(USERS)
+      .set(USERS.AVATAR, avatar)
+      .where(USERS.ID.eq(id))
+      .returning()
+      .awaitSingle()
+      .toUser()
+  }
+
+  suspend fun insertUsers(users: List<CreateUser>): List<String> {
+    return dslContext
+      .insertInto(
+        USERS,
+        USERS.EMAIL,
+        USERS.FULL_NAME,
+        USERS.FIRST_NAME,
+        USERS.LAST_NAME,
+        USERS.ROLE,
+        USERS.ACTIVE,
+      )
+      .apply {
+        users.forEach { user ->
+          values(user.email, user.fullName, user.firstName, user.lastName, user.role.name, true)
+        }
       }
-
-    val order = mutableListOf<SortField<*>>()
-    if (sortOrder == SortOrder.DESC) {
-      order.add(sortField.desc())
-    } else {
-      order.add(sortField.asc())
-    }
-
-    if (sortField == USERS.CREATED_AT) {
-      order.add(USERS.FULL_NAME.asc())
-    }
-
-    return order
+      .onConflict(USERS.EMAIL)
+      .doNothing()
+      .returning()
+      .asFlow()
+      .map { it.email }
+      .toList()
   }
 
   suspend fun getUserCounts(): UserCounts {
@@ -213,28 +221,31 @@ class UserRepository(private val dslContext: DSLContext) {
     return UserCounts(total, active, inactive, admin, user)
   }
 
-  suspend fun insertUsers(users: List<CreateUser>): List<String> {
-    return dslContext
-      .insertInto(
-        USERS,
-        USERS.EMAIL,
-        USERS.FULL_NAME,
-        USERS.FIRST_NAME,
-        USERS.LAST_NAME,
-        USERS.ROLE,
-        USERS.ACTIVE,
-      )
-      .apply {
-        users.forEach { user ->
-          values(user.email, user.fullName, user.firstName, user.lastName, user.role.name, true)
-        }
+  private fun getSortOrder(pagination: PaginationSort): List<SortField<*>> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "email" -> USERS.EMAIL
+        "firstName" -> USERS.FIRST_NAME
+        "lastName" -> USERS.LAST_NAME
+        "role" -> USERS.ROLE
+        "createdAt" -> USERS.CREATED_AT
+        "updatedAt" -> USERS.UPDATED_AT
+        else -> USERS.LAST_NAME
       }
-      .onConflict(USERS.EMAIL)
-      .doNothing()
-      .returning()
-      .asFlow()
-      .map { it.email }
-      .toList()
+
+    val order = mutableListOf<SortField<*>>()
+    if (sortOrder == SortOrder.DESC) {
+      order.add(sortField.desc())
+    } else {
+      order.add(sortField.asc())
+    }
+
+    if (sortField == USERS.CREATED_AT) {
+      order.add(USERS.FULL_NAME.asc())
+    }
+
+    return order
   }
 }
 

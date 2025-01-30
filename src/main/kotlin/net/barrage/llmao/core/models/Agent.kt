@@ -32,10 +32,12 @@ data class Agent(
   /** Language the agent is configured to use. For display purposes only. */
   val language: String? = null,
 
+  /** Agent's avatar file name. */
+  val avatar: String? = null,
+
   /** Agents timestamps. */
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
-  var avatar: Image? = null,
 )
 
 fun AgentsRecord.toAgent() =
@@ -46,6 +48,7 @@ fun AgentsRecord.toAgent() =
     active = this.active!!,
     activeConfigurationId = this.activeConfigurationId,
     language = this.language,
+    avatar = this.avatar,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

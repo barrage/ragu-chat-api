@@ -2,6 +2,7 @@ package net.barrage.llmao.core.services
 
 import io.ktor.util.*
 import io.ktor.utils.io.*
+import java.util.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
@@ -41,36 +42,15 @@ class AgentService(
   private val stateChangeListener: EventListener<StateChangeEvent>,
   private val avatarStorage: ImageStorage,
 ) {
-  suspend fun getAll(
-    pagination: PaginationSort,
-    showDeactivated: Boolean,
-    withAvatar: Boolean = false,
-  ): CountedList<Agent> {
-    return agentRepository.getAll(pagination, showDeactivated).apply {
-      if (withAvatar) {
-        items.forEach { it.avatar = avatarStorage.retrieve(it.id) }
-      }
-    }
+  suspend fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
+    return agentRepository.getAll(pagination, showDeactivated)
   }
 
   suspend fun getAllAdmin(
     pagination: PaginationSort,
     filters: SearchFiltersAdminAgents,
-    withAvatar: Boolean = false,
   ): CountedList<AgentWithConfiguration> {
-    return agentRepository.getAllAdmin(pagination, filters).apply {
-      if (withAvatar) {
-        items.forEach { it.agent.avatar = avatarStorage.retrieve(it.agent.id) }
-      }
-    }
-  }
-
-  suspend fun get(id: KUUID, withAvatar: Boolean = false): AgentFull {
-    return agentRepository.get(id).apply {
-      if (withAvatar) {
-        agent.avatar = avatarStorage.retrieve(id)
-      }
-    }
+    return agentRepository.getAllAdmin(pagination, filters)
   }
 
   suspend fun getActive(id: KUUID): Agent {
@@ -81,12 +61,8 @@ class AgentService(
    * Get an agent with full configuration, with its instructions populated with placeholders for
    * display purposes.
    */
-  suspend fun getFull(id: KUUID, withAvatar: Boolean = false): AgentFull {
-    return agentRepository.get(id).apply {
-      if (withAvatar) {
-        agent.avatar = avatarStorage.retrieve(id)
-      }
-    }
+  suspend fun getFull(id: KUUID): AgentFull {
+    return agentRepository.get(id)
   }
 
   suspend fun create(create: CreateAgent): AgentWithConfiguration {
@@ -112,16 +88,17 @@ class AgentService(
   }
 
   suspend fun delete(id: KUUID) {
-    val count = agentRepository.delete(id)
+    val agent = agentRepository.getAgent(id)
 
-    if (count == 0) {
-      throw AppError.api(
-        ErrorReason.InvalidParameter,
-        "Cannot delete active agent or agent not found",
-      )
+    if (agent.active) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Cannot delete active agent")
     }
 
-    avatarStorage.delete(id)
+    if (agent.avatar != null) {
+      avatarStorage.delete(agent.avatar)
+    }
+
+    agentRepository.delete(id)
   }
 
   suspend fun updateCollections(
@@ -172,25 +149,33 @@ class AgentService(
     return agentRepository.rollbackVersion(agentId, versionId)
   }
 
-  suspend fun getAgent(agentId: KUUID, withAvatar: Boolean = false): Agent {
-    return agentRepository.getAgent(agentId).apply {
-      if (withAvatar) {
-        avatar = avatarStorage.retrieve(id)
-      }
-    }
+  suspend fun getAgent(agentId: KUUID): Agent {
+    return agentRepository.getAgent(agentId)
   }
 
   suspend fun uploadAgentAvatar(id: KUUID, fileExtension: String, avatar: ByteReadChannel): Agent {
     val agent = agentRepository.getAgent(id)
 
-    agent.avatar = avatarStorage.store(id, fileExtension, avatar.toByteArray())
+    val imageName = UUID.randomUUID().toString() + "." + fileExtension
 
-    return agent
+    avatarStorage.store(imageName, avatar.toByteArray())
+
+    if (agent.avatar != null) {
+      avatarStorage.delete(agent.avatar)
+    }
+
+    return agentRepository.updateAvatar(id, imageName)
   }
 
   suspend fun deleteAgentAvatar(id: KUUID) {
-    agentRepository.getAgent(id)
-    avatarStorage.delete(id)
+    val agent = agentRepository.getAgent(id)
+
+    if (agent.avatar == null) {
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent avatar not found")
+    }
+
+    avatarStorage.delete(agent.avatar)
+    agentRepository.updateAvatar(id, null)
   }
 
   fun listAvailableAgentTools(): List<ToolDefinition> {

@@ -15,18 +15,12 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 import net.barrage.llmao.string
 
 fun Route.userRoutes(userService: UserService) {
   get("/users/current", getUser()) {
     val user = call.user()
-
-    if (call.queryParam("withAvatar")?.toBoolean() == true) {
-      user.avatar = userService.downloadUserAvatar(user.id)
-    }
-
     call.respond(user)
   }
 
@@ -78,13 +72,6 @@ fun Route.userRoutes(userService: UserService) {
 private fun getUser(): OpenApiRoute.() -> Unit = {
   tags("users")
   description = "Retrieve logged in user"
-  request {
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
-    }
-  }
   response {
     HttpStatusCode.OK to
       {
@@ -139,6 +126,5 @@ private fun uploadUserAvatar(): OpenApiRoute.() -> Unit = {
 private fun deleteUserAvatar(): OpenApiRoute.() -> Unit = {
   tags("users/avatars")
   description = "Delete user avatar"
-  request {}
   response { HttpStatusCode.NoContent to { description = "User avatar deleted successfully" } }
 }
