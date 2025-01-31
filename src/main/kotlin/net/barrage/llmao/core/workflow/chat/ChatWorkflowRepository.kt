@@ -1,5 +1,8 @@
 package net.barrage.llmao.core.workflow.chat
 
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.ChatWithMessages
@@ -47,6 +50,7 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         .where(MESSAGES.CHAT_ID.eq(id))
         .orderBy(MESSAGES.CREATED_AT.desc())
         .limit(historySize)
+        .asFlow()
         .map { record -> record.into(MESSAGES).toMessage() }
         .toList()
 
