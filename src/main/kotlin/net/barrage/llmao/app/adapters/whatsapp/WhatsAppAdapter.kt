@@ -37,9 +37,8 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.processAdditions
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.WorkflowAgent
-import net.barrage.llmao.core.workflow.WorkflowAgentCollection
 import net.barrage.llmao.core.workflow.chat.ChatAgent
+import net.barrage.llmao.core.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
@@ -241,8 +240,8 @@ class WhatsAppAdapter(
     val agentConfig = agentFull.getConfiguration()
     val agentCollections = agentFull.collections
 
-    val workflowAgent =
-      WorkflowAgent(
+    val conversation =
+      ChatAgent(
         id = agentFull.agent.id,
         name = agentFull.agent.name,
         model = agentFull.agent.model,
@@ -250,7 +249,7 @@ class WhatsAppAdapter(
         context = agentFull.agent.context,
         collections =
           agentCollections.map {
-            WorkflowAgentCollection(
+            ChatAgentCollection(
               name = it.collection,
               amount = it.amount,
               instruction = it.instruction,
@@ -263,9 +262,8 @@ class WhatsAppAdapter(
         tools = null,
         temperature = agentConfig.temperature,
         configurationId = agentConfig.id,
+        providers = providers,
       )
-
-    val conversation = ChatAgent(providers, workflowAgent)
 
     history.add(ChatMessage.user(message))
 

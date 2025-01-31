@@ -92,7 +92,7 @@ class WebsocketSessionManager(
 
     LOG.debug("{} - sending input to workflow '{}'", session, workflow.id())
 
-    workflow.send(message)
+    workflow.execute(message)
   }
 
   private suspend fun handleSystemMessage(

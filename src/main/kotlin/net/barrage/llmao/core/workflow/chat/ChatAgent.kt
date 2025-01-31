@@ -8,14 +8,30 @@ import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
+import net.barrage.llmao.core.llm.ToolDefinition
+import net.barrage.llmao.core.models.AgentInstructions
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.core.vector.VectorData
-import net.barrage.llmao.core.workflow.WorkflowAgent
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
 /** Handles LLM interactions for direct prompts. */
-class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) {
+class ChatAgent(
+  private val providers: ProviderState,
+  val id: KUUID,
+  val name: String,
+  val model: String,
+  val llmProvider: String,
+  val context: String,
+  val collections: List<ChatAgentCollection>,
+  val instructions: AgentInstructions,
+  var tools: List<ToolDefinition>? = null,
+  val temperature: Double,
+
+  /** The agent configuration ID. */
+  val configurationId: KUUID,
+) {
   /** Start a chat completion stream using the parameters from the WorkflowAgent. */
   suspend fun chatCompletionStream(
     input: List<ChatMessage>,
@@ -24,7 +40,7 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
   ): Flow<ChatMessageChunk> {
     val llmInput = input.toMutableList()
 
-    val llm = providers.llm.getProvider(agent.llmProvider)
+    val llm = providers.llm.getProvider(llmProvider)
 
     if (useRag) {
       val userMessage =
@@ -35,14 +51,14 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
       userMessage.content = executeRetrievalAugmentation(userMessage.content!!)
     }
 
-    llmInput.add(0, ChatMessage.system(agent.context))
+    llmInput.add(0, ChatMessage.system(context))
 
     return llm.completionStream(
       llmInput,
       ChatCompletionParameters(
-        model = agent.model,
-        temperature = agent.temperature,
-        tools = if (!useTools) null else agent.tools,
+        model = model,
+        temperature = temperature,
+        tools = if (!useTools) null else tools,
       ),
     )
   }
@@ -56,17 +72,17 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
     // Safe to !! because user messages are never created with null content
     userMessage.content = executeRetrievalAugmentation(userMessage.content!!)
 
-    val systemMessage = ChatMessage.system(agent.context)
+    val systemMessage = ChatMessage.system(context)
 
     val llmInput = mutableListOf(systemMessage, *messages.toTypedArray())
 
-    val llm = providers.llm.getProvider(agent.llmProvider)
+    val llm = providers.llm.getProvider(llmProvider)
 
-    return llm.chatCompletion(llmInput, ChatCompletionParameters(agent.model, agent.temperature))
+    return llm.chatCompletion(llmInput, ChatCompletionParameters(model, temperature))
   }
 
   suspend fun summarizeConversation(history: List<ChatMessage>): String {
-    val llm = providers.llm.getProvider(agent.llmProvider)
+    val llm = providers.llm.getProvider(llmProvider)
 
     val conversation =
       history.joinToString("\n") {
@@ -80,18 +96,14 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
         return@joinToString "$s: ${it.content}"
       }
 
-    val summaryPrompt = agent.instructions.formatSummaryPrompt(conversation)
+    val summaryPrompt = instructions.formatSummaryPrompt(conversation)
 
     val messages = listOf(ChatMessage.user(summaryPrompt))
 
     val completion =
       llm.chatCompletion(
         messages,
-        ChatCompletionParameters(
-          model = agent.model,
-          temperature = agent.temperature,
-          maxTokens = 2000,
-        ),
+        ChatCompletionParameters(model = model, temperature = temperature, maxTokens = 2000),
       )
 
     // Safe to !! because we are not sending any tools in the message, which means the content
@@ -101,7 +113,7 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
 
   fun countHistoryTokens(history: List<ChatMessage>): Int {
     val text = history.joinToString("\n") { it.content ?: "" }
-    return getEncoder(agent.model).encode(text).size()
+    return getEncoder(model).encode(text).size()
   }
 
   /**
@@ -113,11 +125,11 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
    * ```
    */
   private suspend fun executeRetrievalAugmentation(prompt: String): String {
-    if (agent.collections.isEmpty()) {
+    if (collections.isEmpty()) {
       return prompt
     }
 
-    val systemMessage = ChatMessage.system(agent.context)
+    val systemMessage = ChatMessage.system(context)
 
     LOG.trace("Created system message {}", systemMessage)
 
@@ -127,7 +139,7 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
     val providerQueries = mutableMapOf<String, MutableList<CollectionQuery>>()
 
     // Embed the input per collection provider and model
-    for (collection in agent.collections) {
+    for (collection in collections) {
       val embeddings =
         providers.embedding
           .getProvider(collection.embeddingProvider)
@@ -152,7 +164,7 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
       relatedChunks[provider] = vectorDb.query(queries)
     }
 
-    for (collection in agent.collections) {
+    for (collection in collections) {
       val instruction = collection.instruction
       // Safe to !! because the providers must be present here if they were mapped above
       val collectionData =
@@ -183,16 +195,13 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
   }
 
   suspend fun createTitle(prompt: String, response: String): String {
-    val llm = providers.llm.getProvider(agent.llmProvider)
-    val titleInstruction = agent.instructions.titleInstruction()
+    val llm = providers.llm.getProvider(llmProvider)
+    val titleInstruction = instructions.titleInstruction()
     val userMessage = "PROMPT: $prompt\nRESPONSE: $response"
     val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
 
     val completion =
-      llm.chatCompletion(
-        messages,
-        ChatCompletionParameters(agent.model, agent.temperature, maxTokens = 100),
-      )
+      llm.chatCompletion(messages, ChatCompletionParameters(model, temperature, maxTokens = 100))
 
     // Safe to !! because we are not sending tools to the LLM
     var title = completion.content!!.trim()
@@ -206,3 +215,12 @@ class ChatAgent(private val providers: ProviderState, val agent: WorkflowAgent) 
     return title
   }
 }
+
+data class ChatAgentCollection(
+  val name: String,
+  val amount: Int,
+  val instruction: String,
+  val embeddingProvider: String,
+  val embeddingModel: String,
+  val vectorProvider: String,
+)

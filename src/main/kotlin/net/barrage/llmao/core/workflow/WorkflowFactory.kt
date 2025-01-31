@@ -4,10 +4,9 @@ import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
-import net.barrage.llmao.core.models.toSessionAgent
+import net.barrage.llmao.core.models.toChatAgent
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.chat.ChatAgent
 import net.barrage.llmao.core.workflow.chat.ChatWorkflow
 import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.workflow.chat.ChatWorkflowRepository
@@ -32,12 +31,10 @@ class WorkflowFactory(
     // TODO: Skip above check with single call
     val agent = agentService.getFull(agentId)
 
-    val sessionAgent = agent.toSessionAgent()
+    val chatAgent = agent.toChatAgent(providers = providerState)
     val toolchain = toolchainFactory.createAgentToolchain(agentId, toolEmitter)
 
-    sessionAgent.tools = toolchain?.listToolSchemas()
-
-    val chatAgent = ChatAgent(providerState, sessionAgent)
+    chatAgent.tools = toolchain?.listToolSchemas()
 
     return ChatWorkflow(
       id = id,
@@ -61,12 +58,10 @@ class WorkflowFactory(
 
     val agent = agentService.getFull(chat.chat.agentId)
 
-    val sessionAgent = agent.toSessionAgent()
+    val chatAgent = agent.toChatAgent(providers = providerState)
     val toolchain = toolchainFactory.createAgentToolchain(chat.chat.agentId, toolEmitter)
 
-    sessionAgent.tools = toolchain?.listToolSchemas()
-
-    val chatAgent = ChatAgent(providerState, sessionAgent)
+    chatAgent.tools = toolchain?.listToolSchemas()
 
     val history = chat.messages.map(ChatMessage::fromModel)
 

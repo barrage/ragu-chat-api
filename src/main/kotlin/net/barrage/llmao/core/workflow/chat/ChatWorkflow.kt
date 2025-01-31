@@ -73,22 +73,23 @@ class ChatWorkflow(
   }
 
   override fun entityId(): KUUID {
-    return agent.agent.id
+    return agent.id
   }
 
-  override fun send(message: String) {
+  override fun execute(message: String) {
     stream =
       streamScope.launch {
         val streamStart = Instant.now()
 
+        // Copy the history so we can modify it without affecting the original
+        // We only store the input and final output message.
         val input = history.toMutableList()
         input.add(ChatMessage.user(message))
         val response = StringBuilder()
         var finishReason = FinishReason.Stop
 
         try {
-          // Copy the history so we can modify it without affecting the original
-          executeStreamRecursive(input, response)
+          stream(input, response)
         } catch (e: CancellationException) {
           // If the stream is cancelled from outside, via the session manager, a
           // CancellationException is thrown with a specific message indicating the reason.
@@ -152,7 +153,7 @@ class ChatWorkflow(
    * @param out A buffer to capture the final response of the LLM.
    * @param attempts Number of attempts to call the LLM with tools. Used to prevent infinite loops.
    */
-  private suspend fun executeStreamRecursive(
+  private suspend fun stream(
     messages: MutableList<ChatMessage>,
     out: StringBuilder,
     attempts: Int = 0,
@@ -219,21 +220,21 @@ class ChatWorkflow(
       messages.add(ChatMessage.toolResult(result.content, result.id))
     }
 
-    executeStreamRecursive(messages, out)
+    stream(messages, out)
   }
 
   private suspend fun processResponse(prompt: String, response: String) {
     if (!messageReceived) {
       LOG.debug("{} - persisting chat with message pair", id)
       messageReceived = true
-      repository.insertChat(id, userId, prompt, agent.agent.id, response)
+      repository.insertChat(id, userId, prompt, agent.id, response)
     } else {
       LOG.debug("{} - persisting message pair", id)
       repository.insertMessagePair(
         chatId = id,
         userId = userId,
         prompt = prompt,
-        agentConfigurationId = agent.agent.configurationId,
+        agentConfigurationId = agent.configurationId,
         response,
       )
     }

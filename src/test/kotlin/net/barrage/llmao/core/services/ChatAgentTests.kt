@@ -16,7 +16,7 @@ import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DEFAULT_TITLE_INSTRUCTION
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.core.models.toSessionAgent
+import net.barrage.llmao.core.models.toChatAgent
 import net.barrage.llmao.core.workflow.chat.ChatAgent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -45,10 +45,9 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
           summaryInstruction = "Custom summary instruction",
         )
       chat = postgres.testChat(admin.id, agent.id, null)
-      val sessionAgent =
+      workflow =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
-          .toSessionAgent()
-      workflow = ChatAgent(app.providers, sessionAgent)
+          .toChatAgent(providers = app.providers)
     }
   }
 
