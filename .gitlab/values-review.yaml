@@ -2,6 +2,7 @@ ingress:
   className: nginx-external
   annotations:
     cert-manager.io/cluster-issuer: barrage-dev
+    nginx.org/websocket-services: llmao-kappi-master-barrage-autodeploy
     ## The following annotation is to limit access to the ingress
 
 barrage:
