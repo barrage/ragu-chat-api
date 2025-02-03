@@ -9,16 +9,16 @@ import net.barrage.llmao.core.types.KUUID
 sealed class ChatWorkflowMessage {
   /** Sent when a chat's title is generated. */
   @Serializable
-  @SerialName("chat_title")
+  @SerialName("chat.title")
   data class ChatTitleUpdated(val chatId: KUUID, val title: String) : ChatWorkflowMessage()
 
   @Serializable
-  @SerialName("stream_chunk")
+  @SerialName("chat.stream_chunk")
   data class StreamChunk(val chunk: String) : ChatWorkflowMessage()
 
   /** Sent when a chats gets a complete response from an LLM. */
   @Serializable
-  @SerialName("finish_event")
+  @SerialName("chat.stream_complete")
   data class StreamComplete(
     /** The streaming chat ID */
     val chatId: KUUID,

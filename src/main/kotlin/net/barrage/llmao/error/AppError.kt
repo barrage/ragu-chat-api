@@ -1,11 +1,15 @@
 package net.barrage.llmao.error
 
 import io.ktor.http.*
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-open class AppError(val type: String, val reason: ErrorReason, val description: String? = null) :
-  Throwable() {
+open class AppError(
+  @SerialName("errorType") val type: String,
+  @SerialName("errorReason") val reason: ErrorReason,
+  @SerialName("errorDescription") val description: String? = null,
+) : Throwable() {
   companion object {
     fun api(reason: ErrorReason, description: String? = null): AppError {
       return AppError("API", reason, description)

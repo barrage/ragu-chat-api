@@ -67,11 +67,11 @@ class ToolchainBuilder {
 @Serializable
 sealed class ToolEvent {
   /** Sent whenever an agent calls a tool. */
-  @Serializable @SerialName("tool_call") data class ToolCall(val data: ToolCallData) : ToolEvent()
+  @Serializable @SerialName("tool.call") data class ToolCall(val data: ToolCallData) : ToolEvent()
 
   /** Sent whenever an agent receives a tool result. */
   @Serializable
-  @SerialName("tool_result")
+  @SerialName("tool.result")
   data class ToolResult(val result: ToolCallResult) : ToolEvent()
 }
 
@@ -80,7 +80,12 @@ sealed class ToolEvent {
  * streaming. If streaming, this is obtained by collecting the tool call chunks.
  */
 @Serializable
-data class ToolCallData(val id: String? = null, val name: String, var arguments: String)
+data class ToolCallData(
+  /** Tool correlation ID. Used by some LLMs to associate the tool result to the tool call. */
+  val id: String? = null,
+  val name: String,
+  var arguments: String,
+)
 
 @Serializable
 data class ToolCallMessage(

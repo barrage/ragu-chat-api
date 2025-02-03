@@ -284,7 +284,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
           // Send cancel immediately after first chunk
           if (!cancelSent) {
             cancelSent = true
-            sendClientSystem(IncomingSystemMessage.StopStream)
+            sendClientSystem(IncomingSystemMessage.CancelWorkflowStream)
           }
         } catch (_: SerializationException) {}
 
@@ -350,7 +350,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
             assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-            sendClientSystem(IncomingSystemMessage.CloseSession)
+            sendClientSystem(IncomingSystemMessage.CloseWorkflow)
           }
         }
       }
@@ -378,7 +378,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
         assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-        sendClientSystem(IncomingSystemMessage.CloseSession)
+        sendClientSystem(IncomingSystemMessage.CloseWorkflow)
       }
     }
 
