@@ -1,0 +1,12 @@
+ingress:
+  className: nginx-external
+  annotations:
+    cert-manager.io/cluster-issuer: barrage-dev
+    # cert-manager.io/cluster-issuer: barrage-le-production
+    ## The following annotation is to limit access to the ingress
+    nginx.org/websocket-services: llmao-kappi-pevex-pre-production-barrage-autodeploy
+
+barrage:
+  vault:
+    role: llmao-kappi-k8-stg
+    moduleWorkspace: llmao/data/deploy-kappi-stg

@@ -4,7 +4,7 @@ include:
     file: GitlabFlow/Deploy-custom.yml
 
 variables:
-    HELM_RELEASE_PREFIX: llmao-kappi
+    HELM_RELEASE_PREFIX: llmao-kappi-pevex
 
 build-and-test:
   stage: build
@@ -64,4 +64,14 @@ deploy dev:
     - containerize
   rules:
     - !reference [ .development, rules ]
+    - when: on_success
+
+deploy stg:
+  extends: .pre-production
+  needs:
+    - containerize
+  variables:
+    ADDITIONAL_HOSTS: ragu-kappi-demo-pevex.barrage.cloud
+  rules:
+    - !reference [ .pre-production, rules ]
     - when: on_success
