@@ -126,7 +126,7 @@ class WebsocketSessionManager(
         val workflow = workflows[session]
 
         // Prevent loading the same chat
-        if (workflow != null && workflow.id() == message.chatId) {
+        if (workflow != null && workflow.id() == message.workflowId) {
           LOG.debug("{} - workflow already open ({})", session, workflow.id())
           systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id()))
           return
@@ -137,17 +137,17 @@ class WebsocketSessionManager(
         val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
         val existingWorkflow =
           factory.fromExistingChatWorkflow(
-            id = message.chatId,
+            id = message.workflowId,
             emitter = emitter,
             initialHistorySize = message.initialHistorySize,
           )
 
         workflows[session] = existingWorkflow
-        systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(message.chatId))
+        systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(message.workflowId))
 
         LOG.debug("{} - opened workflow {}", session, existingWorkflow.id)
       }
-      is IncomingSystemMessage.CloseSession -> {
+      is IncomingSystemMessage.CloseWorkflow -> {
         workflows.remove(session)?.let {
           systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowClosed(it.id()))
           it.cancelStream()
@@ -159,7 +159,7 @@ class WebsocketSessionManager(
           )
         }
       }
-      is IncomingSystemMessage.StopStream -> {
+      is IncomingSystemMessage.CancelWorkflowStream -> {
         workflows[session]?.let {
           LOG.debug("{} - cancelling stream in workflow '{}'", session, it.id())
           it.cancelStream()

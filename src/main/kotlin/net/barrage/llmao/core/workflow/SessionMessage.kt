@@ -22,29 +22,31 @@ sealed class IncomingMessage {
 @Serializable
 sealed class IncomingSystemMessage {
   @Serializable
-  @SerialName("chat_open_new")
+  @SerialName("workflow.new")
   data class CreateNewWorkflow(val agentId: KUUID) : IncomingSystemMessage()
 
   @Serializable
-  @SerialName("chat_open_existing")
-  data class LoadExistingWorkflow(val chatId: KUUID, val initialHistorySize: Int = 10) :
+  @SerialName("workflow.existing")
+  data class LoadExistingWorkflow(val workflowId: KUUID, val initialHistorySize: Int = 10) :
     IncomingSystemMessage()
 
-  @Serializable @SerialName("chat_close") data object CloseSession : IncomingSystemMessage()
+  @Serializable @SerialName("workflow.close") data object CloseWorkflow : IncomingSystemMessage()
 
-  @Serializable @SerialName("chat_stop_stream") data object StopStream : IncomingSystemMessage()
+  @Serializable
+  @SerialName("workflow.cancel_stream")
+  data object CancelWorkflowStream : IncomingSystemMessage()
 }
 
 /** Outgoing session messages. */
 @Serializable
 sealed class OutgoingSystemMessage {
-  /** Sent when a chat is opened. */
-  @SerialName("chat_open")
+  /** Sent when a workflow is opened manually by the client. */
+  @SerialName("system.workflow.open")
   @Serializable
   data class WorkflowOpen(val id: KUUID) : OutgoingSystemMessage()
 
-  /** Sent when a chat is closed manually. */
-  @SerialName("chat_closed")
+  /** Sent when a workflow is closed manually by the client. */
+  @SerialName("system.workflow.closed")
   @Serializable
   data class WorkflowClosed(val id: KUUID) : OutgoingSystemMessage()
 
@@ -52,7 +54,7 @@ sealed class OutgoingSystemMessage {
    * Sent when an administrator deactivates an agent via the service and is used to indicate the
    * chat is no longer available.
    */
-  @SerialName("agent_deactivated")
+  @SerialName("system.event.agent_deactivated")
   @Serializable
   data class AgentDeactivated(val agentId: KUUID) : OutgoingSystemMessage()
 }
@@ -75,12 +77,12 @@ val IncomingMessageSerializer = Json {
         IncomingSystemMessage.LoadExistingWorkflow.serializer(),
       )
       subclass(
-        IncomingSystemMessage.CloseSession::class,
-        IncomingSystemMessage.CloseSession.serializer(),
+        IncomingSystemMessage.CloseWorkflow::class,
+        IncomingSystemMessage.CloseWorkflow.serializer(),
       )
       subclass(
-        IncomingSystemMessage.StopStream::class,
-        IncomingSystemMessage.StopStream.serializer(),
+        IncomingSystemMessage.CancelWorkflowStream::class,
+        IncomingSystemMessage.CancelWorkflowStream.serializer(),
       )
     }
     polymorphic(OutgoingSystemMessage::class) {
