@@ -2,7 +2,6 @@ package net.barrage.llmao.app.api.ws
 
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -20,10 +19,11 @@ class WebsocketEmitter<T>(ws: WebSocketServerSession, private val serialize: (T)
   private val flow: MutableSharedFlow<String> = MutableSharedFlow()
 
   /**
-   * A running job that collects messages from the flow and calls the provided callback with what is
-   * obtained.
+   * A running job that collects messages from the flow and forwards anything emitted to the client.
    */
-  private val collector: Job = ws.launch { flow.collect { ws.send(it) } }
+  init {
+    ws.launch { flow.collect { ws.send(it) } }
+  }
 
   /** Emit an application error. */
   override suspend fun emitError(error: AppError) {
@@ -33,7 +33,7 @@ class WebsocketEmitter<T>(ws: WebSocketServerSession, private val serialize: (T)
 
   /** Emit a system message to the client. */
   override suspend fun emit(message: T) {
-    LOG.debug("Emitting server message: {}", message)
+    LOG.trace("Emitting server message: {}", message)
     flow.emit(serialize(message))
   }
 

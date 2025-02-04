@@ -41,11 +41,8 @@ class ChatWorkflow(
   /** Responsible for persisting chat data. */
   private val repository: ChatWorkflowRepository,
 
-  /** Used to reason about storing the chat. */
-  private var messageReceived: Boolean = false,
-
-  /** Generated after the first message is received in this chat. */
-  private var title: String? = null,
+  /** The current state of this workflow. */
+  private var state: ChatWorkflowState,
 
   /**
    * If present, pops value from the front of the message history if the history gets larger than
@@ -95,6 +92,8 @@ class ChatWorkflow(
           // CancellationException is thrown with a specific message indicating the reason.
           if (e.message != "manual_cancel") {
             LOG.error("Unexpected cancellation exception", e)
+            handleError(e)
+            return@launch
           }
 
           finishReason = FinishReason.ManualStop
@@ -109,13 +108,24 @@ class ChatWorkflow(
           LOG.error("Unexpected error in stream", e)
           handleError(e)
         } finally {
+          val messageId = KUUID.randomUUID()
+
           streamScope.launch {
             if (response.isNotBlank()) {
-              processResponse(prompt = message, response = response.toString())
+              processResponse(
+                messageId = messageId,
+                prompt = message,
+                response = response.toString(),
+              )
             }
 
             LOG.debug("{} - emitting stream complete, finish reason: {}", id, finishReason.value)
-            val emitPayload = ChatWorkflowMessage.StreamComplete(id, reason = finishReason)
+            val emitPayload =
+              ChatWorkflowMessage.StreamComplete(
+                chatId = id,
+                reason = finishReason,
+                messageId = messageId,
+              )
             emitter.emit(emitPayload)
           }
 
@@ -223,27 +233,36 @@ class ChatWorkflow(
     stream(messages, out)
   }
 
-  private suspend fun processResponse(prompt: String, response: String) {
-    if (!messageReceived) {
-      LOG.debug("{} - persisting chat with message pair", id)
-      messageReceived = true
-      repository.insertChat(id, userId, prompt, agent.id, response)
-    } else {
-      LOG.debug("{} - persisting message pair", id)
-      repository.insertMessagePair(
-        chatId = id,
-        userId = userId,
-        prompt = prompt,
-        agentConfigurationId = agent.configurationId,
-        response,
-      )
-    }
+  private suspend fun processResponse(messageId: KUUID, prompt: String, response: String) {
+    when (state) {
+      ChatWorkflowState.New -> {
+        LOG.debug("{} - persisting chat with message pair", id)
+        repository.insertChat(
+          id = id,
+          responseMessageId = messageId,
+          userId = userId,
+          prompt = prompt,
+          agentId = agent.id,
+          response = response,
+        )
 
-    if (title.isNullOrBlank()) {
-      LOG.debug("{} - generating title", id)
-      title = agent.createTitle(prompt, response)
-      repository.updateTitle(id, userId, title!!)
-      emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title!!))
+        LOG.debug("{} - generating title", id)
+        val title = agent.createTitle(prompt, response)
+        repository.updateTitle(id, userId, title)
+        emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title))
+        state = ChatWorkflowState.Persisted(title)
+      }
+      is ChatWorkflowState.Persisted -> {
+        LOG.debug("{} - persisting message pair", id)
+        repository.insertMessagePair(
+          chatId = id,
+          responseMessageId = messageId,
+          userId = userId,
+          prompt = prompt,
+          agentConfigurationId = agent.configurationId,
+          response,
+        )
+      }
     }
 
     addToHistory(listOf(ChatMessage.user(prompt), ChatMessage.assistant(response)))
@@ -323,4 +342,15 @@ class ChatWorkflow(
       }
     }
   }
+}
+
+sealed class ChatWorkflowState {
+  /** State when a chat is created from scratch. It has no title and received no messages. */
+  data object New : ChatWorkflowState()
+
+  /**
+   * State when a chat is persisted in the database. It has a title and received at least one
+   * message.
+   */
+  data class Persisted(val title: String) : ChatWorkflowState()
 }
