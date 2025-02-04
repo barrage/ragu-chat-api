@@ -18,8 +18,8 @@ import kotlinx.coroutines.Job
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
+import net.barrage.llmao.app.workflow.IncomingMessageSerializer
 import net.barrage.llmao.core.EventListener
-import net.barrage.llmao.core.workflow.IncomingMessageSerializer
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance

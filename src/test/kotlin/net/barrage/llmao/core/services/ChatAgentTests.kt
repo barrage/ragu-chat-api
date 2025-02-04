@@ -9,6 +9,7 @@ import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -17,7 +18,6 @@ import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DEFAULT_TITLE_INSTRUCTION
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.toChatAgent
-import net.barrage.llmao.core.workflow.chat.ChatAgent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll

@@ -19,6 +19,8 @@ import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.app.workflow.IncomingMessageSerializer
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.chatSession
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.AgentFull
@@ -26,10 +28,8 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Pagination
-import net.barrage.llmao.core.workflow.IncomingMessageSerializer
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.json

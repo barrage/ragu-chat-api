@@ -155,7 +155,7 @@ Sent when a chat workflow has generated a title for the chat.
 
 ```json
 {
-  "type": "chat.title_updated",
+  "type": "chat.title",
   "chatId": "chat_uuid",
   "title": "chat_title"
 }

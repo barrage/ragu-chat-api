@@ -27,6 +27,8 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
+import net.barrage.llmao.app.workflow.chat.ChatAgent
+import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
@@ -37,8 +39,6 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.processAdditions
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.chat.ChatAgent
-import net.barrage.llmao.core.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string

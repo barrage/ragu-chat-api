@@ -3,11 +3,11 @@ package net.barrage.llmao.core.models
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.ProviderState
+import net.barrage.llmao.app.workflow.chat.ChatAgent
+import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.core.models.common.TimeSeries
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.chat.ChatAgent
-import net.barrage.llmao.core.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.tables.records.AgentToolsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.utils.NotBlank
