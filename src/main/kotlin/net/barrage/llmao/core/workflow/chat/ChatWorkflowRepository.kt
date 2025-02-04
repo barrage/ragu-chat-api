@@ -67,12 +67,13 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
 
   suspend fun insertMessagePair(
     chatId: KUUID,
+    responseMessageId: KUUID,
     userId: KUUID,
     prompt: String,
     agentConfigurationId: KUUID,
     response: String,
-  ): KUUID {
-    return dslContext.transactionCoroutine { ctx ->
+  ) {
+    dslContext.transactionCoroutine { ctx ->
       val messageId =
         ctx
           .dsl()
@@ -88,6 +89,7 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
       ctx
         .dsl()
         .insertInto(MESSAGES)
+        .set(MESSAGES.ID, responseMessageId)
         .set(MESSAGES.CHAT_ID, chatId)
         .set(MESSAGES.SENDER, agentConfigurationId)
         .set(MESSAGES.SENDER_TYPE, "assistant")
@@ -110,11 +112,12 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
 
   suspend fun insertChat(
     id: KUUID,
+    responseMessageId: KUUID,
     userId: KUUID,
     prompt: String,
     agentId: KUUID,
     response: String,
-  ): KUUID {
+  ) {
     return dslContext.transactionCoroutine { ctx ->
       val chatId =
         ctx
@@ -142,14 +145,13 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
       ctx
         .dsl()
         .insertInto(MESSAGES)
+        .set(MESSAGES.ID, responseMessageId)
         .set(MESSAGES.CHAT_ID, chatId)
         .set(MESSAGES.SENDER, agentId)
         .set(MESSAGES.SENDER_TYPE, "assistant")
         .set(MESSAGES.CONTENT, response)
         .set(MESSAGES.RESPONSE_TO, messageId)
-        .returning(MESSAGES.ID)
-        .awaitSingle()
-        .id ?: throw AppError.internal("Failed to insert assistant message")
+        .awaitSingle() ?: throw AppError.internal("Failed to insert assistant message")
     }
   }
 }

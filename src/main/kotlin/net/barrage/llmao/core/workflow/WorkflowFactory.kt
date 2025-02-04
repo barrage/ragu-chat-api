@@ -10,6 +10,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.chat.ChatWorkflow
 import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.workflow.chat.ChatWorkflowRepository
+import net.barrage.llmao.core.workflow.chat.ChatWorkflowState
 
 class WorkflowFactory(
   private val providerState: ProviderState,
@@ -43,6 +44,7 @@ class WorkflowFactory(
       emitter = emitter,
       toolchain = toolchain,
       repository = chatWorkflowRepository,
+      state = ChatWorkflowState.New,
     )
   }
 
@@ -69,12 +71,11 @@ class WorkflowFactory(
       id = chat.chat.id,
       userId = chat.chat.userId,
       agent = chatAgent,
-      title = chat.chat.title,
-      messageReceived = history.isNotEmpty(),
       history = history as MutableList<ChatMessage>,
       emitter = emitter,
       toolchain = toolchain,
       repository = chatWorkflowRepository,
+      state = ChatWorkflowState.Persisted(chat.chat.title!!),
     )
   }
 }
