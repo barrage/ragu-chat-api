@@ -2,25 +2,28 @@ package net.barrage.llmao.app.api.ws
 
 import io.ktor.server.websocket.*
 import java.util.concurrent.ConcurrentHashMap
+import net.barrage.llmao.app.workflow.IncomingMessage
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolEvent
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
-import net.barrage.llmao.core.workflow.IncomingMessage
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.Workflow
-import net.barrage.llmao.core.workflow.WorkflowFactory
-import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.core.workflow.chat.LOG
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+
+private val LOG =
+  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketSessionManager")
 
 /**
  * The session manage creates sessions and is responsible for broadcasting system events to clients.
  */
 class WebsocketSessionManager(
-  private val factory: WorkflowFactory,
+  private val factory: ChatWorkflowFactory,
   listener: EventListener<StateChangeEvent>,
 ) {
   /** Maps user ID + token pairs to their sessions. */
@@ -80,11 +83,7 @@ class WebsocketSessionManager(
 
   private fun handleChatMessage(session: WebsocketSession, message: String) {
     val workflow =
-      workflows[session]
-        ?: throw AppError.api(
-          ErrorReason.Websocket,
-          "Chat not open for session '{}'".format(session),
-        )
+      workflows[session] ?: throw AppError.api(ErrorReason.Websocket, "Workflow not opened")
 
     if (workflow.isStreaming()) {
       throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
@@ -168,3 +167,5 @@ class WebsocketSessionManager(
     }
   }
 }
+
+data class WebsocketSession(val userId: KUUID, val token: KUUID)

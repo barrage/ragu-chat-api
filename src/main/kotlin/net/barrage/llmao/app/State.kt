@@ -15,6 +15,7 @@ import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowRepository
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.repository.AgentRepository
@@ -27,7 +28,6 @@ import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.storage.ImageStorage
-import net.barrage.llmao.core.workflow.chat.ChatWorkflowRepository
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.initDatabase

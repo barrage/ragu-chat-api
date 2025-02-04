@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.workflow.chat
+package net.barrage.llmao.app.workflow.chat
 
 import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.Encoding

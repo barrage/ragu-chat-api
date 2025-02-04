@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.workflow
+package net.barrage.llmao.app.workflow.chat
 
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatMessage
@@ -7,18 +7,14 @@ import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.models.toChatAgent
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.chat.ChatWorkflow
-import net.barrage.llmao.core.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.core.workflow.chat.ChatWorkflowRepository
-import net.barrage.llmao.core.workflow.chat.ChatWorkflowState
+import net.barrage.llmao.core.workflow.Emitter
 
-class WorkflowFactory(
+class ChatWorkflowFactory(
   private val providerState: ProviderState,
   private val agentService: AgentService,
   private val chatWorkflowRepository: ChatWorkflowRepository,
   private val toolchainFactory: ToolchainFactory,
 ) {
-
   suspend fun newChatWorkflow(
     userId: KUUID,
     agentId: KUUID,

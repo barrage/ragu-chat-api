@@ -9,7 +9,7 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.error.AppError
 
-internal val LOG =
+private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketEmitter")
 
 /** Represents a 2 way communication channel between the server and a client. */
@@ -19,7 +19,8 @@ class WebsocketEmitter<T>(ws: WebSocketServerSession, private val serialize: (T)
   private val flow: MutableSharedFlow<String> = MutableSharedFlow()
 
   /**
-   * A running job that collects messages from the flow and forwards anything emitted to the client.
+   * Start the job that collects messages from the flow and forwards anything emitted to the client.
+   * Once the client disconnects, the job is cancelled and the cancellation caught in the router.
    */
   init {
     ws.launch { flow.collect { ws.send(it) } }

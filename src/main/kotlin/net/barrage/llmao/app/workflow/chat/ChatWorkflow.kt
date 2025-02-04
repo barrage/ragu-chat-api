@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.workflow.chat
+package net.barrage.llmao.app.workflow.chat
 
 import io.ktor.util.logging.*
 import java.time.Instant
@@ -19,7 +19,7 @@ import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.error.AppError
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.ChatWorkflow")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
 
 /** Implementation of a workflow with a single agent. */
 class ChatWorkflow(

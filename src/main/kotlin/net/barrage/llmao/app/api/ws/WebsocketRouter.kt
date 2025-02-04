@@ -16,21 +16,23 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.app.workflow.IncomingMessage
+import net.barrage.llmao.app.workflow.IncomingMessageSerializer
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.IncomingMessage
-import net.barrage.llmao.core.workflow.IncomingMessageSerializer
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.core.workflow.WorkflowFactory
-import net.barrage.llmao.core.workflow.chat.LOG
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.queryParam
 import net.barrage.llmao.plugins.user
 
+private val LOG =
+  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")
+
 fun Application.websocketServer(
-  factory: WorkflowFactory,
+  factory: ChatWorkflowFactory,
   listener: EventListener<StateChangeEvent>,
 ) {
   val server = WebsocketSessionManager(factory, listener)
