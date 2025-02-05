@@ -220,6 +220,7 @@ class TestPostgres {
     temperature: Double = 0.1,
     titleInstruction: String? = null,
     summaryInstruction: String? = null,
+    errorMessage: String? = null,
   ): AgentConfiguration {
     val configuration =
       dslContext
@@ -233,6 +234,7 @@ class TestPostgres {
           AGENT_CONFIGURATIONS.TEMPERATURE,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+          AGENT_CONFIGURATIONS.ERROR_MESSAGE,
         )
         .values(
           agentId,
@@ -243,6 +245,7 @@ class TestPostgres {
           temperature,
           titleInstruction,
           summaryInstruction,
+          errorMessage,
         )
         .returning()
         .awaitSingle()

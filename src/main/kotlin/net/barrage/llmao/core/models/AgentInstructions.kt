@@ -25,6 +25,9 @@ data class AgentInstructions(
    * maximum history is reached.
    */
   val summaryInstruction: String? = null,
+
+  /** If present, contains a message that will be sent to the user when an error occurs. */
+  val errorMessage: String? = null,
 ) {
   fun titleInstruction(): String {
     if (titleInstruction != null) {
@@ -51,5 +54,9 @@ data class AgentInstructions(
       |${"\"\"\""}
     """
       .trimMargin()
+  }
+
+  fun errorMessage(): String {
+    return errorMessage ?: "An error occurred. Please try again later."
   }
 }
