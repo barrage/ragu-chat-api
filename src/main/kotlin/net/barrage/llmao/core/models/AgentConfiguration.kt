@@ -12,7 +12,7 @@ import net.barrage.llmao.utils.ValidationError
 import net.barrage.llmao.utils.addSchemaErr
 
 @Serializable
-class AgentConfiguration(
+data class AgentConfiguration(
   val id: KUUID,
   val agentId: KUUID,
 
@@ -48,13 +48,14 @@ fun AgentConfigurationsRecord.toAgentConfiguration() =
     llmProvider = this.llmProvider,
     model = this.model,
     temperature = this.temperature!!,
-    agentInstructions = AgentInstructions(this.titleInstruction, this.summaryInstruction),
+    agentInstructions =
+      AgentInstructions(this.titleInstruction, this.summaryInstruction, this.errorMessage),
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
 
 @Serializable
-class CreateAgentConfiguration(
+data class CreateAgentConfiguration(
   @NotBlank val context: String,
   @NotBlank val llmProvider: String,
   @NotBlank val model: String,
@@ -64,7 +65,7 @@ class CreateAgentConfiguration(
 
 @Serializable
 @SchemaValidation("validateCombinations")
-class UpdateAgentConfiguration(
+data class UpdateAgentConfiguration(
   @NotBlank val context: String? = null,
   @NotBlank val llmProvider: String? = null,
   @NotBlank val model: String? = null,
@@ -84,14 +85,14 @@ class UpdateAgentConfiguration(
 }
 
 @Serializable
-class AgentConfigurationEvaluatedMessageCounts(
+data class AgentConfigurationEvaluatedMessageCounts(
   val total: Int,
   val positive: Int,
   val negative: Int,
 )
 
 @Serializable
-class AgentConfigurationWithEvaluationCounts(
+data class AgentConfigurationWithEvaluationCounts(
   val configuration: AgentConfiguration,
   val evaluationCounts: AgentConfigurationEvaluatedMessageCounts,
 )

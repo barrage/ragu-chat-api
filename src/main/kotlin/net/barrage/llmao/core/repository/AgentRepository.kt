@@ -116,6 +116,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.TEMPERATURE,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+          AGENT_CONFIGURATIONS.ERROR_MESSAGE,
           AGENT_CONFIGURATIONS.CREATED_AT,
           AGENT_CONFIGURATIONS.UPDATED_AT,
         )
@@ -158,6 +159,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.TEMPERATURE,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
         AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+        AGENT_CONFIGURATIONS.ERROR_MESSAGE,
         AGENT_CONFIGURATIONS.CREATED_AT,
         AGENT_CONFIGURATIONS.UPDATED_AT,
       )
@@ -226,6 +228,7 @@ class AgentRepository(private val dslContext: DSLContext) {
             AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
             create.configuration.instructions?.summaryInstruction,
           )
+          .set(AGENT_CONFIGURATIONS.ERROR_MESSAGE, create.configuration.instructions?.errorMessage)
           .returning()
           .awaitSingle()
           .into(AGENT_CONFIGURATIONS)
@@ -261,6 +264,7 @@ class AgentRepository(private val dslContext: DSLContext) {
     return dslContext.transactionCoroutine { tx ->
       val context = DSL.using(tx)
 
+      // TODO: Move this to service layer
       val configuration =
         // if configuration or instructions are updated, create a new version
         if (
@@ -293,6 +297,11 @@ class AgentRepository(private val dslContext: DSLContext) {
               AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
               update.configuration.instructions?.summaryInstruction
                 ?: currentConfiguration.agentInstructions.summaryInstruction,
+            )
+            .set(
+              AGENT_CONFIGURATIONS.ERROR_MESSAGE,
+              update.configuration.instructions?.errorMessage
+                ?: currentConfiguration.agentInstructions.errorMessage,
             )
             .returning()
             .awaitSingle()
@@ -330,7 +339,8 @@ class AgentRepository(private val dslContext: DSLContext) {
       update.temperature != null && update.temperature != current.temperature ||
       update.instructions != null &&
         (update.instructions.titleInstruction != current.agentInstructions.titleInstruction ||
-          update.instructions.summaryInstruction != current.agentInstructions.summaryInstruction)
+          update.instructions.summaryInstruction != current.agentInstructions.summaryInstruction ||
+          update.instructions.errorMessage != current.agentInstructions.errorMessage)
   }
 
   suspend fun delete(id: KUUID): Int {
@@ -538,6 +548,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.TEMPERATURE,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+          AGENT_CONFIGURATIONS.ERROR_MESSAGE,
           AGENT_CONFIGURATIONS.CREATED_AT,
           AGENT_CONFIGURATIONS.UPDATED_AT,
         )
@@ -565,6 +576,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.TEMPERATURE,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
         AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
+        AGENT_CONFIGURATIONS.ERROR_MESSAGE,
         AGENT_CONFIGURATIONS.CREATED_AT,
         AGENT_CONFIGURATIONS.UPDATED_AT,
       )

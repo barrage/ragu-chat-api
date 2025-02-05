@@ -266,28 +266,91 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun updateAgentNameNoConfigurationSameVersionWorks() = test {
+  fun updatingAgentInstructionsWorks() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
+
+    val agent = postgres.testAgent()
+    postgres.testAgentConfiguration(agent.id, version = 1)
+
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
         description = "description",
         active = true,
         language = "english",
+        configuration =
+          UpdateAgentConfiguration(
+            context = "context",
+            llmProvider = "azure",
+            model = "gpt-4",
+            temperature = 0.5,
+            instructions =
+              AgentInstructions(
+                titleInstruction = "title",
+                summaryInstruction = "summary",
+                errorMessage = "error",
+              ),
+          ),
       )
 
     val response =
-      client.put("/admin/agents/${agentOne.id}") {
+      client.put("/admin/agents/${agent.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
         contentType(ContentType.Application.Json)
         setBody(updateAgent)
       }
 
     assertEquals(200, response.status.value)
+
     val body = response.body<AgentWithConfiguration>()
+
     assertEquals("TestAgentOneUpdated", body.agent.name)
+    assertEquals("description", body.agent.description)
+    assert(body.agent.active)
+    assertEquals("english", body.agent.language)
+    assertEquals("context", body.configuration.context)
+    assertEquals("azure", body.configuration.llmProvider)
+    assertEquals("gpt-4", body.configuration.model)
+    assertEquals(0.5, body.configuration.temperature)
     assertEquals(2, body.configuration.version)
-    assertEquals(0.1, body.configuration.temperature)
+    assertEquals("title", body.configuration.agentInstructions.titleInstruction)
+    assertEquals("summary", body.configuration.agentInstructions.summaryInstruction)
+    assertEquals("error", body.configuration.agentInstructions.errorMessage)
+  }
+
+  @Test
+  fun updatingAgentMetadataDoesNotBumpAgentVersion() = test {
+    val client = createClient { install(ContentNegotiation) { json() } }
+
+    val agent = postgres.testAgent()
+    postgres.testAgentConfiguration(agent.id, version = 1)
+
+    val updateAgent =
+      UpdateAgent(
+        name = "MyAgent",
+        description = "description",
+        active = true,
+        language = "english",
+      )
+
+    val response =
+      client.put("/admin/agents/${agent.id}") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        contentType(ContentType.Application.Json)
+        setBody(updateAgent)
+      }
+
+    assertEquals(200, response.status.value)
+
+    val body = response.body<AgentWithConfiguration>()
+
+    assertEquals("MyAgent", body.agent.name)
+    assertEquals("description", body.agent.description)
+    assert(body.agent.active)
+    assertEquals("english", body.agent.language)
+    assertEquals(1, body.configuration.version)
+
+    postgres.deleteTestAgent(agent.id)
   }
 
   @Test
