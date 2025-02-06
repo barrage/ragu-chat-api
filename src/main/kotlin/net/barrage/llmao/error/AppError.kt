@@ -1,6 +1,6 @@
 package net.barrage.llmao.error
 
-import io.ktor.http.*
+import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -10,6 +10,8 @@ open class AppError(
   @SerialName("errorReason") val reason: ErrorReason,
   @SerialName("errorDescription") val description: String? = null,
 ) : Throwable() {
+  private var displayMessage: String? = null
+
   companion object {
     fun api(reason: ErrorReason, description: String? = null): AppError {
       return AppError("API", reason, description)
@@ -38,6 +40,11 @@ open class AppError(
       ErrorReason.InvalidContentType -> HttpStatusCode.BadRequest
       else -> HttpStatusCode.InternalServerError
     }
+  }
+
+  fun withDisplayMessage(message: String): AppError {
+    this.displayMessage = message
+    return this
   }
 }
 

@@ -334,11 +334,11 @@ class ChatWorkflow(
   private suspend fun handleError(e: Throwable) {
     when (e) {
       is AppError -> {
-        emitter.emitError(e)
+        emitter.emitError(e.withDisplayMessage(agent.instructions.errorMessage()))
       }
       else -> {
         LOG.error("Error in chat", e)
-        emitter.emitError(AppError.internal())
+        emitter.emitError(AppError.internal().withDisplayMessage(agent.instructions.errorMessage()))
       }
     }
   }
