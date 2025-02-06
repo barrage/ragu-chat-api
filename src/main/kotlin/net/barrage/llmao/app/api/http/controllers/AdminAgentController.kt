@@ -5,14 +5,17 @@ import io.github.smiley4.ktorswaggerui.dsl.routing.delete
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.github.smiley4.ktorswaggerui.dsl.routing.put
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.call
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.route
 import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminAgentsQuery
 import net.barrage.llmao.app.api.http.queryListAgentsFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.app.api.http.runWithImage
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
@@ -29,11 +32,9 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.queryParam
-import net.barrage.llmao.string
 
 fun Route.adminAgentsRoutes(agentService: AgentService) {
   route("/admin/agents") {
@@ -95,34 +96,10 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
       route("/avatars") {
         post(uploadAgentAvatar()) {
           val agentId = call.pathUuid("id")
-          val fileExtension =
-            when (call.request.contentType()) {
-              ContentType.Image.JPEG -> "jpg"
-              ContentType.Image.PNG -> "png"
-              else ->
-                throw AppError.api(
-                  ErrorReason.InvalidContentType,
-                  "Expected type: image/jpeg or image/png",
-                )
-            }
-
-          val contentLength =
-            call.request.contentLength()
-              ?: throw AppError.api(
-                ErrorReason.InvalidParameter,
-                "Expected content in request body",
-              )
-          if (
-            contentLength >
-              application.environment.config.string("upload.image.maxFileSize").toLong()
-          ) {
-            call.respond(HttpStatusCode.PayloadTooLarge)
-            return@post
+          call.runWithImage(agentId) { image ->
+            agentService.uploadAgentAvatar(agentId, image)
+            call.respond(HttpStatusCode.Created, image.name)
           }
-
-          val avatar = call.receiveChannel()
-          val agentUpdated = agentService.uploadAgentAvatar(agentId, fileExtension, avatar)
-          call.respond(agentUpdated)
         }
 
         delete(deleteAgentAvatar()) {
@@ -554,7 +531,7 @@ private fun uploadAgentAvatar(): OpenApiRoute.() -> Unit = {
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
     body<ByteArray> {
-      description = "Avatar image, .jpg or .png format"
+      description = "Avatar image, .jpeg or .png format"
       mediaTypes = setOf(ContentType.Image.JPEG, ContentType.Image.PNG)
       required = true
     }

@@ -13,6 +13,7 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminUsersQuery
 import net.barrage.llmao.app.api.http.queryListUsersFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.app.api.http.runWithImage
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.UpdateUserAdmin
@@ -93,34 +94,10 @@ fun Route.adminUserRoutes(userService: UserService) {
       route("/avatars") {
         post(uploadUserAvatar()) {
           val userId = call.pathUuid("id")
-          val fileExtension =
-            when (call.request.contentType()) {
-              ContentType.Image.JPEG -> "jpg"
-              ContentType.Image.PNG -> "png"
-              else ->
-                throw AppError.api(
-                  ErrorReason.InvalidContentType,
-                  "Expected type: image/jpeg or image/png",
-                )
-            }
-
-          val contentLength =
-            call.request.contentLength()
-              ?: throw AppError.api(
-                ErrorReason.InvalidParameter,
-                "Expected content in request body",
-              )
-          if (
-            contentLength >
-              application.environment.config.string("upload.image.maxFileSize").toLong()
-          ) {
-            call.respond(HttpStatusCode.PayloadTooLarge)
-            return@post
+          call.runWithImage(userId) { image ->
+            userService.uploadUserAvatar(userId, image)
+            call.respond(HttpStatusCode.Created, image.name)
           }
-
-          val avatar = call.receiveChannel()
-          val userUpdated = userService.setUserAvatar(userId, fileExtension, avatar)
-          call.respond(userUpdated)
         }
 
         delete(deleteUserAvatar()) {
@@ -280,7 +257,7 @@ private fun uploadUserAvatar(): OpenApiRoute.() -> Unit = {
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
     body<ByteArray> {
-      description = "Avatar image, .jpg or .png format"
+      description = "Avatar image, .jpeg or .png format"
       mediaTypes = setOf(ContentType.Image.JPEG, ContentType.Image.PNG)
       required = true
     }

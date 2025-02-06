@@ -10,13 +10,12 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.api.http.runWithImage
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.user
-import net.barrage.llmao.string
 
 fun Route.userRoutes(userService: UserService) {
   get("/users/current", getUser()) {
@@ -33,31 +32,11 @@ fun Route.userRoutes(userService: UserService) {
 
   route("users/avatars") {
     post(uploadUserAvatar()) {
-      val fileExtension =
-        when (call.request.contentType()) {
-          ContentType.Image.JPEG -> "jpg"
-          ContentType.Image.PNG -> "png"
-          else ->
-            throw AppError.api(
-              ErrorReason.InvalidContentType,
-              "Expected type: image/jpeg or image/png",
-            )
-        }
-
-      val contentLength =
-        call.request.contentLength()
-          ?: throw AppError.api(ErrorReason.InvalidParameter, "Expected content in request body")
-      if (
-        contentLength > application.environment.config.string("upload.image.maxFileSize").toLong()
-      ) {
-        call.respond(HttpStatusCode.PayloadTooLarge)
-        return@post
-      }
-
       val user = call.user()
-      val avatar = call.receiveChannel()
-      val userUpdated = userService.setUserAvatar(user.id, fileExtension, avatar)
-      call.respond(userUpdated)
+      call.runWithImage(user.id) { image ->
+        userService.uploadUserAvatar(user.id, image)
+        call.respond(HttpStatusCode.Created, image.name)
+      }
     }
 
     delete(deleteUserAvatar()) {

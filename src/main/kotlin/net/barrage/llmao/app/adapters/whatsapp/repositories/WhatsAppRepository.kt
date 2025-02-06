@@ -502,14 +502,20 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
     dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(agentId)).awaitSingle()
   }
 
-  suspend fun updateAgentAvatar(id: KUUID, avatar: String? = null): WhatsAppAgent {
-    return dslContext
+  suspend fun updateAgentAvatar(id: KUUID, avatar: String) {
+    dslContext
       .update(WHATS_APP_AGENTS)
       .set(WHATS_APP_AGENTS.AVATAR, avatar)
       .where(WHATS_APP_AGENTS.ID.eq(id))
-      .returning()
-      .awaitSingle()
-      ?.toWhatsAppAgent() ?: throw AppError.internal("Failed to update WhatsApp agent avatar")
+      .awaitSingle() ?: throw AppError.internal("Failed to update WhatsApp agent avatar")
+  }
+
+  suspend fun removeAgentAvatar(id: KUUID) {
+    dslContext
+      .update(WHATS_APP_AGENTS)
+      .setNull(WHATS_APP_AGENTS.AVATAR)
+      .where(WHATS_APP_AGENTS.ID.eq(id))
+      .awaitSingle() ?: throw AppError.internal("Failed to remove WhatsApp agent avatar")
   }
 
   suspend fun deleteAllCollections(agentId: KUUID) {

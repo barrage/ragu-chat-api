@@ -6,6 +6,7 @@ import java.util.*
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.CsvImportedUser
+import net.barrage.llmao.core.models.Image
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.UpdateUserAdmin
 import net.barrage.llmao.core.models.User
@@ -126,20 +127,18 @@ class UserService(
     return CsvImportUsersResult(successful, failed)
   }
 
-  suspend fun setUserAvatar(id: KUUID, fileExtension: String, avatar: ByteReadChannel): User {
+  suspend fun uploadUserAvatar(id: KUUID, image: Image) {
     val user =
       usersRepository.get(id)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "User not found")
-
-    val imageName = UUID.randomUUID().toString() + "." + fileExtension
-
-    avatarStorage.store(imageName, avatar.toByteArray())
 
     if (user.avatar != null) {
       avatarStorage.delete(user.avatar)
     }
 
-    return usersRepository.updateAvatar(id, imageName)
+    avatarStorage.store(image)
+
+    usersRepository.updateAvatar(id, image.name)
   }
 
   suspend fun deleteUserAvatar(id: KUUID) {
@@ -152,6 +151,6 @@ class UserService(
     }
 
     avatarStorage.delete(user.avatar)
-    usersRepository.updateAvatar(id, null)
+    usersRepository.removeAvatar(id)
   }
 }

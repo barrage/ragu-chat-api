@@ -374,14 +374,12 @@ class AgentRepository(private val dslContext: DSLContext) {
       .awaitSingle()
   }
 
-  suspend fun updateAvatar(id: KUUID, avatar: String? = null): Agent {
-    return dslContext
-      .update(AGENTS)
-      .set(AGENTS.AVATAR, avatar)
-      .where(AGENTS.ID.eq(id))
-      .returning()
-      .awaitSingle()
-      .toAgent()
+  suspend fun updateAvatar(id: KUUID, avatarPath: String) {
+    dslContext.update(AGENTS).set(AGENTS.AVATAR, avatarPath).where(AGENTS.ID.eq(id)).awaitSingle()
+  }
+
+  suspend fun removeAvatar(id: KUUID) {
+    dslContext.update(AGENTS).setNull(AGENTS.AVATAR).where(AGENTS.ID.eq(id)).awaitSingle()
   }
 
   suspend fun updateCollections(

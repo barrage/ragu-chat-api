@@ -143,3 +143,21 @@ databaseChangeLog:
             path: migration/8_add_agent_error_message_and_message_finish_reason/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
+  - changeSet:
+      id: 9
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 9.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/9_add_avatar_url_to_users_and_agents/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/9_add_avatar_url_to_users_and_agents/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
