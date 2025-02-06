@@ -1,5 +1,4 @@
 <configuration>
-    <logger name="liquibase" level="ERROR"/>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -26,4 +25,5 @@
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
     </root>
+    <logger name="org.liquibase" level="OFF"/>
 </configuration>

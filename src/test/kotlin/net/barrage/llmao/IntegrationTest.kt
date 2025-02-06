@@ -262,6 +262,9 @@ const val COMPLETIONS_STREAM_WHITESPACE_PROMPT = "v1_chat_completions_whitespace
 /** Prompt configured to make wiremock return a stream response with a long response. */
 const val COMPLETIONS_STREAM_LONG_PROMPT = "v1_chat_completions_long_stream"
 
+/** Prompt configured to make wiremock return an error for downstream LLM APIs. */
+const val COMPLETIONS_ERROR_PROMPT = "v1_chat_completions_error"
+
 // Wiremock message content
 
 /** Returned on [COMPLETIONS_COMPLETION_PROMPT]. */
@@ -276,8 +279,6 @@ const val COMPLETIONS_STREAM_RESPONSE = "v1_chat_completions_stream_response"
 /** Returned on [COMPLETIONS_STREAM_WHITESPACE_PROMPT]. */
 const val COMPLETIONS_STREAM_WHITESPACE_RESPONSE =
   "v1_chat_completions_stream_response\nwith whitespace"
-
-val COMPLETIONS_STREAM_LONG_RESPONSE = COMPLETIONS_STREAM_RESPONSE.repeat(4)
 
 private fun generateP8PrivateKey(): String {
   val keyPairGen = KeyPairGenerator.getInstance("EC")

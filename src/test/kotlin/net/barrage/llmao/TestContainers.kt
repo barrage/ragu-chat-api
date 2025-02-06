@@ -13,6 +13,8 @@ import io.weaviate.client.v1.filters.Operator
 import io.weaviate.client.v1.filters.WhereFilter
 import io.weaviate.client.v1.schema.model.Property
 import io.weaviate.client.v1.schema.model.WeaviateClass
+import java.io.FileOutputStream
+import java.io.PrintStream
 import java.lang.Thread.sleep
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -81,7 +83,6 @@ class TestPostgres {
 
   lateinit var dslContext: DSLContext
   private lateinit var connectionPool: ConnectionPool
-  private val liquibase: Liquibase
 
   init {
     container.start()
@@ -100,14 +101,24 @@ class TestPostgres {
         databaseName = "test"
       }
 
-    liquibase =
-      Liquibase(
-        "db/changelog.yaml",
-        ClassLoaderResourceAccessor(),
-        JdbcConnection(dataSource.connection),
-      )
-
-    liquibase.update()
+    // The insane lengths one has to go through to make this
+    // hot garbage piece of shit library shut the fuck up is unfathomable
+    val originalOut = System.out
+    val originalErr = System.err
+    try {
+      System.setOut(PrintStream(FileOutputStream("/dev/null")))
+      System.setErr(PrintStream(FileOutputStream("/dev/null")))
+      val liquibase =
+        Liquibase(
+          "db/changelog.yaml",
+          ClassLoaderResourceAccessor(),
+          JdbcConnection(dataSource.connection),
+        )
+      liquibase.update()
+    } finally {
+      System.setOut(originalOut)
+      System.setErr(originalErr)
+    }
   }
 
   private fun initConnectionPool() {
@@ -511,7 +522,7 @@ class TestWeaviate {
 }
 
 class TestMinio {
-  val container =
+  val container: MinIOContainer =
     MinIOContainer("minio/minio:latest")
       .withUserName("testMinio")
       .withPassword("testMinio")

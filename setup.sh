@@ -5,17 +5,14 @@ ln -f hooks/pre-push .git/hooks/
 docker compose up -d
 
 # Set up the gradle properties if not already present
-cat gradle.properties &> /dev/null
-if [ $? -eq 0 ]; then
+if [ -e gradle.properties ]; then
   echo "gradle.properties already exists, skipping"
 else
   cp gradle.example.properties gradle.properties
 fi
 
 # Set up the application properties
-cat ./config/application.conf &> /dev/null
-
-if [ $? -eq 0 ]; then
+if [ -e config/application.conf ]; then
   echo "application.conf already exists, skipping"
 else
   cp ./config/application.example.conf ./config/application.conf

@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.models
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
@@ -33,7 +34,15 @@ data class Message(
 
   /** :( / :) */
   val evaluation: Boolean? = null,
+
+  /** Evaluation description. */
   val feedback: String? = null,
+
+  /**
+   * Why the LLM stopped streaming. If this is anything other than STOP or MANUAL_STOP, an error
+   * occurred during inference.
+   */
+  val finishReason: FinishReason? = null,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
@@ -46,9 +55,20 @@ fun MessagesRecord.toMessage() =
     content = this.content,
     chatId = this.chatId,
     responseTo = this.responseTo,
+    finishReason = this.finishReason?.let { FinishReason(it) },
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
+
+data class MessageInsert(
+  val id: KUUID,
+  val chatId: KUUID,
+  val sender: KUUID,
+  val senderType: String,
+  val content: String,
+  val responseTo: KUUID? = null,
+  val finishReason: FinishReason? = null,
+)
 
 @Serializable
 data class AgentConfigurationEvaluatedMessages(

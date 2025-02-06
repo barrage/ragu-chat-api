@@ -13,8 +13,7 @@ sealed class IncomingSystemMessage {
 
   @Serializable
   @SerialName("workflow.existing")
-  data class LoadExistingWorkflow(val workflowId: KUUID, val initialHistorySize: Int = 10) :
-    IncomingSystemMessage()
+  data class LoadExistingWorkflow(val workflowId: KUUID) : IncomingSystemMessage()
 
   @Serializable @SerialName("workflow.close") data object CloseWorkflow : IncomingSystemMessage()
 

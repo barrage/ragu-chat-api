@@ -1,4 +1,4 @@
-./gradlew ktfmtCheck
+./gradlew ktfmtCheck >/dev/null 2>&1
 ktfmt_check_result=$?
 
 if [ $ktfmt_check_result -eq 1 ]; then
