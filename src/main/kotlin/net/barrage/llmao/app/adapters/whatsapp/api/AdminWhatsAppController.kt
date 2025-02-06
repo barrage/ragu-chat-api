@@ -18,6 +18,7 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMes
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.app.api.http.runWithImage
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
@@ -25,11 +26,9 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.queryParam
-import net.barrage.llmao.string
 
 fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
   route("/admin/whatsapp/agents") {
@@ -74,30 +73,10 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 
       post("/avatars", adminUploadWhatsAppAgentAvatar()) {
         val agentId = call.pathUuid("agentId")
-        val fileExtension =
-          when (call.request.contentType()) {
-            ContentType.Image.JPEG -> "jpg"
-            ContentType.Image.PNG -> "png"
-            else ->
-              throw AppError.api(
-                ErrorReason.InvalidContentType,
-                "Expected type: image/jpeg or image/png",
-              )
-          }
-
-        val contentLength =
-          call.request.contentLength()
-            ?: throw AppError.api(ErrorReason.InvalidParameter, "Expected content in request body")
-        if (
-          contentLength > application.environment.config.string("upload.image.maxFileSize").toLong()
-        ) {
-          call.respond(HttpStatusCode.PayloadTooLarge)
-          return@post
+        call.runWithImage(agentId) { image ->
+          whatsAppAdapter.uploadAgentAvatar(agentId, image)
+          call.respond(HttpStatusCode.Created, image.name)
         }
-
-        val avatar = call.receiveChannel()
-        val agent = whatsAppAdapter.uploadAgentAvatar(agentId, fileExtension, avatar)
-        call.respond(agent)
       }
 
       delete("/avatars", adminDeleteWhatsAppAgentAvatar()) {
@@ -164,14 +143,7 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 private fun adminGetAllWhatsAppAgents(): OpenApiRoute.() -> Unit = {
   tags("admin/whatsapp/agents")
   description = "Retrieve list of all WhatsApp agents"
-  request {
-    queryPaginationSort()
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
-    }
-  }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {
@@ -211,11 +183,6 @@ private fun adminGetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
     pathParameter<KUUID>("agentId") {
       description = "Agent ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    queryParameter<Boolean>("withAvatar") {
-      description = "Include avatar in response"
-      required = false
-      example("default") { value = true }
     }
   }
   response {
@@ -350,7 +317,7 @@ private fun adminUploadWhatsAppAgentAvatar(): OpenApiRoute.() -> Unit = {
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
     body<ByteArray> {
-      description = "Avatar image, .jpg or .png format"
+      description = "Avatar image, .jpeg or .png format"
       mediaTypes = setOf(ContentType.Image.JPEG, ContentType.Image.PNG)
       required = true
     }

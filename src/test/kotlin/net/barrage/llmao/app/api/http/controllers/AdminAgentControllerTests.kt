@@ -1,17 +1,21 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.minio.RemoveObjectArgs
-import io.minio.StatObjectArgs
-import io.minio.errors.ErrorResponseException
+import io.ktor.client.call.body
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.core.BUCKET_AVATARS_PATH
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
@@ -31,13 +35,10 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 class AdminAgentControllerTests : IntegrationTest() {
   private lateinit var agentOne: Agent
@@ -437,12 +438,11 @@ class AdminAgentControllerTests : IntegrationTest() {
       }
 
     assertEquals(400, response.status.value)
-    assertEquals("API", response.body<AppError>().errorType)
-    assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().errorReason)
-    assertEquals(
-      "Cannot delete active agent or agent not found",
-      response.body<AppError>().errorDescription,
-    )
+
+    val body = response.body<AppError>()
+
+    assertEquals("API", body.errorType)
+    assertEquals(ErrorReason.InvalidOperation, body.errorReason)
   }
 
   @Test
@@ -524,28 +524,16 @@ class AdminAgentControllerTests : IntegrationTest() {
         setBody("test".toByteArray())
       }
 
-    assertEquals(200, response.status.value)
-    val body = response.body<Agent>()
-    assertEquals(agentOne.id, body.id)
-    assertNotNull(body.avatar, "Avatar should not be null")
+    assertEquals(201, response.status.value)
 
-    assertDoesNotThrow {
-      minio.client.statObject(
-        StatObjectArgs.builder()
-          .bucket("test")
-          .`object`("$BUCKET_AVATARS_PATH/${body.avatar}")
-          .build()
-      )
-    }
+    val responseCheck =
+      client.get("/avatars/${agentOne.id}.jpeg") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
 
-    assertDoesNotThrow {
-      minio.client.removeObject(
-        RemoveObjectArgs.builder()
-          .bucket("test")
-          .`object`("$BUCKET_AVATARS_PATH/${body.avatar}")
-          .build()
-      )
-    }
+    assertEquals(200, responseCheck.status.value)
+    assertEquals("image/jpeg", responseCheck.headers["Content-Type"])
+    assertEquals("test", responseCheck.bodyAsText())
   }
 
   @Test
@@ -558,28 +546,18 @@ class AdminAgentControllerTests : IntegrationTest() {
         setBody("test".toByteArray())
       }
 
-    assertEquals(200, response.status.value)
-    val body = response.body<Agent>()
-    assertEquals(agentOne.id, body.id)
-    assertNotNull(body.avatar, "Avatar should not be null")
+    assertEquals(201, response.status.value)
+    val body = response.bodyAsText()
+    assertEquals("${agentOne.id}.png", body)
 
-    assertDoesNotThrow {
-      minio.client.statObject(
-        StatObjectArgs.builder()
-          .bucket("test")
-          .`object`("$BUCKET_AVATARS_PATH/${body.avatar}")
-          .build()
-      )
-    }
+    val responseCheck =
+      client.get("/avatars/${agentOne.id}.png") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
 
-    assertDoesNotThrow {
-      minio.client.removeObject(
-        RemoveObjectArgs.builder()
-          .bucket("test")
-          .`object`("$BUCKET_AVATARS_PATH/${body.avatar}")
-          .build()
-      )
-    }
+    assertEquals(200, responseCheck.status.value)
+    assertEquals("image/png", responseCheck.headers["Content-Type"])
+    assertEquals("test", responseCheck.bodyAsText())
   }
 
   @Test
@@ -593,19 +571,7 @@ class AdminAgentControllerTests : IntegrationTest() {
         setBody("test".toByteArray())
       }
 
-    assertEquals(200, responseUpload.status.value)
-    val bodyUpload = responseUpload.body<Agent>()
-    assertEquals(agentOne.id, bodyUpload.id)
-    assertNotNull(bodyUpload.avatar, "Avatar should not be null")
-
-    assertDoesNotThrow {
-      minio.client.statObject(
-        StatObjectArgs.builder()
-          .bucket("test")
-          .`object`("$BUCKET_AVATARS_PATH/${bodyUpload.avatar}")
-          .build()
-      )
-    }
+    assertEquals(201, responseUpload.status.value)
 
     val responseDelete =
       client.delete("/admin/agents/${agentOne.id}/avatars") {
@@ -614,24 +580,24 @@ class AdminAgentControllerTests : IntegrationTest() {
 
     assertEquals(204, responseDelete.status.value)
 
-    assertThrows<ErrorResponseException> {
-      minio.client.statObject(
-        StatObjectArgs.builder()
-          .bucket("test")
-          .`object`("$BUCKET_AVATARS_PATH/${bodyUpload.avatar}")
-          .build()
-      )
-    }
-
     val responseCheck =
       client.get("/admin/agents/${agentOne.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
     assertEquals(200, responseCheck.status.value)
+
     val bodyCheck = responseCheck.body<AgentFull>()
+
     assertEquals(agentOne.id, bodyCheck.agent.id)
     assertNull(bodyCheck.agent.avatar, "Avatar should be null")
+
+    val responseCheckAvatar =
+      client.get("/avatars/${agentOne.id}.jpeg") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(404, responseCheckAvatar.status.value)
   }
 
   @Test
@@ -666,50 +632,41 @@ class AdminAgentControllerTests : IntegrationTest() {
   @Test
   fun agentAvatarUploadOverwrite() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val responseUpload1 =
+
+    val responseUploadOriginal =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
         header("Content-Type", "image/jpeg")
-        setBody("test".toByteArray())
+        setBody("foo".toByteArray())
       }
-    assertEquals(200, responseUpload1.status.value)
 
-    assertDoesNotThrow {
-      minio.client.statObject(
-        StatObjectArgs.builder().bucket("test").`object`("avatars/${agentOne.id}.jpg").build()
-      )
-    }
+    assertEquals(201, responseUploadOriginal.status.value)
 
-    assertThrows<ErrorResponseException> {
-      minio.client.statObject(
-        StatObjectArgs.builder().bucket("test").`object`("avatars/${agentOne.id}.png").build()
-      )
-    }
+    val responseCheck =
+      client.get("/avatars/${agentOne.id}.jpeg") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
 
-    val responseUpload2 =
+    assertEquals(200, responseCheck.status.value)
+    assertEquals("image/jpeg", responseCheck.headers["Content-Type"])
+    assertEquals("foo", responseCheck.bodyAsText())
+
+    val responseUploadOverwrite =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
         header("Content-Type", "image/png")
-        setBody("test".toByteArray())
+        setBody("bar".toByteArray())
       }
-    assertEquals(200, responseUpload2.status.value)
 
-    assertThrows<ErrorResponseException> {
-      minio.client.statObject(
-        StatObjectArgs.builder().bucket("test").`object`("avatars/${agentOne.id}.jpg").build()
-      )
-    }
+    assertEquals(201, responseUploadOverwrite.status.value)
 
-    assertDoesNotThrow {
-      minio.client.statObject(
-        StatObjectArgs.builder().bucket("test").`object`("avatars/${agentOne.id}.png").build()
-      )
-    }
+    val responseCheckOverwrite =
+      client.get("/avatars/${agentOne.id}.png") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
 
-    assertDoesNotThrow {
-      minio.client.removeObject(
-        RemoveObjectArgs.builder().bucket("test").`object`("avatars/${agentOne.id}.png").build()
-      )
-    }
+    assertEquals(200, responseCheckOverwrite.status.value)
+    assertEquals("image/png", responseCheckOverwrite.headers["Content-Type"])
+    assertEquals("bar", responseCheckOverwrite.bodyAsText())
   }
 }

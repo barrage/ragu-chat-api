@@ -16,6 +16,7 @@ import net.barrage.llmao.core.models.AgentTool
 import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CollectionInsert
 import net.barrage.llmao.core.models.CreateAgent
+import net.barrage.llmao.core.models.Image
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
@@ -153,18 +154,16 @@ class AgentService(
     return agentRepository.getAgent(agentId)
   }
 
-  suspend fun uploadAgentAvatar(id: KUUID, fileExtension: String, avatar: ByteReadChannel): Agent {
+  suspend fun uploadAgentAvatar(id: KUUID, image: Image) {
     val agent = agentRepository.getAgent(id)
-
-    val imageName = UUID.randomUUID().toString() + "." + fileExtension
-
-    avatarStorage.store(imageName, avatar.toByteArray())
 
     if (agent.avatar != null) {
       avatarStorage.delete(agent.avatar)
     }
 
-    return agentRepository.updateAvatar(id, imageName)
+    avatarStorage.store(image)
+
+    agentRepository.updateAvatar(id, image.name)
   }
 
   suspend fun deleteAgentAvatar(id: KUUID) {
@@ -175,7 +174,8 @@ class AgentService(
     }
 
     avatarStorage.delete(agent.avatar)
-    agentRepository.updateAvatar(id, null)
+
+    agentRepository.removeAvatar(id)
   }
 
   fun listAvailableAgentTools(): List<ToolDefinition> {

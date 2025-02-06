@@ -7,9 +7,9 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.core.storage.ImageStorage
 
 fun Route.imageRoutes(imageStorage: ImageStorage) {
-  get("/avatars/{imageName}") {
-    val imageName = call.parameters["imageName"]
-    val image = imageName?.let { imageStorage.retrieve(it) }
+  get("/avatars/{imagePath}") {
+    val imagePath = call.parameters["imagePath"]
+    val image = imagePath?.let { imageStorage.retrieve(it) }
 
     if (image == null) {
       call.respond(HttpStatusCode.NotFound)
@@ -22,6 +22,6 @@ fun Route.imageRoutes(imageStorage: ImageStorage) {
         .toString(),
     )
 
-    call.respondBytes(image.data, ContentType.parse(image.contentType), HttpStatusCode.OK)
+    call.respondBytes(image.data, ContentType.parse(image.type.toContentType()), HttpStatusCode.OK)
   }
 }

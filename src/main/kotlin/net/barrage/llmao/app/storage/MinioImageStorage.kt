@@ -1,7 +1,7 @@
 package net.barrage.llmao.app.storage
 
-import io.ktor.server.config.*
-import io.ktor.util.logging.*
+import io.ktor.server.config.ApplicationConfig
+import io.ktor.util.logging.KtorSimpleLogger
 import io.minio.BucketExistsArgs
 import io.minio.GetObjectArgs
 import io.minio.MinioClient
@@ -10,12 +10,13 @@ import io.minio.RemoveObjectArgs
 import io.minio.StatObjectArgs
 import io.minio.errors.ErrorResponseException
 import io.minio.errors.MinioException
-import net.barrage.llmao.core.BUCKET_AVATARS_PATH
 import net.barrage.llmao.core.models.Image
+import net.barrage.llmao.core.models.ImageType
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.string
 
+private const val AVATAR_PREFIX = "avatars"
 private val LOG = KtorSimpleLogger("net.barrage.llmao.app.storage.AvatarStorage")
 
 class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
@@ -39,49 +40,39 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
     }
   }
 
-  override fun store(imageName: String, bytes: ByteArray): String {
-    val path = "$BUCKET_AVATARS_PATH/$imageName"
+  override fun store(image: Image) {
+    val path = "$AVATAR_PREFIX/${image.name}"
 
     try {
-      LOG.debug("Uploading file to Minio")
       client.putObject(
         PutObjectArgs.builder()
           .bucket(bucket)
           .`object`(path)
-          .stream(bytes.inputStream(), bytes.size.toLong(), -1)
+          .stream(image.data.inputStream(), image.data.size.toLong(), -1)
           .build()
       )
     } catch (e: MinioException) {
       LOG.error("Failed to upload file", e)
       throw AppError.internal("Failed to upload file")
     }
-
-    return imageName
   }
 
-  override fun retrieve(imageName: String): Image? {
-    val nameWithPath = "$BUCKET_AVATARS_PATH/$imageName"
+  override fun retrieve(name: String): Image? {
+    val nameWithPath = "$AVATAR_PREFIX/$name"
 
     if (!exists(nameWithPath)) {
-      LOG.debug("File does not exist in Minio: $nameWithPath")
       return null
     }
 
-    val contentType =
-      when (imageName.substringAfterLast('.', "").lowercase()) {
-        "jpg" -> "image/jpeg"
-        "png" -> "image/png"
-        else -> return null
-      }
+    val contentType = ImageType.fromImageName(name) ?: throw AppError.internal("Invalid image type")
 
     try {
-      LOG.debug("Downloading file from Minio")
       val bytes =
         client
           .getObject(GetObjectArgs.builder().bucket(bucket).`object`(nameWithPath).build())
           .readBytes()
 
-      return Image(contentType, bytes)
+      return Image(name, bytes, contentType)
     } catch (e: MinioException) {
       LOG.error("Failed to download file", e)
       throw AppError.internal("Failed to download file")
@@ -89,10 +80,9 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
   }
 
   override fun delete(name: String) {
-    val path = "$BUCKET_AVATARS_PATH/$name"
+    val path = "$AVATAR_PREFIX/$name"
 
     try {
-      LOG.debug("Deleting file from Minio")
       client.removeObject(RemoveObjectArgs.builder().bucket(bucket).`object`(path).build())
     } catch (e: MinioException) {
       LOG.error("Failed to delete file", e)
@@ -102,7 +92,6 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
 
   override fun exists(path: String): Boolean {
     return try {
-      LOG.debug("Checking if object exists in Minio")
       client
         .statObject(StatObjectArgs.builder().bucket(bucket).`object`(path).build())
         .contentType()
@@ -112,6 +101,7 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
       if (e.message.equals("Object does not exist", ignoreCase = true)) {
         return false
       } else {
+        LOG.error("Failed to check object", e)
         throw AppError.internal("Failed to check object")
       }
     } catch (e: MinioException) {

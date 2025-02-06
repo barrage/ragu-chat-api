@@ -3,11 +3,14 @@ package net.barrage.llmao.core.storage
 import net.barrage.llmao.core.models.Image
 
 interface ImageStorage {
-  /** Store the given bytes at the given path. */
-  fun store(imageName: String, bytes: ByteArray): String
+  /** Store the given image object. */
+  fun store(image: Image)
 
-  /** Retrieve the bytes at the given path. */
-  fun retrieve(imageName: String): Image?
+  /**
+   * Retrieve the bytes for the given image name. If found, the image object will have the same name
+   * as the input.
+   */
+  fun retrieve(name: String): Image?
 
   /** Delete the file for given name. */
   fun delete(name: String)

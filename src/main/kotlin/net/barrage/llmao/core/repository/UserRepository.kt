@@ -159,14 +159,12 @@ class UserRepository(private val dslContext: DSLContext) {
       .awaitSingle() == 1
   }
 
-  suspend fun updateAvatar(id: UUID, avatar: String? = null): User {
-    return dslContext
-      .update(USERS)
-      .set(USERS.AVATAR, avatar)
-      .where(USERS.ID.eq(id))
-      .returning()
-      .awaitSingle()
-      .toUser()
+  suspend fun updateAvatar(id: UUID, avatar: String) {
+    dslContext.update(USERS).set(USERS.AVATAR, avatar).where(USERS.ID.eq(id)).awaitSingle()
+  }
+
+  suspend fun removeAvatar(id: UUID) {
+    dslContext.update(USERS).setNull(USERS.AVATAR).where(USERS.ID.eq(id)).awaitSingle()
   }
 
   suspend fun insertUsers(users: List<CreateUser>): List<String> {

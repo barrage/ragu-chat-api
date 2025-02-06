@@ -31,6 +31,7 @@ import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.CreateAgent
+import net.barrage.llmao.core.models.Image
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsResult
@@ -147,25 +148,19 @@ class WhatsAppAdapter(
     repository.deleteAgent(agentId)
   }
 
-  suspend fun uploadAgentAvatar(
-    id: KUUID,
-    fileExtension: String,
-    avatar: ByteReadChannel,
-  ): WhatsAppAgent {
+  suspend fun uploadAgentAvatar(id: KUUID, image: Image) {
     val agent = repository.getAgent(id)
-
-    val imageName = java.util.UUID.randomUUID().toString() + "." + fileExtension
-
-    avatarStorage.store(imageName, avatar.toByteArray())
 
     if (agent.agent.avatar != null) {
       avatarStorage.delete(agent.agent.avatar)
     }
 
-    return repository.updateAgentAvatar(id, imageName)
+    avatarStorage.store(image)
+
+    repository.updateAgentAvatar(id, image.name)
   }
 
-  suspend fun deleteAgentAvatar(id: KUUID): WhatsAppAgent {
+  suspend fun deleteAgentAvatar(id: KUUID) {
     val agent = repository.getAgent(id)
 
     if (agent.agent.avatar == null) {
@@ -173,7 +168,8 @@ class WhatsAppAdapter(
     }
 
     avatarStorage.delete(agent.agent.avatar)
-    return repository.updateAgentAvatar(id, null)
+
+    repository.removeAgentAvatar(id)
   }
 
   suspend fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
