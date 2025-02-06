@@ -10,7 +10,7 @@ open class AppError(
   @SerialName("errorReason") val reason: ErrorReason,
   @SerialName("errorDescription") val description: String? = null,
 ) : Throwable() {
-  private var displayMessage: String? = null
+  var displayMessage: String? = null
 
   companion object {
     fun api(reason: ErrorReason, description: String? = null): AppError {

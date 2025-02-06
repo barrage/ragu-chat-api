@@ -4,8 +4,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.models.ChatWithMessages
+import net.barrage.llmao.core.models.MessageInsert
 import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.types.KUUID
@@ -17,7 +17,7 @@ import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 
 class ChatWorkflowRepository(private val dslContext: DSLContext) {
-  suspend fun getChatWithMessages(id: KUUID, historySize: Int): ChatWithMessages {
+  suspend fun getChatWithMessages(id: KUUID): ChatWithMessages {
     val chat =
       dslContext
         .select(
@@ -48,8 +48,7 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         )
         .from(MESSAGES)
         .where(MESSAGES.CHAT_ID.eq(id))
-        .orderBy(MESSAGES.CREATED_AT.desc())
-        .limit(historySize)
+        .orderBy(MESSAGES.CREATED_AT.asc(), MESSAGES.SENDER_TYPE.desc())
         .asFlow()
         .map { record -> record.into(MESSAGES).toMessage() }
         .toList()
@@ -62,42 +61,32 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
       .update(CHATS)
       .set(CHATS.TITLE, title)
       .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
-      .awaitSingle()
+      .awaitFirstOrNull() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 
-  suspend fun insertMessagePair(
-    chatId: KUUID,
-    responseMessageId: KUUID,
-    userId: KUUID,
-    prompt: String,
-    agentConfigurationId: KUUID,
-    response: String,
-  ) {
+  suspend fun insertMessagePair(userMessage: MessageInsert, assistantMessage: MessageInsert) {
     dslContext.transactionCoroutine { ctx ->
-      val messageId =
-        ctx
-          .dsl()
-          .insertInto(MESSAGES)
-          .set(MESSAGES.CHAT_ID, chatId)
-          .set(MESSAGES.SENDER, userId)
-          .set(MESSAGES.SENDER_TYPE, "user")
-          .set(MESSAGES.CONTENT, prompt)
-          .returning(MESSAGES.ID)
-          .awaitSingle()
-          .id
+      ctx
+        .dsl()
+        .insertInto(MESSAGES)
+        .set(MESSAGES.ID, userMessage.id)
+        .set(MESSAGES.CHAT_ID, userMessage.chatId)
+        .set(MESSAGES.CONTENT, userMessage.content)
+        .set(MESSAGES.SENDER, userMessage.sender)
+        .set(MESSAGES.SENDER_TYPE, userMessage.senderType)
+        .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
 
       ctx
         .dsl()
         .insertInto(MESSAGES)
-        .set(MESSAGES.ID, responseMessageId)
-        .set(MESSAGES.CHAT_ID, chatId)
-        .set(MESSAGES.SENDER, agentConfigurationId)
-        .set(MESSAGES.SENDER_TYPE, "assistant")
-        .set(MESSAGES.CONTENT, response)
-        .set(MESSAGES.RESPONSE_TO, messageId)
-        .returning(MESSAGES.ID)
-        .awaitSingle()
-        .id ?: throw AppError.internal("Failed to insert message pair")
+        .set(MESSAGES.ID, assistantMessage.id)
+        .set(MESSAGES.CHAT_ID, assistantMessage.chatId)
+        .set(MESSAGES.CONTENT, assistantMessage.content)
+        .set(MESSAGES.SENDER, assistantMessage.sender)
+        .set(MESSAGES.SENDER_TYPE, assistantMessage.senderType)
+        .set(MESSAGES.RESPONSE_TO, userMessage.id)
+        .set(MESSAGES.FINISH_REASON, assistantMessage.finishReason?.value)
+        .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
     }
   }
 
@@ -107,51 +96,46 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
       .set(MESSAGES.CHAT_ID, id)
       .set(MESSAGES.SENDER_TYPE, "system")
       .set(MESSAGES.CONTENT, message)
-      .awaitSingle()
+      .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert system message")
   }
 
   suspend fun insertChat(
-    id: KUUID,
-    responseMessageId: KUUID,
+    chatId: KUUID,
     userId: KUUID,
-    prompt: String,
     agentId: KUUID,
-    response: String,
+    userMessage: MessageInsert,
+    assistantMessage: MessageInsert,
   ) {
     return dslContext.transactionCoroutine { ctx ->
-      val chatId =
-        ctx
-          .dsl()
-          .insertInto(CHATS)
-          .set(CHATS.ID, id)
-          .set(CHATS.USER_ID, userId)
-          .set(CHATS.AGENT_ID, agentId)
-          .returning(CHATS.ID)
-          .awaitSingle()
-          .id ?: throw AppError.internal("Failed to insert chat")
-
-      val messageId =
-        ctx
-          .dsl()
-          .insertInto(MESSAGES)
-          .set(MESSAGES.CHAT_ID, chatId)
-          .set(MESSAGES.SENDER, userId)
-          .set(MESSAGES.SENDER_TYPE, "user")
-          .set(MESSAGES.CONTENT, prompt)
-          .returning(MESSAGES.ID)
-          .awaitSingle()
-          .id ?: throw AppError.internal("Failed to insert user message")
+      ctx
+        .dsl()
+        .insertInto(CHATS)
+        .set(CHATS.ID, chatId)
+        .set(CHATS.USER_ID, userId)
+        .set(CHATS.AGENT_ID, agentId)
+        .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert chat")
 
       ctx
         .dsl()
         .insertInto(MESSAGES)
-        .set(MESSAGES.ID, responseMessageId)
-        .set(MESSAGES.CHAT_ID, chatId)
-        .set(MESSAGES.SENDER, agentId)
-        .set(MESSAGES.SENDER_TYPE, "assistant")
-        .set(MESSAGES.CONTENT, response)
-        .set(MESSAGES.RESPONSE_TO, messageId)
-        .awaitSingle() ?: throw AppError.internal("Failed to insert assistant message")
+        .set(MESSAGES.ID, userMessage.id)
+        .set(MESSAGES.CHAT_ID, userMessage.chatId)
+        .set(MESSAGES.CONTENT, userMessage.content)
+        .set(MESSAGES.SENDER, userMessage.sender)
+        .set(MESSAGES.SENDER_TYPE, userMessage.senderType)
+        .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
+
+      ctx
+        .dsl()
+        .insertInto(MESSAGES)
+        .set(MESSAGES.ID, assistantMessage.id)
+        .set(MESSAGES.CHAT_ID, assistantMessage.chatId)
+        .set(MESSAGES.CONTENT, assistantMessage.content)
+        .set(MESSAGES.SENDER, assistantMessage.sender)
+        .set(MESSAGES.SENDER_TYPE, assistantMessage.senderType)
+        .set(MESSAGES.RESPONSE_TO, userMessage.id)
+        .set(MESSAGES.FINISH_REASON, assistantMessage.finishReason?.value)
+        .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
     }
   }
 }

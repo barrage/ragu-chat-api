@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
+import net.barrage.llmao.COMPLETIONS_ERROR_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_LONG_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
@@ -444,9 +445,36 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
     assert(asserted)
   }
 
+  @Test
+  fun sendsAgentErrorMessageWhenErrorIsEncountered() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_ERROR_PROMPT)
+
+    val validAgent = createValidAgent("This is an error message.")
+
+    client.chatSession(session.sessionId) {
+      openNewChat(validAgent.agent.id)
+
+      sendMessage("Will this trigger a stream response?") { incoming ->
+        for (frame in incoming) {
+          val response = (frame as Frame.Text).readText()
+          val message = json.decodeFromString<AppError>(response)
+          assertEquals("This is an error message.", message.displayMessage)
+          asserted = true
+          break
+        }
+      }
+    }
+
+    deleteVectors()
+
+    assert(asserted)
+  }
+
   // Valid and invalid here refer to configuration, not the actual models and objects.
 
-  private suspend fun createValidAgent(): AgentFull {
+  private suspend fun createValidAgent(errorMessage: String? = null): AgentFull {
     val validAgent = postgres.testAgent()
 
     val validAgentConfiguration =
@@ -455,6 +483,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
         llmProvider = "openai",
         model = "gpt-4o",
         titleInstruction = COMPLETIONS_TITLE_PROMPT,
+        errorMessage = errorMessage,
       )
 
     val validAgentCollection =

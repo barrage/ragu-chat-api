@@ -24,6 +24,7 @@ sealed class IncomingMessage {
 
 val IncomingMessageSerializer = Json {
   // Register all the polymorphic subclasses
+  ignoreUnknownKeys = true
   classDiscriminator = "type" // Use "type" field for the discriminator
   serializersModule = SerializersModule {
     polymorphic(IncomingMessage::class) {

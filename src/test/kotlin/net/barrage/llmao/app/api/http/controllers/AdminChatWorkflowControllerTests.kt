@@ -9,12 +9,15 @@ import java.util.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowRepository
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.MessageInsert
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
@@ -28,6 +31,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class AdminChatWorkflowControllerTests : IntegrationTest() {
   private lateinit var user: User
@@ -41,6 +45,7 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
   private lateinit var chatThree: Chat
   private lateinit var messageOne: Message
   private lateinit var messageTwo: Message
+  private lateinit var chatWorkflowRepository: ChatWorkflowRepository
   private lateinit var chatRepository: ChatRepository
 
   @BeforeAll
@@ -55,15 +60,17 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
       chatOne = postgres.testChat(user.id, agent.id)
       chatTwo = postgres.testChat(user.id, agent.id)
       chatThree = postgres.testChat(userAdmin.id, agent.id)
-      messageOne = postgres.testChatMessage(chatOne.id, user.id, "First Message")
+      messageOne =
+        postgres.testChatMessage(chatId = chatOne.id, userId = user.id, content = "First Message")
       messageTwo =
         postgres.testChatMessage(
-          chatOne.id,
-          UUID.randomUUID(),
-          "Second Message",
+          chatId = chatOne.id,
+          userId = UUID.randomUUID(),
+          content = "Second Message",
           senderType = "assistant",
           responseTo = messageOne.id,
         )
+      chatWorkflowRepository = ChatWorkflowRepository(postgres.dslContext)
       chatRepository = ChatRepository(postgres.dslContext)
     }
   }
@@ -316,24 +323,42 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
   @Test
   fun shouldDeleteChatWithExistingMessages() = test {
     val newChat = postgres.testChat(user.id, agent.id)
-    val chat = chatRepository.get(newChat.id)!!
-    val userMessage = chatRepository.insertUserMessage(chat.id, user.id, "Test Message")
+    val chat = chatWorkflowRepository.getChatWithMessages(newChat.id)
+
+    val userMessage =
+      MessageInsert(
+        id = UUID.randomUUID(),
+        chatId = chat.chat.id,
+        content = "Test Message",
+        sender = user.id,
+        senderType = "user",
+        responseTo = null,
+        finishReason = null,
+      )
+
     val agentMessage =
-      chatRepository.insertAssistantMessage(chat.id, agent.id, "Test Message", userMessage.id)
+      MessageInsert(
+        id = UUID.randomUUID(),
+        chatId = chat.chat.id,
+        content = "Test Message",
+        sender = agent.id,
+        senderType = "assistant",
+        responseTo = userMessage.id,
+        finishReason = FinishReason.Stop,
+      )
+
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.delete("/admin/chats/${chat.id}") {
+      client.delete("/admin/chats/${chat.chat.id}") {
         header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
       }
 
     assertEquals(HttpStatusCode.NoContent, response.status)
 
-    val deletedChat = chatRepository.get(chat.id)
+    assertThrows<AppError> { chatWorkflowRepository.getChatWithMessages(chat.chat.id) }
 
-    assertNull(deletedChat)
-
-    val deletedUserMessage = chatRepository.getMessage(chat.id, userMessage.id)
-    val deletedAgentMessage = chatRepository.getMessage(chat.id, agentMessage.id)
+    val deletedUserMessage = chatRepository.getMessage(chat.chat.id, userMessage.id)
+    val deletedAgentMessage = chatRepository.getMessage(chat.chat.id, agentMessage.id)
 
     assertNull(deletedUserMessage)
     assertNull(deletedAgentMessage)

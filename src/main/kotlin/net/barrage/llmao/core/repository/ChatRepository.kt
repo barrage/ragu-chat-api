@@ -182,6 +182,7 @@ class ChatRepository(private val dslContext: DSLContext) {
           MESSAGES.CONTENT,
           MESSAGES.CHAT_ID,
           MESSAGES.RESPONSE_TO,
+          MESSAGES.FINISH_REASON,
           MESSAGES.CREATED_AT,
           MESSAGES.UPDATED_AT,
           MESSAGE_EVALUATIONS.EVALUATION,
@@ -191,7 +192,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         .leftJoin(MESSAGE_EVALUATIONS)
         .on(MESSAGES.ID.eq(MESSAGE_EVALUATIONS.MESSAGE_ID))
         .where(MESSAGES.CHAT_ID.eq(chatId))
-        .orderBy(MESSAGES.CREATED_AT.desc())
+        .orderBy(MESSAGES.CREATED_AT.desc(), MESSAGES.SENDER_TYPE.desc())
         .limit(limit)
         .offset(offset)
         .asFlow()
@@ -233,6 +234,7 @@ class ChatRepository(private val dslContext: DSLContext) {
           MESSAGES.CONTENT,
           MESSAGES.CHAT_ID,
           MESSAGES.RESPONSE_TO,
+          MESSAGES.FINISH_REASON,
           MESSAGES.CREATED_AT,
           MESSAGES.UPDATED_AT,
           MESSAGE_EVALUATIONS.EVALUATION,
@@ -243,7 +245,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         .leftJoin(MESSAGE_EVALUATIONS)
         .on(MESSAGES.ID.eq(MESSAGE_EVALUATIONS.MESSAGE_ID))
         .where(MESSAGES.CHAT_ID.eq(chatId).and(CHATS.USER_ID.eq(userId)))
-        .orderBy(MESSAGES.CREATED_AT.desc())
+        .orderBy(MESSAGES.CREATED_AT.desc(), MESSAGES.SENDER_TYPE.desc())
         .limit(limit)
         .offset(offset)
         .asFlow()
@@ -265,6 +267,7 @@ class ChatRepository(private val dslContext: DSLContext) {
         MESSAGES.CONTENT,
         MESSAGES.CHAT_ID,
         MESSAGES.RESPONSE_TO,
+        MESSAGES.FINISH_REASON,
         MESSAGES.CREATED_AT,
         MESSAGES.UPDATED_AT,
       )
@@ -341,38 +344,6 @@ class ChatRepository(private val dslContext: DSLContext) {
       .awaitSingle()
       ?.into(FAILED_MESSAGES)
       ?.toFailedMessage()
-  }
-
-  suspend fun insertUserMessage(id: KUUID, userId: KUUID, proompt: String): Message {
-    return dslContext
-      .insertInto(MESSAGES)
-      .set(MESSAGES.CHAT_ID, id)
-      .set(MESSAGES.SENDER, userId)
-      .set(MESSAGES.SENDER_TYPE, "user")
-      .set(MESSAGES.CONTENT, proompt)
-      .returning()
-      .awaitSingle()
-      ?.into(MESSAGES)
-      ?.toMessage()!!
-  }
-
-  suspend fun insertAssistantMessage(
-    id: KUUID,
-    agentConfigurationId: KUUID,
-    response: String,
-    messageId: KUUID,
-  ): Message {
-    return dslContext
-      .insertInto(MESSAGES)
-      .set(MESSAGES.CHAT_ID, id)
-      .set(MESSAGES.SENDER, agentConfigurationId)
-      .set(MESSAGES.SENDER_TYPE, "assistant")
-      .set(MESSAGES.CONTENT, response)
-      .set(MESSAGES.RESPONSE_TO, messageId)
-      .returning()
-      .awaitSingle()
-      ?.into(MESSAGES)
-      ?.toMessage()!!
   }
 
   suspend fun delete(id: KUUID): Int {

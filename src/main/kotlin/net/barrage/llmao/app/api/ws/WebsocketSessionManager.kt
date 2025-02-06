@@ -135,11 +135,7 @@ class WebsocketSessionManager(
 
         val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
         val existingWorkflow =
-          factory.fromExistingChatWorkflow(
-            id = message.workflowId,
-            emitter = emitter,
-            initialHistorySize = message.initialHistorySize,
-          )
+          factory.fromExistingChatWorkflow(id = message.workflowId, emitter = emitter)
 
         workflows[session] = existingWorkflow
         systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(message.workflowId))

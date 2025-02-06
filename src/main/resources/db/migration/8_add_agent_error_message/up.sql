@@ -1,1 +1,0 @@
-ALTER TABLE agent_configurations ADD COLUMN error_message TEXT;

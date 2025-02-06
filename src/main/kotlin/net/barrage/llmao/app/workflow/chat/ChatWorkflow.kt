@@ -14,6 +14,7 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolCallResult
 import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.models.MessageInsert
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
@@ -108,16 +109,17 @@ class ChatWorkflow(
           LOG.error("Unexpected error in stream", e)
           handleError(e)
         } finally {
-          val messageId = KUUID.randomUUID()
+          streamScope.launch process@{
+            if (response.isBlank()) {
+              return@process
+            }
 
-          streamScope.launch {
-            if (response.isNotBlank()) {
+            val messageId =
               processResponse(
-                messageId = messageId,
                 prompt = message,
                 response = response.toString(),
+                finishReason = finishReason,
               )
-            }
 
             LOG.debug("{} - emitting stream complete, finish reason: {}", id, finishReason.value)
             val emitPayload =
@@ -233,17 +235,43 @@ class ChatWorkflow(
     stream(messages, out)
   }
 
-  private suspend fun processResponse(messageId: KUUID, prompt: String, response: String) {
+  /** Persists messages depending on chat state. Returns the assistant message ID. */
+  private suspend fun processResponse(
+    prompt: String,
+    response: String,
+    finishReason: FinishReason,
+  ): KUUID {
+    val userMessage =
+      MessageInsert(
+        id = KUUID.randomUUID(),
+        chatId = id,
+        content = prompt,
+        sender = userId,
+        senderType = "user",
+        responseTo = null,
+        finishReason = null,
+      )
+
+    val assistantMessage =
+      MessageInsert(
+        id = KUUID.randomUUID(),
+        chatId = id,
+        content = response,
+        sender = agent.configurationId,
+        senderType = "assistant",
+        responseTo = userMessage.id,
+        finishReason = finishReason,
+      )
+
     when (state) {
       ChatWorkflowState.New -> {
         LOG.debug("{} - persisting chat with message pair", id)
         repository.insertChat(
-          id = id,
-          responseMessageId = messageId,
+          chatId = id,
           userId = userId,
-          prompt = prompt,
           agentId = agent.id,
-          response = response,
+          userMessage = userMessage,
+          assistantMessage = assistantMessage,
         )
 
         LOG.debug("{} - generating title", id)
@@ -254,18 +282,13 @@ class ChatWorkflow(
       }
       is ChatWorkflowState.Persisted -> {
         LOG.debug("{} - persisting message pair", id)
-        repository.insertMessagePair(
-          chatId = id,
-          responseMessageId = messageId,
-          userId = userId,
-          prompt = prompt,
-          agentConfigurationId = agent.configurationId,
-          response,
-        )
+        repository.insertMessagePair(userMessage = userMessage, assistantMessage = assistantMessage)
       }
     }
 
     addToHistory(listOf(ChatMessage.user(prompt), ChatMessage.assistant(response)))
+
+    return assistantMessage.id
   }
 
   private fun collectToolCalls(toolCalls: MutableMap<Int, ToolCallData>, chunk: ChatMessageChunk) {

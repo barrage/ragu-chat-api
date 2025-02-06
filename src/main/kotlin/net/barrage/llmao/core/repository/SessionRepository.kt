@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.Session
@@ -31,7 +32,7 @@ class SessionRepository(private val dslContext: DSLContext) {
           SESSIONS.UPDATED_AT,
           SESSIONS.EXPIRES_AT,
         )
-        .awaitSingle()
+        .awaitFirstOrNull()
 
     // This can only happen on constraint failures. Since we
     // are generating a unique UUID every time, this should never
@@ -54,7 +55,7 @@ class SessionRepository(private val dslContext: DSLContext) {
       )
       .from(SESSIONS)
       .where(SESSIONS.ID.eq(id))
-      .awaitSingle()
+      .awaitFirstOrNull()
       ?.into(SESSIONS)
       ?.toSessionData()
   }
@@ -93,7 +94,6 @@ class SessionRepository(private val dslContext: DSLContext) {
       .awaitSingle()
   }
 
-  // TODO: implement cronjob to delete expired sessions
   suspend fun delete(): Int {
     return dslContext
       .deleteFrom(SESSIONS)

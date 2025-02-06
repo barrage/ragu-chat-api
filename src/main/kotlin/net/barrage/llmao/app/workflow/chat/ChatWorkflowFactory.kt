@@ -48,9 +48,8 @@ class ChatWorkflowFactory(
     id: KUUID,
     emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
-    initialHistorySize: Int,
   ): ChatWorkflow {
-    val chat = chatWorkflowRepository.getChatWithMessages(id, initialHistorySize)
+    val chat = chatWorkflowRepository.getChatWithMessages(id)
 
     agentService.getActive(chat.chat.agentId)
 
