@@ -48,8 +48,8 @@ class AppErrorHandlingTests : IntegrationTest() {
     val error = response.body<AppError>()
 
     assertEquals(400, response.status.value)
-    assertEquals(error.reason, ErrorReason.InvalidParameter)
-    assert(error.description!!.startsWith("Illegal input"))
+    assertEquals(error.errorReason, ErrorReason.InvalidParameter)
+    assert(error.errorDescription!!.startsWith("Illegal input"))
   }
 
   @Test
@@ -69,7 +69,7 @@ class AppErrorHandlingTests : IntegrationTest() {
     val error = response.body<AppError>()
 
     assertEquals(400, response.status.value)
-    assertEquals(error.reason, ErrorReason.InvalidParameter)
+    assertEquals(error.errorReason, ErrorReason.InvalidParameter)
   }
 
   @Test
@@ -88,7 +88,7 @@ class AppErrorHandlingTests : IntegrationTest() {
     val error = response.body<AppError>()
 
     assertEquals(400, response.status.value)
-    assertEquals(error.reason, ErrorReason.InvalidParameter)
+    assertEquals(error.errorReason, ErrorReason.InvalidParameter)
   }
 
   @Test
@@ -98,7 +98,7 @@ class AppErrorHandlingTests : IntegrationTest() {
     val response = client.put("/error/foo") { contentType(ContentType.Application.Json) }
     val error = response.body<AppError>()
     assertEquals(400, response.status.value)
-    assertEquals(error.reason, ErrorReason.InvalidParameter)
+    assertEquals(error.errorReason, ErrorReason.InvalidParameter)
   }
 
   @Test
@@ -203,7 +203,7 @@ class AppErrorHandlingTests : IntegrationTest() {
     val error = response.body<AppError>()
 
     assertEquals(400, response.status.value)
-    assertEquals(ErrorReason.InvalidParameter, error.reason)
-    assert(error.description!!.contains("not a valid UUID"))
+    assertEquals(ErrorReason.InvalidParameter, error.errorReason)
+    assert(error.errorDescription!!.contains("not a valid UUID"))
   }
 }

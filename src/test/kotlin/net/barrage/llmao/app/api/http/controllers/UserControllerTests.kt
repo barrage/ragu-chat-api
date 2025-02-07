@@ -170,8 +170,8 @@ class UserControllerTests : IntegrationTest() {
 
     assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    assertEquals("API", body.type)
-    assertEquals(ErrorReason.InvalidContentType, body.reason)
+    assertEquals("API", body.errorType)
+    assertEquals(ErrorReason.InvalidContentType, body.errorReason)
   }
 
   @Test

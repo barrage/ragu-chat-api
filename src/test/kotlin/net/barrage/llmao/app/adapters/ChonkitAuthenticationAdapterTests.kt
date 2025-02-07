@@ -140,8 +140,8 @@ class ChonkitAuthenticationAdapterTests :
 
     val error = response.body<AppError>()
 
-    assertEquals(ErrorReason.Authentication, error.reason)
-    assertEquals("Invalid refresh token", error.description)
+    assertEquals(ErrorReason.Authentication, error.errorReason)
+    assertEquals("Invalid refresh token", error.errorDescription)
   }
 
   @Test
@@ -168,8 +168,8 @@ class ChonkitAuthenticationAdapterTests :
 
     val error = response.body<AppError>()
 
-    assertEquals(ErrorReason.Authentication, error.reason)
-    assertEquals("Invalid refresh token", error.description)
+    assertEquals(ErrorReason.Authentication, error.errorReason)
+    assertEquals("Invalid refresh token", error.errorDescription)
   }
 
   @Test
@@ -184,8 +184,8 @@ class ChonkitAuthenticationAdapterTests :
 
     val error = response.body<AppError>()
 
-    assertEquals(ErrorReason.Authentication, error.reason)
-    assertEquals("No refresh token found", error.description)
+    assertEquals(ErrorReason.Authentication, error.errorReason)
+    assertEquals("No refresh token found", error.errorDescription)
   }
 
   @Test
@@ -216,8 +216,8 @@ class ChonkitAuthenticationAdapterTests :
 
     val error = refreshFailedResponse.body<AppError>()
 
-    assertEquals(ErrorReason.Authentication, error.reason)
-    assertEquals("Invalid refresh token", error.description)
+    assertEquals(ErrorReason.Authentication, error.errorReason)
+    assertEquals("Invalid refresh token", error.errorDescription)
 
     val validRefreshToken = refreshResponse.body<ChonkitAuthentication>().refreshToken
 
