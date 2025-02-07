@@ -442,6 +442,8 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
     }
 
+    deleteVectors()
+
     assert(asserted)
   }
 
@@ -456,7 +458,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
     client.chatSession(session.sessionId) {
       openNewChat(validAgent.agent.id)
 
-      sendMessage("Will this trigger a stream response?") { incoming ->
+      sendMessage("Give me an error") { incoming ->
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           val message = json.decodeFromString<AppError>(response)
