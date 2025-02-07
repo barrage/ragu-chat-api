@@ -5,4 +5,4 @@ import net.barrage.llmao.utils.CharRange
 import net.barrage.llmao.utils.Validation
 
 @Serializable
-data class UpdateChatTitleDTO(@CharRange(min = 3, max = 255) var title: String) : Validation
+data class UpdateChatTitleDTO(@CharRange(min = 1, max = 255) var title: String) : Validation

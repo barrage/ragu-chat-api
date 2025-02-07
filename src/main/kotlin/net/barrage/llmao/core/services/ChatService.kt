@@ -1,8 +1,7 @@
 package net.barrage.llmao.core.services
 
-import io.ktor.util.logging.*
+import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.ChatMaxHistory
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
@@ -15,7 +14,6 @@ import net.barrage.llmao.core.models.common.SearchFiltersAdminChats
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.UserRepository
-import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -27,7 +25,6 @@ class ChatService(
   private val chatRepository: ChatRepository,
   private val agentRepository: AgentRepository,
   private val userRepository: UserRepository,
-  private val avatarStorage: ImageStorage,
 ) {
   suspend fun listChatsAdmin(
     pagination: PaginationSort,
@@ -142,14 +139,5 @@ class ChatService(
     }
 
     return messages.items
-  }
-
-  suspend fun getMaxHistory(): ChatMaxHistory {
-    val maxHistory = chatRepository.getMaxHistory()
-    return ChatMaxHistory(chatMaxHistory = maxHistory)
-  }
-
-  suspend fun setMaxHistory(input: ChatMaxHistory): ChatMaxHistory {
-    return chatRepository.setMaxHistory(input)
   }
 }

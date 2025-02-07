@@ -23,7 +23,6 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.ChatMaxHistory
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
@@ -32,6 +31,9 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.repository.ChatRepository
+import net.barrage.llmao.core.settings.ApplicationSettings
+import net.barrage.llmao.core.settings.SettingUpdate
+import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
@@ -43,7 +45,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class AdminChatWorkflowControllerTests : IntegrationTest() {
+class AdminChatControllerTests : IntegrationTest() {
   private lateinit var user: User
   private lateinit var userAdmin: User
   private lateinit var userSession: Session
@@ -160,29 +162,42 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
   fun shouldRetrieveChatMaxHistory() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/chats/history") {
+      client.get("/admin/settings?setting=chatMaxHistoryTokens") {
         header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
       }
+
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<ChatMaxHistory>()
-    assertNotNull(body)
-    assertEquals(20, body.chatMaxHistory)
+
+    val body = response.body<ApplicationSettings>()
+
+    assertEquals(ApplicationSettings.defaults().chatMaxHistoryTokens, body.chatMaxHistoryTokens)
   }
 
   @Test
   fun shouldSetChatMaxHistory() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val chatMaxHistory = ChatMaxHistory(15)
+
+    val update = SettingsUpdate(listOf(SettingUpdate("chatMaxHistoryTokens", "15")))
+
     val response =
-      client.put("/admin/chats/history") {
+      client.put("/admin/settings") {
         header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
         contentType(ContentType.Application.Json)
-        setBody(chatMaxHistory)
+        setBody(update)
       }
+
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<ChatMaxHistory>()
-    assertNotNull(body)
-    assertEquals(15, body.chatMaxHistory)
+
+    val responseCheck =
+      client.get("/admin/settings?setting=chatMaxHistoryTokens") {
+        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+      }
+
+    assertEquals(HttpStatusCode.OK, response.status)
+
+    val body = responseCheck.body<ApplicationSettings>()
+
+    assertEquals(15, body.chatMaxHistoryTokens)
   }
 
   @Test

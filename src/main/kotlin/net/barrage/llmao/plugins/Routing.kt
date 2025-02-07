@@ -17,6 +17,7 @@ import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppHookRoutes
 import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppRoutes
 import net.barrage.llmao.app.api.http.controllers.adminAgentsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
+import net.barrage.llmao.app.api.http.controllers.adminSettingsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminUserRoutes
 import net.barrage.llmao.app.api.http.controllers.administrationRouter
 import net.barrage.llmao.app.api.http.controllers.agentsRoutes
@@ -51,6 +52,7 @@ fun Application.configureRouting(state: ApplicationState) {
       adminUserRoutes(state.services.user)
       adminChatsRoutes(state.services.chat)
       administrationRouter(state.services.admin)
+      adminSettingsRoutes(state.settings)
       state.adapters.runIfEnabled<ChonkitAuthenticationService, Unit> { chonkitAuthRouter(it) }
     }
 

@@ -16,7 +16,6 @@ import net.barrage.llmao.app.api.http.queryListChatsFilters
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.ChatMaxHistory
 import net.barrage.llmao.core.models.ChatWithUserAndAgent
 import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
@@ -36,19 +35,6 @@ fun Route.adminChatsRoutes(service: ChatService) {
       val filters = call.query(SearchFiltersAdminChatQuery::class).toSearchFiltersAdminChats()
       val chats = service.listChatsAdmin(pagination, filters)
       call.respond(HttpStatusCode.OK, chats)
-    }
-
-    route("/history") {
-      get(adminGetMaxHistory()) {
-        val maxHistory = service.getMaxHistory()
-        call.respond(HttpStatusCode.OK, maxHistory)
-      }
-
-      put(adminSetMaxHistory()) {
-        val input: ChatMaxHistory = call.receive()
-        val maxHistory = service.setMaxHistory(input)
-        call.respond(HttpStatusCode.OK, maxHistory)
-      }
     }
 
     route("/{chatId}") {
@@ -104,41 +90,6 @@ private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
       {
         description = "A list of Chat objects representing all the chats"
         body<CountedList<Chat>> {}
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while retrieving chats"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminGetMaxHistory(): OpenApiRoute.() -> Unit = {
-  tags("admin/chats")
-  description = "Retrieve max chat history setting"
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "Chat max history setting"
-        body<ChatMaxHistory> {}
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while retrieving chats"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminSetMaxHistory(): OpenApiRoute.() -> Unit = {
-  tags("admin/chats")
-  description = "Set chat max history setting"
-  request { body<ChatMaxHistory>() }
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "Max chat history setting"
-        body<ChatMaxHistory> {}
       }
     HttpStatusCode.InternalServerError to
       {

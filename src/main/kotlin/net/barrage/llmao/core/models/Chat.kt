@@ -3,7 +3,6 @@ package net.barrage.llmao.core.models
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.ApplicationSettingsRecord
 import net.barrage.llmao.tables.records.ChatsRecord
 
 /** Base model. */
@@ -24,8 +23,6 @@ data class Chat(
 
 @Serializable data class ChatWithAgent(val chat: Chat, val agent: Agent)
 
-@Serializable data class ChatMaxHistory(val chatMaxHistory: Int)
-
 fun ChatsRecord.toChat() =
   Chat(
     id = this.id!!,
@@ -35,5 +32,3 @@ fun ChatsRecord.toChat() =
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
-
-fun ApplicationSettingsRecord.toChatMaxHistory() = ChatMaxHistory(this.value.toInt())

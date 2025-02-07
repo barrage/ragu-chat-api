@@ -40,7 +40,7 @@ fun Application.module() {
     ChatWorkflowFactory(
       state.providers,
       state.services.agent,
-      state.repository.chatSession,
+      state.repository.chatWorkflow,
       toolchainFactory,
     ),
     stateChangeListener,

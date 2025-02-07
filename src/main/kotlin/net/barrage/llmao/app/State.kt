@@ -27,6 +27,8 @@ import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
+import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.settings.SettingsRepository
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -46,6 +48,7 @@ class ApplicationState(
   val repository: RepositoryState
   val adapters: AdapterState
   val services: ServiceState
+  val settings: Settings
 
   init {
     CookieFactory.init(config)
@@ -53,6 +56,7 @@ class ApplicationState(
     repository = RepositoryState(database)
     services = ServiceState(providers, repository, listener)
     adapters = AdapterState(config, database, providers)
+    settings = Settings(repository.settings)
   }
 }
 
@@ -61,7 +65,8 @@ class RepositoryState(database: DSLContext) {
   val session: SessionRepository = SessionRepository(database)
   val agent: AgentRepository = AgentRepository(database)
   val chat: ChatRepository = ChatRepository(database)
-  val chatSession: ChatWorkflowRepository = ChatWorkflowRepository(database)
+  val chatWorkflow: ChatWorkflowRepository = ChatWorkflowRepository(database)
+  val settings: SettingsRepository = SettingsRepository(database)
 }
 
 /**
@@ -165,7 +170,7 @@ class ServiceState(
   repository: RepositoryState,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val chat = ChatService(repository.chat, repository.agent, repository.user, providers.imageStorage)
+  val chat = ChatService(repository.chat, repository.agent, repository.user)
   val agent =
     AgentService(providers, repository.agent, repository.chat, listener, providers.imageStorage)
   val user = UserService(repository.user, repository.session, providers.imageStorage)
