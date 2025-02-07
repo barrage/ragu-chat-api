@@ -35,8 +35,8 @@ open class IntegrationTest(
   /** If `true`, start a wiremock container for all external APIs. */
   private val useWiremock: Boolean = false,
 
-  /** Enabled OAuth providers. */
-  oAuthProviders: List<String> = listOf("google", "apple", "carnet"),
+  /** If `true`, initialize the minio container and the minio client. */
+  private val useMinio: Boolean = false,
 
   /**
    * If given and `useWiremock` is `true`, an existing wiremock container will be used instead,
@@ -48,9 +48,12 @@ open class IntegrationTest(
   /** If `true`, enables the Chonkit authentication module. */
   enableChonkitAuth: Boolean = false,
   enableWhatsApp: Boolean = false,
+
+  /** Enabled OAuth providers. */
+  oAuthProviders: List<String> = listOf("google", "apple", "carnet"),
 ) {
   val postgres: TestPostgres = TestPostgres()
-  var minio: TestMinio = TestMinio()
+  private var minio: TestMinio? = null
   var weaviate: TestWeaviate? = null
   var wiremock: WireMockServer? = null
   lateinit var app: ApplicationState
@@ -72,17 +75,6 @@ open class IntegrationTest(
           "db.r2dbcDatabase" to postgres.container.databaseName,
           "db.runMigrations" to "false", // We migrate manually on PG container initialization
           "oauth.apple.clientSecret" to generateP8PrivateKey(),
-        )
-      )
-
-    // Minio
-    cfg =
-      cfg.mergeWith(
-        MapApplicationConfig(
-          "minio.endpoint" to minio.container.s3URL,
-          "minio.accessKey" to "testMinio",
-          "minio.secretKey" to "testMinio",
-          "minio.bucket" to "test",
         )
       )
 
@@ -130,6 +122,10 @@ open class IntegrationTest(
 
     if (useWiremock) {
       loadWiremock()
+    }
+
+    if (useMinio) {
+      loadMinio()
     }
 
     app = ApplicationState(cfg, applicationStoppingJob, EventListener())
@@ -220,6 +216,21 @@ open class IntegrationTest(
           "oauth.carnet.userInfoEndpoint" to "$url/$CARNET_WM/auth/userinfo",
           "oauth.carnet.logoutEndpoint" to "$url/$CARNET_WM/auth/logout",
           "llm.ollama.endpoint" to "$url/$OLLAMA_WM",
+        )
+      )
+  }
+
+  private fun loadMinio() {
+    minio = TestMinio()
+
+    // Minio
+    cfg =
+      cfg.mergeWith(
+        MapApplicationConfig(
+          "minio.endpoint" to minio!!.container.s3URL,
+          "minio.accessKey" to "testMinio",
+          "minio.secretKey" to "testMinio",
+          "minio.bucket" to "test",
         )
       )
   }

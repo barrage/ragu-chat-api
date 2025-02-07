@@ -2,7 +2,6 @@ package net.barrage.llmao.app.storage
 
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
-import io.minio.BucketExistsArgs
 import io.minio.GetObjectArgs
 import io.minio.MinioClient
 import io.minio.PutObjectArgs
@@ -27,18 +26,6 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
       .build()
 
   private val bucket = config.string("minio.bucket")
-
-  init {
-    try {
-      if (!client.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
-        LOG.error("Bucket does not exist")
-        throw AppError.internal("Bucket does not exist")
-      }
-    } catch (e: MinioException) {
-      LOG.error("Failed to connect to Minio", e)
-      throw AppError.internal("Failed to connect to Minio")
-    }
-  }
 
   override fun store(image: Image) {
     val path = "$AVATAR_PREFIX/${image.name}"
