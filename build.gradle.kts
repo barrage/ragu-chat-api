@@ -4,7 +4,7 @@ import org.jooq.meta.jaxb.Logging
 import org.liquibase.gradle.LiquibaseTask
 import org.testcontainers.containers.PostgreSQLContainer
 
-val ktorVersion = "2.3.12"
+val ktorVersion = "2.3.13"
 val kotlinVersion = "2.0.20"
 val logbackVersion = "1.5.8"
 val postgresVersion = "42.7.4"
@@ -26,7 +26,7 @@ plugins {
 
 group = "net.barrage"
 
-version = "0.0.1"
+version = "0.2.0"
 
 application {
   mainClass.set("io.ktor.server.netty.EngineMain")
@@ -106,8 +106,8 @@ dependencies {
 
   // Database communication
   liquibaseRuntime("org.liquibase:liquibase-core:4.29.2")
-  liquibaseRuntime("ch.qos.logback:logback-core:1.2.3")
-  liquibaseRuntime("ch.qos.logback:logback-classic:1.2.3")
+  liquibaseRuntime("ch.qos.logback:logback-core:1.5.13")
+  liquibaseRuntime("ch.qos.logback:logback-classic:1.4.12")
   liquibaseRuntime("info.picocli:picocli:4.7.5")
   liquibaseRuntime("javax.xml.bind:jaxb-api:2.2.4")
   liquibaseRuntime("org.postgresql:postgresql:$postgresVersion")
