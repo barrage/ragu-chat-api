@@ -97,7 +97,7 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
   }
 
   @Test
@@ -128,10 +128,10 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
     Assertions.assertEquals(
       "Unable to validate token signature; Unable to match public key!",
-      body.description,
+      body.errorDescription,
     )
 
     wiremock!!.resetScenarios()
@@ -159,8 +159,8 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
-    Assertions.assertEquals("Email not found", body.description)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
+    Assertions.assertEquals("Email not found", body.errorDescription)
   }
 
   // Google login tests
@@ -224,7 +224,7 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
   }
 
   @Test
@@ -255,10 +255,10 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
     Assertions.assertEquals(
       "Unable to validate token signature; Unable to match public key!",
-      body.description,
+      body.errorDescription,
     )
 
     wiremock!!.resetScenarios()
@@ -286,8 +286,8 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
-    Assertions.assertEquals("Email not found", body.description)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
+    Assertions.assertEquals("Email not found", body.errorDescription)
   }
 
   @Test
@@ -312,8 +312,8 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
-    Assertions.assertEquals("Email not found", body.description)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
+    Assertions.assertEquals("Email not found", body.errorDescription)
   }
 
   // Carnet login tests
@@ -375,7 +375,7 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
   }
 
   @Test
@@ -405,10 +405,10 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(401, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.Authentication, body.reason)
+    Assertions.assertEquals(ErrorReason.Authentication, body.errorReason)
     Assertions.assertEquals(
       "Unable to validate token signature; Unable to match public key!",
-      body.description,
+      body.errorDescription,
     )
 
     wiremock!!.resetScenarios()
@@ -438,8 +438,8 @@ class AuthControllerTests : IntegrationTest(useWiremock = true) {
 
     Assertions.assertEquals(404, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.EntityDoesNotExist, body.reason)
-    Assertions.assertEquals("User 'unknown@user.me' does not exist", body.description)
+    Assertions.assertEquals(ErrorReason.EntityDoesNotExist, body.errorReason)
+    Assertions.assertEquals("User 'unknown@user.me' does not exist", body.errorDescription)
   }
 
   // Logout tests

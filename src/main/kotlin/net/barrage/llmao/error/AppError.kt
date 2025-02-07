@@ -1,14 +1,13 @@
 package net.barrage.llmao.error
 
 import io.ktor.http.HttpStatusCode
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 open class AppError(
-  @SerialName("errorType") val type: String,
-  @SerialName("errorReason") val reason: ErrorReason,
-  @SerialName("errorDescription") val description: String? = null,
+  val errorType: String,
+  val errorReason: ErrorReason,
+  val errorDescription: String? = null,
 ) : Throwable() {
   var displayMessage: String? = null
 
@@ -27,7 +26,7 @@ open class AppError(
   }
 
   fun code(): HttpStatusCode {
-    return when (reason) {
+    return when (errorReason) {
       ErrorReason.Authentication -> HttpStatusCode.Unauthorized
       ErrorReason.CannotDeleteSelf -> HttpStatusCode.Conflict
       ErrorReason.CannotUpdateSelf -> HttpStatusCode.Conflict

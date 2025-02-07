@@ -206,7 +206,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(409, response.status.value)
     val body: AppError = response.body()!!
-    assertEquals(ErrorReason.EntityAlreadyExists, body.reason)
+    assertEquals(ErrorReason.EntityAlreadyExists, body.errorReason)
   }
 
   @Test
@@ -237,7 +237,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(404, response.status.value)
     val body: AppError = response.body()!!
-    assertEquals(ErrorReason.EntityDoesNotExist, body.reason)
+    assertEquals(ErrorReason.EntityDoesNotExist, body.errorReason)
   }
 
   @Test
@@ -294,8 +294,8 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(409, response.status.value)
     val body: AppError = response.body()!!
-    assertEquals(ErrorReason.CannotUpdateSelf, body.reason)
-    assertEquals("Cannot update Role on self", body.description)
+    assertEquals(ErrorReason.CannotUpdateSelf, body.errorReason)
+    assertEquals("Cannot update Role on self", body.errorDescription)
   }
 
   @Test
@@ -319,8 +319,8 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(409, response.status.value)
     val body: AppError = response.body()!!
-    assertEquals(ErrorReason.CannotUpdateSelf, body.reason)
-    assertEquals("Cannot update Active on self", body.description)
+    assertEquals(ErrorReason.CannotUpdateSelf, body.errorReason)
+    assertEquals("Cannot update Active on self", body.errorDescription)
   }
 
   @Test
@@ -344,7 +344,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(404, response.status.value)
     val body: AppError = response.body()!!
-    assertEquals(ErrorReason.EntityDoesNotExist, body.reason)
+    assertEquals(ErrorReason.EntityDoesNotExist, body.errorReason)
   }
 
   @Test
@@ -417,7 +417,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(409, response.status.value)
     val body: AppError = response.body()!!
-    assertEquals(ErrorReason.CannotDeleteSelf, body.reason)
+    assertEquals(ErrorReason.CannotDeleteSelf, body.errorReason)
   }
 
   @Test
@@ -430,7 +430,7 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(404, response.status.value)
     val body: AppError = response.body()!!
-    assertEquals(ErrorReason.EntityDoesNotExist, body.reason)
+    assertEquals(ErrorReason.EntityDoesNotExist, body.errorReason)
   }
 
   @Test
@@ -598,8 +598,8 @@ class AdminUserControllerTests : IntegrationTest() {
         setBody("FullName,FirstName,LastName,Email,Roled")
       }
     assertEquals(400, response.status.value)
-    assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().reason)
-    assertEquals("Invalid CSV header", response.body<AppError>().description)
+    assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().errorReason)
+    assertEquals("Invalid CSV header", response.body<AppError>().errorDescription)
   }
 
   @Test
@@ -698,8 +698,8 @@ class AdminUserControllerTests : IntegrationTest() {
 
     assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    assertEquals("API", body.type)
-    assertEquals(ErrorReason.InvalidContentType, body.reason)
+    assertEquals("API", body.errorType)
+    assertEquals(ErrorReason.InvalidContentType, body.errorReason)
   }
 
   @Test

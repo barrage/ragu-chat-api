@@ -205,7 +205,7 @@ class ChatControllerTests : IntegrationTest() {
 
     assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    assertEquals(ErrorReason.InvalidParameter, body.reason)
+    assertEquals(ErrorReason.InvalidParameter, body.errorReason)
   }
 
   @Test

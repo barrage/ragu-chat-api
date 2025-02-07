@@ -174,8 +174,8 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           val error = json.decodeFromString<AppError>(response)
-          assertEquals(ErrorReason.VectorDatabase, error.reason)
-          assertTrue(error.description!!.contains("vector lengths don't match"))
+          assertEquals(ErrorReason.VectorDatabase, error.errorReason)
+          assertTrue(error.errorDescription!!.contains("vector lengths don't match"))
           asserted = true
           break
         }
@@ -199,7 +199,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
       val chatId = openNewChat(validAgent.agent.id)
 
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
-      assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
 
       var buffer = ""
 
@@ -243,12 +243,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
       val chatOne = openNewChat(validAgent.agent.id)
       val errorOne =
         assertThrows<AppError> { app.services.chat.getChat(chatOne, Pagination(1, 50)) }
-      assertEquals(ErrorReason.EntityDoesNotExist, errorOne.reason)
+      assertEquals(ErrorReason.EntityDoesNotExist, errorOne.errorReason)
 
       val chatTwo = openNewChat(validAgent.agent.id)
       val errorTwo =
         assertThrows<AppError> { app.services.chat.getChat(chatTwo, Pagination(1, 50)) }
-      assertEquals(ErrorReason.EntityDoesNotExist, errorTwo.reason)
+      assertEquals(ErrorReason.EntityDoesNotExist, errorTwo.errorReason)
 
       asserted = true
     }
@@ -270,7 +270,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
       val chatId = openNewChat(validAgent.agent.id)
 
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
-      assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
 
       val msg = "{ \"type\": \"chat\", \"text\": \"Will this trigger a stream response?\" }"
 

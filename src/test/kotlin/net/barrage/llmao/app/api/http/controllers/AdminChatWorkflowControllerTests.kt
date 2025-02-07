@@ -237,7 +237,7 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
     assertEquals(HttpStatusCode.BadRequest, response.status)
     val body = response.body<AppError>()
     assertNotNull(body)
-    assertEquals(ErrorReason.InvalidParameter, body.reason)
+    assertEquals(ErrorReason.InvalidParameter, body.errorReason)
   }
 
   @Test

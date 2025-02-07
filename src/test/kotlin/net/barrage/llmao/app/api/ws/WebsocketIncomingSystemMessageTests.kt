@@ -93,8 +93,8 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       send("asdf")
       val response = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(response)
-      assertEquals("API", error.type)
-      assertEquals(ErrorReason.InvalidParameter, error.reason)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.InvalidParameter, error.errorReason)
       asserted = true
     }
 
@@ -174,8 +174,8 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
 
       val message = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(message)
-      assertEquals("API", error.type)
-      assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
       asserted = true
     }
 
@@ -206,8 +206,8 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
 
       val message = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(message)
-      assertEquals("API", error.type)
-      assertEquals(ErrorReason.EntityDoesNotExist, error.reason)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
       asserted = true
     }
 

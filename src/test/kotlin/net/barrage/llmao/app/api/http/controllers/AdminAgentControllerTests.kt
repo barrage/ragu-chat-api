@@ -214,9 +214,9 @@ class AdminAgentControllerTests : IntegrationTest() {
 
     assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    assertEquals("API", body.type)
-    assertEquals(ErrorReason.InvalidProvider, body.reason)
-    assertEquals("Unsupported LLM provider 'openaai'", body.description)
+    assertEquals("API", body.errorType)
+    assertEquals(ErrorReason.InvalidProvider, body.errorReason)
+    assertEquals("Unsupported LLM provider 'openaai'", body.errorDescription)
   }
 
   @Test
@@ -413,8 +413,8 @@ class AdminAgentControllerTests : IntegrationTest() {
       }
 
     assertEquals(404, response.status.value)
-    assertEquals("API", response.body<AppError>().type)
-    assertEquals(ErrorReason.EntityDoesNotExist, response.body<AppError>().reason)
+    assertEquals("API", response.body<AppError>().errorType)
+    assertEquals(ErrorReason.EntityDoesNotExist, response.body<AppError>().errorReason)
   }
 
   @Test
@@ -437,11 +437,11 @@ class AdminAgentControllerTests : IntegrationTest() {
       }
 
     assertEquals(400, response.status.value)
-    assertEquals("API", response.body<AppError>().type)
-    assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().reason)
+    assertEquals("API", response.body<AppError>().errorType)
+    assertEquals(ErrorReason.InvalidParameter, response.body<AppError>().errorReason)
     assertEquals(
       "Cannot delete active agent or agent not found",
-      response.body<AppError>().description,
+      response.body<AppError>().errorDescription,
     )
   }
 
@@ -617,8 +617,8 @@ class AdminAgentControllerTests : IntegrationTest() {
 
     assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    assertEquals("API", body.type)
-    assertEquals(ErrorReason.InvalidContentType, body.reason)
+    assertEquals("API", body.errorType)
+    assertEquals(ErrorReason.InvalidContentType, body.errorReason)
   }
 
   @Test

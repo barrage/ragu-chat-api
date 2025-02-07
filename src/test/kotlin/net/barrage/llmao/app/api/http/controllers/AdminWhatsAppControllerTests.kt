@@ -200,9 +200,9 @@ class AdminWhatsAppControllerTests :
 
     assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    assertEquals("API", body.type)
-    assertEquals(ErrorReason.InvalidOperation, body.reason)
-    assertEquals("Cannot deactivate the last active agent", body.description)
+    assertEquals("API", body.errorType)
+    assertEquals(ErrorReason.InvalidOperation, body.errorReason)
+    assertEquals("Cannot deactivate the last active agent", body.errorDescription)
   }
 
   @Test
@@ -225,9 +225,9 @@ class AdminWhatsAppControllerTests :
       }
 
     assertEquals(400, response.status.value)
-    assertEquals("API", response.body<AppError>().type)
-    assertEquals(ErrorReason.InvalidOperation, response.body<AppError>().reason)
-    assertEquals("Cannot delete active agent", response.body<AppError>().description)
+    assertEquals("API", response.body<AppError>().errorType)
+    assertEquals(ErrorReason.InvalidOperation, response.body<AppError>().errorReason)
+    assertEquals("Cannot delete active agent", response.body<AppError>().errorDescription)
   }
 
   @Test
@@ -376,8 +376,8 @@ class AdminWhatsAppControllerTests :
 
     assertEquals(409, response.status.value)
     val body = response.body<AppError>()
-    assertEquals("API", body.type)
-    assertEquals(ErrorReason.EntityAlreadyExists, body.reason)
+    assertEquals("API", body.errorType)
+    assertEquals(ErrorReason.EntityAlreadyExists, body.errorReason)
   }
 
   @Test

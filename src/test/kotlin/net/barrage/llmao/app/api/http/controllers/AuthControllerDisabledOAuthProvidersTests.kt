@@ -65,8 +65,8 @@ class AuthControllerDisabledOAuthProvidersTests :
 
     Assertions.assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.InvalidProvider, body.reason)
-    Assertions.assertEquals("Unsupported auth provider 'google'", body.description)
+    Assertions.assertEquals(ErrorReason.InvalidProvider, body.errorReason)
+    Assertions.assertEquals("Unsupported auth provider 'google'", body.errorDescription)
   }
 
   @Test
@@ -91,8 +91,8 @@ class AuthControllerDisabledOAuthProvidersTests :
 
     Assertions.assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.InvalidProvider, body.reason)
-    Assertions.assertEquals("Unsupported auth provider 'apple'", body.description)
+    Assertions.assertEquals(ErrorReason.InvalidProvider, body.errorReason)
+    Assertions.assertEquals("Unsupported auth provider 'apple'", body.errorDescription)
   }
 
   @Test
@@ -117,7 +117,7 @@ class AuthControllerDisabledOAuthProvidersTests :
 
     Assertions.assertEquals(400, response.status.value)
     val body = response.body<AppError>()
-    Assertions.assertEquals(ErrorReason.InvalidProvider, body.reason)
-    Assertions.assertEquals("Unsupported auth provider 'carnet'", body.description)
+    Assertions.assertEquals(ErrorReason.InvalidProvider, body.errorReason)
+    Assertions.assertEquals("Unsupported auth provider 'carnet'", body.errorDescription)
   }
 }
