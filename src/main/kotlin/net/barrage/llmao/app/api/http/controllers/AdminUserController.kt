@@ -34,7 +34,7 @@ fun Route.adminUserRoutes(userService: UserService) {
     get(adminGetAllUsers()) {
       val pagination = call.query(PaginationSort::class)
       val filters = call.query(SearchFiltersAdminUsersQuery::class).toSearchFiltersAdminUsers()
-      val users = userService.getAll(pagination, filters)
+      val users = userService.listUsers(pagination, filters)
       call.respond(HttpStatusCode.OK, users)
     }
 

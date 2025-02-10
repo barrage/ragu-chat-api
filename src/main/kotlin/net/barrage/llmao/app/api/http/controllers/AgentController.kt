@@ -20,7 +20,7 @@ fun Route.agentsRoutes(agentService: AgentService) {
   route("/agents") {
     get(getAllAgents()) {
       val pagination = call.query(PaginationSort::class)
-      val agents = agentService.getAll(pagination, showDeactivated = false)
+      val agents = agentService.listAgents(pagination, showDeactivated = false)
       call.respond(HttpStatusCode.OK, agents)
     }
 

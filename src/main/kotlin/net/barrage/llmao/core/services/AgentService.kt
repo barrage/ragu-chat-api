@@ -1,8 +1,5 @@
 package net.barrage.llmao.core.services
 
-import io.ktor.util.*
-import io.ktor.utils.io.*
-import java.util.*
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
@@ -43,11 +40,11 @@ class AgentService(
   private val stateChangeListener: EventListener<StateChangeEvent>,
   private val avatarStorage: ImageStorage,
 ) {
-  suspend fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
+  suspend fun listAgents(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
     return agentRepository.getAll(pagination, showDeactivated)
   }
 
-  suspend fun getAllAdmin(
+  suspend fun listAgentsAdmin(
     pagination: PaginationSort,
     filters: SearchFiltersAdminAgents,
   ): CountedList<AgentWithConfiguration> {

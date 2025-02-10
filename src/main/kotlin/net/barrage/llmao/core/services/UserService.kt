@@ -1,8 +1,6 @@
 package net.barrage.llmao.core.services
 
-import io.ktor.util.*
 import io.ktor.utils.io.*
-import java.util.*
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.CsvImportedUser
@@ -26,7 +24,7 @@ class UserService(
   private val sessionsRepository: SessionRepository,
   private val avatarStorage: ImageStorage,
 ) {
-  suspend fun getAll(
+  suspend fun listUsers(
     pagination: PaginationSort,
     filters: SearchFiltersAdminUsers,
   ): CountedList<User> {
