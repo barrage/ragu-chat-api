@@ -41,7 +41,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService) {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val filters = call.query(SearchFiltersAdminAgentsQuery::class).toSearchFiltersAdminAgents()
-      val agents = agentService.getAllAdmin(pagination, filters)
+      val agents = agentService.listAgentsAdmin(pagination, filters)
       call.respond(HttpStatusCode.OK, agents)
     }
 
