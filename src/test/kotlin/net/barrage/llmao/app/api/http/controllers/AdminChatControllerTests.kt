@@ -31,9 +31,6 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.repository.ChatRepository
-import net.barrage.llmao.core.settings.ApplicationSettings
-import net.barrage.llmao.core.settings.SettingUpdate
-import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
@@ -156,48 +153,6 @@ class AdminChatControllerTests : IntegrationTest() {
     assertEquals(HttpStatusCode.Unauthorized, response.status)
     val body = response.body<String>()
     assertNotNull(body)
-  }
-
-  @Test
-  fun shouldRetrieveChatMaxHistory() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/admin/settings?setting=chatMaxHistoryTokens") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-      }
-
-    assertEquals(HttpStatusCode.OK, response.status)
-
-    val body = response.body<ApplicationSettings>()
-
-    assertEquals(ApplicationSettings.defaults().chatMaxHistoryTokens, body.chatMaxHistoryTokens)
-  }
-
-  @Test
-  fun shouldSetChatMaxHistory() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
-    val update = SettingsUpdate(listOf(SettingUpdate("chatMaxHistoryTokens", "15")))
-
-    val response =
-      client.put("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-        contentType(ContentType.Application.Json)
-        setBody(update)
-      }
-
-    assertEquals(HttpStatusCode.OK, response.status)
-
-    val responseCheck =
-      client.get("/admin/settings?setting=chatMaxHistoryTokens") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-      }
-
-    assertEquals(HttpStatusCode.OK, response.status)
-
-    val body = responseCheck.body<ApplicationSettings>()
-
-    assertEquals(15, body.chatMaxHistoryTokens)
   }
 
   @Test

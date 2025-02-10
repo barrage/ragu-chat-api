@@ -27,7 +27,7 @@ fun Route.adminSettingsRoutes(settings: Settings) {
     get(adminGetSettings()) {
       val parameters = call.request.queryParameters.toMap()["setting"]
       if (parameters.isNullOrEmpty()) {
-        throw AppError.api(ErrorReason.InvalidParameter, "No parameters provided")
+        throw AppError.api(ErrorReason.InvalidParameter, "No setting keys provided")
       }
       val configuration = settings.list(parameters)
       call.respond(HttpStatusCode.OK, configuration)
@@ -38,7 +38,7 @@ fun Route.adminSettingsRoutes(settings: Settings) {
 private fun adminGetSettings(): OpenApiRoute.() -> Unit = {
   tags("admin/settings")
   description = "Retrieve application settings"
-  request { queryParameter<String>("param") { description = "Setting key" } }
+  request { queryParameter<String>("setting") { description = "Setting key" } }
   response {
     HttpStatusCode.OK to
       {

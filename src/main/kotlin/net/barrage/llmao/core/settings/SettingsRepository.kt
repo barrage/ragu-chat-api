@@ -9,6 +9,20 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL.excluded
 
 class SettingsRepository(private val dslContext: DSLContext) {
+  suspend fun listAll(): List<Setting> {
+    return dslContext
+      .select(
+        APPLICATION_SETTINGS.NAME,
+        APPLICATION_SETTINGS.VALUE,
+        APPLICATION_SETTINGS.CREATED_AT,
+        APPLICATION_SETTINGS.UPDATED_AT,
+      )
+      .from(APPLICATION_SETTINGS)
+      .asFlow()
+      .map { it.into(APPLICATION_SETTINGS).toModel() }
+      .toList()
+  }
+
   suspend fun list(keys: List<String>): List<Setting> {
     return dslContext
       .select(

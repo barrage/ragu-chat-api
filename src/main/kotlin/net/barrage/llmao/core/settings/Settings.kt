@@ -22,7 +22,18 @@ internal const val DEFAULT_CHAT_MAX_HISTORY_TOKENS = 100_000
 /** The main API for managing application settings. */
 class Settings(private val settingsRepository: SettingsRepository) {
   suspend fun list(keys: List<String>): ApplicationSettings {
-    val settings = settingsRepository.list(keys)
+    val settings =
+      if (keys.size == 1 && keys[0] == "*") {
+        settingsRepository.listAll()
+      } else {
+        for (key in keys) {
+          if (!ALLOWED_KEYS.contains(key)) {
+            throw AppError.api(ErrorReason.InvalidParameter, "Invalid setting key: $key")
+          }
+        }
+        settingsRepository.list(keys)
+      }
+
     return ApplicationSettings.fromList(settings)
   }
 
