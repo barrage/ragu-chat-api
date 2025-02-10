@@ -197,7 +197,7 @@ class ChatAgent(
   suspend fun createTitle(prompt: String, response: String): String {
     val llm = providers.llm.getProvider(llmProvider)
     val titleInstruction = instructions.titleInstruction()
-    val userMessage = "PROMPT: $prompt\nRESPONSE: $response"
+    val userMessage = "USER: $prompt\nASSISTANT: $response"
     val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
 
     val completion =

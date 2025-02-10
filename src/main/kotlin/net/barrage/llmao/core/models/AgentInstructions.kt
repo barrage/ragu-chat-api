@@ -4,11 +4,11 @@ import kotlinx.serialization.Serializable
 
 const val DEFAULT_TITLE_INSTRUCTION =
   """
-      |You answer only with short and concise titles that you create based on the inputs you receive.
-      |The inputs will always be in the form of a prompt, followed by a response from an agent.
-      |Use the prompt content and the response content to generate a single sentence that describes the interaction.
-      |For example, given the input \"PROMPT: What is the capital of Croatia?\nAGENT: The capital of Croatia is Zagreb.\"
-      |you will generate the title \"The capital of Croatia\".
+      |You answer only with a short and concise title that you create based on the conversation you receive.
+      |The input will always be in the form "USER: <prompt>\nASSISTANT: <response>".
+      |Use the user's prompt content and the assistant's response content to generate a single sentence that describes the interaction.
+      |For example, given the input "USER: What is the capital of Croatia?\nASSISTANT: The capital of Croatia is Zagreb."
+      |you will generate the title "The capital of Croatia".
     """
 
 @Serializable
