@@ -1,12 +1,17 @@
 package net.barrage.llmao.app.api.ws
 
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.websocket.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.websocket.*
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.request.header
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.websocket.Frame
+import io.ktor.websocket.readText
 import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -467,6 +472,76 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
           break
         }
       }
+    }
+
+    deleteVectors()
+
+    assert(asserted)
+  }
+
+  @Test
+  fun properlyLoadsExistingMessages() = wsTest { client ->
+    var asserted = false
+
+    insertVectors(COMPLETIONS_STREAM_PROMPT)
+
+    val validAgent = createValidAgent()
+
+    val prompt = "Will this trigger a stream response?"
+
+    client.chatSession(session.sessionId) {
+      val chatId = openNewChat(validAgent.agent.id)
+
+      var buffer = ""
+
+      sendMessage("0: $prompt") { incoming ->
+        for (frame in incoming) {
+          val response = (frame as Frame.Text).readText()
+          try {
+            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            buffer += message.chunk
+          } catch (_: SerializationException) {}
+
+          try {
+            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            assert(message.reason == FinishReason.Stop)
+            break
+          } catch (_: SerializationException) {}
+        }
+      }
+
+      assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+      buffer = ""
+
+      sendMessage("1: $prompt") { incoming ->
+        for (frame in incoming) {
+          val response = (frame as Frame.Text).readText()
+          try {
+            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            buffer += message.chunk
+          } catch (_: SerializationException) {}
+
+          try {
+            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            assert(message.reason == FinishReason.Stop)
+            break
+          } catch (_: SerializationException) {}
+        }
+      }
+
+      assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+      val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
+      assertEquals(4, chat.messages.size)
+
+      val messages = chat.messages.reversed()
+
+      assertEquals("0: $prompt", messages[0].content)
+      assertEquals(COMPLETIONS_STREAM_RESPONSE, messages[1].content)
+      assertEquals("1: $prompt", messages[2].content)
+      assertEquals(COMPLETIONS_STREAM_RESPONSE, messages[3].content)
+
+      asserted = true
     }
 
     deleteVectors()

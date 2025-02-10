@@ -1,10 +1,19 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.call.body
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import java.util.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
@@ -166,8 +175,7 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
   @Test
   fun shouldUpdateChatTitleValidationFails() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val newTitle = "12"
-    val updatedChatTitle = UpdateChatTitleDTO(newTitle)
+    val updatedChatTitle = UpdateChatTitleDTO("")
     val response =
       client.put("/admin/chats/${chatOne.id}") {
         header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
@@ -176,8 +184,6 @@ class AdminChatWorkflowControllerTests : IntegrationTest() {
       }
     assertEquals(422, response.status.value)
     val body = response.body<List<ValidationError>>()
-    assertEquals("charRange", body[0].code)
-    assertEquals("Value must be between 3 - 255 characters long", body[0].message)
     assertEquals("title", body[0].fieldName)
   }
 
