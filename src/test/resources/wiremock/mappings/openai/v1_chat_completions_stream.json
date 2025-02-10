@@ -11,10 +11,20 @@
     "method": "POST",
     "bodyPatterns": [
       {
-        "matchesJsonPath": {
-          "expression": "$.messages[1].content",
-          "contains": "v1_chat_completions_stream"
-        }
+        "or": [
+          {
+            "matchesJsonPath": {
+              "expression": "$.messages[1].content",
+              "contains": "v1_chat_completions_stream"
+            }
+          },
+          {
+            "matchesJsonPath": {
+              "expression": "$.messages[3].content",
+              "contains": "v1_chat_completions_stream"
+            }
+          }
+        ]
       }
     ]
   },

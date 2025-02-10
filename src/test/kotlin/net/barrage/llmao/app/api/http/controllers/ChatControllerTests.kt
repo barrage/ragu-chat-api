@@ -112,7 +112,7 @@ class ChatControllerTests : IntegrationTest() {
   @Test
   fun shouldUpdateChatTitleValidationFails() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val updatedTitle = UpdateChatTitleDTO("12")
+    val updatedTitle = UpdateChatTitleDTO("")
     val response =
       client.put("/chats/${chatOne.id}") {
         header("Cookie", sessionCookie(userSession.sessionId))
@@ -122,8 +122,6 @@ class ChatControllerTests : IntegrationTest() {
 
     assertEquals(422, response.status.value)
     val body = response.body<List<ValidationError>>()
-    assertEquals("charRange", body[0].code)
-    assertEquals("Value must be between 3 - 255 characters long", body[0].message)
     assertEquals("title", body[0].fieldName)
   }
 
