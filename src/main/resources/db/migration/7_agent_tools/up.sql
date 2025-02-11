@@ -2,7 +2,8 @@
 CREATE TABLE agent_tools(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-    tool_name TEXT NOT NULL
+    tool_name TEXT NOT NULL,
+    CONSTRAINT unique_agent_tool UNIQUE(agent_id, tool_name)
 );
 
 -- Keeps track of tools called during a conversation.
