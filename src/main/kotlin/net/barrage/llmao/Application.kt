@@ -42,6 +42,7 @@ fun Application.module() {
       state.services.agent,
       state.repository.chatWorkflow,
       toolchainFactory,
+      state.settings,
     ),
     stateChangeListener,
   )

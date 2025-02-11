@@ -5,7 +5,10 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
+import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.models.common.TimeSeries
+import net.barrage.llmao.core.settings.ApplicationSettingsDefault
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentToolsRecord
@@ -65,7 +68,11 @@ data class AgentFull(
   val collections: List<AgentCollection>,
 )
 
-fun AgentFull.toChatAgent(providers: ProviderState) =
+fun AgentFull.toChatAgent(
+  providers: ProviderState,
+  tools: List<ToolDefinition>?,
+  settings: ApplicationSettingsDefault,
+) =
   ChatAgent(
     id = agent.id,
     name = agent.name,
@@ -84,9 +91,18 @@ fun AgentFull.toChatAgent(providers: ProviderState) =
         )
       },
     instructions = configuration.agentInstructions,
-    temperature = configuration.temperature,
+    completionParameters =
+      ChatCompletionParameters(
+        model = configuration.model,
+        temperature = configuration.temperature,
+        presencePenalty = configuration.presencePenalty ?: settings.presencePenalty,
+        maxTokens = configuration.maxCompletionTokens ?: settings.maxCompletionTokens,
+      ),
     configurationId = configuration.id,
     providers = providers,
+    tools = tools,
+    titleMaxTokens = settings.titleMaxCompletionTokens,
+    summaryMaxTokens = settings.summaryMaxCompletionTokens,
   )
 
 /** DTO for creating an agent. */

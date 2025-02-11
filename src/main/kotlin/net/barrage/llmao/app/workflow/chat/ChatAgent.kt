@@ -27,10 +27,11 @@ class ChatAgent(
   val collections: List<ChatAgentCollection>,
   val instructions: AgentInstructions,
   var tools: List<ToolDefinition>? = null,
-  val temperature: Double,
-
   /** The agent configuration ID. */
   val configurationId: KUUID,
+  private val completionParameters: ChatCompletionParameters,
+  private val titleMaxTokens: Int,
+  private val summaryMaxTokens: Int,
 ) {
   /** Start a chat completion stream using the parameters from the WorkflowAgent. */
   suspend fun chatCompletionStream(
@@ -55,11 +56,7 @@ class ChatAgent(
 
     return llm.completionStream(
       llmInput,
-      ChatCompletionParameters(
-        model = model,
-        temperature = temperature,
-        tools = if (!useTools) null else tools,
-      ),
+      completionParameters.copy(tools = if (useTools) tools else null),
     )
   }
 
@@ -78,7 +75,7 @@ class ChatAgent(
 
     val llm = providers.llm.getProvider(llmProvider)
 
-    return llm.chatCompletion(llmInput, ChatCompletionParameters(model, temperature))
+    return llm.chatCompletion(llmInput, completionParameters)
   }
 
   suspend fun summarizeConversation(history: List<ChatMessage>): String {
@@ -101,14 +98,32 @@ class ChatAgent(
     val messages = listOf(ChatMessage.user(summaryPrompt))
 
     val completion =
-      llm.chatCompletion(
-        messages,
-        ChatCompletionParameters(model = model, temperature = temperature, maxTokens = 2000),
-      )
+      llm.chatCompletion(messages, completionParameters.copy(maxTokens = summaryMaxTokens))
 
     // Safe to !! because we are not sending any tools in the message, which means the content
     // will never be null
     return completion.content!!
+  }
+
+  suspend fun createTitle(prompt: String, response: String): String {
+    val llm = providers.llm.getProvider(llmProvider)
+    val titleInstruction = instructions.titleInstruction()
+    val userMessage = "USER: $prompt\nASSISTANT: $response"
+    val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
+
+    val completion =
+      llm.chatCompletion(messages, completionParameters.copy(maxTokens = titleMaxTokens))
+
+    // Safe to !! because we are not sending tools to the LLM
+    var title = completion.content!!.trim()
+
+    while (title.startsWith("\"") && title.endsWith("\"") && title.length > 1) {
+      title = title.substring(1, title.length - 1)
+    }
+
+    LOG.trace("Title generated: {}", title)
+
+    return title
   }
 
   fun countHistoryTokens(history: List<ChatMessage>): Int {
@@ -192,27 +207,6 @@ class ChatAgent(
       }
     }
     throw AppError.api(ErrorReason.InvalidParameter, "Cannot find tokenizer for model '$llm'")
-  }
-
-  suspend fun createTitle(prompt: String, response: String): String {
-    val llm = providers.llm.getProvider(llmProvider)
-    val titleInstruction = instructions.titleInstruction()
-    val userMessage = "USER: $prompt\nASSISTANT: $response"
-    val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
-
-    val completion =
-      llm.chatCompletion(messages, ChatCompletionParameters(model, temperature, maxTokens = 100))
-
-    // Safe to !! because we are not sending tools to the LLM
-    var title = completion.content!!.trim()
-
-    while (title.startsWith("\"") && title.endsWith("\"") && title.length > 1) {
-      title = title.substring(1, title.length - 1)
-    }
-
-    LOG.trace("Title generated: {}", title)
-
-    return title
   }
 }
 

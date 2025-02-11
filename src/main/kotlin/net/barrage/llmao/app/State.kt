@@ -54,9 +54,9 @@ class ApplicationState(
     CookieFactory.init(config)
     val database = initDatabase(config, applicationStopping)
     repository = RepositoryState(database)
-    services = ServiceState(providers, repository, listener)
-    adapters = AdapterState(config, database, providers)
     settings = Settings(repository.settings)
+    services = ServiceState(providers, repository, listener)
+    adapters = AdapterState(config, database, providers, settings)
   }
 }
 
@@ -73,7 +73,12 @@ class RepositoryState(database: DSLContext) {
  * Keeps the state of optional modules. Modules are configured via the `ktor.features` flags.
  * Whenever a flag is enabled, the corresponding adapter is enabled for use.
  */
-class AdapterState(config: ApplicationConfig, database: DSLContext, providers: ProviderState) {
+class AdapterState(
+  config: ApplicationConfig,
+  database: DSLContext,
+  providers: ProviderState,
+  settings: Settings,
+) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 
   init {
@@ -86,7 +91,7 @@ class AdapterState(config: ApplicationConfig, database: DSLContext, providers: P
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       val whatsAppRepo = WhatsAppRepository(database)
       adapters[WhatsAppAdapter::class] =
-        WhatsAppAdapter(config, providers, whatsAppRepo, providers.imageStorage)
+        WhatsAppAdapter(config, providers, whatsAppRepo, providers.imageStorage, settings)
     }
   }
 

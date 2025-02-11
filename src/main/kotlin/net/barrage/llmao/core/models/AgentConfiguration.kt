@@ -38,7 +38,7 @@ data class AgentConfiguration(
    * Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear
    * in the text so far, increasing the model's likelihood to talk about new topics.
    */
-  val presencePenalty: Double,
+  val presencePenalty: Double?,
 
   /** Instructions for the agent to use. */
   val agentInstructions: AgentInstructions,
@@ -60,8 +60,7 @@ fun AgentConfigurationsRecord.toAgentConfiguration() =
     agentInstructions =
       AgentInstructions(this.titleInstruction, this.summaryInstruction, this.errorMessage),
     maxCompletionTokens = this.maxCompletionTokens,
-    presencePenalty = this.presencePenalty!!,
-    agentInstructions = AgentInstructions(this.titleInstruction, this.summaryInstruction),
+    presencePenalty = this.presencePenalty,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

@@ -49,9 +49,10 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
   ): ChatMessage {
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
+        model = ModelId(config.model),
         temperature = config.temperature,
+        presencePenalty = config.presencePenalty,
         maxTokens = config.maxTokens,
         tools = config.tools?.map { it.toOpenAiTool() },
       )
@@ -65,13 +66,13 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
   ): Flow<ChatMessageChunk> {
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
-        temperature = config.temperature,
         streamOptions = StreamOptions(true),
-        tools = config.tools?.map { it.toOpenAiTool() },
-        maxTokens = config.maxCompletionTokens,
+        model = ModelId(config.model),
+        temperature = config.temperature,
         presencePenalty = config.presencePenalty,
+        maxTokens = config.maxTokens,
+        tools = config.tools?.map { it.toOpenAiTool() },
       )
 
     return this.client.chatCompletions(chatRequest).map { chunk -> chunk.toNativeMessageChunk() }

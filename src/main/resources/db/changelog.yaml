@@ -179,3 +179,21 @@ databaseChangeLog:
             path: migration/10_application_settings_table/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
+  - changeSet:
+      id: 11
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 11.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/11_alter_agent_configurations_table/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/11_alter_agent_configurations_table/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false

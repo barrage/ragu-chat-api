@@ -29,6 +29,7 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
+import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.Image
@@ -38,6 +39,7 @@ import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.processAdditions
+import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
@@ -51,6 +53,7 @@ class WhatsAppAdapter(
   private val providers: ProviderState,
   private val repository: WhatsAppRepository,
   private val avatarStorage: ImageStorage,
+  private val settings: Settings,
 ) {
   private var whatsAppApi: WhatsAppApi
 
@@ -252,6 +255,7 @@ class WhatsAppAdapter(
 
     val agentConfig = agentFull.getConfiguration()
     val agentCollections = agentFull.collections
+    val settings = settings.getAllWithDefaults()
 
     val conversation =
       ChatAgent(
@@ -273,9 +277,19 @@ class WhatsAppAdapter(
           },
         instructions = agentConfig.agentInstructions,
         tools = null,
-        temperature = agentConfig.temperature,
+        completionParameters =
+          ChatCompletionParameters(
+            model = agentConfig.model,
+            temperature = agentConfig.temperature,
+            presencePenalty = agentConfig.presencePenalty ?: settings.presencePenalty ?: 0.0,
+            maxTokens = agentConfig.maxCompletionTokens ?: settings.maxCompletionTokens,
+          ),
         configurationId = agentConfig.id,
         providers = providers,
+
+        // Safe to !! because we are fetching with defaults
+        titleMaxTokens = settings.titleMaxCompletionTokens!!,
+        summaryMaxTokens = settings.summaryMaxCompletionTokens!!,
       )
 
     history.add(ChatMessage.user(message))

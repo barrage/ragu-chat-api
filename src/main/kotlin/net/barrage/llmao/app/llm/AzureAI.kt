@@ -39,9 +39,12 @@ class AzureAI(
   ): ChatMessage {
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
+        model = ModelId(config.model),
         temperature = config.temperature,
+        presencePenalty = config.presencePenalty,
+        maxTokens = config.maxTokens,
+        tools = config.tools?.map { it.toOpenAiTool() },
       )
 
     return client(config.model)
@@ -58,14 +61,13 @@ class AzureAI(
   ): Flow<ChatMessageChunk> {
     val chatRequest =
       ChatCompletionRequest(
-        model = ModelId(config.model),
         messages = messages.map { it.toOpenAiChatMessage() },
+        streamOptions = StreamOptions(true),
+        model = ModelId(config.model),
         temperature = config.temperature,
+        presencePenalty = config.presencePenalty,
         maxTokens = config.maxTokens,
         tools = config.tools?.map { it.toOpenAiTool() },
-        streamOptions = StreamOptions(true),
-        maxTokens = config.maxCompletionTokens,
-        presencePenalty = config.presencePenalty,
       )
 
     return client(config.model).chatCompletions(chatRequest).map { it.toNativeMessageChunk() }

@@ -47,7 +47,11 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
       chat = postgres.testChat(admin.id, agent.id, null)
       workflow =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
-          .toChatAgent(providers = app.providers)
+          .toChatAgent(
+            providers = app.providers,
+            tools = null,
+            settings = app.settings.getAllWithDefaults(),
+          )
     }
   }
 

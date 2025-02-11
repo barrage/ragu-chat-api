@@ -37,6 +37,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
       ChatRequest(
         config.model,
         messages,
+        // TODO: Implement the rest of the options
         CompletionRequestOptions(
           config.temperature,
           maxTokens = config.maxTokens,
@@ -64,6 +65,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
       ChatRequest(
         config.model,
         messages,
+        // TODO: Implement the rest of the options
         CompletionRequestOptions(
           config.temperature,
           maxTokens = config.maxTokens,

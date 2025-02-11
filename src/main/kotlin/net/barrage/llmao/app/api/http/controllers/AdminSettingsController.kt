@@ -10,7 +10,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
 import io.ktor.util.toMap
-import net.barrage.llmao.core.settings.ApplicationSettings
+import net.barrage.llmao.app.api.http.dto.ApplicationSettingsResponse
 import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.error.AppError
@@ -29,8 +29,9 @@ fun Route.adminSettingsRoutes(settings: Settings) {
       if (parameters.isNullOrEmpty()) {
         throw AppError.api(ErrorReason.InvalidParameter, "No setting keys provided")
       }
-      val configuration = settings.list(parameters)
-      call.respond(HttpStatusCode.OK, configuration)
+      val configuration = settings.get(parameters)
+      val response = ApplicationSettingsResponse(configuration)
+      call.respond(HttpStatusCode.OK, response)
     }
   }
 }
@@ -43,7 +44,7 @@ private fun adminGetSettings(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "Application settings retrieved successfully"
-        body<ApplicationSettings>()
+        body<ApplicationSettingsResponse>()
       }
     HttpStatusCode.InternalServerError to
       {
