@@ -1,4 +1,4 @@
-package net.barrage.llmao.adapters.chonkit
+package net.barrage.llmao.app.adapters.chonkit
 
 import java.time.OffsetDateTime
 import kotlinx.coroutines.reactive.awaitFirstOrNull

@@ -1,4 +1,4 @@
-package net.barrage.llmao.adapters.chonkit
+package net.barrage.llmao.app.adapters.chonkit
 
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -21,7 +21,7 @@ import kotlinx.coroutines.time.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
+import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.types.KUUID
@@ -41,21 +41,21 @@ class ChonkitAuthenticationService
  * @param repository Repository to use for storing refresh tokens.
  */
 private constructor(
-  private val endpoint: String,
-  private val client: HttpClient,
-  private val key: String,
-  private val jwtConfig: JwtConfig,
-  private val repository: ChonkitAuthenticationRepository,
-  private var token: String,
-  private var tokenDuration: Int,
+    private val endpoint: String,
+    private val client: HttpClient,
+    private val key: String,
+    private val jwtConfig: JwtConfig,
+    private val repository: ChonkitAuthenticationRepository,
+    private var token: String,
+    private var tokenDuration: Int,
 ) {
   private val transitPath = "v1/llmao-transit-engine"
 
   companion object {
     /** Initialize an instance of `ChonkitAuthenticationService` and log in to Vault. */
     suspend fun init(
-      repository: ChonkitAuthenticationRepository,
-      config: ApplicationConfig,
+        repository: ChonkitAuthenticationRepository,
+        config: ApplicationConfig,
     ): ChonkitAuthenticationService {
       LOG.info("Attempting to log in to Vault")
 
@@ -338,22 +338,22 @@ private data class VaultAuthResponse(val auth: Auth) {
 private data class VaultKeyResponse(val data: KeyData) {
   @Serializable
   data class KeyData(
-    val type: String,
-    @SerialName("deletion_allowed") val deletionAllowed: Boolean,
-    val derived: Boolean,
-    val exportable: Boolean,
-    @SerialName("allow_plaintext_backup") val allowPlaintextBackup: Boolean,
+      val type: String,
+      @SerialName("deletion_allowed") val deletionAllowed: Boolean,
+      val derived: Boolean,
+      val exportable: Boolean,
+      @SerialName("allow_plaintext_backup") val allowPlaintextBackup: Boolean,
 
-    /** Keys are the version numbers and the values are key metadata. */
+      /** Keys are the version numbers and the values are key metadata. */
     val keys: Map<String, VaultKey>,
-    @SerialName("min_decryption_version") val minDecryptionVersion: Int,
-    @SerialName("min_encryption_version") val minEncryptionVersion: Int,
-    val name: String,
-    @SerialName("supports_encryption") val supportsEncryption: Boolean,
-    @SerialName("supports_decryption") val supportsDecryption: Boolean,
-    @SerialName("supports_derivation") val supportsDerivation: Boolean,
-    @SerialName("supports_signing") val supportsSigning: Boolean,
-    val imported: Boolean? = null,
+      @SerialName("min_decryption_version") val minDecryptionVersion: Int,
+      @SerialName("min_encryption_version") val minEncryptionVersion: Int,
+      val name: String,
+      @SerialName("supports_encryption") val supportsEncryption: Boolean,
+      @SerialName("supports_decryption") val supportsDecryption: Boolean,
+      @SerialName("supports_derivation") val supportsDerivation: Boolean,
+      @SerialName("supports_signing") val supportsSigning: Boolean,
+      val imported: Boolean? = null,
   )
 }
 

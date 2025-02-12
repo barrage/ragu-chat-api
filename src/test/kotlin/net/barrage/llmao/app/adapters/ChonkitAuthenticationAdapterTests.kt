@@ -12,8 +12,8 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.DurationUnit
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthenticationRequest
+import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthentication
+import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthenticationRequest
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.error.AppError

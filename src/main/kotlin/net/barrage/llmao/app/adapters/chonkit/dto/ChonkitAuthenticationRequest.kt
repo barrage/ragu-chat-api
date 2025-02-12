@@ -1,4 +1,4 @@
-package net.barrage.llmao.adapters.chonkit.dto
+package net.barrage.llmao.app.adapters.chonkit.dto
 
 import kotlinx.serialization.Serializable
 

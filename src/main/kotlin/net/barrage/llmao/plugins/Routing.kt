@@ -8,8 +8,8 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.date.*
-import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
-import net.barrage.llmao.adapters.chonkit.chonkitAuthRouter
+import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
+import net.barrage.llmao.app.adapters.chonkit.chonkitAuthRouter
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.api.adminWhatsAppRoutes

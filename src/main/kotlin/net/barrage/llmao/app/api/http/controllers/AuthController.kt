@@ -11,8 +11,8 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
+import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
+import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.api.http.dto.SessionCookie

@@ -5,8 +5,8 @@ import kotlin.reflect.KClass
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationRepository
-import net.barrage.llmao.adapters.chonkit.ChonkitAuthenticationService
+import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationRepository
+import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.api.http.CookieFactory

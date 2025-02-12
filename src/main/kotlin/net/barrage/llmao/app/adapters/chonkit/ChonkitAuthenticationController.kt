@@ -1,4 +1,4 @@
-package net.barrage.llmao.adapters.chonkit
+package net.barrage.llmao.app.adapters.chonkit
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.post
@@ -7,8 +7,8 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthentication
-import net.barrage.llmao.adapters.chonkit.dto.ChonkitAuthenticationRequest
+import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthentication
+import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthenticationRequest
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
