@@ -1,20 +1,20 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
 import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
-import io.ktor.server.config.*
-import io.ktor.util.logging.*
+import io.ktor.server.config.ApplicationConfig
+import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
@@ -39,7 +39,8 @@ import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.processAdditions
-import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.settings.SettingKey
+import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
@@ -53,7 +54,7 @@ class WhatsAppAdapter(
   private val providers: ProviderState,
   private val repository: WhatsAppRepository,
   private val avatarStorage: ImageStorage,
-  private val settings: Settings,
+  private val settings: SettingsService,
 ) {
   private var whatsAppApi: WhatsAppApi
 
@@ -281,15 +282,18 @@ class WhatsAppAdapter(
           ChatCompletionParameters(
             model = agentConfig.model,
             temperature = agentConfig.temperature,
-            presencePenalty = agentConfig.presencePenalty ?: settings.presencePenalty ?: 0.0,
-            maxTokens = agentConfig.maxCompletionTokens ?: settings.maxCompletionTokens,
+            presencePenalty =
+              agentConfig.presencePenalty ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+            maxTokens =
+              agentConfig.maxCompletionTokens
+                ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
           ),
         configurationId = agentConfig.id,
         providers = providers,
 
         // Safe to !! because we are fetching with defaults
-        titleMaxTokens = settings.titleMaxCompletionTokens!!,
-        summaryMaxTokens = settings.summaryMaxCompletionTokens!!,
+        titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+        summaryMaxTokens = settings[SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS].toInt(),
       )
 
     history.add(ChatMessage.user(message))

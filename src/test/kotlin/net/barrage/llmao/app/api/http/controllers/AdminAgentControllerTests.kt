@@ -160,8 +160,14 @@ class AdminAgentControllerTests : IntegrationTest() {
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.5,
+            presencePenalty = 0.5,
+            maxCompletionTokens = 100,
             instructions =
-              AgentInstructions(titleInstruction = "title", summaryInstruction = "summary"),
+              AgentInstructions(
+                titleInstruction = "title",
+                summaryInstruction = "summary",
+                errorMessage = "error",
+              ),
           ),
       )
 
@@ -180,6 +186,11 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals("gpt-4", body.configuration.model)
     assertEquals("title", body.configuration.agentInstructions.titleInstruction)
     assertEquals("summary", body.configuration.agentInstructions.summaryInstruction)
+    assertEquals(1, body.configuration.version)
+    assertEquals(0.5, body.configuration.temperature)
+    assertEquals(0.5, body.configuration.presencePenalty)
+    assertEquals(100, body.configuration.maxCompletionTokens)
+    assertEquals("error", body.configuration.agentInstructions.errorMessage)
 
     postgres.deleteTestAgent(body.agent.id)
   }
@@ -246,6 +257,8 @@ class AdminAgentControllerTests : IntegrationTest() {
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.5,
+            maxCompletionTokens = 100,
+            presencePenalty = 0.5,
             instructions = null,
           ),
       )
@@ -262,6 +275,8 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals("TestAgentOneUpdated", body.agent.name)
     assertEquals(0.5, body.configuration.temperature)
     assertEquals(3, body.configuration.version)
+    assertEquals(100, body.configuration.maxCompletionTokens)
+    assertEquals(0.5, body.configuration.presencePenalty)
   }
 
   @Test

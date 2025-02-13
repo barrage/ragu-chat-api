@@ -1,7 +1,8 @@
 package net.barrage.llmao
 
-import io.ktor.server.application.*
-import io.ktor.server.config.*
+import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopping
+import io.ktor.server.config.ApplicationConfig
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
 import net.barrage.llmao.app.ApplicationState
@@ -42,7 +43,7 @@ fun Application.module() {
       state.services.agent,
       state.repository.chatWorkflow,
       toolchainFactory,
-      state.settings,
+      state.settingsService,
     ),
     stateChangeListener,
   )

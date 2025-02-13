@@ -8,9 +8,9 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.date.*
+import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.app.adapters.chonkit.chonkitAuthRouter
-import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.api.adminWhatsAppRoutes
 import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppHookRoutes
@@ -52,7 +52,7 @@ fun Application.configureRouting(state: ApplicationState) {
       adminUserRoutes(state.services.user)
       adminChatsRoutes(state.services.chat)
       administrationRouter(state.services.admin)
-      adminSettingsRoutes(state.settings)
+      adminSettingsRoutes(state.settingsService)
       state.adapters.runIfEnabled<ChonkitAuthenticationService, Unit> { chonkitAuthRouter(it) }
     }
 

@@ -56,7 +56,7 @@ class ApplicationState(
     repository = RepositoryState(database)
     settingsService = SettingsService(repository.settings)
     services = ServiceState(providers, repository, listener)
-    adapters = AdapterState(config, database, providers, settings)
+    adapters = AdapterState(config, database, providers, settingsService)
   }
 }
 
@@ -91,7 +91,7 @@ class AdapterState(
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       val whatsAppRepo = WhatsAppRepository(database)
       adapters[WhatsAppAdapter::class] =
-        WhatsAppAdapter(config, providers, whatsAppRepo, providers.imageStorage, settings)
+        WhatsAppAdapter(config, providers, whatsAppRepo, providers.imageStorage, settingsService)
     }
   }
 
