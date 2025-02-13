@@ -12,6 +12,9 @@ import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
+import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.configureCors
 import net.barrage.llmao.plugins.configureErrorHandling
 import net.barrage.llmao.plugins.configureOpenApi
@@ -64,4 +67,12 @@ fun ApplicationConfig.string(key: String): String {
 /** Shorthand for `config.property(key).getString().toLong` */
 fun ApplicationConfig.long(key: String): Long {
   return property(key).getString().toLong()
+}
+
+fun tryUuid(value: String): KUUID {
+  return try {
+    KUUID.fromString(value)
+  } catch (e: IllegalArgumentException) {
+    throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID")
+  }
 }

@@ -1,9 +1,14 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.call.body
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.adapters.whatsapp.dto.Contact
@@ -12,11 +17,12 @@ import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.dto.Message
 import net.barrage.llmao.app.adapters.whatsapp.dto.Price
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.sessionCookie
@@ -31,11 +37,15 @@ class WhatsAppControllerTests :
   private lateinit var peasantUser: User
   private lateinit var peasantSession: Session
   private lateinit var whatsAppNumber: WhatsAppNumber
-  private lateinit var whatsAppAgentOne: WhatsAppAgent
-  private lateinit var whatsAppAgentTwo: WhatsAppAgent
+  private lateinit var whatsAppAgentOne: Agent
+  private lateinit var whatsAppAgentTwo: Agent
+  private lateinit var whatsAppAgentOneConfiguration: AgentConfiguration
+  private lateinit var whatsAppAgentTwoConfiguration: AgentConfiguration
   private lateinit var whatsAppChat: WhatsAppChat
   private lateinit var whatsAppMessageOne: WhatsAppMessage
   private lateinit var whatsAppMessageTwo: WhatsAppMessage
+
+  private val userNumber = "385981234567"
 
   @BeforeAll
   fun setup() {
@@ -49,9 +59,19 @@ class WhatsAppControllerTests :
   @BeforeEach
   fun setupWhatsAppUser() {
     runBlocking {
-      whatsAppNumber = postgres.testWhatsAppNumber(peasantUser.id, "385981234567")
-      whatsAppAgentOne = postgres.testWhatsAppAgent(active = true)
-      whatsAppAgentTwo = postgres.testWhatsAppAgent(active = false)
+      whatsAppNumber = postgres.testWhatsAppNumber(peasantUser.id, userNumber)
+      whatsAppAgentOne = postgres.testAgent("Agent 1")
+      whatsAppAgentTwo = postgres.testAgent("Agent 2")
+      whatsAppAgentOneConfiguration =
+        postgres.testAgentConfiguration(
+          whatsAppAgentOne.id,
+          context = "WhatsApp Test Agent Context",
+        )
+      whatsAppAgentTwoConfiguration =
+        postgres.testAgentConfiguration(
+          whatsAppAgentTwo.id,
+          context = "WhatsApp Test Agent Context",
+        )
       whatsAppChat = postgres.testWhatsAppChat(peasantUser.id)
       whatsAppMessageOne = postgres.testWhatsAppMessage(whatsAppChat.id, peasantUser.id)
       whatsAppMessageTwo =
@@ -61,6 +81,7 @@ class WhatsAppControllerTests :
           senderType = "assistant",
           responseTo = whatsAppMessageOne.id,
         )
+      postgres.setWhatsAppAgent(whatsAppAgentOne.id)
     }
   }
 
@@ -69,8 +90,7 @@ class WhatsAppControllerTests :
     runBlocking {
       postgres.deleteTestWhatsAppChat(whatsAppChat.id)
       postgres.deleteTestWhatsAppNumber(whatsAppNumber.id)
-      postgres.deleteTestWhatsAppAgent(whatsAppAgentOne.id)
-      postgres.deleteTestWhatsAppAgent(whatsAppAgentTwo.id)
+      postgres.deleteWhatsAppAgent()
     }
   }
 
@@ -82,7 +102,7 @@ class WhatsAppControllerTests :
         results =
           listOf(
             InfobipResult(
-              from = "385981234567",
+              from = userNumber,
               to = "385912222222",
               integrationType = "WHATSAPP",
               receivedAt = "2024-11-28T07:57:28.000+00:00",

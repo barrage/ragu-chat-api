@@ -13,14 +13,11 @@ import com.infobip.model.WhatsAppTemplateContent
 import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
@@ -31,53 +28,71 @@ import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.models.CreateAgent
-import net.barrage.llmao.core.models.Image
-import net.barrage.llmao.core.models.UpdateAgent
-import net.barrage.llmao.core.models.UpdateCollections
-import net.barrage.llmao.core.models.UpdateCollectionsResult
+import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
-import net.barrage.llmao.core.services.processAdditions
+import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.settings.SettingKey
+import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.tokens.TokenUsageTracker
+import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.string
+import net.barrage.llmao.tryUuid
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
 
 private const val WHATSAPP_CHAT_TOKEN_ORIGIN = "workflow.whatsapp"
 
 class WhatsAppAdapter(
-  private val config: ApplicationConfig,
+  apiKey: String,
+  endpoint: String,
+  private val config: WhatsAppSenderConfig,
   private val providers: ProviderState,
   private val repository: WhatsAppRepository,
   private val avatarStorage: ImageStorage,
   private val settings: SettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
+  private val agentRepository: AgentRepository,
+  private val wappRepository: WhatsAppRepository,
+  private val settingsService: SettingsService,
 ) {
   private var whatsAppApi: WhatsAppApi
 
   init {
-    val apiKey = config.string("infobip.apiKey")
-    val endpoint = config.string("infobip.endpoint")
     val apiClient =
       ApiClient.forApiKey(ApiKey.from(apiKey)).withBaseUrl(BaseUrl.from(endpoint)).build()
 
     whatsAppApi = WhatsAppApi(apiClient)
   }
 
+  suspend fun getAgent(): AgentFull {
+    val agentId =
+      settingsService.get(SettingKey.WHATSAPP_AGENT_ID)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not configured")
+
+    return agentRepository.get(tryUuid(agentId))
+  }
+
+  suspend fun setAgent(agentId: KUUID) {
+    agentRepository.get(agentId)
+
+    val update =
+      SettingsUpdate(listOf(SettingUpdate(SettingKey.WHATSAPP_AGENT_ID, agentId.toString())))
+
+    settingsService.update(update)
+  }
+
   suspend fun getNumbers(id: KUUID): List<WhatsAppNumber> {
-    return repository.getNumbersByUserId(id)
+    return wappRepository.getNumbersByUserId(id)
   }
 
   suspend fun addNumber(id: KUUID, number: PhoneNumber): WhatsAppNumber {
-    val response = repository.addNumber(id, number)
+    val response = wappRepository.addNumber(id, number)
     sendWelcomeMessage(number.phoneNumber)
     return response
   }
@@ -87,7 +102,7 @@ class WhatsAppAdapter(
     numberId: KUUID,
     updateNumber: PhoneNumber,
   ): WhatsAppNumber {
-    val number = repository.getNumberById(numberId)
+    val number = wappRepository.getNumberById(numberId)
 
     if (number.userId != userId) {
       throw AppError.api(
@@ -96,13 +111,13 @@ class WhatsAppAdapter(
       )
     }
 
-    val response = repository.updateNumber(numberId, updateNumber)
+    val response = wappRepository.updateNumber(numberId, updateNumber)
     sendWelcomeMessage(updateNumber.phoneNumber)
     return response
   }
 
   suspend fun deleteNumber(userId: KUUID, numberId: KUUID) {
-    val number = repository.getNumberById(numberId)
+    val number = wappRepository.getNumberById(numberId)
 
     if (number.userId != userId) {
       throw AppError.api(
@@ -111,105 +126,25 @@ class WhatsAppAdapter(
       )
     }
 
-    if (!repository.deleteNumber(numberId)) {
+    if (!wappRepository.deleteNumber(numberId)) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp number not found")
     }
   }
 
-  suspend fun getAllAgents(pagination: PaginationSort): CountedList<WhatsAppAgent> {
-    return repository.getAgents(pagination)
-  }
-
-  suspend fun getAgent(id: KUUID): WhatsAppAgentFull {
-    return repository.getAgent(id)
-  }
-
-  suspend fun createAgent(create: CreateAgent): WhatsAppAgent {
-    providers.validateSupportedConfigurationParams(
-      llmProvider = create.configuration.llmProvider,
-      model = create.configuration.model,
-    )
-
-    return repository.createAgent(create)
-      ?: throw AppError.api(ErrorReason.Internal, "Something went wrong while creating agent")
-  }
-
-  suspend fun updateAgent(agentId: KUUID, update: UpdateAgent): WhatsAppAgent {
-    providers.validateSupportedConfigurationParams(
-      llmProvider = update.configuration?.llmProvider,
-      model = update.configuration?.model,
-    )
-
-    return repository.updateAgent(agentId, update)
-  }
-
-  suspend fun deleteAgent(agentId: KUUID) {
-    // This is to ensure the agent exists
-    val agent = repository.getAgent(agentId)
-    if (agent.agent.active) {
-      throw AppError.api(ErrorReason.InvalidOperation, "Cannot delete active agent")
-    }
-
-    if (agent.agent.avatar != null) {
-      avatarStorage.delete(agent.agent.avatar)
-    }
-
-    repository.deleteAgent(agentId)
-  }
-
-  suspend fun uploadAgentAvatar(id: KUUID, image: Image) {
-    val agent = repository.getAgent(id)
-
-    if (agent.agent.avatar != null) {
-      avatarStorage.delete(agent.agent.avatar)
-    }
-
-    avatarStorage.store(image)
-
-    repository.updateAgentAvatar(id, image.name)
-  }
-
-  suspend fun deleteAgentAvatar(id: KUUID) {
-    val agent = repository.getAgent(id)
-
-    if (agent.agent.avatar == null) {
-      throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent avatar not found")
-    }
-
-    avatarStorage.delete(agent.agent.avatar)
-
-    repository.removeAgentAvatar(id)
-  }
-
   suspend fun getAllChats(pagination: PaginationSort): CountedList<WhatsAppChatWithUserName> {
-    return repository.getAllChats(pagination)
+    return wappRepository.getAllChats(pagination)
   }
 
   suspend fun getChatByUserId(userId: KUUID): WhatsAppChatWithUserAndMessages {
     val chat =
-      repository.getChatByUserId(userId)
+      wappRepository.getChatByUserId(userId)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp chat not found")
 
     return getChatWithMessages(chat.id)
   }
 
   suspend fun getChatWithMessages(id: KUUID): WhatsAppChatWithUserAndMessages {
-    return repository.getChatWithMessages(id)
-  }
-
-  suspend fun updateCollections(
-    agentId: KUUID,
-    update: UpdateCollections,
-  ): UpdateCollectionsResult {
-    val (additions, failures) = processAdditions(providers, update)
-
-    repository.updateCollections(agentId, additions, update.remove)
-
-    return UpdateCollectionsResult(additions.map { it.info }, update.remove.orEmpty(), failures)
-  }
-
-  suspend fun removeCollectionFromAllAgents(collectionName: String, provider: String) {
-    repository.removeCollectionFromAllAgents(collectionName, provider)
+    return wappRepository.getChatWithMessages(id)
   }
 
   suspend fun handleIncomingMessage(input: InfobipResponseDTO) {
@@ -219,7 +154,7 @@ class WhatsAppAdapter(
   }
 
   private suspend fun processResult(result: InfobipResult) {
-    val whatsAppNumber = repository.getNumber(result.from)
+    val whatsAppNumber = wappRepository.getNumber(result.from)
     if (whatsAppNumber == null) {
       val message =
         createWhatsAppMessage(result.from, result.to, "You are not registered in our system.")
@@ -254,24 +189,26 @@ class WhatsAppAdapter(
     message: String,
     whatsAppNumber: WhatsAppNumber,
   ): ProcessedInput {
-    val agentFull = repository.getActiveAgentFull()
-    val chat = getChat(whatsAppNumber.userId)
-    val chatMessages = repository.getMessages(chat.id, 20)
+    val wappAgentId =
+      settingsService.get(SettingKey.WHATSAPP_AGENT_ID)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not configured")
+
+    val agent = agentRepository.get(KUUID.fromString(wappAgentId))
+    val chat = getOrInsertChat(whatsAppNumber.userId)
+    val chatMessages = wappRepository.getMessages(chat.id, 20)
     val history = chatMessages.map(WhatsAppMessage::toChatMessage).toMutableList()
 
-    val agentConfig = agentFull.getConfiguration()
-    val agentCollections = agentFull.collections
-    val settings = settings.getAllWithDefaults()
+    val settings = settingsService.getAllWithDefaults()
 
     val conversation =
       ChatAgent(
-        id = agentFull.agent.id,
-        name = agentFull.agent.name,
-        model = agentFull.agent.model,
-        llmProvider = agentFull.agent.llmProvider,
-        context = agentFull.agent.context,
+        id = agent.agent.id,
+        name = agent.agent.name,
+        model = agent.configuration.model,
+        llmProvider = agent.configuration.llmProvider,
+        context = agent.configuration.context,
         collections =
-          agentCollections.map {
+          agent.collections.map {
             ChatAgentCollection(
               name = it.collection,
               amount = it.amount,
@@ -281,19 +218,20 @@ class WhatsAppAdapter(
               vectorProvider = it.vectorProvider,
             )
           },
-        instructions = agentConfig.agentInstructions,
+        instructions = agent.configuration.agentInstructions,
         tools = null,
         completionParameters =
           ChatCompletionParameters(
-            model = agentConfig.model,
-            temperature = agentConfig.temperature,
+            model = agent.configuration.model,
+            temperature = agent.configuration.temperature,
             presencePenalty =
-              agentConfig.presencePenalty ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+              agent.configuration.presencePenalty
+                ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
             maxTokens =
-              agentConfig.maxCompletionTokens
+              agent.configuration.maxCompletionTokens
                 ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
           ),
-        configurationId = agentConfig.id,
+        configurationId = agent.configuration.id,
         providers = providers,
 
         // Safe to !! because we are fetching with defaults
@@ -316,7 +254,7 @@ class WhatsAppAdapter(
 
     // Safe to !! because we are not sending any tools in the message, which means the content
     // is always present
-    return ProcessedInput(response.content!!, chat.id, whatsAppNumber.userId, agentFull.agent.id)
+    return ProcessedInput(response.content!!, chat.id, whatsAppNumber.userId, agent.agent.id)
   }
 
   private fun createWhatsAppMessage(
@@ -336,20 +274,17 @@ class WhatsAppAdapter(
   }
 
   private fun sendWelcomeMessage(to: String) {
-    val sender = config.string("infobip.sender")
-    val template = config.string("infobip.template")
-    val appName = config.string("infobip.appName")
     val message =
       InfobipWhatsAppMessage()
-        .from(sender)
+        .from(config.sender)
         .to(to)
         .content(
           WhatsAppTemplateContent()
             .language("en")
-            .templateName(template)
+            .templateName(config.template)
             .templateData(
               WhatsAppTemplateDataContent()
-                .body(WhatsAppTemplateBodyContent().addPlaceholdersItem(appName))
+                .body(WhatsAppTemplateBodyContent().addPlaceholdersItem(config.appName))
             )
         )
 
@@ -371,14 +306,14 @@ class WhatsAppAdapter(
     }
   }
 
-  private suspend fun getChat(userId: KUUID): WhatsAppChat {
-    val chat = repository.getChatByUserId(userId)
+  private suspend fun getOrInsertChat(userId: KUUID): WhatsAppChat {
+    val chat = wappRepository.getChatByUserId(userId)
+
     if (chat == null) {
       val id = KUUID.randomUUID()
-      return repository.storeChat(id, userId)
+      return wappRepository.storeChat(id, userId)
     }
 
-    LOG.trace("Found chat {}", chat)
     return chat
   }
 
@@ -389,8 +324,8 @@ class WhatsAppAdapter(
     proompt: String,
     response: String,
   ) {
-    val userMessage = repository.insertUserMessage(chatId, userId, proompt)
-    repository.insertAssistantMessage(chatId, agentId, userMessage.id, response)
+    val userMessage = wappRepository.insertUserMessage(chatId, userId, proompt)
+    wappRepository.insertAssistantMessage(chatId, agentId, userMessage.id, response)
   }
 }
 
@@ -400,3 +335,5 @@ data class ProcessedInput(
   val userId: KUUID,
   val agentId: KUUID,
 )
+
+data class WhatsAppSenderConfig(val sender: String, val template: String, val appName: String)

@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationRepository
 import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
+import net.barrage.llmao.app.adapters.whatsapp.WhatsAppSenderConfig
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.auth.AuthenticationProviderFactory
@@ -61,7 +62,7 @@ class ApplicationState(
     repository = RepositoryState(database)
     settingsService = SettingsService(repository.settings)
     services = ServiceState(providers, repository, listener)
-    adapters = AdapterState(config, database, providers, settingsService)
+    adapters = AdapterState(config, database, providers, settingsService, repository)
   }
 }
 
@@ -85,6 +86,7 @@ class AdapterState(
   database: DSLContext,
   providers: ProviderState,
   settingsService: SettingsService,
+  repository: RepositoryState,
 ) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 
@@ -95,8 +97,8 @@ class AdapterState(
         ChonkitAuthenticationService.init(chonkitAuthRepo, config)
       }
     }
+
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
-      val whatsAppRepo = WhatsAppRepository(database)
       adapters[WhatsAppAdapter::class] =
         WhatsAppAdapter(
           config,
@@ -105,6 +107,18 @@ class AdapterState(
           providers.imageStorage,
           settingsService,
           TokenUsageRepositoryWrite(database),
+          apiKey = config.string("infobip.apiKey"),
+          endpoint = config.string("infobip.endpoint"),
+          config =
+            WhatsAppSenderConfig(
+              config.string("infobip.sender"),
+              config.string("infobip.template"),
+              config.string("infobip.appName"),
+            ),
+          providers = providers,
+          agentRepository = repository.agent,
+          wappRepository = WhatsAppRepository(database),
+          settingsService = settingsService,
         )
     }
     if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {

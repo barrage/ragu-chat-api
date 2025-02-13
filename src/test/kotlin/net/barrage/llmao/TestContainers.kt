@@ -23,11 +23,9 @@ import kotlinx.coroutines.reactive.awaitSingle
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppAgent
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
@@ -46,6 +44,7 @@ import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
 import net.barrage.llmao.core.settings.SettingsUpdate
+import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
@@ -58,7 +57,6 @@ import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_EVALUATIONS
 import net.barrage.llmao.tables.references.SESSIONS
 import net.barrage.llmao.tables.references.USERS
-import net.barrage.llmao.tables.references.WHATS_APP_AGENTS
 import net.barrage.llmao.tables.references.WHATS_APP_CHATS
 import net.barrage.llmao.tables.references.WHATS_APP_MESSAGES
 import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
@@ -364,42 +362,22 @@ class TestPostgres {
     dslContext.deleteFrom(WHATS_APP_NUMBERS).where(WHATS_APP_NUMBERS.ID.eq(id)).awaitSingle()
   }
 
-  suspend fun testWhatsAppAgent(
-    name: String = "Test WhatsApp Agent",
-    active: Boolean = true,
-  ): WhatsAppAgent {
-    val agent =
-      dslContext
-        .insertInto(WHATS_APP_AGENTS)
-        .columns(
-          WHATS_APP_AGENTS.NAME,
-          WHATS_APP_AGENTS.DESCRIPTION,
-          WHATS_APP_AGENTS.CONTEXT,
-          WHATS_APP_AGENTS.LLM_PROVIDER,
-          WHATS_APP_AGENTS.MODEL,
-          WHATS_APP_AGENTS.TEMPERATURE,
-          WHATS_APP_AGENTS.LANGUAGE,
-          WHATS_APP_AGENTS.ACTIVE,
-        )
-        .values(
-          name,
-          "Test Description",
-          "WhatsApp Test Agent Context",
-          "openai",
-          "gpt-4",
-          0.4,
-          "croatian",
-          active,
-        )
-        .returning()
-        .awaitSingle()
-        .toWhatsAppAgent()
-
-    return agent
+  suspend fun setWhatsAppAgent(agentId: KUUID) {
+    dslContext
+      .insertInto(APPLICATION_SETTINGS)
+      .set(APPLICATION_SETTINGS.NAME, SettingKey.WHATSAPP_AGENT_ID.name)
+      .set(APPLICATION_SETTINGS.VALUE, agentId.toString())
+      .onConflict(APPLICATION_SETTINGS.NAME)
+      .doUpdate()
+      .set(APPLICATION_SETTINGS.VALUE, agentId.toString())
+      .awaitSingle()
   }
 
-  suspend fun deleteTestWhatsAppAgent(id: UUID) {
-    dslContext.deleteFrom(WHATS_APP_AGENTS).where(WHATS_APP_AGENTS.ID.eq(id)).awaitSingle()
+  suspend fun deleteWhatsAppAgent() {
+    dslContext
+      .deleteFrom(APPLICATION_SETTINGS)
+      .where(APPLICATION_SETTINGS.NAME.eq(SettingKey.WHATSAPP_AGENT_ID.name))
+      .awaitSingle()
   }
 
   suspend fun testWhatsAppChat(userId: UUID): WhatsAppChat {

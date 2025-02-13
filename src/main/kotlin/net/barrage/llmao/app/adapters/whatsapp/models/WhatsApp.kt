@@ -2,14 +2,9 @@ package net.barrage.llmao.app.adapters.whatsapp.models
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.models.AgentCollection
-import net.barrage.llmao.core.models.AgentConfiguration
-import net.barrage.llmao.core.models.AgentInstructions
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.WhatsAppAgentCollectionsRecord
-import net.barrage.llmao.tables.records.WhatsAppAgentsRecord
 import net.barrage.llmao.tables.records.WhatsAppChatsRecord
 import net.barrage.llmao.tables.records.WhatsAppMessagesRecord
 import net.barrage.llmao.tables.records.WhatsAppNumbersRecord
@@ -34,45 +29,6 @@ data class WhatsAppChat(
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
-
-@Serializable
-data class WhatsAppAgent(
-  val id: KUUID,
-  val name: String,
-  val description: String?,
-  val context: String,
-  val llmProvider: String,
-  val model: String,
-  val temperature: Double,
-  val maxCompletionTokens: Int?,
-  val presencePenalty: Double?,
-  val language: String,
-  val active: Boolean,
-  val avatar: String? = null,
-  val agentInstructions: AgentInstructions,
-  val createdAt: KOffsetDateTime,
-  val updatedAt: KOffsetDateTime,
-)
-
-@Serializable
-data class WhatsAppAgentFull(val agent: WhatsAppAgent, val collections: List<AgentCollection>) {
-  fun getConfiguration(): AgentConfiguration {
-    return AgentConfiguration(
-      id = agent.id,
-      agentId = agent.id,
-      version = 1,
-      context = agent.context,
-      llmProvider = agent.llmProvider,
-      model = agent.model,
-      temperature = agent.temperature,
-      maxCompletionTokens = agent.maxCompletionTokens,
-      presencePenalty = agent.presencePenalty,
-      agentInstructions = agent.agentInstructions,
-      createdAt = KOffsetDateTime.now(),
-      updatedAt = KOffsetDateTime.now(),
-    )
-  }
-}
 
 @Serializable
 data class WhatsAppMessage(
@@ -104,8 +60,6 @@ data class WhatsAppChatWithUserName(
   val avatar: String? = null,
 )
 
-@Serializable data class WhatsAppAgentCurrent(val id: KUUID?, val active: Boolean)
-
 fun WhatsAppNumbersRecord.toWhatsAppNumber() =
   WhatsAppNumber(
     id = this.id!!,
@@ -134,39 +88,3 @@ fun WhatsAppMessagesRecord.toWhatsAppMessage() =
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
-
-fun WhatsAppAgentsRecord.toWhatsAppAgent() =
-  WhatsAppAgent(
-    id = this.id!!,
-    name = this.name,
-    description = this.description,
-    context = this.context,
-    llmProvider = this.llmProvider,
-    model = this.model,
-    temperature = this.temperature!!,
-    maxCompletionTokens = this.maxCompletionTokens,
-    presencePenalty = this.presencePenalty,
-    language = this.language!!,
-    active = this.active!!,
-    avatar = this.avatar,
-    agentInstructions = AgentInstructions(summaryInstruction = this.summaryInstruction),
-    createdAt = this.createdAt!!,
-    updatedAt = this.updatedAt!!,
-  )
-
-fun WhatsAppAgentCollectionsRecord.toAgentCollection() =
-  AgentCollection(
-    id = this.id!!,
-    agentId = this.agentId!!,
-    instruction = this.instruction,
-    collection = this.collection,
-    amount = this.amount,
-    embeddingModel = this.embeddingModel,
-    vectorProvider = this.vectorProvider,
-    embeddingProvider = this.embeddingProvider,
-    createdAt = this.createdAt!!,
-    updatedAt = this.updatedAt!!,
-  )
-
-fun WhatsAppAgentsRecord.toWhatsAppAgentCurrent() =
-  WhatsAppAgentCurrent(id = this.id, active = this.active!!)

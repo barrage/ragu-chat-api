@@ -11,86 +11,29 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
+import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentUpdate
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgent
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppAgentFull
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.api.http.queryPaginationSort
-import net.barrage.llmao.app.api.http.runWithImage
-import net.barrage.llmao.core.models.CreateAgent
-import net.barrage.llmao.core.models.UpdateAgent
-import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
-import net.barrage.llmao.plugins.queryParam
 
 fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
-  route("/admin/whatsapp/agents") {
-    get(adminGetAllWhatsAppAgents()) {
-      val pagination = call.query(PaginationSort::class)
-      val agents = whatsAppAdapter.getAllAgents(pagination)
-      call.respond(agents)
+  route("/admin/whatsapp/agent") {
+    get(adminGetWhatsAppAgent()) {
+      val agent = whatsAppAdapter.getAgent()
+      call.respond(HttpStatusCode.OK, agent)
     }
-
-    post(adminCreateWhatsAppAgent()) {
-      val newAgent = call.receive<CreateAgent>()
-      val createdAgent = whatsAppAdapter.createAgent(newAgent)
-      call.respond(createdAgent)
-    }
-
-    route("/{agentId}") {
-      get(adminGetWhatsAppAgent()) {
-        val agentId = call.pathUuid("agentId")
-        val agent = whatsAppAdapter.getAgent(agentId)
-        call.respond(agent)
-      }
-
-      put(adminUpdateWhatsAppAgent()) {
-        val agentId = call.pathUuid("agentId")
-        val updatedAgent = call.receive<UpdateAgent>()
-        val agent = whatsAppAdapter.updateAgent(agentId, updatedAgent)
-        call.respond(agent)
-      }
-
-      delete(adminDeleteWhatsAppAgent()) {
-        val agentId = call.pathUuid("agentId")
-        whatsAppAdapter.deleteAgent(agentId)
-        call.respond(HttpStatusCode.NoContent)
-      }
-
-      put("/collections", adminUpdateWhatsAppAgentCollections()) {
-        val agentId = call.pathUuid("agentId")
-        val update = call.receive<UpdateCollections>()
-        whatsAppAdapter.updateCollections(agentId, update)
-        call.respond(HttpStatusCode.OK)
-      }
-
-      post("/avatars", adminUploadWhatsAppAgentAvatar()) {
-        val agentId = call.pathUuid("agentId")
-        call.runWithImage(agentId) { image ->
-          whatsAppAdapter.uploadAgentAvatar(agentId, image)
-          call.respond(HttpStatusCode.Created, image.name)
-        }
-      }
-
-      delete("/avatars", adminDeleteWhatsAppAgentAvatar()) {
-        val agentId = call.pathUuid("agentId")
-        val agent = whatsAppAdapter.deleteAgentAvatar(agentId)
-        call.respond(agent)
-      }
-    }
-
-    delete("/collections", adminDeleteCollectionFromAllWhatsAppAgents()) {
-      val collection = call.queryParam("collection")!!
-      val provider = call.queryParam("provider")!!
-      whatsAppAdapter.removeCollectionFromAllAgents(collection, provider)
-      call.respond(HttpStatusCode.NoContent)
+    put(adminSetWhatsAppAgent()) {
+      val update = call.receive<WhatsAppAgentUpdate>()
+      val agent = whatsAppAdapter.setAgent(update.agentId)
+      call.respond(agent)
     }
   }
 
@@ -140,56 +83,14 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 }
 
 // OpenAPI documentation
-private fun adminGetAllWhatsAppAgents(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Retrieve list of all WhatsApp agents"
-  request { queryPaginationSort() }
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "List of WhatsAppAgents"
-        body<CountedList<WhatsAppAgent>>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while retrieving agents"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminCreateWhatsAppAgent(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Create a new WhatsApp agent"
-  request { body<CreateAgent> { description = "New WhatsApp agent object" } }
-  response {
-    HttpStatusCode.Created to
-      {
-        description = "WhatsAppAgent created successfully"
-        body<WhatsAppAgent>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while creating agent"
-        body<List<AppError>> {}
-      }
-  }
-}
-
 private fun adminGetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Retrieve WhatsApp agent by ID"
-  request {
-    pathParameter<KUUID>("agentId") {
-      description = "Agent ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-  }
+  tags("admin/whatsapp/agent")
+  description = "Get the currently assigned WhatsApp agent"
   response {
     HttpStatusCode.OK to
       {
-        description = "WhatsAppAgent retrieved successfully"
-        body<WhatsAppAgentFull>()
+        description = "WhatsApp agent retrieved successfully"
+        body<WhatsAppNumber>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -199,166 +100,19 @@ private fun adminGetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminUpdateWhatsAppAgent(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Update WhatsApp agent"
-  request {
-    pathParameter<KUUID>("agentId") {
-      description = "Agent ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    body<UpdateAgent> { description = "Updated WhatsApp agent object" }
-  }
+private fun adminSetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
+  tags("admin/whatsapp/agent")
+  description = "Set the currently assigned WhatsApp agent"
+  request { body<WhatsAppAgentUpdate> { description = "New WhatsApp agent" } }
   response {
     HttpStatusCode.OK to
       {
-        description = "WhatsAppAgent updated successfully"
-        body<WhatsAppAgent>()
+        description = "WhatsApp agent set successfully"
+        body<WhatsAppNumber>()
       }
     HttpStatusCode.InternalServerError to
       {
-        description = "Internal server error occurred while updating agent"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminDeleteWhatsAppAgent(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Delete WhatsApp agent"
-  request {
-    pathParameter<KUUID>("agentId") {
-      description = "Agent ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-  }
-  response {
-    HttpStatusCode.NoContent to { description = "WhatsAppAgent deleted successfully" }
-    HttpStatusCode.BadRequest to
-      {
-        description = "Cannot delete active agent"
-        body<List<AppError>> {}
-      }
-    HttpStatusCode.NotFound to
-      {
-        description = "WhatsApp agent not found"
-        body<List<AppError>> {}
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while deleting agent"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminUpdateWhatsAppAgentCollections(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Update WhatsApp agent collections"
-  request {
-    pathParameter<KUUID>("agentId") {
-      description = "Agent ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    body<UpdateCollections> {
-      description = "The updated collections for the agent"
-      required = true
-    }
-  }
-  response {
-    HttpStatusCode.OK to { description = "Collections updated successfully" }
-    HttpStatusCode.BadRequest to
-      {
-        description = "Invalid input or agent ID"
-        body<List<AppError>> {}
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while updating collections"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminDeleteCollectionFromAllWhatsAppAgents(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Remove a collection from all WhatsApp agents"
-  request {
-    queryParameter<String>("collection") {
-      description = "Collection name"
-      example("example") { value = "Kusturica_small" }
-    }
-    queryParameter<String>("provider") {
-      description = "Collection provider"
-      example("example") { value = "weaviate" }
-    }
-  }
-  response {
-    HttpStatusCode.NoContent to { description = "Collection removed successfully" }
-    HttpStatusCode.BadRequest to
-      {
-        description = "Invalid input"
-        body<List<AppError>> {}
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while removing collection"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminUploadWhatsAppAgentAvatar(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Upload WhatsApp agent avatar"
-  request {
-    pathParameter<KUUID>("agentId") {
-      description = "Agent ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-    body<ByteArray> {
-      description = "Avatar image, .jpeg or .png format"
-      mediaTypes = setOf(ContentType.Image.JPEG, ContentType.Image.PNG)
-      required = true
-    }
-  }
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "WhatsApp agent with avatar"
-        body<WhatsAppAgent> {}
-      }
-  }
-  response {
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while uploading avatar"
-        body<List<AppError>> {}
-      }
-  }
-  response {
-    HttpStatusCode.BadRequest to
-      {
-        description = "Invalid input"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminDeleteWhatsAppAgentAvatar(): OpenApiRoute.() -> Unit = {
-  tags("admin/whatsapp/agents")
-  description = "Delete WhatsApp agent avatar"
-  request {
-    pathParameter<KUUID>("agentId") {
-      description = "Agent ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-    }
-  }
-  response {
-    HttpStatusCode.NoContent to { description = "WhatsApp agent avatar deleted successfully" }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while deleting avatar"
+        description = "Internal server error occurred while setting agent"
         body<List<AppError>> {}
       }
   }
