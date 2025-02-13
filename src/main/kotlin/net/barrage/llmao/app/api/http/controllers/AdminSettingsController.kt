@@ -9,60 +9,51 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
-import io.ktor.util.toMap
-import net.barrage.llmao.app.api.http.dto.ApplicationSettingsResponse
-import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
-fun Route.adminSettingsRoutes(settings: Settings) {
+fun Route.adminSettingsRoutes(settingsService: SettingsService) {
   route("/admin/settings") {
-    put(adminUpdateSettings()) {
+    put(updateSettings()) {
       val parameters: SettingsUpdate = call.receive()
-      settings.update(parameters)
+      settingsService.update(parameters)
       call.respond(HttpStatusCode.OK)
     }
 
-    get(adminGetSettings()) {
-      val parameters = call.request.queryParameters.toMap()["setting"]
-      if (parameters.isNullOrEmpty()) {
-        throw AppError.api(ErrorReason.InvalidParameter, "No setting keys provided")
-      }
-      val configuration = settings.get(parameters)
-      val response = ApplicationSettingsResponse(configuration)
-      call.respond(HttpStatusCode.OK, response)
+    get(getSettings()) {
+      val settings = settingsService.getAllWithDefaults()
+      call.respond(HttpStatusCode.OK, settings)
     }
   }
 }
 
-private fun adminGetSettings(): OpenApiRoute.() -> Unit = {
+private fun updateSettings(): OpenApiRoute.() -> Unit = {
   tags("admin/settings")
-  description = "Retrieve application settings"
-  request { queryParameter<String>("setting") { description = "Setting key" } }
-  response {
-    HttpStatusCode.OK to
-      {
-        description = "Application settings retrieved successfully"
-        body<ApplicationSettingsResponse>()
-      }
-    HttpStatusCode.InternalServerError to
-      {
-        description = "Internal server error occurred while retrieving settings"
-        body<List<AppError>> {}
-      }
-  }
-}
-
-private fun adminUpdateSettings(): OpenApiRoute.() -> Unit = {
-  tags("admin/settings")
-  description = "Update application settings"
+  description = "Update settings"
   request { body<SettingsUpdate> { description = "Updated settings" } }
   response {
     HttpStatusCode.OK to { description = "Settings updated successfully" }
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating settings"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun getSettings(): OpenApiRoute.() -> Unit = {
+  tags("admin/settings")
+  description = "Retrieve settings"
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Settings retrieved successfully"
+        body<Map<String, String>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving settings"
         body<List<AppError>> {}
       }
   }

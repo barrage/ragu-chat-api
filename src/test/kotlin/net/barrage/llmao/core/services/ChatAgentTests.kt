@@ -50,7 +50,7 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
           .toChatAgent(
             providers = app.providers,
             tools = null,
-            settings = app.settings.getAllWithDefaults(),
+            settings = app.settingsService.getAllWithDefaults(),
           )
     }
   }

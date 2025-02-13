@@ -6,7 +6,7 @@ import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.models.toChatAgent
 import net.barrage.llmao.core.services.AgentService
-import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 
@@ -15,7 +15,7 @@ class ChatWorkflowFactory(
   private val agentService: AgentService,
   private val chatWorkflowRepository: ChatWorkflowRepository,
   private val toolchainFactory: ToolchainFactory,
-  private val settings: Settings,
+  private val settingsService: SettingsService,
 ) {
   suspend fun newChatWorkflow(
     userId: KUUID,
@@ -31,7 +31,7 @@ class ChatWorkflowFactory(
     val agent = agentService.getFull(agentId)
     val toolchain = toolchainFactory.createAgentToolchain(agentId, toolEmitter)
     val tools = toolchain?.listToolSchemas()
-    val settings = settings.getAllWithDefaults()
+    val settings = settingsService.getAllWithDefaults()
 
     val chatAgent = agent.toChatAgent(providers = providerState, tools = tools, settings = settings)
 
@@ -59,7 +59,7 @@ class ChatWorkflowFactory(
 
     val toolchain = toolchainFactory.createAgentToolchain(chat.chat.agentId, toolEmitter)
     val tools = toolchain?.listToolSchemas()
-    val settings = settings.getAllWithDefaults()
+    val settings = settingsService.getAllWithDefaults()
 
     val chatAgent = agent.toChatAgent(providers = providerState, tools = tools, settings = settings)
 

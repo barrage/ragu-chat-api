@@ -27,8 +27,8 @@ import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
-import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.settings.SettingsRepository
+import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -48,13 +48,13 @@ class ApplicationState(
   val repository: RepositoryState
   val adapters: AdapterState
   val services: ServiceState
-  val settings: Settings
+  val settingsService: SettingsService
 
   init {
     CookieFactory.init(config)
     val database = initDatabase(config, applicationStopping)
     repository = RepositoryState(database)
-    settings = Settings(repository.settings)
+    settingsService = SettingsService(repository.settings)
     services = ServiceState(providers, repository, listener)
     adapters = AdapterState(config, database, providers, settings)
   }
@@ -77,7 +77,7 @@ class AdapterState(
   config: ApplicationConfig,
   database: DSLContext,
   providers: ProviderState,
-  settings: Settings,
+  settingsService: SettingsService,
 ) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 

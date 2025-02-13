@@ -8,7 +8,8 @@ import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.models.common.TimeSeries
-import net.barrage.llmao.core.settings.ApplicationSettingsDefault
+import net.barrage.llmao.core.settings.ApplicationSettings
+import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentToolsRecord
@@ -71,7 +72,8 @@ data class AgentFull(
 fun AgentFull.toChatAgent(
   providers: ProviderState,
   tools: List<ToolDefinition>?,
-  settings: ApplicationSettingsDefault,
+  /** Used for default values if the agent configuration does not specify them. */
+  settings: ApplicationSettings,
 ) =
   ChatAgent(
     id = agent.id,
@@ -95,14 +97,17 @@ fun AgentFull.toChatAgent(
       ChatCompletionParameters(
         model = configuration.model,
         temperature = configuration.temperature,
-        presencePenalty = configuration.presencePenalty ?: settings.presencePenalty,
-        maxTokens = configuration.maxCompletionTokens ?: settings.maxCompletionTokens,
+        presencePenalty =
+          configuration.presencePenalty ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+        maxTokens =
+          configuration.maxCompletionTokens
+            ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
       ),
     configurationId = configuration.id,
     providers = providers,
     tools = tools,
-    titleMaxTokens = settings.titleMaxCompletionTokens,
-    summaryMaxTokens = settings.summaryMaxCompletionTokens,
+    titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+    summaryMaxTokens = settings[SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS].toInt(),
   )
 
 /** DTO for creating an agent. */

@@ -3,13 +3,24 @@ package net.barrage.llmao.core.settings
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.excluded
 
 class SettingsRepository(private val dslContext: DSLContext) {
-  suspend fun listAll(): List<Setting> {
+  suspend fun getValue(key: SettingKey): String? {
+    return dslContext
+      .select(APPLICATION_SETTINGS.VALUE)
+      .from(APPLICATION_SETTINGS)
+      .where(APPLICATION_SETTINGS.NAME.eq(key.name))
+      .awaitFirstOrNull()
+      ?.into(APPLICATION_SETTINGS)
+      ?.value
+  }
+
+  suspend fun listAll(): List<ApplicationSetting> {
     return dslContext
       .select(
         APPLICATION_SETTINGS.NAME,
@@ -23,7 +34,7 @@ class SettingsRepository(private val dslContext: DSLContext) {
       .toList()
   }
 
-  suspend fun list(keys: List<String>): List<Setting> {
+  suspend fun list(keys: List<String>): List<ApplicationSetting> {
     return dslContext
       .select(
         APPLICATION_SETTINGS.NAME,
@@ -41,7 +52,7 @@ class SettingsRepository(private val dslContext: DSLContext) {
   suspend fun update(update: SettingsUpdate) {
     dslContext
       .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
-      .apply { update.updates.forEach { setting -> values(setting.key, setting.value) } }
+      .apply { update.updates.forEach { setting -> values(setting.key.name, setting.value) } }
       .onConflict(APPLICATION_SETTINGS.NAME)
       .doUpdate()
       .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
