@@ -101,12 +101,6 @@ class AdapterState(
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       adapters[WhatsAppAdapter::class] =
         WhatsAppAdapter(
-          config,
-          providers,
-          whatsAppRepo,
-          providers.imageStorage,
-          settingsService,
-          TokenUsageRepositoryWrite(database),
           apiKey = config.string("infobip.apiKey"),
           endpoint = config.string("infobip.endpoint"),
           config =
@@ -119,6 +113,7 @@ class AdapterState(
           agentRepository = repository.agent,
           wappRepository = WhatsAppRepository(database),
           settingsService = settingsService,
+          tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
         )
     }
     if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {

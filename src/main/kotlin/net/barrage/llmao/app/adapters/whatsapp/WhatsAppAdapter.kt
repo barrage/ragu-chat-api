@@ -35,10 +35,9 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsService
-import net.barrage.llmao.core.storage.ImageStorage
+import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.tokens.TokenUsageTracker
-import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -53,13 +52,10 @@ class WhatsAppAdapter(
   endpoint: String,
   private val config: WhatsAppSenderConfig,
   private val providers: ProviderState,
-  private val repository: WhatsAppRepository,
-  private val avatarStorage: ImageStorage,
-  private val settings: SettingsService,
-  private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val agentRepository: AgentRepository,
   private val wappRepository: WhatsAppRepository,
   private val settingsService: SettingsService,
+  private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
 ) {
   private var whatsAppApi: WhatsAppApi
 
@@ -240,8 +236,8 @@ class WhatsAppAdapter(
         tokenTracker =
           TokenUsageTracker(
             userId = whatsAppNumber.userId,
-            agentId = agentFull.agent.id,
-            agentConfigurationId = agentConfig.id,
+            agentId = agent.agent.id,
+            agentConfigurationId = agent.configuration.id,
             origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
             originId = chat.id,
             repository = tokenUsageRepositoryW,
