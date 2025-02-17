@@ -1,8 +1,10 @@
 package net.barrage.llmao.core.settings
 
+import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.tables.records.ApplicationSettingsRecord
 
+@Serializable
 data class ApplicationSetting(
   val name: SettingKey,
   val value: String,

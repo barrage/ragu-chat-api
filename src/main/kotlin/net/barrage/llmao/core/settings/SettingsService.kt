@@ -23,8 +23,8 @@ class SettingsService(private val settingsRepository: SettingsRepository) {
     }
 
     val appSettings =
-      settings.fold(mutableMapOf<SettingKey, String>()) { acc, setting ->
-        acc[setting.name] = setting.value
+      settings.fold(mutableMapOf<SettingKey, ApplicationSetting>()) { acc, setting ->
+        acc[setting.name] = setting
         acc
       }
 
@@ -117,13 +117,13 @@ enum class SettingKey {
  */
 @JvmInline
 @Serializable
-value class ApplicationSettings(private val m: Map<SettingKey, String>) {
+value class ApplicationSettings(private val m: Map<SettingKey, ApplicationSetting>) {
   operator fun get(key: SettingKey): String {
-    return m[key]!!
+    return m[key]!!.value
   }
 
   fun getOptional(key: SettingKey): String? {
-    return m[key]
+    return m[key]?.value
   }
 }
 
