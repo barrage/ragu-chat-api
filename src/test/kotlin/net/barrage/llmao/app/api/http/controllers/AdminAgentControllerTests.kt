@@ -245,6 +245,8 @@ class AdminAgentControllerTests : IntegrationTest() {
   @Test
   fun updateAgentWorks() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
+    val agent = postgres.testAgent(name = "TestAgentUpdate")
+    postgres.testAgentConfiguration(agent.id, version = 1)
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
@@ -264,7 +266,7 @@ class AdminAgentControllerTests : IntegrationTest() {
       )
 
     val response =
-      client.put("/admin/agents/${agentOne.id}") {
+      client.put("/admin/agents/${agent.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
         contentType(ContentType.Application.Json)
         setBody(updateAgent)
@@ -274,9 +276,11 @@ class AdminAgentControllerTests : IntegrationTest() {
     val body = response.body<AgentWithConfiguration>()
     assertEquals("TestAgentOneUpdated", body.agent.name)
     assertEquals(0.5, body.configuration.temperature)
-    assertEquals(3, body.configuration.version)
+    assertEquals(2, body.configuration.version)
     assertEquals(100, body.configuration.maxCompletionTokens)
     assertEquals(0.5, body.configuration.presencePenalty)
+
+    postgres.deleteTestAgent(agent.id)
   }
 
   @Test
@@ -370,6 +374,16 @@ class AdminAgentControllerTests : IntegrationTest() {
   @Test
   fun updateAgentNameSameConfigurationSameVersionWorks() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
+    val agent = postgres.testAgent(name = "TestAgentUpdate")
+    postgres.testAgentConfiguration(
+      agent.id,
+      version = 1,
+      llmProvider = "openai",
+      model = "gpt-4",
+      temperature = 0.1,
+      presencePenalty = 0.1,
+      maxCompletionTokens = 100,
+    )
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
@@ -382,12 +396,13 @@ class AdminAgentControllerTests : IntegrationTest() {
             llmProvider = "openai",
             model = "gpt-4",
             temperature = 0.1,
-            instructions = null,
+            presencePenalty = 0.1,
+            maxCompletionTokens = 100,
           ),
       )
 
     val response =
-      client.put("/admin/agents/${agentOne.id}") {
+      client.put("/admin/agents/${agent.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
         contentType(ContentType.Application.Json)
         setBody(updateAgent)
@@ -396,8 +411,10 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals(200, response.status.value)
     val body = response.body<AgentWithConfiguration>()
     assertEquals("TestAgentOneUpdated", body.agent.name)
-    assertEquals(2, body.configuration.version)
+    assertEquals(1, body.configuration.version)
     assertEquals(0.1, body.configuration.temperature)
+
+    postgres.deleteTestAgent(agent.id)
   }
 
   @Test

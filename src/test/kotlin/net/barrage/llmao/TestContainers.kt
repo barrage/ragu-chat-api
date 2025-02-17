@@ -45,12 +45,10 @@ import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
-import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
-import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_EVALUATIONS
@@ -231,6 +229,8 @@ class TestPostgres {
     llmProvider: String = "openai",
     model: String = "gpt-4",
     temperature: Double = 0.1,
+    presencePenalty: Double? = null,
+    maxCompletionTokens: Int? = null,
     titleInstruction: String? = null,
     summaryInstruction: String? = null,
     errorMessage: String? = null,
@@ -245,6 +245,8 @@ class TestPostgres {
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
           AGENT_CONFIGURATIONS.TEMPERATURE,
+          AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
+          AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
           AGENT_CONFIGURATIONS.ERROR_MESSAGE,
@@ -256,6 +258,8 @@ class TestPostgres {
           llmProvider,
           model,
           temperature,
+          presencePenalty,
+          maxCompletionTokens,
           titleInstruction,
           summaryInstruction,
           errorMessage,

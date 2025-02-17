@@ -372,6 +372,9 @@ class AgentRepository(private val dslContext: DSLContext) {
       update.llmProvider != null && update.llmProvider != current.llmProvider ||
       update.model != null && update.model != current.model ||
       update.temperature != null && update.temperature != current.temperature ||
+      update.maxCompletionTokens != null &&
+        update.maxCompletionTokens != current.maxCompletionTokens ||
+      update.presencePenalty != null && update.presencePenalty != current.presencePenalty ||
       update.instructions != null &&
         (update.instructions.titleInstruction != current.agentInstructions.titleInstruction ||
           update.instructions.summaryInstruction != current.agentInstructions.summaryInstruction ||
