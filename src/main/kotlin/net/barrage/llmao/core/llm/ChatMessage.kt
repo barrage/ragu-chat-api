@@ -10,7 +10,7 @@ data class ChatMessageChunk(
   val created: Long,
   val content: String? = null,
   val stopReason: FinishReason? = null,
-  // val type: String? = null,
+  val tokenUsage: Int?,
   val toolCalls: List<ToolCallChunk>? = null,
 )
 
@@ -64,6 +64,9 @@ data class ChatCompletion(
 
   /** A list of generated completions */
   val choices: List<ChatChoice>,
+
+  /** The total amount of tokens spent. */
+  val tokenUsage: Int?,
 )
 
 @Serializable

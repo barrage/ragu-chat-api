@@ -15,6 +15,8 @@ import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolCallResult
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.models.MessageInsert
+import net.barrage.llmao.core.tokens.TokenUsageTracker
+import net.barrage.llmao.core.tokens.TokenUsageType
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
@@ -47,7 +49,7 @@ class ChatWorkflow(
 
   /**
    * If present, pops value from the front of the message history if the history gets larger than
-   * this.
+   * this. TODO: replace with token based summarization.
    */
   private val maxHistory: Int = 20,
 
@@ -59,6 +61,9 @@ class ChatWorkflow(
 
   /** Chat message history. */
   private val history: MutableList<ChatMessage> = mutableListOf(),
+
+  /** Used to track token usage. */
+  private val tokenTracker: TokenUsageTracker,
 ) : Workflow {
   /** True if the chat is streaming, false otherwise. */
   private var stream: Job? = null
@@ -194,6 +199,16 @@ class ChatWorkflow(
         out.append(chunk.content)
       }
 
+      if (chunk.tokenUsage != null) {
+        assert(chunk.stopReason != null)
+        tokenTracker.store(
+          amount = chunk.tokenUsage,
+          usageType = TokenUsageType.COMPLETION,
+          model = agent.model,
+          provider = agent.llmProvider,
+        )
+      }
+
       collectToolCalls(toolCalls, chunk)
     }
 
@@ -276,9 +291,10 @@ class ChatWorkflow(
 
         LOG.debug("{} - generating title", id)
         val title = agent.createTitle(prompt, response)
-        repository.updateTitle(id, userId, title)
-        emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title))
-        state = ChatWorkflowState.Persisted(title)
+        // Safe to !! because title generation never sends tools to the LLM
+        repository.updateTitle(id, userId, title.content!!)
+        emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title.content!!))
+        state = ChatWorkflowState.Persisted(title.content!!)
       }
       is ChatWorkflowState.Persisted -> {
         LOG.debug("{} - persisting message pair", id)
@@ -335,9 +351,11 @@ class ChatWorkflow(
       val tokenCount = agent.countHistoryTokens(history)
       if (tokenCount >= it) {
         val summary = agent.summarizeConversation(history)
-        repository.insertSystemMessage(id, summary)
+        // Safe to !! because summarization never sends any tools in the message, which means the
+        // content will never be null
+        repository.insertSystemMessage(id, summary.content!!)
         history.clear()
-        history.add(ChatMessage.system(summary))
+        history.add(ChatMessage.system(summary.content!!))
       }
       return@addToHistory
     }

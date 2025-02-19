@@ -30,6 +30,8 @@ import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.settings.SettingsRepository
 import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.storage.ImageStorage
+import net.barrage.llmao.core.tokens.TokenUsageRepositoryRead
+import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.plugins.initDatabase
@@ -67,6 +69,8 @@ class RepositoryState(database: DSLContext) {
   val chat: ChatRepository = ChatRepository(database)
   val chatWorkflow: ChatWorkflowRepository = ChatWorkflowRepository(database)
   val settings: SettingsRepository = SettingsRepository(database)
+  val tokenUsageR: TokenUsageRepositoryRead = TokenUsageRepositoryRead(database)
+  val tokenUsageW: TokenUsageRepositoryWrite = TokenUsageRepositoryWrite(database)
 }
 
 /**
@@ -91,7 +95,14 @@ class AdapterState(
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       val whatsAppRepo = WhatsAppRepository(database)
       adapters[WhatsAppAdapter::class] =
-        WhatsAppAdapter(config, providers, whatsAppRepo, providers.imageStorage, settingsService)
+        WhatsAppAdapter(
+          config,
+          providers,
+          whatsAppRepo,
+          providers.imageStorage,
+          settingsService,
+          TokenUsageRepositoryWrite(database),
+        )
     }
   }
 
@@ -180,7 +191,14 @@ class ServiceState(
     AgentService(providers, repository.agent, repository.chat, listener, providers.imageStorage)
   val user = UserService(repository.user, repository.session, providers.imageStorage)
   val auth = AuthenticationService(providers.auth, repository.session, repository.user)
-  val admin = AdministrationService(providers, repository.agent, repository.chat, repository.user)
+  val admin =
+    AdministrationService(
+      providers = providers,
+      agentRepository = repository.agent,
+      chatRepository = repository.chat,
+      userRepository = repository.user,
+      tokenUsageRepository = repository.tokenUsageR,
+    )
 }
 
 @Serializable

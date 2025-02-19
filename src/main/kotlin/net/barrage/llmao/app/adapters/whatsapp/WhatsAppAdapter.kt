@@ -1,12 +1,12 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -42,6 +42,8 @@ import net.barrage.llmao.core.services.processAdditions
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.storage.ImageStorage
+import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
+import net.barrage.llmao.core.tokens.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -49,12 +51,15 @@ import net.barrage.llmao.string
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
 
+private const val WHATSAPP_CHAT_TOKEN_ORIGIN = "workflow.whatsapp"
+
 class WhatsAppAdapter(
   private val config: ApplicationConfig,
   private val providers: ProviderState,
   private val repository: WhatsAppRepository,
   private val avatarStorage: ImageStorage,
   private val settings: SettingsService,
+  private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
 ) {
   private var whatsAppApi: WhatsAppApi
 
@@ -294,6 +299,15 @@ class WhatsAppAdapter(
         // Safe to !! because we are fetching with defaults
         titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
         summaryMaxTokens = settings[SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS].toInt(),
+        tokenTracker =
+          TokenUsageTracker(
+            userId = whatsAppNumber.userId,
+            agentId = agentFull.agent.id,
+            agentConfigurationId = agentConfig.id,
+            origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
+            originId = chat.id,
+            repository = tokenUsageRepositoryW,
+          ),
       )
 
     history.add(ChatMessage.user(message))

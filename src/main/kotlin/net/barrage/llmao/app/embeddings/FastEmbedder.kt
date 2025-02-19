@@ -6,6 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.embeddings.Embedder
+import net.barrage.llmao.core.embeddings.Embeddings
 import net.barrage.llmao.core.httpClient
 
 class FastEmbedder(private val endpoint: String) : Embedder {
@@ -25,14 +26,14 @@ class FastEmbedder(private val endpoint: String) : Embedder {
     return models.keys.contains(model)
   }
 
-  override suspend fun embed(input: String, model: String): List<Double> {
+  override suspend fun embed(input: String, model: String): Embeddings {
     val request = EmbeddingRequest(listOf(input), model)
     val response =
       client.post("$endpoint/embed") {
         contentType(ContentType.Application.Json)
         setBody(request)
       }
-    return response.body<EmbeddingResponse>().embeddings[0]
+    return Embeddings(response.body<EmbeddingResponse>().embeddings[0])
   }
 
   override suspend fun vectorSize(model: String): Int {

@@ -8,6 +8,7 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
@@ -36,7 +37,7 @@ class AzureAI(
   override suspend fun chatCompletion(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): ChatMessage {
+  ): ChatCompletion {
     val chatRequest =
       ChatCompletionRequest(
         messages = messages.map { it.toOpenAiChatMessage() },
@@ -47,12 +48,7 @@ class AzureAI(
         tools = config.tools?.map { it.toOpenAiTool() },
       )
 
-    return client(config.model)
-      .chatCompletion(chatRequest)
-      .toNativeChatCompletion()
-      .choices
-      .first()
-      .message
+    return client(config.model).chatCompletion(chatRequest).toNativeChatCompletion()
   }
 
   override suspend fun completionStream(

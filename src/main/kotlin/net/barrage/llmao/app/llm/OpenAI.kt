@@ -46,7 +46,7 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
   override suspend fun chatCompletion(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): ChatMessage {
+  ): ChatCompletion {
     val chatRequest =
       ChatCompletionRequest(
         messages = messages.map { it.toOpenAiChatMessage() },
@@ -57,7 +57,7 @@ class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
         tools = config.tools?.map { it.toOpenAiTool() },
       )
 
-    return client.chatCompletion(chatRequest).toNativeChatCompletion().choices.first().message
+    return client.chatCompletion(chatRequest).toNativeChatCompletion()
   }
 
   override suspend fun completionStream(
@@ -142,6 +142,7 @@ fun OpenAiChatChunk.toNativeMessageChunk(): ChatMessageChunk {
           function = FunctionCall(it.function?.nameOrNull, it.function?.arguments),
         )
       },
+    tokenUsage = usage?.totalTokens,
   )
 }
 
@@ -158,6 +159,7 @@ fun OpenAiChatCompletion.toNativeChatCompletion(): ChatCompletion {
     created = created,
     choices = choices.map { it.toNativeChatChoice() },
     model = model.id,
+    tokenUsage = usage?.totalTokens,
   )
 }
 

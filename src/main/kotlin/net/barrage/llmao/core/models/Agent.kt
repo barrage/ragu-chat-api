@@ -2,14 +2,7 @@ package net.barrage.llmao.core.models
 
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.app.ProviderState
-import net.barrage.llmao.app.workflow.chat.ChatAgent
-import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
-import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.models.common.TimeSeries
-import net.barrage.llmao.core.settings.ApplicationSettings
-import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentToolsRecord
@@ -68,47 +61,6 @@ data class AgentFull(
   val configuration: AgentConfiguration,
   val collections: List<AgentCollection>,
 )
-
-fun AgentFull.toChatAgent(
-  providers: ProviderState,
-  tools: List<ToolDefinition>?,
-  /** Used for default values if the agent configuration does not specify them. */
-  settings: ApplicationSettings,
-) =
-  ChatAgent(
-    id = agent.id,
-    name = agent.name,
-    model = configuration.model,
-    llmProvider = configuration.llmProvider,
-    context = configuration.context,
-    collections =
-      collections.map {
-        ChatAgentCollection(
-          it.collection,
-          it.amount,
-          it.instruction,
-          it.embeddingProvider,
-          it.embeddingModel,
-          it.vectorProvider,
-        )
-      },
-    instructions = configuration.agentInstructions,
-    completionParameters =
-      ChatCompletionParameters(
-        model = configuration.model,
-        temperature = configuration.temperature,
-        presencePenalty =
-          configuration.presencePenalty ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
-        maxTokens =
-          configuration.maxCompletionTokens
-            ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
-      ),
-    configurationId = configuration.id,
-    providers = providers,
-    tools = tools,
-    titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-    summaryMaxTokens = settings[SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS].toInt(),
-  )
 
 /** DTO for creating an agent. */
 @Serializable

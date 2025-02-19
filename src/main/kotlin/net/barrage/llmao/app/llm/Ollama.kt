@@ -13,6 +13,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.httpClient
+import net.barrage.llmao.core.llm.ChatChoice
+import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
@@ -32,7 +34,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
   override suspend fun chatCompletion(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): ChatMessage {
+  ): ChatCompletion {
     val request =
       ChatRequest(
         config.model,
@@ -52,9 +54,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
         setBody(request)
       }
 
-    val body = response.body<ChatCompletionResponse>()
-
-    return body.message.toNativeChatMessage()
+    return response.body<ChatCompletionResponse>().toNativeChatCompletion()
   }
 
   override suspend fun completionStream(
@@ -162,25 +162,21 @@ private data class CompletionRequestOptions(
   val tools: List<ToolDefinition>? = null,
 )
 
+private fun ChatCompletionResponse.toNativeChatCompletion(): ChatCompletion {
+  return ChatCompletion(
+    id = "ID",
+    created = createdAt.toEpochSecond(),
+    model = model,
+    choices = listOf(ChatChoice(0, message.toNativeChatMessage())),
+    tokenUsage = null,
+  )
+}
+
 @Serializable
 private data class ChatCompletionResponse(
   val model: String,
   @SerialName("created_at") val createdAt: KOffsetDateTime,
   val message: OllamaChatMessage,
-  val done: Boolean,
-  @SerialName("total_duration") val totalDuration: Long,
-  @SerialName("load_duration") val loadDuration: Long,
-  @SerialName("prompt_eval_count") val promptEvalCount: Long,
-  @SerialName("prompt_eval_duration") val promptEvalDuration: Long,
-  @SerialName("eval_count") val evalCount: Long,
-  @SerialName("eval_duration") val evalDuration: Long,
-)
-
-@Serializable
-private data class CompletionResponse(
-  val model: String,
-  @SerialName("created_at") val createdAt: KOffsetDateTime,
-  val response: String,
   val done: Boolean,
   @SerialName("total_duration") val totalDuration: Long,
   @SerialName("load_duration") val loadDuration: Long,
@@ -219,14 +215,17 @@ private data class ChatStreamChunk(
 ) {
   fun toTokenChunk(): ChatMessageChunk {
     return ChatMessageChunk(
-      "ID",
-      createdAt.toEpochSecond(),
-      message.content,
-      if (done) {
-        FinishReason.Stop
-      } else {
-        null
-      },
+      id = "ID",
+      created = createdAt.toEpochSecond(),
+      content = message.content,
+      stopReason =
+        if (done) {
+          FinishReason.Stop
+        } else {
+          null
+        },
+      tokenUsage = null,
+      toolCalls = null,
     )
   }
 }

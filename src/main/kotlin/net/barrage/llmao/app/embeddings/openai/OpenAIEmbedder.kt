@@ -5,6 +5,7 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
 import net.barrage.llmao.core.embeddings.Embedder
+import net.barrage.llmao.core.embeddings.Embeddings
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
@@ -23,7 +24,7 @@ class OpenAIEmbedder(endpoint: String, apiKey: String) : Embedder {
     return OpenAIEmbeddingModel.tryFromString(model) != null
   }
 
-  override suspend fun embed(input: String, model: String): List<Double> {
+  override suspend fun embed(input: String, model: String): Embeddings {
     val request = EmbeddingRequest(ModelId(model), listOf(input))
 
     val response = client.embeddings(request)
@@ -35,7 +36,7 @@ class OpenAIEmbedder(endpoint: String, apiKey: String) : Embedder {
 
     // We always get embeddings in a 1:1 manner relative to the input
     // Above check ensures we are always in bounds
-    return response.embeddings.map { it.embedding }[0]
+    return Embeddings(response.embeddings.map { it.embedding }[0], response.usage.totalTokens)
   }
 
   override suspend fun vectorSize(model: String): Int {

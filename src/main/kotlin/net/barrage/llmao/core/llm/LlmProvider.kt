@@ -9,7 +9,7 @@ interface LlmProvider {
   suspend fun chatCompletion(
     messages: List<ChatMessage>,
     config: ChatCompletionParameters,
-  ): ChatMessage
+  ): ChatCompletion
 
   /** Create a stream that emits [ChatMessageChunk]s. */
   suspend fun completionStream(

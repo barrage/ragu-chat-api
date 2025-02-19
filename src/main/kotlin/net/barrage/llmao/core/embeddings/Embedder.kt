@@ -7,7 +7,7 @@ interface Embedder {
   suspend fun supportsModel(model: String): Boolean
 
   /** Embed the given input string using the provided embedding model. */
-  suspend fun embed(input: String, model: String): List<Double>
+  suspend fun embed(input: String, model: String): Embeddings
 
   /** Return the size of the vector for the given model. */
   suspend fun vectorSize(model: String): Int

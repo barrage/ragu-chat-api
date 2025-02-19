@@ -265,6 +265,12 @@ const val COMPLETIONS_STREAM_PROMPT = "v1_chat_completions_stream"
 const val COMPLETIONS_TITLE_PROMPT = "v1_chat_completions_title"
 
 /**
+ * Instruction configured to make wiremock return the default title response. This should be used in
+ * agent instructions as the summary instruction
+ */
+const val COMPLETIONS_SUMMARY_PROMPT = "v1_chat_completions_summary"
+
+/**
  * Prompt configured to make wiremock return a stream response with additional whitespace for
  * testing purposes.
  */
@@ -283,6 +289,9 @@ const val COMPLETIONS_RESPONSE = "v1_chat_completions_completion_response"
 
 /** Wiremock response for a title response. */
 const val COMPLETIONS_TITLE_RESPONSE = "v1_chat_completions_title_response"
+
+/** Wiremock response for a summary response. */
+const val COMPLETIONS_SUMMARY_RESPONSE = "v1_chat_completions_summary_response"
 
 /** Returned on [COMPLETIONS_STREAM_PROMPT]. */
 const val COMPLETIONS_STREAM_RESPONSE = "v1_chat_completions_stream_response"

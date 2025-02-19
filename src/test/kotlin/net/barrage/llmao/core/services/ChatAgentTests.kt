@@ -10,6 +10,7 @@ import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.workflow.chat.ChatAgent
+import net.barrage.llmao.app.workflow.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -17,7 +18,7 @@ import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DEFAULT_TITLE_INSTRUCTION
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.core.models.toChatAgent
+import net.barrage.llmao.core.tokens.TokenUsageTracker
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -25,7 +26,6 @@ import org.junit.jupiter.api.Test
 
 class ChatAgentTests : IntegrationTest(useWiremock = true) {
   private lateinit var workflow: ChatAgent
-
   private lateinit var admin: User
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
@@ -51,6 +51,15 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
             providers = app.providers,
             tools = null,
             settings = app.settingsService.getAllWithDefaults(),
+            tokenTracker =
+              TokenUsageTracker(
+                userId = admin.id,
+                agentId = agent.id,
+                agentConfigurationId = agentConfiguration.id,
+                origin = "test",
+                originId = chat.id,
+                repository = app.repository.tokenUsageW,
+              ),
           )
     }
   }
@@ -59,7 +68,7 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
   fun successfullyGeneratesChatTitle() = test {
     // Title responses are always the same regardless of the prompt
     val response = workflow.createTitle("Test prompt - title", "Test response - title")
-    assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
+    assertEquals(COMPLETIONS_TITLE_RESPONSE, response.content)
   }
 
   @Test

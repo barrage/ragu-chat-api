@@ -197,3 +197,21 @@ databaseChangeLog:
             path: migration/11_alter_agent_configurations_table/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
+  - changeSet:
+      id: 12
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 12.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/12_token_usage_table/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/12_token_usage_table/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false

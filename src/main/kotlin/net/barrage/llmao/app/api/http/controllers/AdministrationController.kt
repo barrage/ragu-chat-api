@@ -2,15 +2,17 @@ package net.barrage.llmao.app.api.http.controllers
 
 import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.call
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
 import net.barrage.llmao.app.ProvidersResponse
 import net.barrage.llmao.core.models.AgentChatTimeSeries
 import net.barrage.llmao.core.models.DashboardCounts
 import net.barrage.llmao.core.models.common.Period
 import net.barrage.llmao.core.services.AdministrationService
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.queryParam
 
@@ -39,9 +41,23 @@ fun Route.administrationRouter(service: AdministrationService) {
 
     call.respond(HttpStatusCode.OK, history)
   }
+
+  get("/admin/tokens/usage/total", tokenUsageForPeriod()) {
+    val from = call.queryParam("from")?.let { KOffsetDateTime.parse(it) }
+    val to = call.queryParam("to")?.let { KOffsetDateTime.parse(it) }
+    val usage = service.getTotalTokenUsageForPeriod(from, to)
+    call.respond(HttpStatusCode.OK, usage)
+  }
+
+  get("/admin/tokens/usage", listTokenUsage()) {
+    val userId = call.queryParam("userId")?.let { KUUID.fromString(it) }
+    val agentId = call.queryParam("agentId")?.let { KUUID.fromString(it) }
+    val usage = service.listTokenUsage(userId = userId, agentId = agentId)
+    call.respond(HttpStatusCode.OK, usage)
+  }
 }
 
-fun providers(): OpenApiRoute.() -> Unit = {
+private fun providers(): OpenApiRoute.() -> Unit = {
   summary = "List all available providers"
   description = "List all available providers for the application."
   tags("providers")
@@ -69,7 +85,7 @@ fun providers(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun providerModels(): OpenApiRoute.() -> Unit = {
+private fun providerModels(): OpenApiRoute.() -> Unit = {
   summary = "List all available language models for a provider"
   description = "List all available language models for a provider."
   tags("providers")
@@ -89,7 +105,7 @@ fun providerModels(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun dashboardCounts(): OpenApiRoute.() -> Unit = {
+private fun dashboardCounts(): OpenApiRoute.() -> Unit = {
   summary = "Get dashboard count statistics"
   description = "Get count statistics for the application dashboard."
   tags("admin/dashboard")
@@ -107,7 +123,7 @@ fun dashboardCounts(): OpenApiRoute.() -> Unit = {
   }
 }
 
-fun chatHistory(): OpenApiRoute.() -> Unit = {
+private fun chatHistory(): OpenApiRoute.() -> Unit = {
   summary = "Get chat history"
   description = "Get chat history for the application dashboard."
   tags("admin/dashboard")
@@ -117,6 +133,50 @@ fun chatHistory(): OpenApiRoute.() -> Unit = {
       {
         description = "Chat history"
         body<AgentChatTimeSeries> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error"
+        body<List<AppError>>()
+      }
+  }
+}
+
+private fun tokenUsageForPeriod(): OpenApiRoute.() -> Unit = {
+  summary = "Get the total token usage for a given period."
+  description = "Get token usage."
+  tags("admin/tokens")
+  request {
+    queryParameter<KOffsetDateTime>("from") { description = "From date" }
+    queryParameter<KOffsetDateTime>("to") { description = "To date" }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Token usage"
+        body<List<Number>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error"
+        body<List<AppError>>()
+      }
+  }
+}
+
+private fun listTokenUsage(): OpenApiRoute.() -> Unit = {
+  summary = "List token usage"
+  description = "List token usage for the application."
+  tags("admin/tokens")
+  request {
+    queryParameter<KUUID>("userId") { description = "User ID" }
+    queryParameter<KUUID>("agentId") { description = "Agent ID" }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Token usage"
+        body<List<Number>> {}
       }
     HttpStatusCode.InternalServerError to
       {

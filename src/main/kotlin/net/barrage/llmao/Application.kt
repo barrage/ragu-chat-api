@@ -39,11 +39,12 @@ fun Application.module() {
   configureOpenApi()
   websocketServer(
     ChatWorkflowFactory(
-      state.providers,
-      state.services.agent,
-      state.repository.chatWorkflow,
-      toolchainFactory,
-      state.settingsService,
+      providerState = state.providers,
+      agentService = state.services.agent,
+      chatWorkflowRepository = state.repository.chatWorkflow,
+      toolchainFactory = toolchainFactory,
+      settingsService = state.settingsService,
+      tokenUsageRepositoryW = state.repository.tokenUsageW,
     ),
     stateChangeListener,
   )
