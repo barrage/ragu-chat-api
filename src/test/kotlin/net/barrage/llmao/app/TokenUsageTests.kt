@@ -41,7 +41,7 @@ class TokenUsageTests : IntegrationTest(useWiremock = true) {
           llmProvider = "openai",
           model = "gpt-4o",
           titleInstruction = COMPLETIONS_TITLE_PROMPT,
-          summaryInstruction = "Custom summary instruction",
+          summaryInstruction = COMPLETIONS_SUMMARY_PROMPT,
         )
       chat = postgres.testChat(admin.id, agent.id, null)
       workflow =
@@ -83,7 +83,7 @@ class TokenUsageTests : IntegrationTest(useWiremock = true) {
 
   @Test
   fun registersUsageWhenCallingTitleCompletion() = test {
-    val response = workflow.createTitle(COMPLETIONS_COMPLETION_PROMPT, COMPLETIONS_RESPONSE)
+    val response = workflow.createTitle("foo", "bar")
     assertEquals(COMPLETIONS_TITLE_RESPONSE, response.content)
 
     // Use delays since storing the usage is done in a separate coroutine

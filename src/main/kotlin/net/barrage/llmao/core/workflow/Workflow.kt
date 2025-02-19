@@ -21,9 +21,6 @@ interface Workflow {
    */
   fun execute(message: String)
 
-  /** Check if the workflow is streaming. */
-  fun isStreaming(): Boolean
-
   /** Cancel the current stream. */
   fun cancelStream()
 }

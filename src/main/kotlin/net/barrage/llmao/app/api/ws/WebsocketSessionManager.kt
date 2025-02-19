@@ -85,10 +85,6 @@ class WebsocketSessionManager(
     val workflow =
       workflows[session] ?: throw AppError.api(ErrorReason.Websocket, "Workflow not opened")
 
-    if (workflow.isStreaming()) {
-      throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
-    }
-
     LOG.debug("{} - sending input to workflow '{}'", session, workflow.id())
 
     workflow.execute(message)

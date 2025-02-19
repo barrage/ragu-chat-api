@@ -21,8 +21,10 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
+private const val MANUAL_CANCEL = "manual_cancel"
 
 /** Implementation of a workflow with a single agent. */
 class ChatWorkflow(
@@ -80,6 +82,10 @@ class ChatWorkflow(
   }
 
   override fun execute(message: String) {
+    if (stream != null) {
+      throw AppError.api(ErrorReason.Websocket, "Chat is already streaming")
+    }
+
     stream =
       streamScope.launch {
         val streamStart = Instant.now()
@@ -96,7 +102,7 @@ class ChatWorkflow(
         } catch (e: CancellationException) {
           // If the stream is cancelled from outside, via the session manager, a
           // CancellationException is thrown with a specific message indicating the reason.
-          if (e.message != "manual_cancel") {
+          if (e.message != MANUAL_CANCEL) {
             LOG.error("Unexpected cancellation exception", e)
             handleError(e)
             return@launch
@@ -127,12 +133,14 @@ class ChatWorkflow(
               )
 
             LOG.debug("{} - emitting stream complete, finish reason: {}", id, finishReason.value)
+
             val emitPayload =
               ChatWorkflowMessage.StreamComplete(
                 chatId = id,
                 reason = finishReason,
                 messageId = messageId,
               )
+
             emitter.emit(emitPayload)
           }
 
@@ -141,16 +149,12 @@ class ChatWorkflow(
       }
   }
 
-  override fun isStreaming(): Boolean {
-    return stream != null
-  }
-
   override fun cancelStream() {
     if (stream == null) {
       return
     }
     LOG.debug("{} - cancelling stream", id)
-    stream!!.cancel("manual_cancel")
+    stream!!.cancel(MANUAL_CANCEL)
   }
 
   /**
