@@ -14,7 +14,9 @@ import com.aallam.openai.api.chat.ToolId
 import com.aallam.openai.api.chat.ToolType
 import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
 import com.aallam.openai.api.core.Parameters
+import com.aallam.openai.api.logging.LogLevel
 import com.aallam.openai.api.model.ModelId
+import com.aallam.openai.client.LoggingConfig
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +32,7 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.FunctionCall
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.ToolCallChunk
+import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -37,7 +40,12 @@ import net.barrage.llmao.error.ErrorReason
 private val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
 
 class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
-  private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
+  private val client: OpenAI =
+    OpenAI(
+      token = apiKey,
+      host = OpenAIHost(endpoint),
+      logging = LoggingConfig(logLevel = LogLevel.Info),
+    )
 
   override fun id(): String {
     return "openai"
@@ -149,7 +157,20 @@ fun OpenAiChatChunk.toNativeMessageChunk(): ChatMessageChunk {
 fun OpenAiChatMessage.toNativeChatMessage(): ChatMessage {
   return ChatMessage(
     role = role.role,
-    content = content ?: throw AppError.api(ErrorReason.InvalidParameter, "Message content is null"),
+    content = content,
+    toolCalls =
+      toolCalls?.map { toolCall ->
+        when (toolCall) {
+          is OpenAiToolCall.Function ->
+            ToolCallData(
+              id = toolCall.id.id,
+              name = toolCall.function.name,
+              arguments = toolCall.function.arguments,
+            )
+          else ->
+            throw AppError.api(ErrorReason.InvalidParameter, "Unrecognized tool call '$toolCall'")
+        }
+      },
   )
 }
 

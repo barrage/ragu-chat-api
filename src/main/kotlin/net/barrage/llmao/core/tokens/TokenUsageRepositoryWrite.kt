@@ -7,11 +7,11 @@ import org.jooq.DSLContext
 
 class TokenUsageRepositoryWrite(private val dslContext: DSLContext) {
   suspend fun insert(
-    userId: KUUID,
-    agentId: KUUID,
+    userId: KUUID?,
+    agentId: KUUID?,
     agentConfigurationId: KUUID?,
     origin: String,
-    originId: KUUID,
+    originId: KUUID?,
     amount: Int,
     usageType: TokenUsageType,
     model: String,

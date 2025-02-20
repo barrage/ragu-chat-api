@@ -1,6 +1,6 @@
 package net.barrage.llmao.app
 
-import io.ktor.server.config.*
+import io.ktor.server.config.ApplicationConfig
 import kotlin.reflect.KClass
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
@@ -16,6 +16,8 @@ import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowRepository
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraRepository
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.repository.AgentRepository
@@ -40,6 +42,7 @@ import org.jooq.DSLContext
 
 const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
 const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
+const val JIRAKIRA_FEATURE_FLAG = "ktor.features.specialists.jirakira"
 
 class ApplicationState(
   config: ApplicationConfig,
@@ -103,6 +106,17 @@ class AdapterState(
           settingsService,
           TokenUsageRepositoryWrite(database),
         )
+    }
+    if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
+      val jiraKiraKeyStore = JiraKiraRepository(database)
+      val jiraKiraWorkflowFactory =
+        JiraKiraWorkflowFactory(
+          providers = providers,
+          settingsService = settingsService,
+          tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
+          jiraKiraRepository = jiraKiraKeyStore,
+        )
+      adapters[JiraKiraWorkflowFactory::class] = jiraKiraWorkflowFactory
     }
   }
 

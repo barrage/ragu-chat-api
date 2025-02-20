@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraMessage
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 
@@ -73,6 +74,9 @@ val IncomingMessageSerializer = Json {
         ChatWorkflowMessage.ChatTitleUpdated::class,
         ChatWorkflowMessage.ChatTitleUpdated.serializer(),
       )
+    }
+    polymorphic(JiraKiraMessage::class) {
+      subclass(JiraKiraMessage.LlmResponse::class, JiraKiraMessage.LlmResponse.serializer())
     }
   }
 }

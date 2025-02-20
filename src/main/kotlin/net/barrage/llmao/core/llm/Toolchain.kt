@@ -63,6 +63,36 @@ class ToolchainBuilder {
   }
 }
 
+fun collectToolCalls(toolCalls: MutableMap<Int, ToolCallData>, chunk: ChatMessageChunk) {
+  val chunkToolCalls = chunk.toolCalls ?: return
+
+  for (chunkToolCall in chunkToolCalls) {
+    val index = chunkToolCall.index
+
+    val toolCall = toolCalls[index]
+
+    if (toolCall != null) {
+      val callChunk = chunkToolCall.function?.arguments ?: ""
+      toolCall.arguments += callChunk
+      continue
+    }
+    // The tool name is sent in the first chunk
+    // Since we don't have the tool in the map, it must be the first chunk for this
+    // tool call.
+    if (chunkToolCall.function?.name == null) {
+      LOG.warn("Received tool call without function name")
+      continue
+    }
+
+    toolCalls[index] =
+      ToolCallData(
+        id = chunkToolCall.id,
+        name = chunkToolCall.function.name,
+        arguments = chunkToolCall.function.arguments ?: "",
+      )
+  }
+}
+
 /** Used to notify clients of tool calls and results. */
 @Serializable
 sealed class ToolEvent {
@@ -141,13 +171,14 @@ data class ToolFunctionDefinition(
 @Serializable
 data class ToolFunctionParameters(
   val type: String,
-  val properties: Map<String, ToolFunctionPropertyDefinition>,
+  val properties: Map<String, ToolPropertyDefinition>,
   val required: List<String>,
   val additionalProperties: Boolean = false,
 )
 
+/** JSON schema property definition. */
 @Serializable
-data class ToolFunctionPropertyDefinition(
+data class ToolPropertyDefinition(
   val type: String,
   val description: String,
   val enum: List<String>? = null,

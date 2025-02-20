@@ -9,11 +9,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolCallResult
 import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.llm.collectToolCalls
 import net.barrage.llmao.core.models.MessageInsert
 import net.barrage.llmao.core.tokens.TokenUsageTracker
 import net.barrage.llmao.core.tokens.TokenUsageType
@@ -309,36 +309,6 @@ class ChatWorkflow(
     addToHistory(listOf(ChatMessage.user(prompt), ChatMessage.assistant(response)))
 
     return assistantMessage.id
-  }
-
-  private fun collectToolCalls(toolCalls: MutableMap<Int, ToolCallData>, chunk: ChatMessageChunk) {
-    val chunkToolCalls = chunk.toolCalls ?: return
-
-    for (chunkToolCall in chunkToolCalls) {
-      val index = chunkToolCall.index
-
-      val toolCall = toolCalls[index]
-
-      if (toolCall != null) {
-        val callChunk = chunkToolCall.function?.arguments ?: ""
-        toolCall.arguments += callChunk
-        continue
-      }
-      // The tool name is sent in the first chunk
-      // Since we don't have the tool in the map, it must be the first chunk for this
-      // tool call.
-      if (chunkToolCall.function?.name == null) {
-        LOG.warn("{} - Received tool call without function name", id)
-        continue
-      }
-
-      toolCalls[index] =
-        ToolCallData(
-          id = chunkToolCall.id,
-          name = chunkToolCall.function.name,
-          arguments = chunkToolCall.function.arguments ?: "",
-        )
-    }
   }
 
   /**

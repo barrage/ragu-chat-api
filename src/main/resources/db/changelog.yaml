@@ -215,3 +215,21 @@ databaseChangeLog:
             path: migration/12_token_usage_table/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
+  - changeSet:
+      id: 13
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 13.0
+        - sqlFile:
+            encoding: utf8
+            path: migration/13_add_jira_kira_tables/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migration/13_add_jira_kira_tables/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false

@@ -167,7 +167,8 @@ private fun ChatCompletionResponse.toNativeChatCompletion(): ChatCompletion {
     id = "ID",
     created = createdAt.toEpochSecond(),
     model = model,
-    choices = listOf(ChatChoice(0, message.toNativeChatMessage())),
+    choices =
+      listOf(ChatChoice(0, message.toNativeChatMessage(), finishReason = FinishReason.Stop)),
     tokenUsage = null,
   )
 }

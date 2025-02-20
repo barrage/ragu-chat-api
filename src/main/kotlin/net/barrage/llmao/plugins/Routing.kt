@@ -25,8 +25,11 @@ import net.barrage.llmao.app.api.http.controllers.authRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
 import net.barrage.llmao.app.api.http.controllers.devController
 import net.barrage.llmao.app.api.http.controllers.imageRoutes
+import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraAdminRoutes
+import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraUserRoutes
 import net.barrage.llmao.app.api.http.controllers.thirdPartyRoutes
 import net.barrage.llmao.app.api.http.controllers.userRoutes
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -54,10 +57,17 @@ fun Application.configureRouting(state: ApplicationState) {
       administrationRouter(state.services.admin)
       adminSettingsRoutes(state.settingsService)
       state.adapters.runIfEnabled<ChonkitAuthenticationService, Unit> { chonkitAuthRouter(it) }
+      state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
+        jiraKiraAdminRoutes(it.jiraKiraRepository)
+      }
     }
 
     // User API routes
     authenticate("auth-session") {
+      state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
+        jiraKiraUserRoutes(it.jiraKiraRepository)
+      }
+
       agentsRoutes(state.services.agent)
       userRoutes(state.services.user)
       chatsRoutes(state.services.chat)

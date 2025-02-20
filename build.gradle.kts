@@ -58,6 +58,7 @@ dependencies {
   implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-websockets:$ktorVersion")
+  implementation("io.ktor:ktor-client-logging:$ktorVersion")
 
   implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
   implementation("io.ktor:ktor-client-apache-jvm:$ktorVersion")

@@ -16,6 +16,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.workflow.IncomingMessage
 import net.barrage.llmao.app.workflow.IncomingMessageSerializer
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
@@ -33,9 +34,10 @@ private val LOG =
 
 fun Application.websocketServer(
   factory: ChatWorkflowFactory,
+  adapters: AdapterState,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val server = WebsocketSessionManager(factory, listener)
+  val server = WebsocketSessionManager(factory = factory, listener = listener, adapters = adapters)
 
   val tokenManager = WebsocketTokenManager()
 

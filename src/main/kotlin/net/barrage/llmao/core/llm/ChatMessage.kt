@@ -78,7 +78,7 @@ data class ChatChoice(
   val message: ChatMessage,
 
   /** The reason why OpenAI stopped generating. */
-  val finishReason: FinishReason? = null,
+  val finishReason: FinishReason?,
 )
 
 /** Mimics the OpenAI finish reason enum, adding additional application specific stop reasons. */

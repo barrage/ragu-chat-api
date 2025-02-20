@@ -1,10 +1,14 @@
 package net.barrage.llmao.app.api.ws
 
-import io.ktor.server.websocket.*
+import io.ktor.server.websocket.WebSocketServerSession
+import io.ktor.util.logging.KtorSimpleLogger
 import java.util.concurrent.ConcurrentHashMap
+import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.workflow.IncomingMessage
+import net.barrage.llmao.app.workflow.WorkflowType
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolEvent
@@ -16,14 +20,14 @@ import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-private val LOG =
-  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketSessionManager")
+private val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketSessionManager")
 
 /**
  * The session manage creates sessions and is responsible for broadcasting system events to clients.
  */
 class WebsocketSessionManager(
   private val factory: ChatWorkflowFactory,
+  private val adapters: AdapterState,
   listener: EventListener<StateChangeEvent>,
 ) {
   /** Maps user ID + token pairs to their sessions. */
@@ -97,25 +101,52 @@ class WebsocketSessionManager(
   ) {
     when (message) {
       is IncomingSystemMessage.CreateNewWorkflow -> {
-        val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
-        val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
-        val workflow =
-          factory.newChatWorkflow(
-            userId = session.userId,
-            agentId = message.agentId,
-            emitter = emitter,
-            toolEmitter = toolEmitter,
-          )
-        workflows[session] = workflow
+        when (message.workflowType) {
+          null,
+          WorkflowType.CHAT.name -> {
+            LOG.debug("{} - opening chat workflow", session)
+            val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
+            val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
+            val workflow =
+              factory.newChatWorkflow(
+                userId = session.userId,
+                agentId =
+                  message.agentId
+                    ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing agentId"),
+                emitter = emitter,
+                toolEmitter = toolEmitter,
+              )
+            workflows[session] = workflow
 
-        systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
+            systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
 
-        LOG.debug(
-          "{} - started workflow ({}) total workflows in manager: {}",
-          session,
-          workflow.id,
-          workflows.size,
-        )
+            LOG.debug(
+              "{} - started workflow ({}) total workflows in manager: {}",
+              session,
+              workflow.id,
+              workflows.size,
+            )
+          }
+          WorkflowType.JIRAKIRA.name -> {
+            val jkFactory =
+              adapters.adapterForFeature<JiraKiraWorkflowFactory>()
+                ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+
+            LOG.debug("{} - opening JiraKira workflow", session)
+
+            val workflow =
+              jkFactory.newJiraKiraWorkflow(
+                session.userId,
+                emitter = WebsocketEmitter.new(ws),
+                toolEmitter = WebsocketEmitter.new(ws),
+              )
+
+            workflows[session] = workflow
+
+            systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
+          }
+          else -> throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+        }
       }
       is IncomingSystemMessage.LoadExistingWorkflow -> {
         val workflow = workflows[session]

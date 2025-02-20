@@ -10,14 +10,14 @@ internal val LOG =
 
 /** Used for tracking token usage when embedding and performing inference. */
 class TokenUsageTracker(
-  private val userId: KUUID,
-  private val agentId: KUUID,
-  private val agentConfigurationId: KUUID,
+  private val userId: KUUID?,
+  private val agentId: KUUID?,
+  private val agentConfigurationId: KUUID?,
   private val origin: String,
-  private val originId: KUUID,
+  private val originId: KUUID?,
   private val repository: TokenUsageRepositoryWrite,
-  private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
 ) {
+  private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 
   fun store(amount: Int, usageType: TokenUsageType, model: String, provider: String) {
     try {

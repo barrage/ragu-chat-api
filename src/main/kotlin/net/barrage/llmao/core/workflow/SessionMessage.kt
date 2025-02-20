@@ -9,7 +9,8 @@ import net.barrage.llmao.core.types.KUUID
 sealed class IncomingSystemMessage {
   @Serializable
   @SerialName("workflow.new")
-  data class CreateNewWorkflow(val agentId: KUUID) : IncomingSystemMessage()
+  data class CreateNewWorkflow(val agentId: KUUID? = null, val workflowType: String? = null) :
+    IncomingSystemMessage()
 
   @Serializable
   @SerialName("workflow.existing")

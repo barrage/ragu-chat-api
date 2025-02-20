@@ -23,6 +23,12 @@ object OffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
 
   override fun deserialize(decoder: Decoder): OffsetDateTime {
     val string = decoder.decodeString()
-    return OffsetDateTime.parse(string)
+    // Handle cases where the offset is in +NNNN format instead of +NN:NN
+    val normalized =
+      string.replace(Regex("\\+(\\d{4})$")) { matchResult ->
+        val offset = matchResult.groupValues[1]
+        "+${offset.substring(0,2)}:${offset.substring(2,4)}"
+      }
+    return OffsetDateTime.parse(normalized)
   }
 }

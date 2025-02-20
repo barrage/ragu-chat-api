@@ -3,6 +3,7 @@ package net.barrage.llmao
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.netty.EngineMain
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
 import net.barrage.llmao.app.ApplicationState
@@ -21,7 +22,7 @@ import net.barrage.llmao.plugins.configureSession
 import net.barrage.llmao.plugins.extendSession
 
 fun main(args: Array<String>) {
-  io.ktor.server.netty.EngineMain.main(args)
+  EngineMain.main(args)
 }
 
 fun Application.module() {
@@ -46,7 +47,8 @@ fun Application.module() {
       settingsService = state.settingsService,
       tokenUsageRepositoryW = state.repository.tokenUsageW,
     ),
-    stateChangeListener,
+    listener = stateChangeListener,
+    adapters = state.adapters,
   )
   configureRouting(state)
   configureRequestValidation()

@@ -75,7 +75,6 @@ class AdminUserControllerTests : IntegrationTest() {
         parameter("name", "adminko")
         header("Cookie", sessionCookie(adminSession.sessionId))
       }
-    println(response.bodyAsText())
     assertEquals(200, response.status.value)
     val body: CountedList<User> = response.body()!!
     assertEquals(1, body.total)

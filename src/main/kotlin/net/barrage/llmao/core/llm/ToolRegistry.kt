@@ -49,7 +49,7 @@ object ToolRegistry {
               properties =
                 mapOf(
                   "agent_id" to
-                    ToolFunctionPropertyDefinition(
+                    ToolPropertyDefinition(
                       type = "string",
                       description = "The ID of the agent in UUID format.",
                     )

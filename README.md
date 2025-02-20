@@ -22,6 +22,7 @@
     - [WS Diagrams](#ws-diagrams)
         - [Chatting](#chatting)
         - [Changing chats](#changing-chats)
+- [Specialists](#specialists)
 - [WhatsApp](#whatsapp)
 - [Agent tools](#agent-tools)
     - [Defining custom tools](#defining-custom-tools)
@@ -253,6 +254,17 @@ to authorize the client and establish a connection with the server. Otherwise, d
 connection will be instantly closed with the reason: `Policy Violation`.
 
 For a full list of session messages and their formats, see [MESSAGES.md](docs/MESSAGES.md).
+
+## Specialists
+
+Specialists are agents that are configured for particular integrations. They are not customizable in the same sense
+regular agents are. These agent perform specific workflows with downstream applications by utilising tools (agent
+functions). Specialists can be enabled by setting the corresponding feature flag in the `application.conf` file via the
+`features.specialists` properties.
+
+### JiraKira
+
+JiraKira is a specialist agent that is used to interact with Jira. It can be used to perform various actions with Jira.
 
 ## WhatsApp
 

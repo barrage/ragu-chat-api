@@ -92,7 +92,36 @@ enum class SettingKey {
    *
    * DEFAULT: [DefaultSetting.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS]
    */
-  WHATSAPP_AGENT_MAX_COMPLETION_TOKENS;
+  WHATSAPP_AGENT_MAX_COMPLETION_TOKENS,
+
+  /**
+   * The LLM provider to use for JiraKira.
+   *
+   * DEFAULT: openai
+   */
+  JIRA_KIRA_LLM_PROVIDER,
+
+  /**
+   * Which model will be used for JiraKira. Has to be compatible with [JIRA_KIRA_LLM_PROVIDER].
+   *
+   * DEFAULT: gpt-4o
+   */
+  JIRA_KIRA_MODEL,
+
+  /**
+   * The attribute to use as the time slot attribute when creating worklog entries with the Jira
+   * API. Defined in Jira.
+   *
+   * DEFAULT: -
+   */
+  JIRA_TIME_SLOT_ATTRIBUTE_KEY,
+
+  /**
+   * The endpoint for JiraKira.
+   *
+   * DEFAULT: -
+   */
+  JIRA_ENDPOINT;
 
   companion object {
     fun tryFromString(value: String): SettingKey {
@@ -141,6 +170,8 @@ enum class DefaultSetting(val setting: ApplicationSetting) {
   WHATSAPP_AGENT_MAX_COMPLETION_TOKENS(
     ApplicationSetting(SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS, 135.toString())
   ),
+  JIRA_KIRA_LLM_PROVIDER(ApplicationSetting(SettingKey.JIRA_KIRA_LLM_PROVIDER, "openai")),
+  JIRA_KIRA_MODEL(ApplicationSetting(SettingKey.JIRA_KIRA_MODEL, "gpt-4o")),
 }
 
 /** DTO for updating multiple settings at once. */
