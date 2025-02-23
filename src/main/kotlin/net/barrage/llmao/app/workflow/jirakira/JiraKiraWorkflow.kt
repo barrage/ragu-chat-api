@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.error.AppError
 
 class JiraKiraWorkflow(val id: KUUID, val userId: KUUID, private val jirakira: JiraKira) :
   Workflow {
@@ -20,7 +21,22 @@ class JiraKiraWorkflow(val id: KUUID, val userId: KUUID, private val jirakira: J
   }
 
   override fun execute(message: String) {
-    scope.launch { jirakira.completion(message) }
+    scope.launch {
+      try {
+        jirakira.completion(message)
+      } catch (e: AppError) {
+        LOG.error("Error in JiraKira", e)
+        jirakira.emitError(
+          e.withDisplayMessage("Gojira malfunction. Business execution failure imminent.")
+        )
+      } catch (e: Exception) {
+        LOG.error("Error in JiraKira", e)
+        jirakira.emitError(
+          AppError.internal()
+            .withDisplayMessage("Gojira malfunction. Business execution failure imminent.")
+        )
+      }
+    }
   }
 
   override fun cancelStream() {}

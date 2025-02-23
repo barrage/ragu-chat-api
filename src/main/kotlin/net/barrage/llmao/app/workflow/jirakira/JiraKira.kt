@@ -2,6 +2,7 @@ package net.barrage.llmao.app.workflow.jirakira
 
 import io.ktor.util.logging.KtorSimpleLogger
 import java.time.OffsetDateTime
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.ChatCompletionParameters
@@ -16,6 +17,7 @@ import net.barrage.llmao.core.tokens.TokenUsageTracker
 import net.barrage.llmao.core.tokens.TokenUsageType
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.error.AppError
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.jirakira.JiraKira")
 
@@ -42,9 +44,10 @@ class JiraKira(
    * The key of the time slot attribute to use when creating worklog entries. The key for this
    * attribute is set in Jira and must be configured into the app via the application settings.
    *
-   * The value for this key is obtained per issue.
+   * If not present, the time slot will not be present on created worklogs. The value for this key
+   * is obtained per issue.
    */
-  private val timeSlotAttributeKey: String,
+  private val timeSlotAttributeKey: String?,
 
   /**
    * A set of attributes that are allowed/required to be used in worklog entries. This is predefined
@@ -60,11 +63,22 @@ class JiraKira(
   private var state: JiraKiraState = JiraKiraState.New
 
   suspend fun completion(
+    /** The original user message. */
     message: String,
-    useTools: Boolean = true,
-    attempts: Int = 0,
+    /**
+     * If present, the message ID of the message that this response is in reply to in cases when
+     * this is called recursively.
+     */
     responseToMessageId: KUUID? = null,
+
+    /** Current attempt. */
+    attempt: Int = 0,
+
+    /** Safeguard for infinite recursion in case the agent keeps calling tools. */
+    maxAttempts: Int = 3,
   ) {
+    LOG.debug("{} - running completion (attempt: {})", jiraUser.name, attempt + 1)
+
     if (state == JiraKiraState.New) {
       // Ensures tools are initialized
       loadTools()
@@ -81,7 +95,7 @@ class JiraKira(
           model = model,
           temperature = 0.1,
           presencePenalty = 0.0,
-          tools = if (useTools) toolDefinitions else null,
+          tools = if (attempt < maxAttempts) toolDefinitions else null,
           maxTokens = null,
         ),
       )
@@ -97,15 +111,21 @@ class JiraKira(
 
     val response = completionResponse.choices.first()
 
+    trackAssistantMessage(userMessageId, response.message)
+
+    response.message.content?.let { content ->
+      if (content.isNotBlank()) {
+        emitter.emit(JiraKiraMessage.LlmResponse(content))
+      }
+    }
+
     if (response.message.toolCalls == null) {
-      assert(response.message.content != null)
-
-      trackAssistantMessage(userMessageId, response.message)
-
-      emitter.emit(JiraKiraMessage.LlmResponse(response.message.content!!))
-
+      assert(response.finishReason == FinishReason.Stop)
       return
     }
+
+    // From this point on we are handling tool calls
+    // and need to call completion again
 
     assert(response.finishReason == FinishReason.ToolCalls)
 
@@ -123,15 +143,19 @@ class JiraKira(
           val input = Json.decodeFromString<CreateWorklogInput>(toolCall.arguments)
 
           val issueKey = jiraApi.getIssueKey(input.issueId)
-          val timeslotAccount = jiraApi.getDefaultBillingAccountForIssue(issueKey.issueKey)
+
+          val timeSlotAccount =
+            timeSlotAttributeKey?.let {
+              val acc =
+                jiraApi.getDefaultBillingAccountForIssue(issueKey.issueKey) ?: return@let null
+              val timeSlotAccount = JiraApi.TimeSlotAttribute(acc.key, acc.value)
+              LOG.debug("{} - using timeslot account: {}", jiraUser.name, timeSlotAccount)
+              timeSlotAccount
+            }
 
           LOG.debug("{} - creating worklog entry; input: {}", jiraUser.name, input)
-          LOG.debug("{} - using timeslot account: {}", jiraUser.name, timeslotAccount)
 
-          val worklog =
-            jiraApi
-              .createWorklogEntry(input, jiraUser.key, timeSlotAttributeKey, timeslotAccount?.key)
-              .worklog
+          val worklog = jiraApi.createWorklogEntry(input, jiraUser.key, timeSlotAccount)
 
           emitter.emit(JiraKiraMessage.WorklogCreated(worklog))
 
@@ -145,22 +169,16 @@ class JiraKira(
         TOOL_LIST_USER_OPEN_ISSUES -> {
           val issues = jiraApi.getOpenIssuesForProject(Json.decodeFromString(toolCall.arguments))
 
-          toolResults.add(
-            ChatMessage.toolResult(
-              "Found ${issues.issues.size} open issues for the user: ${issues.issues.joinToString("\n")}",
-              toolCall.id,
-            )
-          )
+          toolResults.add(ChatMessage.toolResult(issues.joinToString("\n"), toolCall.id))
         }
         TOOL_GET_ISSUE_ID -> {
-          val input = Json.decodeFromString<JiraApi.IssueKey>(toolCall.arguments)
+          val input = Json.decodeFromString<IssueKey>(toolCall.arguments)
           val issueId = jiraApi.getIssueId(input.issueKey)
 
           toolResults.add(ChatMessage.toolResult(issueId, toolCall.id))
         }
         else -> {
-          LOG.warn("Unknown tool call: {}", toolCall.name)
-          return completion(message, attempts = attempts + 1, responseToMessageId = userMessageId)
+          LOG.warn("{} - received unknown tool call: {}", jiraUser.name, toolCall.name)
         }
       }
 
@@ -169,11 +187,18 @@ class JiraKira(
       )
     }
 
-    trackToolMessages(userMessageId, response.message, toolResults)
+    trackToolMessages(userMessageId, toolResults)
 
-    LOG.debug("{} - rerunning completion (attempt: {})", jiraUser.name, attempts + 1)
+    return completion(
+      message = message,
+      attempt = attempt + 1,
+      responseToMessageId = userMessageId,
+      maxAttempts = maxAttempts,
+    )
+  }
 
-    return completion(message, attempts = attempts + 1, responseToMessageId = userMessageId)
+  suspend fun emitError(e: AppError) {
+    emitter.emitError(e)
   }
 
   private suspend fun trackWorkflow() {
@@ -189,6 +214,8 @@ class JiraKira(
         senderType = "user",
         content = prompt,
         toolCalls = null,
+        toolCallId = null,
+        responseTo = null,
       )
     )
   }
@@ -201,18 +228,14 @@ class JiraKira(
         sender = null,
         senderType = "assistant",
         content = message.content,
-        responseTo = userMessageId,
         toolCalls = Json.encodeToString(message.toolCalls),
+        toolCallId = message.toolCallId,
+        responseTo = userMessageId,
       )
     )
   }
 
-  private suspend fun trackToolMessages(
-    userMessageId: KUUID,
-    assistantMessage: ChatMessage,
-    messages: List<ChatMessage>,
-  ) {
-    history.add(assistantMessage)
+  private suspend fun trackToolMessages(userMessageId: KUUID, messages: List<ChatMessage>) {
     history.addAll(messages)
     repository.insertJiraKiraMessages(
       messages.map { message ->
@@ -221,13 +244,23 @@ class JiraKira(
           sender = null,
           senderType = "tool",
           content = message.content,
-          responseTo = userMessageId,
           toolCalls = Json.encodeToString(message.toolCalls),
+          toolCallId = message.toolCallId,
+          responseTo = userMessageId,
         )
       }
     )
   }
 
+  /**
+   * Load tool JSON schema definitions into [toolDefinitions].
+   *
+   * This method will load all custom worklog attributes from the Jira API and include them in the
+   * tool definitions.
+   *
+   * All attributes are obtained from the Jira API and are matched against the ones defined in the
+   * database. Only those that are present in the database will be included in the tool definitions.
+   */
   private suspend fun loadTools() {
     if (::toolDefinitions.isInitialized) {
       return
@@ -298,12 +331,14 @@ class JiraKira(
 const val JIRA_KIRA_CONTEXT =
   """
     |You are an expert in Jira. Your purpose is to help users manage their Jira tasks.
-    |You have the capabilities of displaying and modifying Jira issues (tasks), including creating worklog entries.
     |Use the tools at your disposal to gather information about the user's Jira tasks and help them with them.
     |Never assume any parameters when calling tools. Always ask the user for them if you are uncertain.
     |The only time frame you can work in is the current week. Never assume any other time frame and reject any requests
     |that are not related to the current week.
 """
+
+/** Input for the [TOOL_GET_ISSUE_ID] tool. */
+@Serializable data class IssueKey(val issueKey: String)
 
 data class JiraKiraMessageInsert(
   val workflowId: KUUID,
@@ -311,7 +346,8 @@ data class JiraKiraMessageInsert(
   val senderType: String,
   val content: String?,
   val toolCalls: String?,
-  val responseTo: KUUID? = null,
+  val toolCallId: String?,
+  val responseTo: KUUID?,
 )
 
 sealed class JiraKiraState {

@@ -12,6 +12,7 @@ CREATE TABLE jira_kira_messages (
     sender_type TEXT NOT NULL,
     content TEXT,
     tool_calls TEXT,
+    tool_call_id TEXT,
     workflow_id UUID NOT NULL REFERENCES jira_kira_workflows(id) ON DELETE CASCADE,
     response_to UUID REFERENCES jira_kira_messages(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

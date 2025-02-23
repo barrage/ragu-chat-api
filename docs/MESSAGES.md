@@ -12,12 +12,16 @@ These messages indicate events outside workflows and are mainly used to control 
 Start a new workflow with the given configuration. The configuration must be provided depending on the type of workflow.
 The server will respond with a `system.workflow.open` message, depending on the type of workflow opened.
 
+`agentId` is optional and is only necessary when instantiating `CHAT` workflows.
+`workflowType` is optional and defaults to `CHAT` if not provided.
+
 ```json
 {
   "type": "system",
   "payload": {
     "type": "workflow.new",
-    "agentId": "agent_uuid"
+    "agentId": "agent_uuid",
+    "workflowType": "CHAT | JIRAKIRA"
   }
 }
 ```

@@ -11,5 +11,5 @@ sealed class JiraKiraMessage {
 
   @Serializable
   @SerialName("jirakira.worklog")
-  data class WorklogCreated(val worklog: TempoWorklog) : JiraKiraMessage()
+  data class WorklogCreated(val worklog: TempoWorklogEntry) : JiraKiraMessage()
 }

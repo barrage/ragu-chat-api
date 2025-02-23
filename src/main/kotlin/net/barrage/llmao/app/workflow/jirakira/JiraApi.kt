@@ -47,13 +47,13 @@ class JiraApi(
     return client.get(account.self) { header("Authorization", "Bearer $apiKey") }.body<JiraUser>()
   }
 
-  suspend fun getOpenIssuesForProject(input: ListOpenIssuesInput): ListOpenIssuesOutput {
-    LOG.debug("Listing open Jira issues for project ${input.project}")
+  suspend fun getOpenIssuesForProject(projectKey: String): List<JiraIssueShort> {
+    LOG.debug("Listing open Jira issues for project {}", projectKey)
 
     val fields = "summary,description,assignee,watcher,worklog,created,updated,priority"
     val jql =
       URLEncoder.encode(
-        "project=\"${input.project}\" AND assignee=currentUser() AND statusCategory!=Done",
+        "project=\"${projectKey}\" AND assignee=currentUser() AND statusCategory!=Done",
         StandardCharset.UTF_8,
       )
     val issues =
@@ -75,11 +75,11 @@ class JiraApi(
           )
         }
 
-    LOG.debug("Found ${issues.size} open issues for project {}", input.project)
+    LOG.debug("Found ${issues.size} open issues for project {}", projectKey)
 
     LOG.debug("{}", issues.joinToString(", ") { it.key })
 
-    return ListOpenIssuesOutput(issues)
+    return issues
   }
 
   suspend fun getIssueId(issueKey: String): String {
@@ -119,17 +119,19 @@ class JiraApi(
     /** The Jira user ID to use for the worklog entry. `JIRAUSERXXXX` */
     jiraUserId: String,
 
-    /** Custom attribute key that represents the time slot account for billable work. */
-    timeSlotAttributeKey: String,
-
-    /** The value to use for the time slot account. */
-    timeSlotAccountValue: String?,
-  ): CreateWorklogOutput {
+    /**
+     * Custom attribute key and value that represents the time slot account for billable work. The
+     * value is obtained from the [getDefaultBillingAccountForIssue] call.
+     */
+    timeSlotAttribute: TimeSlotAttribute?,
+  ): TempoWorklogEntry {
     LOG.debug("Creating worklog entry for issue ${input.issueId}")
 
     val attributes =
-      timeSlotAccountValue?.let {
-        mutableMapOf(timeSlotAttributeKey to CreateWorklogInputAttributeJira(timeSlotAccountValue))
+      timeSlotAttribute?.let {
+        mutableMapOf(
+          timeSlotAttribute.key to CreateWorklogInputAttributeJira(timeSlotAttribute.value)
+        )
       } ?: mutableMapOf()
 
     for ((key, value) in input.attributes) {
@@ -160,14 +162,14 @@ class JiraApi(
       throw AppError.internal("Failed to create worklog entry")
     }
 
-    val entry = response.body<List<TempoWorklog>>().first()
+    val entry = response.body<List<TempoWorklogEntry>>().first()
 
     LOG.debug(
       "Worklog for issue ${input.issueId} created successfully for issue (time: {})",
       entry.timeSpent,
     )
 
-    return CreateWorklogOutput(entry)
+    return entry
   }
 
   suspend fun getDefaultBillingAccountForIssue(issueKey: String): IssueTimeSlotAccount? {
@@ -210,6 +212,8 @@ class JiraApi(
     return attributes
   }
 
+  @Serializable data class TimeSlotAttribute(val key: String, val value: String)
+
   @Serializable
   private data class CreateWorklogInputJira(
     val originTaskId: String,
@@ -221,64 +225,9 @@ class JiraApi(
   )
 
   @Serializable private data class CreateWorklogInputAttributeJira(val value: String)
-
-  @Serializable data class IssueKey(val issueKey: String)
-
-  @Serializable data class CreateWorklogOutput(val worklog: TempoWorklog)
-
-  @Serializable data class ListOpenIssuesInput(val project: String)
-
-  @Serializable data class ListOpenIssuesOutput(val issues: List<JiraIssueShort>)
 }
 
-@Serializable
-data class JiraIssueResponse(
-  val startAt: Int,
-  val maxResults: Int,
-  val total: Int,
-  val issues: List<JiraIssue>,
-)
-
-@Serializable
-data class JiraIssueShort(
-  val id: String,
-  val key: String,
-  val summary: String,
-  val assigneeName: String?,
-  val priority: String,
-  val created: KOffsetDateTime,
-  val updated: KOffsetDateTime,
-)
-
-@Serializable
-data class JiraIssue(
-  val id: String,
-  val self: String,
-  val key: String,
-  val fields: JiraIssueFields,
-)
-
-@Serializable
-data class JiraIssueFields(
-  val summary: String,
-  val created: KOffsetDateTime,
-  val updated: KOffsetDateTime,
-  val description: String?,
-  val worklog: JiraWorklog?,
-  val assignee: JiraUser?,
-  val priority: JiraIssuePriority,
-)
-
-@Serializable data class JiraIssuePriority(val name: String)
-
-@Serializable
-data class JiraWorklog(
-  val startAt: Int,
-  val maxResults: Int,
-  val total: Int,
-  val worklogs: List<JiraWorklogEntry>,
-)
-
+/** Original Jira user model. Also used in JiraKira sessions. */
 @Serializable
 data class JiraUser(
   val self: String,
@@ -290,8 +239,67 @@ data class JiraUser(
   val timeZone: String,
 )
 
+/** Summarized version of [JiraIssue]. */
 @Serializable
-data class JiraWorklogEntry(
+data class JiraIssueShort(
+  val id: String,
+  val key: String,
+  val summary: String,
+  val assigneeName: String?,
+  val priority: String,
+  val created: KOffsetDateTime,
+  val updated: KOffsetDateTime,
+)
+
+/**
+ * Original Jira response when listing issues.
+ *
+ * `GET /rest/api/2/search`
+ */
+@Serializable
+private data class JiraIssueResponse(
+  val startAt: Int,
+  val maxResults: Int,
+  val total: Int,
+  val issues: List<JiraIssue>,
+)
+
+/** Original Jira issue model. */
+@Serializable
+private data class JiraIssue(
+  val id: String,
+  val self: String,
+  val key: String,
+  val fields: JiraIssueFields,
+)
+
+/** Configured for the JQL we are sending when searching open issues. */
+@Serializable
+private data class JiraIssueFields(
+  val summary: String,
+  val created: KOffsetDateTime,
+  val updated: KOffsetDateTime,
+  val description: String?,
+  val worklog: JiraWorklog?,
+  val assignee: JiraUser?,
+  val priority: JiraIssuePriority,
+)
+
+/** Shortened version of the priority object from Jira. */
+@Serializable private data class JiraIssuePriority(val name: String)
+
+/** Jira worklog list object. */
+@Serializable
+private data class JiraWorklog(
+  val startAt: Int,
+  val maxResults: Int,
+  val total: Int,
+  val worklogs: List<JiraWorklogEntry>,
+)
+
+/** Original Jira worklog entry model. */
+@Serializable
+private data class JiraWorklogEntry(
   val self: String,
   val author: JiraUser,
   val updateAuthor: JiraUser,
@@ -306,18 +314,23 @@ data class JiraWorklogEntry(
 )
 
 @Serializable
-data class JiraUserSession(val self: String, val name: String, val loginInfo: JiraLoginInfo)
+private data class JiraUserSession(
+  val self: String,
+  val name: String,
+  val loginInfo: JiraLoginInfo,
+)
 
 @Serializable
-data class JiraLoginInfo(
+private data class JiraLoginInfo(
   val failedLoginCount: Int,
   val loginCount: Int,
   val lastFailedLoginTime: KOffsetDateTime,
   val previousLoginTime: KOffsetDateTime,
 )
 
+/** Returned when calling the add worklog endpoint. */
 @Serializable
-data class TempoWorklog(
+data class TempoWorklogEntry(
   val billableSeconds: Int,
   val timeSpent: String,
   val comment: String,
@@ -367,6 +380,10 @@ data class Issue(
 
 @Serializable data class EpicIssue(val issueType: String, val summary: String)
 
+/**
+ * Obtained when instantiating JiraKira. These attributes represent custom attributes that can be
+ * used in worklog entries.
+ */
 @Serializable
 data class TempoWorkAttribute(
   val id: Int,
@@ -379,9 +396,11 @@ data class TempoWorkAttribute(
   val externalUrl: String? = null,
 )
 
+/** The type of the custom attribute. */
 @Serializable
 data class TempoWorkAttributeType(val name: String, val value: String, val systemType: Boolean)
 
+/** A value that can be used for the custom attribute. */
 @Serializable
 data class TempoStaticListValue(
   val id: Int,

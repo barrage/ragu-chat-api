@@ -11,11 +11,15 @@ import net.barrage.llmao.tables.records.JiraWorklogAttributesRecord
  */
 @Serializable
 data class WorklogAttribute(
-  /** The Jira custom worklog attribute key. Serves as the property key in property definitions. */
-  val key: String,
   /**
-   * The Jira custom worklog attribute description. Serves as the property description in property
+   * The Jira custom worklog attribute key. Serves as the property key in JSON schema property
    * definitions.
+   */
+  val key: String,
+
+  /**
+   * The Jira custom worklog attribute description. Serves as the property description in JSON
+   * schema property definitions.
    */
   val description: String,
 )

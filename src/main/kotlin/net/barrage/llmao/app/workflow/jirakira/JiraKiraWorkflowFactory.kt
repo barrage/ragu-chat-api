@@ -38,10 +38,7 @@ class JiraKiraWorkflowFactory(
 
     val jiraTimeSlotAttributeKey =
       settings.getOptional(SettingKey.JIRA_TIME_SLOT_ATTRIBUTE_KEY)
-        ?: throw AppError.api(
-          ErrorReason.InvalidOperation,
-          "Jira time slot attribute key not configured",
-        )
+
 
     val jiraKiraLlmProvider = settings[SettingKey.JIRA_KIRA_LLM_PROVIDER]
     val jiraKiraModel = settings[SettingKey.JIRA_KIRA_MODEL]
