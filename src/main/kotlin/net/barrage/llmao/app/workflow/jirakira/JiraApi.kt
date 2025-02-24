@@ -6,11 +6,13 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import java.net.URLEncoder
 import java.time.format.DateTimeFormatter
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -48,8 +50,6 @@ class JiraApi(
   }
 
   suspend fun getOpenIssuesForProject(projectKey: String): List<JiraIssueShort> {
-    LOG.debug("Listing open Jira issues for project {}", projectKey)
-
     val fields = "summary,description,assignee,watcher,worklog,created,updated,priority"
     val jql =
       URLEncoder.encode(
@@ -67,24 +67,43 @@ class JiraApi(
           JiraIssueShort(
             id = it.id,
             key = it.key,
-            summary = it.fields.summary,
+            summary = it.fields.summary!!,
             assigneeName = it.fields.assignee?.name,
-            priority = it.fields.priority.name,
-            created = it.fields.created,
-            updated = it.fields.updated,
+            priority = it.fields.priority!!.name,
+            created = it.fields.created!!,
+            updated = it.fields.updated!!,
           )
         }
 
     LOG.debug("Found ${issues.size} open issues for project {}", projectKey)
-
     LOG.debug("{}", issues.joinToString(", ") { it.key })
 
     return issues
   }
 
-  suspend fun getIssueId(issueKey: String): String {
-    LOG.debug("Fetching issue ID for key: {}", issueKey)
+  suspend fun getIssueWorklog(issueKey: String, jiraUserKey: String): List<JiraWorklogEntryShort> {
+    val issue =
+      client
+        .get("$endpoint/rest/api/2/issue/$issueKey?fields=worklog") {
+          header("Authorization", "Bearer $apiKey")
+        }
+        .body<JiraIssue>()
 
+    return issue.fields.worklog!!
+      .worklogs
+      .filter { it.author.key == jiraUserKey }
+      .map {
+        JiraWorklogEntryShort(
+          worklogEntryId = it.id,
+          authorKey = it.author.key,
+          comment = it.comment,
+          started = it.started,
+          timeSpentSeconds = it.timeSpentSeconds,
+        )
+      }
+  }
+
+  suspend fun getIssueId(issueKey: String): String {
     val issue =
       client
         .get("$endpoint/rest/api/2/issue/$issueKey") { header("Authorization", "Bearer $apiKey") }
@@ -96,8 +115,6 @@ class JiraApi(
   }
 
   suspend fun getIssueKey(id: String): IssueKey {
-    LOG.debug("Fetching issue key for ID: {}", id)
-
     val issue =
       client
         .get("$endpoint/rest/api/2/issue/$id") { header("Authorization", "Bearer $apiKey") }
@@ -125,30 +142,26 @@ class JiraApi(
      */
     timeSlotAttribute: TimeSlotAttribute?,
   ): TempoWorklogEntry {
-    LOG.debug("Creating worklog entry for issue ${input.issueId}")
-
     val attributes =
       timeSlotAttribute?.let {
-        mutableMapOf(
-          timeSlotAttribute.key to CreateWorklogInputAttributeJira(timeSlotAttribute.value)
-        )
+        mutableMapOf(timeSlotAttribute.key to WorklogInputAttributeJira(timeSlotAttribute.value))
       } ?: mutableMapOf()
 
     for ((key, value) in input.attributes) {
-      attributes[key] = CreateWorklogInputAttributeJira(value)
+      attributes[key] = WorklogInputAttributeJira(value)
     }
-
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
 
     val body =
       CreateWorklogInputJira(
         originTaskId = input.issueId,
         comment = input.comment,
-        started = formatter.format(input.started),
+        started = input.started.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")),
         timeSpentSeconds = input.timeSpentSeconds,
         attributes = attributes,
         worker = jiraUserId,
       )
+
+    LOG.debug("jira - creating worklog entry: {}", body)
 
     val response =
       client.post("$endpoint/rest/tempo-timesheets/4/worklogs") {
@@ -162,14 +175,37 @@ class JiraApi(
       throw AppError.internal("Failed to create worklog entry")
     }
 
-    val entry = response.body<List<TempoWorklogEntry>>().first()
+    return response.body<List<TempoWorklogEntry>>().first()
+  }
 
-    LOG.debug(
-      "Worklog for issue ${input.issueId} created successfully for issue (time: {})",
-      entry.timeSpent,
-    )
+  suspend fun updateWorklogEntry(input: UpdateWorklogInput): TempoWorklogEntry {
+    val attributes =
+      input.attributes.map { (key, value) -> key to WorklogInputAttributeJira(value) }.toMap()
 
-    return entry
+    val body =
+      UpdateWorklogInputJira(
+        originId = input.worklogEntryId,
+        started = input.started?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")),
+        timeSpentSeconds = input.timeSpentSeconds,
+        comment = input.comment,
+        attributes = attributes,
+      )
+
+    LOG.debug("jira - updating worklog entry: {}", body)
+
+    val response =
+      client.put("$endpoint/rest/tempo-timesheets/4/worklogs/${input.worklogEntryId}") {
+        header("Authorization", "Bearer $apiKey")
+        header("Content-Type", "application/json")
+        setBody(body)
+      }
+
+    if (!response.status.isSuccess()) {
+      LOG.error("Worklog update failed: ${response.bodyAsText()}")
+      throw AppError.internal("Failed to update worklog entry")
+    }
+
+    return response.body<TempoWorklogEntry>()
   }
 
   suspend fun getDefaultBillingAccountForIssue(issueKey: String): IssueTimeSlotAccount? {
@@ -211,21 +247,10 @@ class JiraApi(
     }
     return attributes
   }
-
-  @Serializable data class TimeSlotAttribute(val key: String, val value: String)
-
-  @Serializable
-  private data class CreateWorklogInputJira(
-    val originTaskId: String,
-    val comment: String,
-    val started: String,
-    val timeSpentSeconds: Int,
-    val attributes: Map<String, CreateWorklogInputAttributeJira>,
-    val worker: String,
-  )
-
-  @Serializable private data class CreateWorklogInputAttributeJira(val value: String)
 }
+
+/** Customer account attribute. */
+@Serializable data class TimeSlotAttribute(val key: String, val value: String)
 
 /** Original Jira user model. Also used in JiraKira sessions. */
 @Serializable
@@ -249,6 +274,16 @@ data class JiraIssueShort(
   val priority: String,
   val created: KOffsetDateTime,
   val updated: KOffsetDateTime,
+)
+
+/** Summarized version of [JiraWorklogEntry]. */
+@Serializable
+data class JiraWorklogEntryShort(
+  val worklogEntryId: String,
+  val authorKey: String,
+  val comment: String,
+  val started: KOffsetDateTime,
+  val timeSpentSeconds: Int,
 )
 
 /**
@@ -276,13 +311,13 @@ private data class JiraIssue(
 /** Configured for the JQL we are sending when searching open issues. */
 @Serializable
 private data class JiraIssueFields(
-  val summary: String,
-  val created: KOffsetDateTime,
-  val updated: KOffsetDateTime,
-  val description: String?,
-  val worklog: JiraWorklog?,
-  val assignee: JiraUser?,
-  val priority: JiraIssuePriority,
+  val summary: String? = null,
+  val created: KOffsetDateTime? = null,
+  val updated: KOffsetDateTime? = null,
+  val description: String? = null,
+  val worklog: JiraWorklog? = null,
+  val assignee: JiraUser? = null,
+  val priority: JiraIssuePriority? = null,
 )
 
 /** Shortened version of the priority object from Jira. */
@@ -337,7 +372,7 @@ data class TempoWorklogEntry(
   val location: Location,
   val attributes: Map<String, WorkAttribute>,
   val timeSpentSeconds: Int,
-  val issue: Issue,
+  val issue: Issue?,
   val tempoWorklogId: Int,
   val originId: Int,
   val worker: String,
@@ -364,7 +399,7 @@ data class Issue(
   val key: String,
   val id: Int,
   val accountKey: String,
-  val estimatedRemainingSeconds: Int,
+  val estimatedRemainingSeconds: Int? = null,
   val epicIssue: EpicIssue,
   val projectId: Int,
   val projectKey: String,
@@ -425,6 +460,18 @@ data class CreateWorklogInput(
   @SerialName("attributes") val attributes: HashMap<String, String> = HashMap(),
 )
 
+@Serializable
+private data class CreateWorklogInputJira(
+  val originTaskId: String,
+  val comment: String,
+  val started: String,
+  val timeSpentSeconds: Int,
+  val attributes: Map<String, WorklogInputAttributeJira>,
+  val worker: String,
+)
+
+@Serializable private data class WorklogInputAttributeJira(val value: String)
+
 object CreateWorklogInputSerializer : KSerializer<CreateWorklogInput> {
   override val descriptor: SerialDescriptor =
     buildClassSerialDescriptor("CreateWorklogInput") {
@@ -448,7 +495,7 @@ object CreateWorklogInputSerializer : KSerializer<CreateWorklogInput> {
     compositeEncoder.encodeIntElement(descriptor, 3, value.timeSpentSeconds)
     compositeEncoder.encodeSerializableElement(
       descriptor,
-      4,
+      3,
       MapSerializer(String.serializer(), String.serializer()),
       value.attributes,
     )
@@ -489,6 +536,95 @@ object CreateWorklogInputSerializer : KSerializer<CreateWorklogInput> {
       comment = comment,
       started = started,
       timeSpentSeconds = timeSpentSeconds,
+      attributes = attributes,
+    )
+  }
+}
+
+@Serializable(with = UpdateWorklogInputSerializer::class)
+data class UpdateWorklogInput(
+  val worklogEntryId: Int,
+  val started: KOffsetDateTime?,
+  val timeSpentSeconds: Int?,
+  val comment: String,
+  val attributes: Map<String, String>,
+)
+
+@Serializable
+private data class UpdateWorklogInputJira(
+  val originId: Int,
+  val started: String?,
+  val timeSpentSeconds: Int?,
+  val comment: String?,
+  val attributes: Map<String, WorklogInputAttributeJira>,
+)
+
+object UpdateWorklogInputSerializer : KSerializer<UpdateWorklogInput> {
+  override val descriptor: SerialDescriptor =
+    buildClassSerialDescriptor("UpdateWorklogInput") {
+      element<Int>("worklogEntryId")
+      element("started", OffsetDateTimeSerializer.descriptor)
+      element<Int?>("timeSpentSeconds")
+      element<String?>("comment")
+      element<Map<String, String>>("attributes")
+    }
+
+  @OptIn(ExperimentalSerializationApi::class)
+  override fun serialize(encoder: Encoder, value: UpdateWorklogInput) {
+    val compositeEncoder = encoder.beginStructure(descriptor)
+    compositeEncoder.encodeIntElement(descriptor, 0, value.worklogEntryId)
+    value.started?.let {
+      compositeEncoder.encodeNullableSerializableElement(
+        descriptor,
+        1,
+        OffsetDateTimeSerializer,
+        it,
+      )
+    }
+    value.timeSpentSeconds?.let {
+      compositeEncoder.encodeNullableSerializableElement(descriptor, 2, Int.serializer(), it)
+    }
+    compositeEncoder.encodeStringElement(descriptor, 3, value.comment)
+    compositeEncoder.encodeSerializableElement(
+      descriptor,
+      4,
+      MapSerializer(String.serializer(), String.serializer()),
+      value.attributes,
+    )
+    compositeEncoder.endStructure(descriptor)
+  }
+
+  override fun deserialize(decoder: Decoder): UpdateWorklogInput {
+    val jsonObject = decoder.decodeSerializableValue(JsonObject.serializer())
+    val attributes = HashMap<String, String>()
+
+    // Extract known fields
+    val worklogEntryId =
+      jsonObject["worklogEntryId"]?.jsonPrimitive?.int
+        ?: throw SerializationException("Missing required field: worklogEntryId")
+    val started =
+      jsonObject["started"]?.let { Json.decodeFromJsonElement(OffsetDateTimeSerializer, it) }
+    val timeSpentSeconds = jsonObject["timeSpentSeconds"]?.jsonPrimitive?.int
+    val comment =
+      jsonObject["comment"]?.jsonPrimitive?.content
+        ?: throw SerializationException("Missing required field: comment")
+
+    // Collect unrecognized fields
+    jsonObject.forEach { (key, value) ->
+      when (key) {
+        "worklogEntryId",
+        "started",
+        "timeSpentSeconds",
+        "comment" -> {} // Skip known fields
+        else -> attributes[key] = value.jsonPrimitive.content
+      }
+    }
+
+    return UpdateWorklogInput(
+      worklogEntryId = worklogEntryId,
+      started = started,
+      timeSpentSeconds = timeSpentSeconds,
+      comment = comment,
       attributes = attributes,
     )
   }

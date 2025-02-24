@@ -3,6 +3,7 @@ package net.barrage.llmao.app.workflow.jirakira
 import io.ktor.util.logging.KtorSimpleLogger
 import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.ChatCompletionParameters
@@ -138,53 +139,115 @@ class JiraKira(
     val toolResults = mutableListOf<ChatMessage>()
 
     for (toolCall in response.message.toolCalls) {
-      when (toolCall.name) {
-        TOOL_CREATE_WORKLOG_ENTRY -> {
-          val input = Json.decodeFromString<CreateWorklogInput>(toolCall.arguments)
+      try {
+        when (toolCall.name) {
+          TOOL_CREATE_WORKLOG_ENTRY -> {
+            LOG.debug("{} - creating worklog entry; input: {}", jiraUser.name, toolCall.arguments)
+            val input = Json.decodeFromString<CreateWorklogInput>(toolCall.arguments)
 
-          val issueKey = jiraApi.getIssueKey(input.issueId)
+            val issueKey = jiraApi.getIssueKey(input.issueId)
 
-          val timeSlotAccount =
-            timeSlotAttributeKey?.let {
-              val acc =
-                jiraApi.getDefaultBillingAccountForIssue(issueKey.issueKey) ?: return@let null
-              val timeSlotAccount = JiraApi.TimeSlotAttribute(acc.key, acc.value)
-              LOG.debug("{} - using timeslot account: {}", jiraUser.name, timeSlotAccount)
-              timeSlotAccount
-            }
+            val timeSlotAccount =
+              timeSlotAttributeKey?.let {
+                val acc =
+                  jiraApi.getDefaultBillingAccountForIssue(issueKey.issueKey) ?: return@let null
+                val timeSlotAccount = TimeSlotAttribute(timeSlotAttributeKey, acc.key)
+                LOG.debug("{} - using timeslot account: {}", jiraUser.name, timeSlotAccount)
+                timeSlotAccount
+              }
 
-          LOG.debug("{} - creating worklog entry; input: {}", jiraUser.name, input)
+            val worklog = jiraApi.createWorklogEntry(input, jiraUser.key, timeSlotAccount)
 
-          val worklog = jiraApi.createWorklogEntry(input, jiraUser.key, timeSlotAccount)
-
-          emitter.emit(JiraKiraMessage.WorklogCreated(worklog))
-
-          toolResults.add(
-            ChatMessage.toolResult(
-              "Success. ${worklog.issue.estimatedRemainingSeconds} estimate seconds remaining.",
-              toolCall.id,
+            LOG.debug(
+              "Worklog for issue ${input.issueId} created successfully for issue (time: {})",
+              worklog.timeSpent,
             )
-          )
-        }
-        TOOL_LIST_USER_OPEN_ISSUES -> {
-          val issues = jiraApi.getOpenIssuesForProject(Json.decodeFromString(toolCall.arguments))
 
-          toolResults.add(ChatMessage.toolResult(issues.joinToString("\n"), toolCall.id))
-        }
-        TOOL_GET_ISSUE_ID -> {
-          val input = Json.decodeFromString<IssueKey>(toolCall.arguments)
-          val issueId = jiraApi.getIssueId(input.issueKey)
+            emitter.emit(JiraKiraMessage.WorklogCreated(worklog))
 
-          toolResults.add(ChatMessage.toolResult(issueId, toolCall.id))
+            toolResults.add(
+              ChatMessage.toolResult(
+                "Success. Worklog entry ID: ${worklog.tempoWorklogId}.",
+                toolCall.id,
+              )
+            )
+          }
+
+          TOOL_LIST_USER_OPEN_ISSUES -> {
+            LOG.debug("{} - listing open issues; input: {}", jiraUser.name, toolCall.arguments)
+
+            val input = Json.decodeFromString<ProjectKey>(toolCall.arguments)
+
+            val issues = jiraApi.getOpenIssuesForProject(input.project)
+
+            toolResults.add(ChatMessage.toolResult(issues.joinToString("\n"), toolCall.id))
+          }
+
+          TOOL_GET_ISSUE_ID -> {
+            LOG.debug("{} - getting ID for issue; input: {}", jiraUser.name, toolCall.arguments)
+            val input = Json.decodeFromString<IssueKey>(toolCall.arguments)
+
+            val issueId = jiraApi.getIssueId(input.issueKey)
+
+            toolResults.add(ChatMessage.toolResult(issueId, toolCall.id))
+          }
+
+          TOOL_UPDATE_WORKLOG_ENTRY -> {
+            LOG.debug("{} - updating worklog entry; input: {}", jiraUser.name, toolCall.arguments)
+
+            val input =
+              try {
+                Json.decodeFromString<UpdateWorklogInput>(toolCall.arguments)
+              } catch (e: SerializationException) {
+                LOG.error("Failed to decode tool call arguments: {}", toolCall.arguments, e)
+                if (e.message?.startsWith("Missing required field") == true) {
+                  toolResults.add(ChatMessage.toolResult("${e.message}", toolCall.id))
+                  continue
+                }
+                throw e
+              }
+
+            val worklog = jiraApi.updateWorklogEntry(input)
+
+            LOG.debug(
+              "Worklog for issue ${worklog.issue?.key} updated successfully for issue (time: {})",
+              worklog.timeSpent,
+            )
+
+            emitter.emit(JiraKiraMessage.WorklogUpdated(worklog))
+
+            toolResults.add(ChatMessage.toolResult("success", toolCall.id))
+          }
+
+          TOOL_GET_ISSUE_WORKLOG -> {
+            LOG.debug("{} - getting issue worklog; input: {}", jiraUser.name, toolCall.arguments)
+
+            val input = Json.decodeFromString<IssueKeyOrId>(toolCall.arguments)
+
+            val worklog = jiraApi.getIssueWorklog(input.issueKeyOrId, jiraUser.key)
+
+            val result = worklog.joinToString("\n")
+
+            LOG.debug("{} - worklog: {}", jiraUser.name, result)
+
+            toolResults.add(ChatMessage.toolResult(result, toolCall.id))
+          }
+
+          else -> {
+            LOG.warn("{} - received unknown tool call: {}", jiraUser.name, toolCall.name)
+          }
         }
-        else -> {
-          LOG.warn("{} - received unknown tool call: {}", jiraUser.name, toolCall.name)
-        }
+
+        toolEmitter?.emit(
+          ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "${toolCall.name}: success"))
+        )
+      } catch (e: Throwable) {
+        LOG.error("Error in tool call", e)
+        toolResults.add(ChatMessage.toolResult("error: ${e.message}", toolCall.id))
+        toolEmitter?.emit(
+          ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "Error: ${e.message}"))
+        )
       }
-
-      toolEmitter?.emit(
-        ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "${toolCall.name}: success"))
-      )
     }
 
     trackToolMessages(userMessageId, toolResults)
@@ -270,7 +333,10 @@ class JiraKira(
     // based on custom attributes from the repository
     // and the enumeration of their values obtained from the API
 
-    val properties = CreateWorklogEntrySchema.function.parameters.properties.toMutableMap()
+    val propertiesCreateWorklog =
+      CreateWorklogEntrySchema.function.parameters.properties.toMutableMap()
+    val propertiesUpdateWorklog =
+      UpdateWorklogEntrySchema.function.parameters.properties.toMutableMap()
 
     val attributes = jiraApi.listWorklogAttributes()
 
@@ -300,18 +366,34 @@ class JiraKira(
         )
 
       LOG.debug("Adding worklog attribute to tool definition: {}", attribute.key)
-      properties[attribute.key] = property
+      propertiesCreateWorklog[attribute.key] = property
+      propertiesUpdateWorklog[attribute.key] = property
     }
 
     toolDefinitions =
       listOf(
         ListUserOpenIssuesSchema,
         GetIssueIdSchema,
+        GetIssueWorklogSchema,
+        UpdateWorklogEntrySchema.copy(
+          function =
+            UpdateWorklogEntrySchema.function.copy(
+              parameters =
+                UpdateWorklogEntrySchema.function.parameters.copy(
+                  properties = propertiesUpdateWorklog
+                )
+            )
+        ),
         CreateWorklogEntrySchema.copy(
           function =
             CreateWorklogEntrySchema.function.copy(
               parameters =
-                CreateWorklogEntrySchema.function.parameters.copy(properties = properties)
+                CreateWorklogEntrySchema.function.parameters.copy(
+                  properties = propertiesCreateWorklog,
+                  required =
+                    CreateWorklogEntrySchema.function.parameters.required +
+                      attributes.map { it.key },
+                )
             )
         ),
       )
@@ -321,7 +403,7 @@ class JiraKira(
     return """
         |$JIRA_KIRA_CONTEXT
         |The JIRA user you are talking to is called ${jiraUser.displayName} and their email is ${jiraUser.email}.
-        |The user is logged in to Jira as ${jiraUser.name}. The user key to use in worklog entries is ${jiraUser.key}.
+        |The user is logged in to Jira as ${jiraUser.name} and their Jira user key is ${jiraUser.key}.
         |The time zone of the user is ${jiraUser.timeZone}. The current time is ${OffsetDateTime.now()}.
         """
       .trimMargin()
@@ -339,6 +421,10 @@ const val JIRA_KIRA_CONTEXT =
 
 /** Input for the [TOOL_GET_ISSUE_ID] tool. */
 @Serializable data class IssueKey(val issueKey: String)
+
+@Serializable data class IssueKeyOrId(val issueKeyOrId: String)
+
+@Serializable data class ProjectKey(val project: String)
 
 data class JiraKiraMessageInsert(
   val workflowId: KUUID,

@@ -10,6 +10,10 @@ sealed class JiraKiraMessage {
   data class LlmResponse(val content: String) : JiraKiraMessage()
 
   @Serializable
-  @SerialName("jirakira.worklog")
+  @SerialName("jirakira.worklog_created")
   data class WorklogCreated(val worklog: TempoWorklogEntry) : JiraKiraMessage()
+
+  @Serializable
+  @SerialName("jirakira.worklog_updated")
+  data class WorklogUpdated(val worklog: TempoWorklogEntry) : JiraKiraMessage()
 }
