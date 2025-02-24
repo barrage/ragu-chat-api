@@ -26,7 +26,9 @@ CREATE TABLE jira_worklog_attributes (
     -- The attribute identifier, or the attribute value as its called in Jira.
     id TEXT NOT NULL UNIQUE,
     -- The attribute description that will be used in tool definitions for JiraKira.
-    description TEXT NOT NULL
+    description TEXT NOT NULL,
+    -- Whether or not to specify the attribute as required in tool definitions.
+    required BOOLEAN NOT NULL
 );
 
 CREATE TABLE jira_api_keys (

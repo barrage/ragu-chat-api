@@ -37,7 +37,8 @@ fun Route.jiraKiraUserRoutes(jiraKiraRepository: JiraKiraKeyStore) {
 }
 
 fun Route.jiraKiraAdminRoutes(jiraKiraRepository: JiraKiraRepository) {
-  @Serializable data class AddWorklogAttribute(val key: String, val description: String)
+  @Serializable
+  data class AddWorklogAttribute(val key: String, val description: String, val required: Boolean)
 
   get("/jirakira/worklog-attributes", listJiraKiraWorklogAttributes()) {
     val attributes = jiraKiraRepository.listAllWorklogAttributes()
@@ -46,7 +47,7 @@ fun Route.jiraKiraAdminRoutes(jiraKiraRepository: JiraKiraRepository) {
 
   post("/jirakira/worklog-attributes", upsertJiraKiraWorklogAttribute()) {
     val body = call.receive<AddWorklogAttribute>()
-    jiraKiraRepository.upsertWorklogAttribute(body.key, body.description)
+    jiraKiraRepository.upsertWorklogAttribute(body.key, body.description, body.required)
     call.respond(HttpStatusCode.OK)
   }
 

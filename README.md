@@ -15,13 +15,6 @@
     - [Migrations and seeders](#migrations-and-seeders)
     - [Building and running](#building-and-running)
 - [WebSocket](#websocket)
-    - [Client messages](#client-messages)
-        - [System messages](#system-messages)
-        - [Chat messages](#chat-messages)
-    - [Server responses](#server-responses)
-    - [WS Diagrams](#ws-diagrams)
-        - [Chatting](#chatting)
-        - [Changing chats](#changing-chats)
 - [Specialists](#specialists)
 - [WhatsApp](#whatsapp)
 - [Agent tools](#agent-tools)
@@ -316,7 +309,8 @@ that can have the values "A", "B", and "C". If you want to include this attribut
 it to the database as a Jira worklog attribute. This can be done via the `POST /admin/jirakira/attributes` endpoint.
 
 Every attribute in the database must have its `key`, which is the attribute identifier, and its `description` that will
-be used in the tool definition.
+be used in the tool definition. Attributes can also be marked as `required` which will make them required in the tool
+definition.
 
 In the above example, it should look something like this:
 

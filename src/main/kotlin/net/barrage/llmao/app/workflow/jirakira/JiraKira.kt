@@ -338,6 +338,8 @@ class JiraKira(
     val propertiesUpdateWorklog =
       UpdateWorklogEntrySchema.function.parameters.properties.toMutableMap()
 
+    val requiredAttributes = worklogAttributes.filter { it.required }.map { it.key }
+
     val attributes = jiraApi.listWorklogAttributes()
 
     for (attribute in attributes) {
@@ -391,8 +393,7 @@ class JiraKira(
                 CreateWorklogEntrySchema.function.parameters.copy(
                   properties = propertiesCreateWorklog,
                   required =
-                    CreateWorklogEntrySchema.function.parameters.required +
-                      attributes.map { it.key },
+                    CreateWorklogEntrySchema.function.parameters.required + requiredAttributes,
                 )
             )
         ),

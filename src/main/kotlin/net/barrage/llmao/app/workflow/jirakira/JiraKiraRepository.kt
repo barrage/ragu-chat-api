@@ -38,21 +38,27 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
 
   suspend fun listAllWorklogAttributes(): List<WorklogAttribute> {
     return dslContext
-      .select(JIRA_WORKLOG_ATTRIBUTES.ID, JIRA_WORKLOG_ATTRIBUTES.DESCRIPTION)
+      .select(
+        JIRA_WORKLOG_ATTRIBUTES.ID,
+        JIRA_WORKLOG_ATTRIBUTES.DESCRIPTION,
+        JIRA_WORKLOG_ATTRIBUTES.REQUIRED,
+      )
       .from(JIRA_WORKLOG_ATTRIBUTES)
       .asFlow()
       .map { it.into(JIRA_WORKLOG_ATTRIBUTES).toWorklogAttributeModel() }
       .toList()
   }
 
-  suspend fun upsertWorklogAttribute(id: String, description: String) {
+  suspend fun upsertWorklogAttribute(id: String, description: String, required: Boolean) {
     dslContext
       .insertInto(JIRA_WORKLOG_ATTRIBUTES)
       .set(JIRA_WORKLOG_ATTRIBUTES.ID, id)
       .set(JIRA_WORKLOG_ATTRIBUTES.DESCRIPTION, description)
+      .set(JIRA_WORKLOG_ATTRIBUTES.REQUIRED, required)
       .onConflict(JIRA_WORKLOG_ATTRIBUTES.ID)
       .doUpdate()
       .set(JIRA_WORKLOG_ATTRIBUTES.DESCRIPTION, description)
+      .set(JIRA_WORKLOG_ATTRIBUTES.REQUIRED, required)
       .awaitFirstOrNull()
   }
 

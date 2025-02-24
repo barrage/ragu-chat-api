@@ -22,7 +22,10 @@ data class WorklogAttribute(
    * schema property definitions.
    */
   val description: String,
+
+  /** Whether or not the attribute will be marked as required in the JSON schema. */
+  val required: Boolean,
 )
 
 fun JiraWorklogAttributesRecord.toWorklogAttributeModel() =
-  WorklogAttribute(key = id, description = description)
+  WorklogAttribute(key = id, description = description, required = required)
