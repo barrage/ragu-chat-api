@@ -15,7 +15,7 @@ import net.barrage.llmao.error.AppError
 private const val JIRA_KIRA_NAME = "Gojira"
 
 fun Route.specialistWorkflowRoutes(adapterState: AdapterState) {
-  get("/agents/specialists", listSpecialists()) {
+  get("/workflows", listSpecialists()) {
     val specialists = mutableListOf<SpecialistAgent>()
 
     adapterState.runIfEnabled<JiraKiraWorkflowFactory, Unit> {

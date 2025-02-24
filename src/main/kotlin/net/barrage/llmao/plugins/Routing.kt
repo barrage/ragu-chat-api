@@ -1,6 +1,5 @@
 package net.barrage.llmao.plugins
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
 import io.github.smiley4.ktorswaggerui.dsl.routing.get
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -25,6 +24,7 @@ import net.barrage.llmao.app.api.http.controllers.authRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
 import net.barrage.llmao.app.api.http.controllers.devController
 import net.barrage.llmao.app.api.http.controllers.imageRoutes
+import net.barrage.llmao.app.api.http.controllers.specialistWorkflowRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraAdminRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraUserRoutes
 import net.barrage.llmao.app.api.http.controllers.thirdPartyRoutes
@@ -37,7 +37,7 @@ import net.barrage.llmao.error.ErrorReason
 fun Application.configureRouting(state: ApplicationState) {
   routing {
     // K8S specific route
-    route("/__health") { get(health()) { call.respond(HttpStatusCode.OK) } }
+    route("/__health") { get { call.respond(HttpStatusCode.OK) } }
 
     // Unprotected authentication routes
     authRoutes(state.services.auth, state.adapters)
@@ -64,6 +64,7 @@ fun Application.configureRouting(state: ApplicationState) {
 
     // User API routes
     authenticate("auth-session") {
+      specialistWorkflowRoutes(state.adapters)
       state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
         jiraKiraUserRoutes(it.jiraKiraRepository)
       }
@@ -98,28 +99,4 @@ fun ApplicationCall.pathUuid(param: String): KUUID {
   } catch (e: IllegalArgumentException) {
     throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID")
   }
-}
-
-fun ApplicationCall.expireCookie(name: String) {
-  response.cookies.append(
-    Cookie(
-      name = name,
-      value = "",
-      encoding = CookieEncoding.RAW,
-      maxAge = 0,
-      expires = GMTDate(),
-      domain = null,
-      path = null,
-      secure = false,
-      httpOnly = true,
-      extensions = mapOf(),
-    )
-  )
-}
-
-private fun health(): OpenApiRoute.() -> Unit = {
-  description = "Health check for server"
-  summary = "Health check"
-  securitySchemeNames = null
-  response { HttpStatusCode.OK to { description = "Server is healthy" } }
 }

@@ -317,7 +317,8 @@ In the above example, it should look something like this:
 ```json
 {
   "key": "WorkCategory",
-  "description": "The category of work done on the issue. Assume the category to be A, unless the user's instruction says otherwise. Required."
+  "description": "The category of work done on the issue. Assume the category to be A, unless the user's instruction says otherwise.",
+  "required": true
 }
 ```
 
