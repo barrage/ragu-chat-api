@@ -42,11 +42,28 @@ class JiraApi(
 ) {
   suspend fun getCurrentJiraUser(): JiraUser {
     LOG.debug("Fetching Jira user metadata")
+
     val account =
       client
         .get("$endpoint/rest/auth/1/session") { header("Authorization", "Bearer $apiKey") }
         .body<JiraUserSession>()
-    return client.get(account.self) { header("Authorization", "Bearer $apiKey") }.body<JiraUser>()
+
+    val user =
+      client.get("$endpoint/rest/api/2/user?username=${account.name}") {
+        header("Authorization", "Bearer $apiKey")
+      }
+
+    if (!user.status.isSuccess()) {
+      LOG.error("Failed to retrieve Jira user metadata: {}", user.bodyAsText())
+      throw AppError.internal("Failed to retrieve Jira user metadata")
+    }
+
+    try {
+      return user.body<JiraUser>()
+    } catch (e: Exception) {
+      LOG.error("Failed to parse Jira user metadata: {}", user.bodyAsText(), e)
+      throw AppError.internal("Failed to parse Jira user metadata")
+    }
   }
 
   suspend fun getOpenIssuesForProject(projectKey: String): List<JiraIssueShort> {

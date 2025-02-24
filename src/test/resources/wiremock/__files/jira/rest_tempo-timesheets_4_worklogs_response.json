@@ -1,0 +1,53 @@
+[
+  {
+    "billableSeconds": 27000,
+    "timeSpent": "3m",
+    "comment": "Did stuff.",
+    "location": {
+      "name": "Default Location",
+      "id": 1
+    },
+    "attributes": {
+      "_WorkCategory_": {
+        "workAttributeId": 12,
+        "value": "Work",
+        "type": "STATIC_LIST",
+        "key": "_WorkCategory_",
+        "name": "Work Category"
+      }
+    },
+    "timeSpentSeconds": 27000,
+    "issue": {
+      "key": "RAGU-420",
+      "id": 55404,
+      "accountKey": "MY_CUSTOMER",
+      "estimatedRemainingSeconds": 1200,
+      "epicIssue": {
+        "issueType": "Epic",
+        "iconUrl": "/images/icons/issuetypes/epic.svg",
+        "summary": "Agent Workflows"
+      },
+      "projectId": 14700,
+      "projectKey": "RAGU",
+      "issueType": "New Feature",
+      "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10311&avatarType=issuetype",
+      "versions": [
+        14407
+      ],
+      "summary": "Agent behaviour packs aka Agent Marketplace - TBD",
+      "reporterKey": "JIRAUSER42069",
+      "issueStatus": "To Do",
+      "components": [],
+      "epicKey": "RAGU-420",
+      "internalIssue": false
+    },
+    "tempoWorklogId": 464710,
+    "originId": 464710,
+    "worker": "JIRAUSER42069",
+    "updater": "JIRAUSER42069",
+    "started": "2024-02-14T15:30:00.000",
+    "originTaskId": 55404,
+    "dateCreated": "2025-02-21 16:23:36.000",
+    "dateUpdated": "2025-02-21 16:23:36.000"
+  }
+]

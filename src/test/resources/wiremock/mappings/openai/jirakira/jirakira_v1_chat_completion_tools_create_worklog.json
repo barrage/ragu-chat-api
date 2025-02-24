@@ -1,0 +1,60 @@
+{
+  "id": "349eedf3-0d0f-472e-a3e6-4fdee8a1bbc6",
+  "name": "openai_v1_chat_completions_jira_kira_create_worklog",
+  "request": {
+    "url": "/__openai/v1/chat/completions",
+    "method": "POST",
+    "headers": {
+      "Accept": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "and": [
+          {
+            "matchesJsonPath": {
+              "expression": "$.messages[1].content",
+              "contains": "JIRA_KIRA_CREATE_WORKLOG"
+            }
+          },
+          {
+            "matchesJsonPath": "$[?(@.messages.size() == 2)]"
+          }
+        ]
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "openai/jirakira/openai_v1_chat_completion_tools_create_worklog.json",
+    "headers": {
+      "x-request-id": "req_b80e2a9f31d149a68830d1a40a748c9a",
+      "x-ratelimit-limit-tokens": "2000000",
+      "openai-organization": "barrage",
+      "CF-RAY": "8e57a568fb22ec28-ZAG",
+      "Server": "cloudflare",
+      "X-Content-Type-Options": "nosniff",
+      "x-ratelimit-reset-requests": "6ms",
+      "x-ratelimit-remaining-tokens": "1999831",
+      "x-ratelimit-remaining-requests": "9999",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+      "Date": "Wed, 20 Nov 2024 10:09:44 GMT",
+      "x-ratelimit-reset-tokens": "5ms",
+      "access-control-expose-headers": "X-Request-ID",
+      "CF-Cache-Status": "DYNAMIC",
+      "x-ratelimit-limit-requests": "10000",
+      "Set-Cookie": [
+        "__cf_bm=Do7PPxrLPEeB3eu8Kc25sZpBL_3xLOsUL7jI1OuDbMk-1732097384-1.0.1.1-FpZTpIXg5kmQuNgGUrGNXo6JsaaIqiJA85QjhSGSK5SKpoztjME8vspOe84t3zsFpOyymoJ5BcsW_pZUARS39g; path=/; expires=Wed, 20-Nov-24 10:39:44 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None",
+        "_cfuvid=V0zREy42uIZTfdOWHXIMdoWyG44.oOHlH3wOK3q6saE-1732097384722-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None"
+      ],
+      "openai-version": "2020-10-01",
+      "openai-processing-ms": "300",
+      "alt-svc": "h3=\":443\"; ma=86400",
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "349eedf3-0d0f-472e-a3e6-4fdee8a1bbc6",
+  "persistent": true,
+  "insertionIndex": 42
+}

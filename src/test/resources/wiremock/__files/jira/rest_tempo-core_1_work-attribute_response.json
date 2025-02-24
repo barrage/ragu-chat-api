@@ -1,0 +1,61 @@
+[
+  {
+    "id": 12,
+    "key": "_WorkCategory_",
+    "name": "Work Category",
+    "type": {
+      "name": "Static List",
+      "value": "STATIC_LIST",
+      "systemType": false
+    },
+    "required": true,
+    "sequence": 0,
+    "staticListValues": [
+      {
+        "id": 18,
+        "name": "Work",
+        "value": "Work",
+        "removed": false,
+        "sequence": 0,
+        "workAttributeId": 12
+      },
+      {
+        "id": 17,
+        "name": "Meeting",
+        "value": "Meeting",
+        "removed": false,
+        "sequence": 1,
+        "workAttributeId": 12
+      },
+      {
+        "id": 28,
+        "name": "Break",
+        "value": "Break",
+        "removed": false,
+        "sequence": 2,
+        "workAttributeId": 12
+      },
+      {
+        "id": 20,
+        "name": "Absence",
+        "value": "Vacman",
+        "removed": false,
+        "sequence": 3,
+        "workAttributeId": 12
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "key": "_Customer_",
+    "name": "Customer-Time Slot account",
+    "type": {
+      "name": "Account",
+      "value": "ACCOUNT",
+      "systemType": false
+    },
+    "externalUrl": "/jira/rest/tempo-rest/1.0/accounts/json/billingKeyList/{IssueKey}",
+    "required": true,
+    "sequence": 1
+  }
+]

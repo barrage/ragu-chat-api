@@ -1,0 +1,32 @@
+{
+  "id": "chatcmpl-123ABC",
+  "object": "chat.completion",
+  "created": 1732021169,
+  "model": "gpt-4o",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_abc123",
+            "type": "function",
+            "function": {
+              "name": "create_new_worklog_entry",
+              "arguments": "{\"issueId\": \"RAGU-420\", \"comment\": \"Did stuff.\", \"started\": \"2024-02-14T15:30:00Z\", \"timeSpentSeconds\": 180}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 123,
+    "completion_tokens": 456,
+    "total_tokens": 579
+  },
+  "system_fingerprint": "fp_44921..."
+}

@@ -1,0 +1,21 @@
+{
+  "id": "390e1529-b56e-41d2-8343-2249bed3e052",
+  "name": "get_jira_user",
+  "request": {
+    "url": "/__jira/rest/api/2/issue/RAGU-420",
+    "method": "GET",
+    "headers": {
+      "Authorization": {
+        "equalTo": "Bearer JIRA_API_KEY"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "jira/rest_api_2_issue_response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "390e1529-b56e-41d2-8343-2249bed3e052"
+}

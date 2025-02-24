@@ -45,11 +45,15 @@ import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
+import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
+import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import net.barrage.llmao.tables.references.CHATS
+import net.barrage.llmao.tables.references.JIRA_API_KEYS
+import net.barrage.llmao.tables.references.JIRA_WORKLOG_ATTRIBUTES
 import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_EVALUATIONS
 import net.barrage.llmao.tables.references.SESSIONS
@@ -61,6 +65,7 @@ import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
+import org.jooq.impl.DSL.excluded
 import org.jooq.impl.DefaultConfiguration
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -428,6 +433,33 @@ class TestPostgres {
       .returning()
       .awaitSingle()
       .toWhatsAppMessage()
+  }
+
+  suspend fun testJiraApiKey(userId: UUID, apiKey: String) {
+    dslContext
+      .insertInto(JIRA_API_KEYS)
+      .set(JIRA_API_KEYS.USER_ID, userId)
+      .set(JIRA_API_KEYS.API_KEY, apiKey)
+      .awaitSingle()
+  }
+
+  suspend fun testJiraWorklogAttribute(id: String, description: String, required: Boolean) {
+    dslContext
+      .insertInto(JIRA_WORKLOG_ATTRIBUTES)
+      .set(JIRA_WORKLOG_ATTRIBUTES.ID, id)
+      .set(JIRA_WORKLOG_ATTRIBUTES.DESCRIPTION, description)
+      .set(JIRA_WORKLOG_ATTRIBUTES.REQUIRED, required)
+      .awaitSingle()
+  }
+
+  suspend fun testSettings(settings: SettingsUpdate) {
+    dslContext
+      .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
+      .apply { settings.updates.forEach { setting -> values(setting.key.name, setting.value) } }
+      .onConflict(APPLICATION_SETTINGS.NAME)
+      .doUpdate()
+      .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
+      .awaitSingle()
   }
 }
 

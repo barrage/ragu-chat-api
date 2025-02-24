@@ -108,9 +108,11 @@ class AdapterState(
         )
     }
     if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
+      val endpoint = config.string("jirakira.endpoint")
       val jiraKiraKeyStore = JiraKiraRepository(database)
       val jiraKiraWorkflowFactory =
         JiraKiraWorkflowFactory(
+          endpoint = endpoint,
           providers = providers,
           settingsService = settingsService,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),

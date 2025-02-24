@@ -1,0 +1,21 @@
+{
+  "id": "82a8b26e-bb92-4c3a-b5d9-db6919077c8c",
+  "name": "get_jira_user_session",
+  "request": {
+    "url": "/__jira/rest/auth/1/session",
+    "method": "GET",
+    "headers": {
+      "Authorization": {
+        "equalTo": "Bearer JIRA_API_KEY"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "jira/rest_auth_1_session_response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "82a8b26e-bb92-4c3a-b5d9-db6919077c8c"
+}

@@ -2,12 +2,15 @@ package net.barrage.llmao
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
-import io.ktor.client.*
-import io.ktor.client.plugins.websocket.*
-import io.ktor.serialization.kotlinx.*
-import io.ktor.server.config.*
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
+import io.ktor.server.config.ConfigLoader
 import io.ktor.server.config.ConfigLoader.Companion.load
-import io.ktor.server.testing.*
+import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.config.mergeWith
+import io.ktor.server.testing.ApplicationTestBuilder
+import io.ktor.server.testing.testApplication
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.spec.ECGenParameterSpec
@@ -153,6 +156,8 @@ open class IntegrationTest(
       cfg =
         cfg.mergeWith(
           MapApplicationConfig(
+            "jirakira.endpoint" to "$wiremockUrlOverride",
+
             // We are not overriding the API key since we need real ones.
 
             // Has to match the URL from the OpenAI SDK.
@@ -160,7 +165,7 @@ open class IntegrationTest(
             "embeddings.openai.endpoint" to "$wiremockUrlOverride/v1/",
 
             // Has to match the URL from the Azure OpenAI SDK.
-            "embeddings.azure.endpoint" to "wiremockUrlOverride/openai/deployments",
+            "embeddings.azure.endpoint" to "$wiremockUrlOverride/openai/deployments",
             "vault.endpoint" to wiremockUrlOverride,
 
             // Has to match the URL from the Infobip SDK.
@@ -216,6 +221,7 @@ open class IntegrationTest(
           "oauth.carnet.userInfoEndpoint" to "$url/$CARNET_WM/auth/userinfo",
           "oauth.carnet.logoutEndpoint" to "$url/$CARNET_WM/auth/logout",
           "llm.ollama.endpoint" to "$url/$OLLAMA_WM",
+          "jirakira.endpoint" to "$url/$JIRA_WM",
         )
       )
   }
@@ -249,6 +255,7 @@ const val GOOGLE_WM = "__google"
 const val APPLE_VM = "__apple"
 const val CARNET_WM = "__carnet"
 const val OLLAMA_WM = "__ollama"
+const val JIRA_WM = "__jira"
 
 // Wiremock response triggers
 

@@ -114,14 +114,7 @@ enum class SettingKey {
    *
    * DEFAULT: -
    */
-  JIRA_TIME_SLOT_ATTRIBUTE_KEY,
-
-  /**
-   * The endpoint for JiraKira.
-   *
-   * DEFAULT: -
-   */
-  JIRA_ENDPOINT;
+  JIRA_TIME_SLOT_ATTRIBUTE_KEY;
 
   companion object {
     fun tryFromString(value: String): SettingKey {

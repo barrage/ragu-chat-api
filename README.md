@@ -265,8 +265,8 @@ A few things must be configured in order for JiraKira to work.
 
 #### Administrators
 
-The Jira endpoint _must_ be configured in the global application settings. It can be configured via the
-`PUT /admin/settings` endpoint and setting the `JIRA_ENDPOINT`.
+The Jira endpoint _must_ be configured in the `application.conf` file. The endpoint can be set with the
+`jirakira.endpoint` property.
 
 An administrator _should_ configure the default billing account **key** for issues if the Jira instance has billing
 accounts configured and worklogs should have billing accounts associated with them.
@@ -281,10 +281,6 @@ Example request body for `PUT /admin/settings`:
 ```json
 {
   "updates": [
-    {
-      "key": "JIRA_ENDPOINT",
-      "value": "https://my.jira.endpoint"
-    },
     {
       "key": "JIRA_TIME_SLOT_ATTRIBUTE_KEY",
       "value": "_Customer_"

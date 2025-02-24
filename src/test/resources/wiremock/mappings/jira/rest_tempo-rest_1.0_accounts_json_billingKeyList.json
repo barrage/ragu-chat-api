@@ -1,0 +1,21 @@
+{
+  "id": "83a7cdcd-d73a-465a-9b1b-5ad8e87fcbfa",
+  "name": "get_jira_worklog_attributes",
+  "request": {
+    "url": "/__jira/rest/tempo-rest/1.0/accounts/json/billingKeyList/RAGU-420?callback=__fn__",
+    "method": "GET",
+    "headers": {
+      "Authorization": {
+        "equalTo": "Bearer JIRA_API_KEY"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "jira/rest_tempo-rest_1.0_accounts_json_billingKeyList_response.txt",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "83a7cdcd-d73a-465a-9b1b-5ad8e87fcbfa"
+}

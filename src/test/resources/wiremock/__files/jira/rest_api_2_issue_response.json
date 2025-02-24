@@ -1,0 +1,212 @@
+{
+  "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+  "id": "42069",
+  "self": "https://my.jira.net/rest/api/2/issue/42069",
+  "key": "RAGU-420",
+  "fields": {
+    "fixVersions": [
+      {
+        "self": "https://my.jira.net/rest/api/2/version/42069",
+        "id": "42069",
+        "description": "Agent functions, additional agent parameters, Order management prerequisites",
+        "name": "v0.3.0",
+        "archived": false,
+        "released": false,
+        "releaseDate": "2025-02-28"
+      }
+    ],
+    "resolution": null,
+    "priority": {
+      "self": "https://my.jira.net/rest/api/2/priority/3",
+      "iconUrl": "https://my.jira.net/images/icons/priorities/medium.svg",
+      "name": "Normal",
+      "id": "3"
+    },
+    "labels": [],
+    "aggregatetimeoriginalestimate": null,
+    "timeestimate": 27000,
+    "versions": [],
+    "issuelinks": [],
+    "assignee": {
+      "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+      "name": "jirakira",
+      "key": "JIRAUSER42069",
+      "emailAddress": "jirakira@jira.net",
+      "displayName": "jirakira",
+      "active": true,
+      "timeZone": "Europe/Zagreb"
+    },
+    "status": {
+      "self": "https://my.jira.net/rest/api/2/status/10303",
+      "description": "Issue is undergoing testing (Developer or QA)",
+      "iconUrl": "https://my.jira.net/images/icons/statuses/generic.png",
+      "name": "In Test",
+      "id": "10303",
+      "statusCategory": {
+        "self": "https://my.jira.net/rest/api/2/statuscategory/4",
+        "id": 4,
+        "key": "indeterminate",
+        "colorName": "yellow",
+        "name": "In Progress"
+      }
+    },
+    "components": [],
+    "aggregatetimeestimate": 27000,
+    "creator": {
+      "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+      "name": "jirakira",
+      "key": "JIRAUSER42069",
+      "emailAddress": "jirakira@jira.net",
+      "displayName": "jirakira",
+      "active": true,
+      "timeZone": "Europe/Zagreb"
+    },
+    "subtasks": [],
+    "reporter": {
+      "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+      "name": "jirakira",
+      "key": "JIRAUSER42069",
+      "emailAddress": "jirakira@jira.net",
+      "displayName": "jirakira",
+      "active": true,
+      "timeZone": "Europe/Zagreb"
+    },
+    "aggregateprogress": {
+      "progress": 27000,
+      "total": 54000,
+      "percent": 50
+    },
+    "progress": {
+      "progress": 27000,
+      "total": 54000,
+      "percent": 50
+    },
+    "worklog": {
+      "startAt": 0,
+      "maxResults": 20,
+      "total": 1,
+      "worklogs": [
+        {
+          "self": "https://my.jira.net/rest/api/2/issue/42069/worklog/464387",
+          "author": {
+            "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+            "name": "jirakira",
+            "key": "JIRAUSER42069",
+            "emailAddress": "jirakira@jira.net",
+            "displayName": "jirakira",
+            "active": true,
+            "timeZone": "Europe/Zagreb"
+          },
+          "updateAuthor": {
+            "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+            "name": "jirakira",
+            "key": "JIRAUSER42069",
+            "emailAddress": "jirakira@jira.net",
+            "displayName": "jirakira",
+            "active": true,
+            "timeZone": "Europe/Zagreb"
+          },
+          "comment": "Explored Azure AI studio and implemented Azure embeddings in Chonkit.",
+          "created": "2025-02-20T13:48:36.189+0000",
+          "updated": "2025-02-20T13:48:36.189+0000",
+          "started": "2025-02-20T07:30:00.000+0000",
+          "timeSpent": "7h 30m",
+          "timeSpentSeconds": 42069,
+          "id": "464387",
+          "issueId": "42069"
+        }
+      ]
+    },
+    "customfield_11808": null,
+    "issuetype": {
+      "self": "https://my.jira.net/rest/api/2/issuetype/11901",
+      "id": "11901",
+      "description": "A new feature of the product, which has yet to be developed.",
+      "iconUrl": "https://my.jira.net/secure/viewavatar?size=xsmall&avatarId=10311&avatarType=issuetype",
+      "name": "New Feature",
+      "subtask": false,
+      "avatarId": 10311
+    },
+    "timespent": 27000,
+    "project": {
+      "self": "https://my.jira.net/rest/api/2/project/14700",
+      "id": "14700",
+      "key": "RAGU",
+      "name": "Something something AI who gives a shit",
+      "projectTypeKey": "software"
+    },
+    "aggregatetimespent": 27000,
+    "watches": {
+      "self": "https://my.jira.net/rest/api/2/issue/RAGU-420/watchers",
+      "watchCount": 2,
+      "isWatching": true
+    },
+    "created": "2025-02-13T15:01:47.859+0000",
+    "updated": "2025-02-22T17:50:30.730+0000",
+    "timetracking": {
+      "remainingEstimate": "7.5h",
+      "timeSpent": "7.5h",
+      "remainingEstimateSeconds": 27000,
+      "timeSpentSeconds": 27000
+    },
+    "environment": null,
+    "duedate": null,
+    "comment": {
+      "comments": [
+        {
+          "self": "https://my.jira.net/rest/api/2/issue/42069/comment/66869",
+          "id": "66869",
+          "author": {
+            "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+            "name": "jirakira",
+            "key": "JIRAUSER42069",
+            "emailAddress": "jirakira@jira.net",
+            "displayName": "jirakira",
+            "active": true,
+            "timeZone": "Europe/Zagreb"
+          },
+          "body": "I have something to say!",
+          "updateAuthor": {
+            "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+            "name": "jirakira",
+            "key": "JIRAUSER42069",
+            "emailAddress": "jirakira@jira.net",
+            "displayName": "jirakira",
+            "active": true,
+            "timeZone": "Europe/Zagreb"
+          },
+          "created": "2025-02-14T09:09:08.448+0000",
+          "updated": "2025-02-14T09:09:39.281+0000"
+        },
+        {
+          "self": "https://my.jira.net/rest/api/2/issue/42069/comment/66907",
+          "id": "66907",
+          "author": {
+            "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+            "name": "jirakira",
+            "key": "JIRAUSER42069",
+            "emailAddress": "jirakira@jira.net",
+            "displayName": "jirakira",
+            "active": true,
+            "timeZone": "Europe/Zagreb"
+          },
+          "body": "Did some other stuff",
+          "updateAuthor": {
+            "self": "https://my.jira.net/rest/api/2/user?username=jirakira",
+            "name": "jirakira",
+            "key": "JIRAUSER42069",
+            "emailAddress": "jirakira@jira.net",
+            "displayName": "jirakira",
+            "active": true,
+            "timeZone": "Europe/Zagreb"
+          },
+          "created": "2025-02-20T12:26:26.998+0000",
+          "updated": "2025-02-20T12:26:26.998+0000"
+        }
+      ],
+      "maxResults": 2,
+      "total": 2,
+      "startAt": 0
+    }
+  }
+}

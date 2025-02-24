@@ -1,0 +1,10 @@
+{
+  "self": "https://my.jira.net/rest/api/latest/user?username=jirakira",
+  "name": "jirakira",
+  "loginInfo": {
+    "failedLoginCount": 9,
+    "loginCount": 1468,
+    "lastFailedLoginTime": "2024-09-04T13:31:33.837+0000",
+    "previousLoginTime": "2025-02-21T08:56:45.845+0000"
+  }
+}

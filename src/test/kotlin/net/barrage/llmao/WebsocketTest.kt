@@ -31,9 +31,12 @@ suspend fun ClientWebSocketSession.sendClientSystem(message: IncomingSystemMessa
 }
 
 /** Send the `chat_open_new` system message and wait for the chat_open response. */
-suspend fun ClientWebSocketSession.openNewChat(agentId: KUUID): KUUID {
+suspend fun ClientWebSocketSession.openNewChat(
+  agentId: KUUID? = null,
+  workflowType: String? = null,
+): KUUID {
   // Open a chat and confirm it's open
-  sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agentId))
+  sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agentId, workflowType))
   val chatOpen = (incoming.receive() as Frame.Text).readText()
   val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
   assertNotNull(workflowOpenMessage.id)

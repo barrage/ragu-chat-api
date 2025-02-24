@@ -210,7 +210,7 @@ class JiraKira(
             val worklog = jiraApi.updateWorklogEntry(input)
 
             LOG.debug(
-              "Worklog for issue ${worklog.issue?.key} updated successfully for issue (time: {})",
+              "Worklog for issue ${worklog.issue?.key} updated successfully (time: {})",
               worklog.timeSpent,
             )
 

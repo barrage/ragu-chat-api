@@ -15,6 +15,8 @@ import net.barrage.llmao.error.ErrorReason
 private const val JIRAKIRA_TOKEN_ORIGIN = "workflow.jirakira"
 
 class JiraKiraWorkflowFactory(
+  /** Jira endpoint. */
+  private val endpoint: String,
   private val providers: ProviderState,
   private val settingsService: SettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
@@ -32,13 +34,7 @@ class JiraKiraWorkflowFactory(
 
     val settings = settingsService.getAllWithDefaults()
 
-    val jiraEndpoint =
-      settings.getOptional(SettingKey.JIRA_ENDPOINT)
-        ?: throw AppError.api(ErrorReason.InvalidOperation, "Jira endpoint not configured")
-
-    val jiraTimeSlotAttributeKey =
-      settings.getOptional(SettingKey.JIRA_TIME_SLOT_ATTRIBUTE_KEY)
-
+    val jiraTimeSlotAttributeKey = settings.getOptional(SettingKey.JIRA_TIME_SLOT_ATTRIBUTE_KEY)
 
     val jiraKiraLlmProvider = settings[SettingKey.JIRA_KIRA_LLM_PROVIDER]
     val jiraKiraModel = settings[SettingKey.JIRA_KIRA_MODEL]
@@ -49,7 +45,7 @@ class JiraKiraWorkflowFactory(
         "JiraKira LLM provider does not support the configured JiraKira model",
       )
     }
-    val jiraApi = JiraApi(endpoint = jiraEndpoint, apiKey = userJiraApiKey, client = httpClient())
+    val jiraApi = JiraApi(endpoint = endpoint, apiKey = userJiraApiKey, client = httpClient())
     val jiraUser = jiraApi.getCurrentJiraUser()
     val worklogAttributes = jiraKiraRepository.listAllWorklogAttributes()
 

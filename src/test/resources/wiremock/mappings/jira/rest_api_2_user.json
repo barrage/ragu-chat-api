@@ -1,0 +1,21 @@
+{
+  "id": "5ea34bf1-c294-419b-a520-3ee0dfa16631",
+  "name": "get_jira_user",
+  "request": {
+    "url": "/__jira/rest/api/2/user?username=jirakira",
+    "method": "GET",
+    "headers": {
+      "Authorization": {
+        "equalTo": "Bearer JIRA_API_KEY"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "jira/rest_api_2_user_response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "5ea34bf1-c294-419b-a520-3ee0dfa16631"
+}

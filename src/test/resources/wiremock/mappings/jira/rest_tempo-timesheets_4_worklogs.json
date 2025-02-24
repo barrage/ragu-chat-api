@@ -1,0 +1,21 @@
+{
+  "id": "a69f528e-6b93-459a-befc-3fafabf91f47",
+  "name": "get_jira_user",
+  "request": {
+    "url": "/__jira/rest/tempo-timesheets/4/worklogs",
+    "method": "POST",
+    "headers": {
+      "Authorization": {
+        "equalTo": "Bearer JIRA_API_KEY"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "jira/rest_tempo-timesheets_4_worklogs_response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "uuid": "a69f528e-6b93-459a-befc-3fafabf91f47"
+}
