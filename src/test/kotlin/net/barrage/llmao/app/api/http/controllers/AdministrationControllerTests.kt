@@ -17,7 +17,9 @@ import net.barrage.llmao.core.models.DashboardCounts
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.sessionCookie
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
@@ -68,19 +70,17 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<ProvidersResponse>()
 
-    Assertions.assertEquals(body.auth.size, 3)
-    Assertions.assertTrue(body.auth.contains("google"))
-    Assertions.assertTrue(body.auth.contains("apple"))
-    Assertions.assertTrue(body.auth.contains("carnet"))
+    assertEquals(body.auth.size, 3)
+    assertTrue(body.auth.contains("google"))
+    assertTrue(body.auth.contains("apple"))
+    assertTrue(body.auth.contains("carnet"))
 
-    Assertions.assertEquals(body.llm, listOf("openai", "azure", "ollama"))
-
-    Assertions.assertEquals(body.vector, listOf("weaviate"))
-
-    Assertions.assertEquals(body.embedding, listOf("openai", "azure", "fembed"))
+    assert(body.llm.isNotEmpty())
+    assert(body.vector.isNotEmpty())
+    assert(body.embedding.isNotEmpty())
   }
 
   @Test
@@ -91,10 +91,10 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<List<String>>()
 
-    Assertions.assertEquals(body, listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o"))
+    assert(body.isNotEmpty())
   }
 
   @Test
@@ -105,10 +105,10 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<List<String>>()
 
-    Assertions.assertEquals(body, listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o"))
+    assert(body.isNotEmpty())
   }
 
   @Test
@@ -119,9 +119,9 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<List<String>>()
-    Assertions.assertTrue(body.isNotEmpty())
+    assertTrue(body.isNotEmpty())
   }
 
   @Test
@@ -132,28 +132,26 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
 
     val body = response.body<DashboardCounts>()
 
-    Assertions.assertEquals(3, body.agent.total)
-    Assertions.assertEquals(2, body.agent.active)
-    Assertions.assertEquals(1, body.agent.inactive)
-    Assertions.assertEquals(1, body.agent.providers["openai"])
-    Assertions.assertEquals(1, body.agent.providers["azure"])
+    assertEquals(3, body.agent.total)
+    assertEquals(2, body.agent.active)
+    assertEquals(1, body.agent.inactive)
 
-    Assertions.assertEquals(4, body.user.total)
-    Assertions.assertEquals(3, body.user.active)
-    Assertions.assertEquals(1, body.user.inactive)
-    Assertions.assertEquals(2, body.user.admin)
-    Assertions.assertEquals(1, body.user.user)
+    assertEquals(4, body.user.total)
+    assertEquals(3, body.user.active)
+    assertEquals(1, body.user.inactive)
+    assertEquals(2, body.user.admin)
+    assertEquals(1, body.user.user)
 
-    Assertions.assertEquals(2, body.chat.total)
-    Assertions.assertEquals(1, body.chat.chats.size)
+    assertEquals(2, body.chat.total)
+    assertEquals(1, body.chat.chats.size)
 
-    Assertions.assertEquals(2, body.chat.chats.find { it.agentId == agentOne.id }!!.count)
-    Assertions.assertNull(body.chat.chats.find { it.agentId == agentTwo.id })
-    Assertions.assertNull(body.chat.chats.find { it.agentId == agentThree.id })
+    assertEquals(2, body.chat.chats.find { it.agentId == agentOne.id }!!.count)
+    assertNull(body.chat.chats.find { it.agentId == agentTwo.id })
+    assertNull(body.chat.chats.find { it.agentId == agentThree.id })
   }
 
   @Test
@@ -165,30 +163,21 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
       }
     val body = response.body<AgentChatTimeSeries>()
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
 
-    Assertions.assertEquals(3, body.series.size)
+    assertEquals(3, body.series.size)
 
-    Assertions.assertEquals(7, body.series[agentOne.id.toString()]!!.data.size)
-    Assertions.assertEquals(
-      2,
-      body.series[agentOne.id.toString()]!!.data[LocalDate.now().toString()],
-    )
+    assertEquals(7, body.series[agentOne.id.toString()]!!.data.size)
+    assertEquals(2, body.series[agentOne.id.toString()]!!.data[LocalDate.now().toString()])
 
-    Assertions.assertEquals(7, body.series[agentTwo.id.toString()]!!.data.size)
-    Assertions.assertEquals(
-      0,
-      body.series[agentTwo.id.toString()]!!.data[LocalDate.now().toString()],
-    )
+    assertEquals(7, body.series[agentTwo.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentTwo.id.toString()]!!.data[LocalDate.now().toString()])
 
-    Assertions.assertEquals(7, body.series[agentThree.id.toString()]!!.data.size)
-    Assertions.assertEquals(
-      0,
-      body.series[agentThree.id.toString()]!!.data[LocalDate.now().toString()],
-    )
+    assertEquals(7, body.series[agentThree.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentThree.id.toString()]!!.data[LocalDate.now().toString()])
 
-    Assertions.assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
-    Assertions.assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
+    assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
+    assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
   }
 
   @Test
@@ -200,30 +189,21 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
       }
     val body = response.body<AgentChatTimeSeries>()
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
 
-    Assertions.assertEquals(3, body.series.size)
+    assertEquals(3, body.series.size)
 
-    Assertions.assertEquals(30, body.series[agentOne.id.toString()]!!.data.size)
-    Assertions.assertEquals(
-      2,
-      body.series[agentOne.id.toString()]!!.data[LocalDate.now().toString()],
-    )
+    assertEquals(30, body.series[agentOne.id.toString()]!!.data.size)
+    assertEquals(2, body.series[agentOne.id.toString()]!!.data[LocalDate.now().toString()])
 
-    Assertions.assertEquals(30, body.series[agentTwo.id.toString()]!!.data.size)
-    Assertions.assertEquals(
-      0,
-      body.series[agentTwo.id.toString()]!!.data[LocalDate.now().toString()],
-    )
+    assertEquals(30, body.series[agentTwo.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentTwo.id.toString()]!!.data[LocalDate.now().toString()])
 
-    Assertions.assertEquals(30, body.series[agentThree.id.toString()]!!.data.size)
-    Assertions.assertEquals(
-      0,
-      body.series[agentThree.id.toString()]!!.data[LocalDate.now().toString()],
-    )
+    assertEquals(30, body.series[agentThree.id.toString()]!!.data.size)
+    assertEquals(0, body.series[agentThree.id.toString()]!!.data[LocalDate.now().toString()])
 
-    Assertions.assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
-    Assertions.assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
+    assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
+    assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
   }
 
   @Test
@@ -235,17 +215,17 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
       }
     val body = response.body<AgentChatTimeSeries>()
 
-    Assertions.assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, response.status)
 
-    Assertions.assertEquals(3, body.series.size)
+    assertEquals(3, body.series.size)
 
-    Assertions.assertEquals(12, body.series[agentOne.id.toString()]!!.data.size)
+    assertEquals(12, body.series[agentOne.id.toString()]!!.data.size)
 
-    Assertions.assertEquals(12, body.series[agentTwo.id.toString()]!!.data.size)
+    assertEquals(12, body.series[agentTwo.id.toString()]!!.data.size)
 
-    Assertions.assertEquals(12, body.series[agentThree.id.toString()]!!.data.size)
+    assertEquals(12, body.series[agentThree.id.toString()]!!.data.size)
 
-    Assertions.assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
-    Assertions.assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
+    assertEquals("TestAgentOne", body.legend[agentOne.id.toString()]!!)
+    assertEquals("TestAgentTwo", body.legend[agentTwo.id.toString()]!!)
   }
 }

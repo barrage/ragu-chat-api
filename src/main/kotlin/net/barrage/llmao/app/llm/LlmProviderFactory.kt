@@ -1,6 +1,8 @@
 package net.barrage.llmao.app.llm
 
 import io.ktor.server.config.*
+import net.barrage.llmao.app.llm.openai.AzureAI
+import net.barrage.llmao.app.llm.openai.OpenAI
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.error.AppError

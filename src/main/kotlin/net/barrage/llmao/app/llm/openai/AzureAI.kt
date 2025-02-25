@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.llm
+package net.barrage.llmao.app.llm.openai
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.StreamOptions
@@ -27,8 +27,7 @@ class AzureAI(
   private val apiVersion: String,
 ) : LlmProvider {
   /** Maps LLM identifiers to Azure deployment names. */
-  private var deploymentMap =
-    mapOf("gpt-3.5-turbo" to "gpt-35-turbo", "gpt-4" to "gpt-4", "gpt-4o" to "gpt-4o")
+  private var deploymentMap = mapOf("gpt-4" to "gpt-4", "gpt-4o" to "gpt-4o")
 
   override fun id(): String {
     return "azure"

@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.llm
+package net.barrage.llmao.app.llm.openai
 
 import com.aallam.openai.api.chat.ChatChoice as OpenAiChatChoice
 import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
@@ -37,7 +37,8 @@ import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
-private val SUPPORTED_MODELS = listOf("gpt-3.5-turbo", "gpt-4", "gpt-4o")
+private val SUPPORTED_MODELS =
+  listOf("gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini")
 
 class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
   private val client: OpenAI =
