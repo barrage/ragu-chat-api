@@ -3,12 +3,13 @@ package net.barrage.llmao.app.workflow.jirakira
 import com.nimbusds.jose.util.StandardCharset
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.put
+import io.ktor.client.request.request
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpMethod
 import io.ktor.http.isSuccess
 import java.net.URLEncoder
 import java.time.format.DateTimeFormatter
@@ -43,27 +44,8 @@ class JiraApi(
   suspend fun getCurrentJiraUser(): JiraUser {
     LOG.debug("Fetching Jira user metadata")
 
-    val account =
-      client
-        .get("$endpoint/rest/auth/1/session") { header("Authorization", "Bearer $apiKey") }
-        .body<JiraUserSession>()
-
-    val user =
-      client.get("$endpoint/rest/api/2/user?username=${account.name}") {
-        header("Authorization", "Bearer $apiKey")
-      }
-
-    if (!user.status.isSuccess()) {
-      LOG.error("Failed to retrieve Jira user metadata: {}", user.bodyAsText())
-      throw AppError.internal("Failed to retrieve Jira user metadata")
-    }
-
-    try {
-      return user.body<JiraUser>()
-    } catch (e: Exception) {
-      LOG.error("Failed to parse Jira user metadata: {}", user.bodyAsText(), e)
-      throw AppError.internal("Failed to parse Jira user metadata")
-    }
+    val account = runWithHandler<JiraUserSession>("$endpoint/rest/auth/1/session")
+    return runWithHandler<JiraUser>("$endpoint/rest/api/2/user?username=${account.name}")
   }
 
   suspend fun getOpenIssuesForProject(projectKey: String): List<JiraIssueShort> {
@@ -73,38 +55,28 @@ class JiraApi(
         "project=\"${projectKey}\" AND assignee=currentUser() AND statusCategory!=Done",
         StandardCharset.UTF_8,
       )
-    val issues =
-      client
-        .get("$endpoint/rest/api/2/search?jql=$jql&fields=$fields") {
-          header("Authorization", "Bearer $apiKey")
-        }
-        .body<JiraIssueResponse>()
-        .issues
-        .map {
-          JiraIssueShort(
-            id = it.id,
-            key = it.key,
-            summary = it.fields.summary!!,
-            assigneeName = it.fields.assignee?.name,
-            priority = it.fields.priority!!.name,
-            created = it.fields.created!!,
-            updated = it.fields.updated!!,
-          )
-        }
 
-    LOG.debug("Found ${issues.size} open issues for project {}", projectKey)
-    LOG.debug("{}", issues.joinToString(", ") { it.key })
+    val response =
+      runWithHandler<JiraIssueResponse>("$endpoint/rest/api/2/search?jql=$jql&fields=$fields")
 
-    return issues
+    LOG.debug("Found ${response.issues.size} open issues for project {}", projectKey)
+    LOG.debug("{}", response.issues.joinToString(", ") { it.key })
+
+    return response.issues.map {
+      JiraIssueShort(
+        id = it.id,
+        key = it.key,
+        summary = it.fields.summary!!,
+        assigneeName = it.fields.assignee?.name,
+        priority = it.fields.priority!!.name,
+        created = it.fields.created!!,
+        updated = it.fields.updated!!,
+      )
+    }
   }
 
   suspend fun getIssueWorklog(issueKey: String, jiraUserKey: String): List<JiraWorklogEntryShort> {
-    val issue =
-      client
-        .get("$endpoint/rest/api/2/issue/$issueKey?fields=worklog") {
-          header("Authorization", "Bearer $apiKey")
-        }
-        .body<JiraIssue>()
+    val issue = runWithHandler<JiraIssue>("$endpoint/rest/api/2/issue/$issueKey?fields=worklog")
 
     return issue.fields.worklog!!
       .worklogs
@@ -121,24 +93,14 @@ class JiraApi(
   }
 
   suspend fun getIssueId(issueKey: String): String {
-    val issue =
-      client
-        .get("$endpoint/rest/api/2/issue/$issueKey") { header("Authorization", "Bearer $apiKey") }
-        .body<JiraIssue>()
-
+    val issue = runWithHandler<JiraIssue>("$endpoint/rest/api/2/issue/$issueKey")
     LOG.debug("Found issue ID {} for key {}", issue.id, issueKey)
-
     return issue.id
   }
 
   suspend fun getIssueKey(id: String): IssueKey {
-    val issue =
-      client
-        .get("$endpoint/rest/api/2/issue/$id") { header("Authorization", "Bearer $apiKey") }
-        .body<JiraIssue>()
-
+    val issue = runWithHandler<JiraIssue>("$endpoint/rest/api/2/issue/$id")
     LOG.debug("Found issue key {} for ID {}", issue.key, id)
-
     return IssueKey(issue.key)
   }
 
@@ -180,19 +142,14 @@ class JiraApi(
 
     LOG.debug("jira - creating worklog entry: {}", body)
 
-    val response =
-      client.post("$endpoint/rest/tempo-timesheets/4/worklogs") {
-        header("Authorization", "Bearer $apiKey")
+    return runWithHandler<List<TempoWorklogEntry>>(
+        "$endpoint/rest/tempo-timesheets/4/worklogs",
+        HttpMethod.Post,
+      ) {
         header("Content-Type", "application/json")
         setBody(body)
       }
-
-    if (!response.status.isSuccess()) {
-      LOG.error("Worklog creation failed: ${response.bodyAsText()}")
-      throw AppError.internal("Failed to create worklog entry")
-    }
-
-    return response.body<List<TempoWorklogEntry>>().first()
+      .first()
   }
 
   suspend fun updateWorklogEntry(input: UpdateWorklogInput): TempoWorklogEntry {
@@ -210,61 +167,93 @@ class JiraApi(
 
     LOG.debug("jira - updating worklog entry: {}", body)
 
-    val response =
-      client.put("$endpoint/rest/tempo-timesheets/4/worklogs/${input.worklogEntryId}") {
-        header("Authorization", "Bearer $apiKey")
-        header("Content-Type", "application/json")
-        setBody(body)
-      }
-
-    if (!response.status.isSuccess()) {
-      LOG.error("Worklog update failed: ${response.bodyAsText()}")
-      throw AppError.internal("Failed to update worklog entry")
+    return runWithHandler<TempoWorklogEntry>(
+      "$endpoint/rest/tempo-timesheets/4/worklogs/${input.worklogEntryId}",
+      HttpMethod.Put,
+    ) {
+      header("Content-Type", "application/json")
+      setBody(body)
     }
-
-    return response.body<TempoWorklogEntry>()
   }
 
   suspend fun getDefaultBillingAccountForIssue(issueKey: String): IssueTimeSlotAccount? {
     // The response is obtained as an application/x-javascript;charset=UTF-8 response.
     // The actual JSON will be wrapped like: `__fn__({...})`
-    val response =
-      client.get(
+    val body =
+      runWithHandler<String>(
         "$endpoint/rest/tempo-rest/1.0/accounts/json/billingKeyList/$issueKey?callback=__fn__"
       ) {
-        header("Authorization", "Bearer $apiKey")
         header("Accept", "application/x-javascript;charset=UTF-8")
       }
 
-    LOG.debug("Response: {}", response)
-
-    val body = response.bodyAsText()
-
-    LOG.debug("Json: {}", response)
-
-    val accounts =
-      json.decodeFromString<IssueTimeSlotAccountResponse>(
-        body.substringAfter("__fn__(", "").dropLast(1)
-      )
-
-    return accounts.values.find { it.selected } ?: accounts.values.firstOrNull()
+    try {
+      val accounts =
+        json.decodeFromString<IssueTimeSlotAccountResponse>(
+          body.substringAfter("__fn__(", "").dropLast(1)
+        )
+      return accounts.values.find { it.selected } ?: accounts.values.firstOrNull()
+    } catch (e: Exception) {
+      LOG.error("Failed to parse Jira response for billing account: {}", body, e)
+      return null
+    }
   }
 
   suspend fun listWorklogAttributes(): List<TempoWorkAttribute> {
     LOG.debug("Listing worklog attributes")
+
     val attributes =
-      client
-        .get("$endpoint/rest/tempo-core/1/work-attribute") {
-          header("Authorization", "Bearer $apiKey")
-        }
-        .body<List<TempoWorkAttribute>>()
+      runWithHandler<List<TempoWorkAttribute>>("$endpoint/rest/tempo-core/1/work-attribute")
+
     LOG.debug("Found ${attributes.size} worklog attributes")
+
     for (attribute in attributes) {
       LOG.debug(" - {}: {}", attribute.key, attribute.name)
     }
+
     return attributes
   }
+
+  private suspend inline fun <reified T> runWithHandler(
+    url: String,
+    method: HttpMethod = HttpMethod.Get,
+    crossinline builder: HttpRequestBuilder.() -> Unit = {},
+  ): T {
+    val response =
+      client.request(url) {
+        this.method = method
+        header("Authorization", "Bearer $apiKey")
+        builder()
+      }
+
+    handleResponseError(url, response)
+
+    try {
+      return response.body<T>()
+    } catch (e: Exception) {
+      LOG.error("Failed to parse Jira response ({})", url, e)
+      throw AppError.internal("Failed to parse Jira response")
+    }
+  }
+
+  private suspend fun handleResponseError(url: String, response: HttpResponse) {
+    if (response.status.isSuccess()) {
+      return
+    }
+    val error =
+      try {
+        response.body<JiraError>()
+      } catch (e: Exception) {
+        LOG.error("Failed to parse Jira error ({})", url, e)
+        throw AppError.internal("An error occurred when calling the Jira API")
+      }
+    LOG.error("Jira API call failed ({})", url, error)
+    throw error
+  }
 }
+
+@Serializable
+data class JiraError(val errorMessages: List<String>, val errors: Map<String, String>) :
+  Throwable()
 
 /** Customer account attribute. */
 @Serializable data class TimeSlotAttribute(val key: String, val value: String)

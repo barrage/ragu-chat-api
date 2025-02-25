@@ -97,14 +97,14 @@ enum class SettingKey {
   /**
    * The LLM provider to use for JiraKira.
    *
-   * DEFAULT: openai
+   * DEFAULT: [DefaultSetting.JIRA_KIRA_LLM_PROVIDER]
    */
   JIRA_KIRA_LLM_PROVIDER,
 
   /**
    * Which model will be used for JiraKira. Has to be compatible with [JIRA_KIRA_LLM_PROVIDER].
    *
-   * DEFAULT: gpt-4o
+   * DEFAULT: [DefaultSetting.JIRA_KIRA_MODEL]
    */
   JIRA_KIRA_MODEL,
 
@@ -164,7 +164,7 @@ enum class DefaultSetting(val setting: ApplicationSetting) {
     ApplicationSetting(SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS, 135.toString())
   ),
   JIRA_KIRA_LLM_PROVIDER(ApplicationSetting(SettingKey.JIRA_KIRA_LLM_PROVIDER, "openai")),
-  JIRA_KIRA_MODEL(ApplicationSetting(SettingKey.JIRA_KIRA_MODEL, "gpt-4o")),
+  JIRA_KIRA_MODEL(ApplicationSetting(SettingKey.JIRA_KIRA_MODEL, "gpt-4o-mini")),
 }
 
 /** DTO for updating multiple settings at once. */

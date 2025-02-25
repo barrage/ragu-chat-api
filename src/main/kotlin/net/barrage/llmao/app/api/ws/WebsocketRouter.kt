@@ -123,6 +123,9 @@ fun Application.websocketServer(
           }
         }
         .onFailure { e ->
+          if (e is AppError) {
+            emitter.emitError(e)
+          }
           LOG.error("Websocket exception occurred {}", e.message)
           val formatter =
             DateTimeFormatter.ofPattern("yyyy/MM/dd:HH:mm:ss").withZone(ZoneId.systemDefault())
@@ -136,7 +139,6 @@ fun Application.websocketServer(
           )
           server.removeWorkflow(session)
           server.removeSystemEmitter(session)
-          return@webSocket
         }
 
       // From this point on, the websocket connection is closed

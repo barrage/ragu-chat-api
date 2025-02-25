@@ -101,52 +101,57 @@ class WebsocketSessionManager(
   ) {
     when (message) {
       is IncomingSystemMessage.CreateNewWorkflow -> {
-        when (message.workflowType) {
-          null,
-          WorkflowType.CHAT.name -> {
-            LOG.debug("{} - opening chat workflow", session)
-            val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
-            val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
-            val workflow =
-              factory.newChatWorkflow(
-                userId = session.userId,
-                agentId =
-                  message.agentId
-                    ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing agentId"),
-                emitter = emitter,
-                toolEmitter = toolEmitter,
-              )
-            workflows[session] = workflow
+        val id =
+          when (message.workflowType) {
+            null,
+            WorkflowType.CHAT.name -> {
+              LOG.debug("{} - opening chat workflow", session)
+              val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
+              val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
+              val workflow =
+                factory.newChatWorkflow(
+                  userId = session.userId,
+                  agentId =
+                    message.agentId
+                      ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing agentId"),
+                  emitter = emitter,
+                  toolEmitter = toolEmitter,
+                )
+              workflows[session] = workflow
 
-            systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
+              systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
 
-            LOG.debug(
-              "{} - started workflow ({}) total workflows in manager: {}",
-              session,
-              workflow.id,
-              workflows.size,
-            )
+              workflow.id
+            }
+            WorkflowType.JIRAKIRA.name -> {
+              val jkFactory =
+                adapters.adapterForFeature<JiraKiraWorkflowFactory>()
+                  ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+
+              LOG.debug("{} - opening JiraKira workflow", session)
+
+              val workflow =
+                jkFactory.newJiraKiraWorkflow(
+                  session.userId,
+                  emitter = WebsocketEmitter.new(ws),
+                  toolEmitter = WebsocketEmitter.new(ws),
+                )
+
+              workflows[session] = workflow
+
+              systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
+
+              workflow.id
+            }
+            else -> throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
           }
-          WorkflowType.JIRAKIRA.name -> {
-            val jkFactory =
-              adapters.adapterForFeature<JiraKiraWorkflowFactory>()
-                ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
 
-            LOG.debug("{} - opening JiraKira workflow", session)
-
-            val workflow =
-              jkFactory.newJiraKiraWorkflow(
-                session.userId,
-                emitter = WebsocketEmitter.new(ws),
-                toolEmitter = WebsocketEmitter.new(ws),
-              )
-
-            workflows[session] = workflow
-
-            systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id))
-          }
-          else -> throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
-        }
+        LOG.debug(
+          "{} - started workflow ({}) total workflows in manager: {}",
+          session,
+          id,
+          workflows.size,
+        )
       }
       is IncomingSystemMessage.LoadExistingWorkflow -> {
         val workflow = workflows[session]

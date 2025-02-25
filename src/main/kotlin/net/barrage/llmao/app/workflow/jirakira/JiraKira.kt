@@ -140,6 +140,8 @@ class JiraKira(
 
     for (toolCall in response.message.toolCalls) {
       try {
+        toolEmitter?.emit(ToolEvent.ToolCall(toolCall))
+
         when (toolCall.name) {
           TOOL_CREATE_WORKLOG_ENTRY -> {
             LOG.debug("{} - creating worklog entry; input: {}", jiraUser.name, toolCall.arguments)
@@ -240,6 +242,12 @@ class JiraKira(
 
         toolEmitter?.emit(
           ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "${toolCall.name}: success"))
+        )
+      } catch (e: JiraError) {
+        LOG.error("Jira API error:", e)
+        toolResults.add(ChatMessage.toolResult("error: ${e.message}", toolCall.id))
+        toolEmitter?.emit(
+          ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "Error: ${e.message}"))
         )
       } catch (e: Throwable) {
         LOG.error("Error in tool call", e)

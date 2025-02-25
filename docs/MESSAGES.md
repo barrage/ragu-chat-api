@@ -165,6 +165,80 @@ Sent when a chat workflow has generated a title for the chat.
 }
 ```
 
+### JiraKira
+
+Jira Kira conversations are not streaming.
+
+- `jirakira.response`
+
+Obtained as the final response from the LLM.
+
+```json
+{
+  "type": "jirakira.response",
+  "content": "response_content"
+}
+```
+
+- `jirakira.worklog_created`
+
+Sent when a worklog entry is created for a Jira issue.
+The worklog field is the original Jira worklog entry model.
+
+```json
+{
+  "type": "jirakira.worklog_created",
+  "worklog": "JIRA_WORKLOG_ENTRY_MODEL"
+}
+```
+
+- `jirakira.worklog_updated`
+
+Sent when a worklog entry is updated for a Jira issue.
+The worklog field is the original Jira worklog entry model.
+
+```json
+{
+  "type": "jirakira.worklog_updated",
+  "worklog": "JIRA_WORKLOG_ENTRY_MODEL"
+}
+```
+
+## Tools
+
+All workflows can emit tool events. These can be used to notify clients of tool calls and results.
+
+- `tool.call`
+
+Sent whenever an agent calls a tool.
+
+```json
+{
+  "type": "tool.call",
+  "data": {
+    "id": "tool_call_id",
+    "name": "tool_name",
+    "arguments": "tool_arguments"
+  }
+}
+```
+
+- `tool.result`
+
+Sent whenever an agent receives a tool result.
+The content field will usually be in the format of `tool_name: success`. Errors in tools are not sent back to the
+client.
+
+```json
+{
+  "type": "tool.result",
+  "result": {
+    "id": "tool_call_id",
+    "content": "tool_result_content"
+  }
+}
+```
+
 ## Error
 
 - `error`

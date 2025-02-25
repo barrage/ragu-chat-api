@@ -30,7 +30,8 @@ class JiraKiraWorkflowFactory(
     val workflowId = KUUID.randomUUID()
 
     val userJiraApiKey =
-      jiraKiraRepository.getUserApiKey(userId) ?: throw Exception("No Jira API key found for user")
+      jiraKiraRepository.getUserApiKey(userId)
+        ?: throw AppError.api(ErrorReason.InvalidOperation, "No Jira API key found for user")
 
     val settings = settingsService.getAllWithDefaults()
 

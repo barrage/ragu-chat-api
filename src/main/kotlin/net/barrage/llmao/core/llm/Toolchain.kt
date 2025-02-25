@@ -63,6 +63,7 @@ class ToolchainBuilder {
   }
 }
 
+/** Used to collect tool calls from streaming responses. */
 fun collectToolCalls(toolCalls: MutableMap<Int, ToolCallData>, chunk: ChatMessageChunk) {
   val chunkToolCalls = chunk.toolCalls ?: return
 
@@ -93,6 +94,25 @@ fun collectToolCalls(toolCalls: MutableMap<Int, ToolCallData>, chunk: ChatMessag
   }
 }
 
+/**
+ * Represents a finalized tool call. This can be obtained directly from LLM responses if not
+ * streaming. If streaming, this is obtained by collecting the tool call chunks.
+ */
+@Serializable
+data class ToolCallData(
+  /** Tool correlation ID. Used by some LLMs to associate the tool result to the tool call. */
+  val id: String? = null,
+
+  /** The name of the tool as defined in the JSON schema. */
+  val name: String,
+
+  /**
+   * The arguments for the tool call. It is generally a good idea to specify the arguments as a JSON
+   * object so that it can be easily deserialized from the LLM.
+   */
+  var arguments: String,
+)
+
 /** Used to notify clients of tool calls and results. */
 @Serializable
 sealed class ToolEvent {
@@ -104,25 +124,6 @@ sealed class ToolEvent {
   @SerialName("tool.result")
   data class ToolResult(val result: ToolCallResult) : ToolEvent()
 }
-
-/**
- * Represents a finalized tool call. This can be obtained directly from LLM responses if not
- * streaming. If streaming, this is obtained by collecting the tool call chunks.
- */
-@Serializable
-data class ToolCallData(
-  /** Tool correlation ID. Used by some LLMs to associate the tool result to the tool call. */
-  val id: String? = null,
-  val name: String,
-  var arguments: String,
-)
-
-@Serializable
-data class ToolCallMessage(
-  val id: String? = null,
-  val type: String = "function",
-  val function: FunctionCall,
-)
 
 /** Used as a native application model for mapping tool call streams. */
 @Serializable
@@ -149,9 +150,10 @@ data class ToolCallChunk(
 /** Used as a native application model for mapping function call arguments. */
 @Serializable data class FunctionCall(val name: String?, val arguments: String?)
 
+/** Holds the result of a tool call and its correlation ID. */
 @Serializable
 data class ToolCallResult(
-  /** Tool correlation ID. Used on some LLMs to associate the tool result to the tool call. */
+  /** Tool correlation ID. Used in most LLMs to associate the tool result to the tool call. */
   val id: String?,
 
   /** The result of the tool call. */
