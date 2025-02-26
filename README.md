@@ -17,6 +17,8 @@
 - [WebSocket](#websocket)
 - [Specialists](#specialists)
 - [WhatsApp](#whatsapp)
+    - [Configuration](#configuration)
+    - [Infobip setup](#infobip-setup)
 - [Agent tools](#agent-tools)
     - [Defining custom tools](#defining-custom-tools)
 
@@ -333,12 +335,40 @@ deleted via the `DELETE /jirakira/key` endpoint.
 
 ## WhatsApp
 
-WhatsApp is a messaging platform that allows users to send and receive messages through their phone numbers.
-It is used as a chat provider for Kappi.
+To use WhatsApp as a chat provider, set the `ktor.features.whatsApp` flag to `true`.
+This feature uses Infobip as the downstream service that forwards messages to Kappi.
 
-### Setup
+### Configuration
+
+To make an agent available for WhatsApp, set the `WHATSAPP_AGENT_ID` application setting to the desired agent's ID. This
+can be done via the `PUT /admin/settings` endpoint. Only a single agent can be used as the active WhatsApp agent and it
+is recommended to use a dedicated agent for this purpose.
+
+Whatsapp is usually accessed from mobile clients, so message size plays an important role as we don't want users to
+receive messages that are too long. The maximum message size is limited to 135 tokens by default. This can be configured
+via the `WHATSAPP_AGENT_MAX_COMPLETION_TOKENS` application setting.
+
+Example configuration `PUT /admin/settings`:
+
+```json
+{
+  "updates": [
+    {
+      "key": "WHATSAPP_AGENT_ID",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "WHATSAPP_AGENT_MAX_COMPLETION_TOKENS",
+      "value": "135"
+    }
+  ]
+}
+```
+
+### Infobip setup
 
 Before you can use WhatsApp, you need to create an account on [Infobip](https://www.infobip.com/).
+
 You will need to create an API key, a WhatsApp sender number, a WhatsApp template, and an inbound configuration. The
 template will be used to send a welcome message to users, so that the users know the number of the chat provider.
 
@@ -369,10 +399,6 @@ You can create a new WhatsApp template from the Infobip dashboard by navigating 
 https://portal.infobip.com/channels-and-numbers/channels/whatsapp/templates. There you will see your WhatsApp templates.
 You will need to set the `infobip.template` configuration value to the WhatsApp template name.
 More info can be found [here](https://www.infobip.com/docs/whatsapp/message-types#template-registration).
-
-### Activation
-
-To use WhatsApp as a chat provider, you need to set the `ktor.features.whatsApp` configuration to `true`.
 
 ## Agent tools
 
