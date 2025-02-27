@@ -12,6 +12,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
+import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminAgentsQuery
 import net.barrage.llmao.app.api.http.queryListAgentsFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
@@ -30,18 +31,40 @@ import net.barrage.llmao.core.models.UpdateTools
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.AgentService
+import net.barrage.llmao.core.settings.SettingKey
+import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.plugins.pathUuid
 import net.barrage.llmao.plugins.query
 import net.barrage.llmao.plugins.queryParam
+import net.barrage.llmao.tryUuid
 
-fun Route.adminAgentsRoutes(agentService: AgentService) {
+/** Agent DTO for display purposes. */
+@Serializable
+data class AgentDisplay(
+  val agent: Agent,
+  val configuration: AgentConfiguration? = null,
+  val whatsapp: Boolean = false,
+)
+
+fun AgentWithConfiguration.toAgentDisplay(activeWappAgentId: KUUID?) =
+  AgentDisplay(
+    agent = agent,
+    configuration = configuration,
+    whatsapp = agent.id == activeWappAgentId,
+  )
+
+fun Route.adminAgentsRoutes(agentService: AgentService, settingsService: SettingsService) {
   route("/admin/agents") {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val filters = call.query(SearchFiltersAdminAgentsQuery::class).toSearchFiltersAdminAgents()
-      val agents = agentService.listAgentsAdmin(pagination, filters)
+      val activeWappAgentId = settingsService.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
+      val agents =
+        agentService.listAgentsAdmin(pagination, filters).map {
+          it.toAgentDisplay(activeWappAgentId)
+        }
       call.respond(HttpStatusCode.OK, agents)
     }
 

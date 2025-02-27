@@ -3,8 +3,10 @@ package net.barrage.llmao
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
+import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.config.ConfigLoader
 import io.ktor.server.config.ConfigLoader.Companion.load
 import io.ktor.server.config.MapApplicationConfig
@@ -18,6 +20,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.util.*
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
@@ -96,10 +99,13 @@ open class IntegrationTest(
    * The main test execution function that uses configuration obtained from the test containers as
    * the application environment.
    */
-  fun test(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
+  fun test(block: suspend ApplicationTestBuilder.(client: HttpClient) -> Unit) = testApplication {
     environment { config = cfg }
+    val client = createClient {
+      install(ContentNegotiation) { json(json = Json { ignoreUnknownKeys = true }) }
+    }
     try {
-      block()
+      block(client)
     } catch (e: Throwable) {
       e.printStackTrace()
       throw e

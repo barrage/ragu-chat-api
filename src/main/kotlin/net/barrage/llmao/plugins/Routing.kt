@@ -51,7 +51,7 @@ fun Application.configureRouting(state: ApplicationState) {
 
     // Admin API routes
     authenticate("auth-session-admin") {
-      adminAgentsRoutes(state.services.agent)
+      adminAgentsRoutes(state.services.agent, state.settingsService)
       adminUserRoutes(state.services.user)
       adminChatsRoutes(state.services.chat)
       administrationRouter(state.services.admin)

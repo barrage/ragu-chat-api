@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -11,9 +10,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -35,6 +32,7 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
@@ -91,63 +89,61 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun listingAgentsWorksDefaultPagination() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun listingAgentsWorksDefaultPagination() = test { client ->
     val response =
       client.get("/admin/agents") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<CountedList<AgentWithConfiguration>>()
+    val body = response.body<CountedList<AgentDisplay>>()
     assertEquals(2, body.total)
   }
 
   @Test
-  fun listingAgentsWorksPagination() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun listingAgentsWorksPagination() = test { client ->
     val response =
       client.get("/admin/agents?page=2&perPage=1") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<CountedList<AgentWithConfiguration>>()
+
+    val body = response.body<CountedList<AgentDisplay>>()
+
     assertEquals(2, body.total)
     assertEquals(1, body.items.size)
   }
 
   @Test
-  fun listingAgentsWorksSearchByName() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun listingAgentsWorksSearchByName() = test { client ->
     val response =
       client.get("/admin/agents?name=tone") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<CountedList<AgentWithConfiguration>>()
+    val body = response.body<CountedList<AgentDisplay>>()
     assertEquals(1, body.total)
     assertEquals(agentOne.id, body.items.first().agent.id)
   }
 
   @Test
-  fun listingAgentsWorksFilterByStatus() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun listingAgentsWorksFilterByStatus() = test { client ->
     val response =
       client.get("/admin/agents?active=false") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
       }
 
     assertEquals(200, response.status.value)
+
     val body = response.body<CountedList<AgentWithConfiguration>>()
     assertEquals(1, body.total)
     assertEquals(agentTwo.id, body.items.first().agent.id)
   }
 
   @Test
-  fun createAgentWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun createAgentWorks() = test { client ->
     val createAgent =
       CreateAgent(
         name = "TestAgentCreated",
@@ -196,10 +192,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun createAgentFailsWrongLLmProvider() = test {
-    val client = createClient {
-      install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-    }
+  fun createAgentFailsWrongLLmProvider() = test { client ->
     val createAgent =
       CreateAgent(
         name = "TestAgentCreated",
@@ -230,8 +223,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getAgentWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getAgentWorks() = test { client ->
     val response =
       client.get("/admin/agents/${agentOne.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -243,8 +235,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun updateAgentWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun updateAgentWorks() = test { client ->
     val agent = postgres.testAgent(name = "TestAgentUpdate")
     postgres.testAgentConfiguration(agent.id, version = 1)
     val updateAgent =
@@ -284,9 +275,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun updatingAgentInstructionsWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
+  fun updatingAgentInstructionsWorks() = test { client ->
     val agent = postgres.testAgent()
     postgres.testAgentConfiguration(agent.id, version = 1)
 
@@ -337,9 +326,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun updatingAgentMetadataDoesNotBumpAgentVersion() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
+  fun updatingAgentMetadataDoesNotBumpAgentVersion() = test { client ->
     val agent = postgres.testAgent()
     postgres.testAgentConfiguration(agent.id, version = 1)
 
@@ -372,8 +359,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun updateAgentNameSameConfigurationSameVersionWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun updateAgentNameSameConfigurationSameVersionWorks() = test { client ->
     val agent = postgres.testAgent(name = "TestAgentUpdate")
     postgres.testAgentConfiguration(
       agent.id,
@@ -418,8 +404,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun updateAgentFailsNotFound() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun updateAgentFailsNotFound() = test { client ->
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
@@ -449,8 +434,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun deleteAgentWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun deleteAgentWorks() = test { client ->
     val response =
       client.delete("/admin/agents/${agentTwo.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -460,8 +444,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun deleteAgentFailsForActiveAgent() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun deleteAgentFailsForActiveAgent() = test { client ->
     val response =
       client.delete("/admin/agents/${agentOne.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -476,8 +459,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getAgentVersionsWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getAgentVersionsWorks() = test { client ->
     val response =
       client.get("/admin/agents/${agentOne.id}/versions?sortOrder=desc") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -494,8 +476,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getAgentVersionWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getAgentVersionWorks() = test { client ->
     val response =
       client.get("/admin/agents/${agentOne.id}/versions/${agentOneConfigurationV1.id}") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -515,8 +496,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getAgentVersionEvaluatedMessagesWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getAgentVersionEvaluatedMessagesWorks() = test { client ->
     val response =
       client.get("/admin/agents/${agentOne.id}/versions/${agentOneConfigurationV1.id}/messages") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -530,8 +510,7 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun rollbackAgentVersionWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun rollbackAgentVersionWorks() = test { client ->
     val response =
       client.put("/admin/agents/${agentOne.id}/versions/${agentOneConfigurationV1.id}/rollback") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -542,5 +521,20 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals(agentOne.id, body.agent.id)
     assertEquals(agentOneConfigurationV1.id, body.agent.activeConfigurationId)
     assertEquals(agentOneConfigurationV1.id, body.configuration.id)
+  }
+
+  @Test
+  fun listingWithWhatsAppWorks() = test { client ->
+    postgres.setWhatsAppAgent(agentOne.id)
+
+    val response =
+      client.get("/admin/agents") {
+        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      }
+
+    assertEquals(200, response.status.value)
+    val body = response.body<CountedList<AgentDisplay>>()
+    assertEquals(2, body.total)
+    assertTrue(body.items.any { it.whatsapp })
   }
 }
