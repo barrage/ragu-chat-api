@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -9,7 +8,6 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
@@ -25,6 +23,7 @@ import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 
 class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   private lateinit var agentOne: Agent
@@ -78,9 +77,8 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     }
   }
 
-  @org.junit.jupiter.api.Test
-  fun agentUploadAvatarJpeg() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  @Test
+  fun agentUploadAvatarJpeg() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -100,9 +98,8 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals("test", responseCheck.bodyAsText())
   }
 
-  @org.junit.jupiter.api.Test
-  fun agentUploadAvatarPng() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  @Test
+  fun agentUploadAvatarPng() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -124,10 +121,8 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals("test", responseCheck.bodyAsText())
   }
 
-  @org.junit.jupiter.api.Test
-  fun agentDeleteAvatar() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
+  @Test
+  fun agentDeleteAvatar() = test { client ->
     val responseUpload =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -164,9 +159,8 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(404, responseCheckAvatar.status.value)
   }
 
-  @org.junit.jupiter.api.Test
-  fun agentFailUploadAvatarWrongContentType() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  @Test
+  fun agentFailUploadAvatarWrongContentType() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -180,9 +174,8 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(ErrorReason.InvalidContentType, body.errorReason)
   }
 
-  @org.junit.jupiter.api.Test
-  fun agentFailUploadAvatarTooLarge() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  @Test
+  fun agentFailUploadAvatarTooLarge() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
@@ -193,10 +186,8 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(413, response.status.value)
   }
 
-  @org.junit.jupiter.api.Test
-  fun agentAvatarUploadOverwrite() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
+  @Test
+  fun agentAvatarUploadOverwrite() = test { client ->
     val responseUploadOriginal =
       client.post("/admin/agents/${agentOne.id}/avatars") {
         header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))

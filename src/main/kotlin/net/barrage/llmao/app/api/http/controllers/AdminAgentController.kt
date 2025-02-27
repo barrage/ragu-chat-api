@@ -21,6 +21,7 @@ import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.runWithImage
 import net.barrage.llmao.core.models.Agent
+import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.models.AgentFull
@@ -45,6 +46,7 @@ import net.barrage.llmao.tryUuid
 data class AgentDisplay(
   val agent: Agent,
   val configuration: AgentConfiguration? = null,
+  val collections: List<AgentCollection>? = null,
   val whatsapp: Boolean = false,
 )
 
@@ -52,6 +54,14 @@ fun AgentWithConfiguration.toAgentDisplay(activeWappAgentId: KUUID?) =
   AgentDisplay(
     agent = agent,
     configuration = configuration,
+    whatsapp = agent.id == activeWappAgentId,
+  )
+
+fun AgentFull.toAgentDisplay(activeWappAgentId: KUUID?) =
+  AgentDisplay(
+    agent = agent,
+    configuration = configuration,
+    collections = collections,
     whatsapp = agent.id == activeWappAgentId,
   )
 
@@ -77,8 +87,10 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settingsService: Setting
     route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
+        val activeWappAgentId =
+          settingsService.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
         val agent = agentService.getFull(id)
-        call.respond(HttpStatusCode.OK, agent)
+        call.respond(HttpStatusCode.OK, agent.toAgentDisplay(activeWappAgentId))
       }
 
       put(updateAgent()) {

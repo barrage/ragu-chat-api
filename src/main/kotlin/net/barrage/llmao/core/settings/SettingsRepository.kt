@@ -4,7 +4,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.excluded
@@ -54,7 +53,7 @@ class SettingsRepository(private val dslContext: DSLContext) {
       dslContext
         .deleteFrom(APPLICATION_SETTINGS)
         .where(APPLICATION_SETTINGS.NAME.eq(key.name))
-        .awaitSingle()
+        .awaitFirstOrNull()
     }
 
     update.updates?.let { updates ->
@@ -64,7 +63,7 @@ class SettingsRepository(private val dslContext: DSLContext) {
         .onConflict(APPLICATION_SETTINGS.NAME)
         .doUpdate()
         .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
-        .awaitSingle()
+        .awaitFirstOrNull()
     }
   }
 }
