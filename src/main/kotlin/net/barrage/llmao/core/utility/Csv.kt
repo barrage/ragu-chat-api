@@ -7,7 +7,7 @@ import net.barrage.llmao.core.models.CsvImportErrorType
 import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.utils.validateEmail
+import net.barrage.llmao.core.validateEmail
 
 suspend fun parseUsers(csv: ByteReadChannel): Pair<List<CreateUser>, List<CsvImportError>> {
   val header = csv.readUTF8Line() ?: throw AppError.api(ErrorReason.InvalidParameter, "Empty CSV")

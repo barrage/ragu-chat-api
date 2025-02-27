@@ -29,7 +29,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
-import net.barrage.llmao.utils.ValidationError
+import net.barrage.llmao.core.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

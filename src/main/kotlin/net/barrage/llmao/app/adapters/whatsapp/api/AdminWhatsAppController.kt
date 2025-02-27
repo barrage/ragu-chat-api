@@ -16,13 +16,13 @@ import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.app.api.http.pathUuid
+import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.plugins.pathUuid
-import net.barrage.llmao.plugins.query
 
 fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
   route("/admin/whatsapp/agent") {

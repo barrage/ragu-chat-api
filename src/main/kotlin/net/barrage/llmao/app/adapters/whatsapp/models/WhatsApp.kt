@@ -8,8 +8,8 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.WhatsAppChatsRecord
 import net.barrage.llmao.tables.records.WhatsAppMessagesRecord
 import net.barrage.llmao.tables.records.WhatsAppNumbersRecord
-import net.barrage.llmao.utils.Number
-import net.barrage.llmao.utils.Validation
+import net.barrage.llmao.core.Number
+import net.barrage.llmao.core.Validation
 
 @Serializable
 data class WhatsAppNumber(

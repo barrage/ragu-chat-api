@@ -9,18 +9,18 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthentication
-import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.CookieFactory
 import net.barrage.llmao.app.api.http.dto.SessionCookie
+import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.plugins.pathUuid
 
 fun Route.devController(
   authService: AuthenticationService,

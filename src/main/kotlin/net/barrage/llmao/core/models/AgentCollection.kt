@@ -5,8 +5,8 @@ import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.tables.records.AgentCollectionsRecord
-import net.barrage.llmao.utils.NotBlank
-import net.barrage.llmao.utils.Validation
+import net.barrage.llmao.core.NotBlank
+import net.barrage.llmao.core.Validation
 
 @Serializable
 data class AgentCollection(

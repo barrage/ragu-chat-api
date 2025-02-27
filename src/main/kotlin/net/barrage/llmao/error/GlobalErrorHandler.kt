@@ -1,14 +1,16 @@
-package net.barrage.llmao.plugins
+package net.barrage.llmao.error
 
 import io.ktor.http.*
+import io.ktor.serialization.JsonConvertException
 import io.ktor.server.application.*
+import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.NotFoundException
+import io.ktor.server.plugins.requestvalidation.RequestValidationException
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.util.logging.*
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.utils.ValidationError
+import net.barrage.llmao.core.ValidationError
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.plugins.GlobalErrorHandler")
 
@@ -34,21 +36,21 @@ fun Application.configureErrorHandling() {
 
     // KTOR specific exceptions
 
-    exception<io.ktor.server.plugins.NotFoundException> { call, err ->
+    exception<NotFoundException> { call, err ->
       call.respond(
         HttpStatusCode.NotFound,
         AppError.api(ErrorReason.EntityDoesNotExist, err.message ?: err.localizedMessage),
       )
     }
 
-    exception<io.ktor.server.plugins.BadRequestException> { call, err ->
-      if (err.cause is io.ktor.serialization.JsonConvertException) {
-        call.handleJsonConvert(err.cause!! as io.ktor.serialization.JsonConvertException)
+    exception<BadRequestException> { call, err ->
+      if (err.cause is JsonConvertException) {
+        call.handleJsonConvert(err.cause!! as JsonConvertException)
         return@exception
       }
 
-      if (err.cause?.cause is io.ktor.serialization.JsonConvertException) {
-        call.handleJsonConvert(err.cause!!.cause as io.ktor.serialization.JsonConvertException)
+      if (err.cause?.cause is JsonConvertException) {
+        call.handleJsonConvert(err.cause!!.cause as JsonConvertException)
         return@exception
       }
 
@@ -57,12 +59,12 @@ fun Application.configureErrorHandling() {
       call.respond(HttpStatusCode.BadRequest, err)
     }
 
-    exception<io.ktor.server.plugins.requestvalidation.RequestValidationException> { call, err ->
+    exception<RequestValidationException> { call, err ->
       val errors = err.reasons.map { Json.decodeFromString<ValidationError>(it) }
       call.respond(HttpStatusCode.UnprocessableEntity, errors)
     }
 
-    exception<io.ktor.serialization.JsonConvertException> { call, err ->
+    exception<JsonConvertException> { call, err ->
       call.respond(
         HttpStatusCode.BadRequest,
         AppError.api(ErrorReason.InvalidParameter, err.localizedMessage),
@@ -80,7 +82,7 @@ fun Application.configureErrorHandling() {
 }
 
 private suspend fun ApplicationCall.handleJsonConvert(
-  err: io.ktor.serialization.JsonConvertException
+  err: JsonConvertException
 ) {
   // In case of missing fields, only the message will be present
   val message = err.localizedMessage

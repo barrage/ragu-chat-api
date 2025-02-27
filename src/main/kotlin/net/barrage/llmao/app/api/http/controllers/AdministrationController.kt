@@ -7,6 +7,7 @@ import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import net.barrage.llmao.app.ProvidersResponse
+import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.core.models.AgentChatTimeSeries
 import net.barrage.llmao.core.models.DashboardCounts
 import net.barrage.llmao.core.models.common.Period
@@ -14,7 +15,6 @@ import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.plugins.queryParam
 
 fun Route.administrationRouter(service: AdministrationService) {
   get("/admin/providers", providers()) {

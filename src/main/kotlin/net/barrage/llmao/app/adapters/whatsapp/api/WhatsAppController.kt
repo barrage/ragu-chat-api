@@ -15,10 +15,10 @@ import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.app.api.http.pathUuid
+import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.plugins.pathUuid
-import net.barrage.llmao.plugins.user
 
 fun Route.whatsAppHookRoutes(whatsAppAdapter: WhatsAppAdapter) {
   post("/whatsapp/webhook", infobipResponse()) {

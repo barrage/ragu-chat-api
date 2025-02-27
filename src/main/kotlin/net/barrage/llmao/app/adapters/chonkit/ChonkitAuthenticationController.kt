@@ -10,10 +10,10 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthentication
 import net.barrage.llmao.app.adapters.chonkit.dto.ChonkitAuthenticationRequest
 import net.barrage.llmao.app.api.http.CookieFactory
+import net.barrage.llmao.app.api.http.queryParam
+import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.queryParam
-import net.barrage.llmao.plugins.user
 
 fun Route.chonkitAuthRouter(service: ChonkitAuthenticationService) {
   route("/auth/chonkit") {

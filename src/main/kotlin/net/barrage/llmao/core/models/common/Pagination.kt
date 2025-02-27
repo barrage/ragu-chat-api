@@ -2,7 +2,7 @@ package net.barrage.llmao.core.models.common
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.plugins.QueryParameter
+import net.barrage.llmao.app.api.http.QueryParameter
 
 /** Basic pagination parameters. */
 @Serializable

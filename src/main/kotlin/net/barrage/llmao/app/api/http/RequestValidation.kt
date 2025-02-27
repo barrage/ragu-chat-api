@@ -1,4 +1,4 @@
-package net.barrage.llmao.plugins
+package net.barrage.llmao.app.api.http
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*

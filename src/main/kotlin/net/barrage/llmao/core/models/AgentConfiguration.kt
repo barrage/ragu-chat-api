@@ -4,12 +4,12 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
-import net.barrage.llmao.utils.NotBlank
-import net.barrage.llmao.utils.Range
-import net.barrage.llmao.utils.SchemaValidation
-import net.barrage.llmao.utils.Validation
-import net.barrage.llmao.utils.ValidationError
-import net.barrage.llmao.utils.addSchemaErr
+import net.barrage.llmao.core.NotBlank
+import net.barrage.llmao.core.Range
+import net.barrage.llmao.core.SchemaValidation
+import net.barrage.llmao.core.Validation
+import net.barrage.llmao.core.ValidationError
+import net.barrage.llmao.core.addSchemaErr
 
 @Serializable
 data class AgentConfiguration(

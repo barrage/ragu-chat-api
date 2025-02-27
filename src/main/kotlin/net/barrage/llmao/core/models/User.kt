@@ -5,9 +5,9 @@ import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.UsersRecord
-import net.barrage.llmao.utils.Email
-import net.barrage.llmao.utils.NotBlank
-import net.barrage.llmao.utils.Validation
+import net.barrage.llmao.core.Email
+import net.barrage.llmao.core.NotBlank
+import net.barrage.llmao.core.Validation
 
 @Serializable
 data class User(

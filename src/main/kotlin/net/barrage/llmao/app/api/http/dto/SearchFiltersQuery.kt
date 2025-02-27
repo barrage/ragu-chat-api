@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.api.http.dto
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.app.api.http.QueryParameter
 import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.models.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.models.common.SearchFiltersAdminChats
@@ -8,7 +9,6 @@ import net.barrage.llmao.core.models.common.SearchFiltersAdminUsers
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.QueryParameter
 
 @Serializable
 data class SearchFiltersAdminUsersQuery(

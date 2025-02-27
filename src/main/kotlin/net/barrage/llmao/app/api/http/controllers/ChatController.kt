@@ -11,8 +11,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.app.api.http.pathUuid
+import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.EvaluateMessage
@@ -22,9 +25,6 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.plugins.pathUuid
-import net.barrage.llmao.plugins.query
-import net.barrage.llmao.plugins.user
 
 fun Route.chatsRoutes(service: ChatService) {
   route("/chats") {

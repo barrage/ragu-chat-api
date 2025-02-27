@@ -1,4 +1,4 @@
-package net.barrage.llmao.plugins
+package net.barrage.llmao.core
 
 import io.ktor.server.config.*
 import io.r2dbc.pool.ConnectionPool
@@ -27,6 +27,10 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DefaultConfiguration
 import org.postgresql.ds.PGSimpleDataSource
 
+/**
+ * The only exception to the dependency inversion principle. Repositories depend directly on
+ * [DSLContext] since there is almost no reason to abstract it.
+ */
 fun initDatabase(config: ApplicationConfig, applicationStopping: Job): DSLContext {
   val r2dbcHost = config.property("db.r2dbcHost").getString()
   val r2dbcPort = config.property("db.r2dbcPort").getString()
@@ -72,7 +76,7 @@ fun initDatabase(config: ApplicationConfig, applicationStopping: Job): DSLContex
   return dslContext
 }
 
-fun runLiquibaseMigration(config: ApplicationConfig) {
+private fun runLiquibaseMigration(config: ApplicationConfig) {
   val url = config.property("db.url").getString()
   val user = config.property("db.user").getString()
   val pw = config.property("db.password").getString()
@@ -91,7 +95,7 @@ fun runLiquibaseMigration(config: ApplicationConfig) {
   }
 }
 
-fun insertAdminUser(dslContext: DSLContext, config: ApplicationConfig) {
+private fun insertAdminUser(dslContext: DSLContext, config: ApplicationConfig) {
   val email = config.string("admin.email")
   val fullName = config.string("admin.fullName")
   val firstName = config.string("admin.firstName")

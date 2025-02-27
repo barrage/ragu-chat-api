@@ -11,9 +11,12 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminUsersQuery
+import net.barrage.llmao.app.api.http.pathUuid
+import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryListUsersFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.runWithImage
+import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.models.CreateUser
 import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.UpdateUserAdmin
@@ -24,9 +27,6 @@ import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.pathUuid
-import net.barrage.llmao.plugins.query
-import net.barrage.llmao.plugins.user
 import net.barrage.llmao.string
 
 fun Route.adminUserRoutes(userService: UserService) {

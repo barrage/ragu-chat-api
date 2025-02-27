@@ -21,6 +21,7 @@ import net.barrage.llmao.app.workflow.jirakira.JiraKiraRepository
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.initDatabase
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.core.repository.SessionRepository
@@ -37,7 +38,6 @@ import net.barrage.llmao.core.tokens.TokenUsageRepositoryRead
 import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.initDatabase
 import net.barrage.llmao.string
 import org.jooq.DSLContext
 

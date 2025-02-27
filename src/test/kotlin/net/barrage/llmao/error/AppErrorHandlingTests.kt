@@ -12,12 +12,12 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.app.api.http.pathUuid
+import net.barrage.llmao.core.NotBlank
+import net.barrage.llmao.core.Range
+import net.barrage.llmao.core.Validation
+import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.plugins.pathUuid
-import net.barrage.llmao.utils.NotBlank
-import net.barrage.llmao.utils.Range
-import net.barrage.llmao.utils.Validation
-import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

@@ -1,4 +1,4 @@
-package net.barrage.llmao.utils
+package net.barrage.llmao.core
 
 import io.ktor.server.plugins.requestvalidation.*
 import kotlin.reflect.KProperty
@@ -8,6 +8,65 @@ import kotlin.reflect.full.functions
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
+/**
+ * Auto-implements the `validate` method based on annotations used.
+ *
+ * We do not have an annotation processor so we must be careful to use these on the correct types,
+ * **especially** with schema validation functions.
+ */
+interface Validation {
+  fun validate(): ValidationResult {
+    val clazz = this::class
+
+    val errors = mutableListOf<ValidationError>()
+
+    val schemaValidation = clazz.findAnnotations<SchemaValidation>().firstOrNull()
+
+    schemaValidation?.let { schema ->
+      // Throws an exception if the function does not exist.
+      val fn = clazz.functions.first { it.name == schema.fn }
+      val schemaErrors = fn.call(this) as List<*>
+      for (error in schemaErrors) {
+        errors.add(error as ValidationError)
+      }
+    }
+
+    val fields = clazz.declaredMemberProperties
+
+    for (field in fields) {
+      // First validate the field's annotations
+      for (annotation in field.annotations) {
+        val error = validateInternal(this, field, annotation)
+        error?.let { errors.addAll(it) }
+      }
+
+      // Then validate nested object's fields
+      val value = field.getter.call(this)
+
+      if (value == null || value !is Validation) {
+        continue
+      }
+
+      when (val result = value.validate()) {
+        is ValidationResult.Valid -> {}
+        is ValidationResult.Invalid ->
+          errors.addAll(
+            result.reasons.map { reason ->
+              val original = Json.decodeFromString<ValidationError>(reason)
+              original.copy(fieldName = "${field.name}.${original.fieldName}")
+            }
+          )
+      }
+    }
+
+    return if (errors.isEmpty()) {
+      ValidationResult.Valid
+    } else {
+      ValidationResult.Invalid(errors.map { Json.encodeToString(it) })
+    }
+  }
+}
 
 /** Valid only on `String` fields. Validate the string is not blank. */
 @Target(AnnotationTarget.PROPERTY)
@@ -73,66 +132,6 @@ annotation class CharRange(
 @Retention(AnnotationRetention.RUNTIME)
 annotation class SchemaValidation(val fn: String)
 
-/**
- * Auto-implements the `validate` method based on annotations used.
- *
- * We do not have an annotation processor so we must be careful to use these on the correct types,
- * **especially** with schema validation functions.
- */
-interface Validation {
-  fun validate(): ValidationResult {
-    val clazz = this::class
-
-    val errors = mutableListOf<ValidationError>()
-
-    val schemaValidation = clazz.findAnnotations<SchemaValidation>().firstOrNull()
-
-    schemaValidation?.let { schema ->
-      // Throws an exception if the function does not exist.
-      val fn = clazz.functions.first { it.name == schema.fn }
-      val schemaErrors = fn.call(this) as List<*>
-      for (error in schemaErrors) {
-        errors.add(error as ValidationError)
-      }
-    }
-
-    val fields = clazz.declaredMemberProperties
-
-    for (field in fields) {
-      // First validate the field's annotations
-      for (annotation in field.annotations) {
-        val error = validateInternal(this, field, annotation)
-        error?.let { errors.addAll(it) }
-      }
-
-      // Then validate nested object's fields
-      val value = field.getter.call(this)
-      if (value != null && value is Validation) {
-
-        when (val result = value.validate()) {
-          is ValidationResult.Valid -> {}
-          is ValidationResult.Invalid ->
-            errors.addAll(
-              result.reasons.map {
-                Json.decodeFromString<ValidationError>(it)
-                  .copy(
-                    fieldName =
-                      "${field.name}.${Json.decodeFromString<ValidationError>(it).fieldName ?: ""}"
-                  )
-              }
-            )
-        }
-      }
-    }
-
-    return if (errors.isEmpty()) {
-      ValidationResult.Valid
-    } else {
-      ValidationResult.Invalid(errors.map { Json.encodeToString(it) })
-    }
-  }
-}
-
 /** Validation dirty work. All downstream functions return `true` if the validation passed */
 private fun validateInternal(
   instance: Validation,
@@ -182,7 +181,7 @@ private fun validateInternal(
       }
     }
     is CharRange -> {
-      return if (validateCharRange(value as String, annotation.min, annotation.max)) {
+      return if (validateStringLength(value as String, annotation.min, annotation.max)) {
         null
       } else {
         val message =
@@ -236,6 +235,6 @@ private fun validateRange(input: Any, min: Double, max: Double): Boolean {
   }
 }
 
-private fun validateCharRange(input: String, min: Int, max: Int): Boolean {
+private fun validateStringLength(input: String, min: Int, max: Int): Boolean {
   return input.length in min..max
 }

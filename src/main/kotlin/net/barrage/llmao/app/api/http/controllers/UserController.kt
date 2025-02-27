@@ -11,11 +11,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.runWithImage
+import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.models.UpdateUser
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.plugins.user
 
 fun Route.userRoutes(userService: UserService) {
   get("/users/current", getUser()) {

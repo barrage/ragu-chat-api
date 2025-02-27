@@ -3,7 +3,6 @@ package net.barrage.llmao.app.api.http.controllers
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.time.OffsetDateTime
@@ -11,6 +10,7 @@ import java.util.*
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.models.CsvImportErrorType
 import net.barrage.llmao.core.models.CsvImportUsersResult
 import net.barrage.llmao.core.models.Session
@@ -22,7 +22,6 @@ import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.sessionCookie
 import net.barrage.llmao.tables.references.USERS
-import net.barrage.llmao.utils.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll

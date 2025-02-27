@@ -12,6 +12,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminChatQuery
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.app.api.http.pathUuid
+import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryListChatsFilters
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
@@ -25,8 +27,6 @@ import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.plugins.pathUuid
-import net.barrage.llmao.plugins.query
 
 fun Route.adminChatsRoutes(service: ChatService) {
   route("/admin/chats") {

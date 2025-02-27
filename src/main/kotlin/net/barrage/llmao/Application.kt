@@ -1,12 +1,22 @@
 package net.barrage.llmao
 
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopping
+import io.ktor.server.application.install
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.netty.EngineMain
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
+import net.barrage.llmao.app.api.http.configureCors
+import net.barrage.llmao.app.api.http.configureOpenApi
+import net.barrage.llmao.app.api.http.configureRequestValidation
+import net.barrage.llmao.app.api.http.configureRouting
+import net.barrage.llmao.app.api.http.configureSession
+import net.barrage.llmao.app.api.http.extendSession
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.EventListener
@@ -15,14 +25,7 @@ import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.plugins.configureCors
-import net.barrage.llmao.plugins.configureErrorHandling
-import net.barrage.llmao.plugins.configureOpenApi
-import net.barrage.llmao.plugins.configureRequestValidation
-import net.barrage.llmao.plugins.configureRouting
-import net.barrage.llmao.plugins.configureSerialization
-import net.barrage.llmao.plugins.configureSession
-import net.barrage.llmao.plugins.extendSession
+import net.barrage.llmao.error.configureErrorHandling
 
 fun main(args: Array<String>) {
   EngineMain.main(args)
@@ -37,7 +40,15 @@ fun Application.module() {
   val state = ApplicationState(environment.config, applicationStoppingJob, stateChangeListener)
   val toolchainFactory = ToolchainFactory(state.services, state.repository.agent)
 
-  configureSerialization()
+  install(ContentNegotiation) {
+    json(
+      Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        encodeDefaults = true
+      }
+    )
+  }
   configureSession(state.services.auth)
   extendSession(state.services.auth)
   configureOpenApi()
