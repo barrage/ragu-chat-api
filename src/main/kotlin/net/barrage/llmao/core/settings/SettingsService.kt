@@ -169,14 +169,19 @@ enum class DefaultSetting(val setting: ApplicationSetting) {
 
 /** DTO for updating multiple settings at once. */
 @Serializable
-data class SettingsUpdate(val updates: List<SettingUpdate>) {
+data class SettingsUpdate(
+  val updates: List<SettingUpdate>? = null,
+  val removals: List<SettingKey>? = null,
+) {
   fun validate() {
-    for (update in updates) {
-      if (update.value.isBlank()) {
-        throw AppError.api(
-          ErrorReason.InvalidParameter,
-          "Invalid setting '${update.key}'; value cannot be blank",
-        )
+    updates?.let {
+      for (update in updates) {
+        if (update.value.isBlank()) {
+          throw AppError.api(
+            ErrorReason.InvalidParameter,
+            "Invalid setting '${update.key}'; value cannot be blank",
+          )
+        }
       }
     }
   }

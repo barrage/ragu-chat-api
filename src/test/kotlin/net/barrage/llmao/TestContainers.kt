@@ -43,8 +43,8 @@ import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
 import net.barrage.llmao.core.models.toSessionData
 import net.barrage.llmao.core.models.toUser
-import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.settings.SettingKey
+import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
@@ -431,13 +431,22 @@ class TestPostgres {
   }
 
   suspend fun testSettings(settings: SettingsUpdate) {
-    dslContext
-      .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
-      .apply { settings.updates.forEach { setting -> values(setting.key.name, setting.value) } }
-      .onConflict(APPLICATION_SETTINGS.NAME)
-      .doUpdate()
-      .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
-      .awaitSingle()
+    settings.removals?.forEach { key ->
+      dslContext
+        .deleteFrom(APPLICATION_SETTINGS)
+        .where(APPLICATION_SETTINGS.NAME.eq(key.name))
+        .awaitSingle()
+    }
+
+    settings.updates?.let { updates ->
+      dslContext
+        .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
+        .apply { updates.forEach { setting -> values(setting.key.name, setting.value) } }
+        .onConflict(APPLICATION_SETTINGS.NAME)
+        .doUpdate()
+        .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
+        .awaitSingle()
+    }
   }
 }
 

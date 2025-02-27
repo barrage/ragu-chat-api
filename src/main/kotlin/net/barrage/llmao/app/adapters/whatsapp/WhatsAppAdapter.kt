@@ -78,8 +78,15 @@ class WhatsAppAdapter(
     agentRepository.get(agentId)
 
     val update =
-      SettingsUpdate(listOf(SettingUpdate(SettingKey.WHATSAPP_AGENT_ID, agentId.toString())))
+      SettingsUpdate(
+        updates = listOf(SettingUpdate(SettingKey.WHATSAPP_AGENT_ID, agentId.toString()))
+      )
 
+    settingsService.update(update)
+  }
+
+  suspend fun unsetAgent() {
+    val update = SettingsUpdate(removals = listOf(SettingKey.WHATSAPP_AGENT_ID))
     settingsService.update(update)
   }
 

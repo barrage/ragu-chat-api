@@ -50,12 +50,21 @@ class SettingsRepository(private val dslContext: DSLContext) {
   }
 
   suspend fun update(update: SettingsUpdate) {
-    dslContext
-      .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
-      .apply { update.updates.forEach { setting -> values(setting.key.name, setting.value) } }
-      .onConflict(APPLICATION_SETTINGS.NAME)
-      .doUpdate()
-      .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
-      .awaitSingle()
+    update.removals?.forEach { key ->
+      dslContext
+        .deleteFrom(APPLICATION_SETTINGS)
+        .where(APPLICATION_SETTINGS.NAME.eq(key.name))
+        .awaitSingle()
+    }
+
+    update.updates?.let { updates ->
+      dslContext
+        .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
+        .apply { updates.forEach { setting -> values(setting.key.name, setting.value) } }
+        .onConflict(APPLICATION_SETTINGS.NAME)
+        .doUpdate()
+        .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
+        .awaitSingle()
+    }
   }
 }
