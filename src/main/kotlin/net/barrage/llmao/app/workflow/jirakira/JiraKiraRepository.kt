@@ -78,23 +78,25 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
       .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert workflow")
   }
 
-  suspend fun insertJiraKiraMessage(message: JiraKiraMessageInsert): KUUID {
-    return dslContext
-      .insertInto(JIRA_KIRA_MESSAGES)
-      .set(JIRA_KIRA_MESSAGES.WORKFLOW_ID, message.workflowId)
-      .set(JIRA_KIRA_MESSAGES.SENDER, message.sender)
-      .set(JIRA_KIRA_MESSAGES.SENDER_TYPE, message.senderType)
-      .set(JIRA_KIRA_MESSAGES.TOOL_CALLS, message.toolCalls)
-      .set(JIRA_KIRA_MESSAGES.TOOL_CALL_ID, message.toolCallId)
-      .set(JIRA_KIRA_MESSAGES.CONTENT, message.content)
-      .set(JIRA_KIRA_MESSAGES.RESPONSE_TO, message.responseTo)
-      .returning(JIRA_KIRA_MESSAGES.ID)
-      .awaitFirstOrNull()!!
-      .id!!
-  }
-
-  suspend fun insertJiraKiraMessages(messages: List<JiraKiraMessageInsert>) {
+  suspend fun insertJiraKiraMessages(
+    userMessage: JiraKiraMessageInsert,
+    messages: List<JiraKiraMessageInsert>,
+  ) {
     return dslContext.transactionCoroutine { ctx ->
+      val messageId =
+        ctx
+          .dsl()
+          .insertInto(JIRA_KIRA_MESSAGES)
+          .set(JIRA_KIRA_MESSAGES.WORKFLOW_ID, userMessage.workflowId)
+          .set(JIRA_KIRA_MESSAGES.SENDER, userMessage.sender)
+          .set(JIRA_KIRA_MESSAGES.SENDER_TYPE, userMessage.senderType)
+          .set(JIRA_KIRA_MESSAGES.TOOL_CALLS, userMessage.toolCalls)
+          .set(JIRA_KIRA_MESSAGES.TOOL_CALL_ID, userMessage.toolCallId)
+          .set(JIRA_KIRA_MESSAGES.CONTENT, userMessage.content)
+          .returning(JIRA_KIRA_MESSAGES.ID)
+          .awaitFirstOrNull()
+          ?.id ?: throw AppError.internal("Failed to insert message")
+
       for (message in messages) {
         ctx
           .dsl()
@@ -105,7 +107,7 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
           .set(JIRA_KIRA_MESSAGES.TOOL_CALLS, message.toolCalls)
           .set(JIRA_KIRA_MESSAGES.TOOL_CALL_ID, message.toolCallId)
           .set(JIRA_KIRA_MESSAGES.CONTENT, message.content)
-          .set(JIRA_KIRA_MESSAGES.RESPONSE_TO, message.responseTo)
+          .set(JIRA_KIRA_MESSAGES.RESPONSE_TO, messageId)
           .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message")
       }
     }

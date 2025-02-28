@@ -23,7 +23,7 @@ class JiraKiraWorkflow(val id: KUUID, val userId: KUUID, private val jirakira: J
   override fun execute(message: String) {
     scope.launch {
       try {
-        jirakira.completion(message)
+        jirakira.execute(message)
       } catch (e: AppError) {
         LOG.error("Error in JiraKira", e)
         jirakira.emitError(

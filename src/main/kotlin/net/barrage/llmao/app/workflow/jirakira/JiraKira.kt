@@ -10,6 +10,7 @@ import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolCallResult
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolEvent
@@ -19,6 +20,7 @@ import net.barrage.llmao.core.tokens.TokenUsageType
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.jirakira.JiraKira")
 
@@ -60,38 +62,75 @@ class JiraKira(
 ) {
   /** Lazily initialized when calling [completion] for the first time. */
   private lateinit var toolDefinitions: List<ToolDefinition>
+
+  /** The message history that always starts with the context. */
   private val history: MutableList<ChatMessage> = mutableListOf(ChatMessage.system(context()))
+
+  /** Current Jira Kira state. */
   private var state: JiraKiraState = JiraKiraState.New
 
-  suspend fun completion(
-    /** The original user message. */
-    message: String,
+  /** Used to prevent Jira Kira inputs when it is already doing work. */
+  private var lock: Boolean = false
+
+  suspend fun emitError(e: AppError) {
+    emitter.emitError(e)
+  }
+
+  suspend fun execute(message: String) {
+    if (lock) {
+      throw AppError.api(ErrorReason.Websocket, "Jira Kira is already busy")
+    }
+
+    try {
+      if (state == JiraKiraState.New) {
+        // Ensures tools are initialized
+        loadTools()
+        trackWorkflow()
+        state = JiraKiraState.Persisted
+      }
+
+      val buffer = mutableListOf<ChatMessage>(ChatMessage.user(message))
+
+      lock = true
+
+      completion(messageBuffer = buffer)
+      storePendingBuffer(buffer)
+
+      // Track the messages only if the above 2 calls succeed
+      // to try to keep it as consistent as possible.
+      history.addAll(buffer)
+
+      lock = false
+    } catch (e: Throwable) {
+      lock = false
+      throw e
+    }
+  }
+
+  /**
+   * Run completion and handle tool calls.
+   *
+   * @param messageBuffer The message buffer for tracking messages. Has to contain the user message
+   *   initially.
+   * @param attempt Current attempt. Used to prevent infinite loops.
+   * @param maxAttempts Safeguard for infinite recursion in case the agent keeps calling tools.
+   */
+  private suspend fun completion(
     /**
-     * If present, the message ID of the message that this response is in reply to in cases when
-     * this is called recursively.
+     * A buffer that keeps track of new messages that are not yet persisted. Since we call this
+     * recursively, but don't want to persist prompts that fail, this needs to be passed as an
+     * argument.
      */
-    responseToMessageId: KUUID? = null,
-
-    /** Current attempt. */
+    messageBuffer: MutableList<ChatMessage>,
     attempt: Int = 0,
-
-    /** Safeguard for infinite recursion in case the agent keeps calling tools. */
     maxAttempts: Int = 3,
   ) {
     LOG.debug("{} - running completion (attempt: {})", jiraUser.name, attempt + 1)
 
-    if (state == JiraKiraState.New) {
-      // Ensures tools are initialized
-      loadTools()
-      trackWorkflow()
-      state = JiraKiraState.Persisted
-    }
-
-    val userMessageId = responseToMessageId ?: trackUserMessage(message)
-
     val completionResponse =
       llm.chatCompletion(
-        history,
+        // Append the message buffer to the history
+        history + messageBuffer,
         ChatCompletionParameters(
           model = model,
           temperature = 0.1,
@@ -112,7 +151,8 @@ class JiraKira(
 
     val response = completionResponse.choices.first()
 
-    trackAssistantMessage(userMessageId, response.message)
+    // Track the assistant's message
+    messageBuffer.add(response.message)
 
     response.message.content?.let { content ->
       if (content.isNotBlank()) {
@@ -121,6 +161,7 @@ class JiraKira(
     }
 
     if (response.message.toolCalls == null) {
+      // This is the end of the interaction
       assert(response.finishReason == FinishReason.Stop)
       return
     }
@@ -136,12 +177,24 @@ class JiraKira(
       response.message.toolCalls.joinToString(", ") { it.name },
     )
 
-    val toolResults = mutableListOf<ChatMessage>()
-
     for (toolCall in response.message.toolCalls) {
-      try {
-        toolEmitter?.emit(ToolEvent.ToolCall(toolCall))
+      // Track all tool calls
+      handleToolCall(toolCall).let { messageBuffer.add(it) }
+    }
 
+    return completion(
+      attempt = attempt + 1,
+      maxAttempts = maxAttempts,
+      messageBuffer = messageBuffer,
+    )
+  }
+
+  /** Tool calling dirty work. Always returns a chat message with role set to "tool". */
+  private suspend fun handleToolCall(toolCall: ToolCallData): ChatMessage {
+    try {
+      toolEmitter?.emit(ToolEvent.ToolCall(toolCall))
+
+      val result =
         when (toolCall.name) {
           TOOL_CREATE_WORKLOG_ENTRY -> {
             LOG.debug("{} - creating worklog entry; input: {}", jiraUser.name, toolCall.arguments)
@@ -167,11 +220,9 @@ class JiraKira(
 
             emitter.emit(JiraKiraMessage.WorklogCreated(worklog))
 
-            toolResults.add(
-              ChatMessage.toolResult(
-                "Success. Worklog entry ID: ${worklog.tempoWorklogId}.",
-                toolCall.id,
-              )
+            ChatMessage.toolResult(
+              "Success. Worklog entry ID: ${worklog.tempoWorklogId}.",
+              toolCall.id,
             )
           }
 
@@ -182,7 +233,7 @@ class JiraKira(
 
             val issues = jiraApi.getOpenIssuesForProject(input.project)
 
-            toolResults.add(ChatMessage.toolResult(issues.joinToString("\n"), toolCall.id))
+            return ChatMessage.toolResult(issues.joinToString("\n"), toolCall.id)
           }
 
           TOOL_GET_ISSUE_ID -> {
@@ -191,7 +242,7 @@ class JiraKira(
 
             val issueId = jiraApi.getIssueId(input.issueKey)
 
-            toolResults.add(ChatMessage.toolResult(issueId, toolCall.id))
+            ChatMessage.toolResult(issueId, toolCall.id)
           }
 
           TOOL_UPDATE_WORKLOG_ENTRY -> {
@@ -203,8 +254,7 @@ class JiraKira(
               } catch (e: SerializationException) {
                 LOG.error("Failed to decode tool call arguments: {}", toolCall.arguments, e)
                 if (e.message?.startsWith("Missing required field") == true) {
-                  toolResults.add(ChatMessage.toolResult("${e.message}", toolCall.id))
-                  continue
+                  return ChatMessage.toolResult("${e.message}", toolCall.id)
                 }
                 throw e
               }
@@ -218,7 +268,7 @@ class JiraKira(
 
             emitter.emit(JiraKiraMessage.WorklogUpdated(worklog))
 
-            toolResults.add(ChatMessage.toolResult("success", toolCall.id))
+            ChatMessage.toolResult("success", toolCall.id)
           }
 
           TOOL_GET_ISSUE_WORKLOG -> {
@@ -232,94 +282,65 @@ class JiraKira(
 
             LOG.debug("{} - worklog: {}", jiraUser.name, result)
 
-            toolResults.add(ChatMessage.toolResult(result, toolCall.id))
+            ChatMessage.toolResult(result, toolCall.id)
           }
 
           else -> {
             LOG.warn("{} - received unknown tool call: {}", jiraUser.name, toolCall.name)
+            return ChatMessage.toolResult("error: unknown tool", toolCall.id)
           }
         }
 
-        toolEmitter?.emit(
-          ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "${toolCall.name}: success"))
-        )
-      } catch (e: JiraError) {
-        LOG.error("Jira API error:", e)
-        toolResults.add(ChatMessage.toolResult("error: ${e.message}", toolCall.id))
-        toolEmitter?.emit(
-          ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "Error: ${e.message}"))
-        )
-      } catch (e: Throwable) {
-        LOG.error("Error in tool call", e)
-        toolResults.add(ChatMessage.toolResult("error: ${e.message}", toolCall.id))
-        toolEmitter?.emit(
-          ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "Error: ${e.message}"))
-        )
-      }
+      toolEmitter?.emit(
+        ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "${toolCall.name}: success"))
+      )
+
+      return result
+    } catch (e: JiraError) {
+      LOG.error("Jira API error:", e)
+
+      toolEmitter?.emit(
+        ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "Error: ${e.message}"))
+      )
+
+      return ChatMessage.toolResult("error: ${e.message}", toolCall.id)
+    } catch (e: Throwable) {
+      LOG.error("Error in tool call", e)
+
+      toolEmitter?.emit(
+        ToolEvent.ToolResult(result = ToolCallResult(toolCall.id, "Error: ${e.message}"))
+      )
+
+      return ChatMessage.toolResult("error: ${e.message}", toolCall.id)
     }
-
-    trackToolMessages(userMessageId, toolResults)
-
-    return completion(
-      message = message,
-      attempt = attempt + 1,
-      responseToMessageId = userMessageId,
-      maxAttempts = maxAttempts,
-    )
-  }
-
-  suspend fun emitError(e: AppError) {
-    emitter.emitError(e)
   }
 
   private suspend fun trackWorkflow() {
     repository.insertJiraKiraWorkflow(workflowId = workflowId, userId = userId)
   }
 
-  private suspend fun trackUserMessage(prompt: String): KUUID {
-    history.add(ChatMessage.user(prompt))
-    return repository.insertJiraKiraMessage(
+  private suspend fun storePendingBuffer(buffer: MutableList<ChatMessage>) {
+    val userMessage = buffer.removeFirst()
+
+    repository.insertJiraKiraMessages(
       JiraKiraMessageInsert(
         workflowId = workflowId,
         sender = userId,
         senderType = "user",
-        content = prompt,
+        content = userMessage.content,
         toolCalls = null,
         toolCallId = null,
-        responseTo = null,
-      )
-    )
-  }
-
-  private suspend fun trackAssistantMessage(userMessageId: KUUID, message: ChatMessage) {
-    history.add(message)
-    repository.insertJiraKiraMessage(
-      JiraKiraMessageInsert(
-        workflowId = workflowId,
-        sender = null,
-        senderType = "assistant",
-        content = message.content,
-        toolCalls = Json.encodeToString(message.toolCalls),
-        toolCallId = message.toolCallId,
-        responseTo = userMessageId,
-      )
-    )
-  }
-
-  private suspend fun trackToolMessages(userMessageId: KUUID, messages: List<ChatMessage>) {
-    history.addAll(messages)
-    repository.insertJiraKiraMessages(
-      messages.map { message ->
+      ),
+      buffer.map { message ->
         JiraKiraMessageInsert(
           workflowId = workflowId,
           sender = null,
-          senderType = "tool",
+          senderType = message.role,
           content = message.content,
           toolCalls = Json.encodeToString(message.toolCalls),
           toolCallId = message.toolCallId,
-          responseTo = userMessageId,
         )
-      }
+      },
     )
   }
 
@@ -442,7 +463,6 @@ data class JiraKiraMessageInsert(
   val content: String?,
   val toolCalls: String?,
   val toolCallId: String?,
-  val responseTo: KUUID?,
 )
 
 sealed class JiraKiraState {
