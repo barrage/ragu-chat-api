@@ -162,7 +162,7 @@ open class IntegrationTest(
       cfg =
         cfg.mergeWith(
           MapApplicationConfig(
-            "jirakira.endpoint" to "$wiremockUrlOverride",
+            "jirakira.endpoint" to wiremockUrlOverride,
 
             // We are not overriding the API key since we need real ones.
 
@@ -302,9 +302,6 @@ const val COMPLETIONS_RESPONSE = "v1_chat_completions_completion_response"
 
 /** Wiremock response for a title response. */
 const val COMPLETIONS_TITLE_RESPONSE = "v1_chat_completions_title_response"
-
-/** Wiremock response for a summary response. */
-const val COMPLETIONS_SUMMARY_RESPONSE = "v1_chat_completions_summary_response"
 
 /** Returned on [COMPLETIONS_STREAM_PROMPT]. */
 const val COMPLETIONS_STREAM_RESPONSE = "v1_chat_completions_stream_response"

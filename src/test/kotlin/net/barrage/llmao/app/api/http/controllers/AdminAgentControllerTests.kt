@@ -158,12 +158,7 @@ class AdminAgentControllerTests : IntegrationTest() {
             temperature = 0.5,
             presencePenalty = 0.5,
             maxCompletionTokens = 100,
-            instructions =
-              AgentInstructions(
-                titleInstruction = "title",
-                summaryInstruction = "summary",
-                errorMessage = "error",
-              ),
+            instructions = AgentInstructions(titleInstruction = "title", errorMessage = "error"),
           ),
       )
 
@@ -181,7 +176,6 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals("azure", body.configuration.llmProvider)
     assertEquals("gpt-4", body.configuration.model)
     assertEquals("title", body.configuration.agentInstructions.titleInstruction)
-    assertEquals("summary", body.configuration.agentInstructions.summaryInstruction)
     assertEquals(1, body.configuration.version)
     assertEquals(0.5, body.configuration.temperature)
     assertEquals(0.5, body.configuration.presencePenalty)
@@ -291,12 +285,7 @@ class AdminAgentControllerTests : IntegrationTest() {
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.5,
-            instructions =
-              AgentInstructions(
-                titleInstruction = "title",
-                summaryInstruction = "summary",
-                errorMessage = "error",
-              ),
+            instructions = AgentInstructions(titleInstruction = "title", errorMessage = "error"),
           ),
       )
 
@@ -321,7 +310,6 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals(0.5, body.configuration.temperature)
     assertEquals(2, body.configuration.version)
     assertEquals("title", body.configuration.agentInstructions.titleInstruction)
-    assertEquals("summary", body.configuration.agentInstructions.summaryInstruction)
     assertEquals("error", body.configuration.agentInstructions.errorMessage)
   }
 

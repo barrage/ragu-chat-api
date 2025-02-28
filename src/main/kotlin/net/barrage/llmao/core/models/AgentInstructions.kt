@@ -20,12 +20,6 @@ data class AgentInstructions(
    */
   val titleInstruction: String? = null,
 
-  /**
-   * If present, contains instructions for the LLM on how to summarize conversations when a chat's
-   * maximum history is reached.
-   */
-  val summaryInstruction: String? = null,
-
   /** If present, contains a message that will be sent to the user when an error occurs. */
   val errorMessage: String? = null,
 ) {
@@ -35,25 +29,6 @@ data class AgentInstructions(
     }
 
     return DEFAULT_TITLE_INSTRUCTION.trimMargin()
-  }
-
-  fun formatSummaryPrompt(history: String): String {
-    if (summaryInstruction != null) {
-      return "$summaryInstruction\nConversation: \"\"\"\n$history\n\"\"\""
-    }
-
-    return """
-      |Create a summary for the conversation below denoted by triple quotes.
-      |The summary language must be in english language.
-
-      |Desired format:
-      |Summary: <summarized_conversation>
-
-      |Conversation: ${"\"\"\""}
-      |$history
-      |${"\"\"\""}
-    """
-      .trimMargin()
   }
 
   fun errorMessage(): String {

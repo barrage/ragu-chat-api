@@ -1,15 +1,15 @@
 package net.barrage.llmao.core.models
 
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Range
 import net.barrage.llmao.core.SchemaValidation
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.addSchemaErr
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 
 @Serializable
 data class AgentConfiguration(
@@ -58,7 +58,7 @@ fun AgentConfigurationsRecord.toAgentConfiguration() =
     model = this.model,
     temperature = this.temperature!!,
     agentInstructions =
-      AgentInstructions(this.titleInstruction, this.summaryInstruction, this.errorMessage),
+      AgentInstructions(titleInstruction = this.titleInstruction, errorMessage = this.errorMessage),
     maxCompletionTokens = this.maxCompletionTokens,
     presencePenalty = this.presencePenalty,
     createdAt = this.createdAt!!,

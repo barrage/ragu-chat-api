@@ -66,13 +66,6 @@ enum class SettingKey {
   AGENT_TITLE_MAX_COMPLETION_TOKENS,
 
   /**
-   * The maximum amount of tokens for summary generation. Applied to all agents.
-   *
-   * DEFAULT: [DefaultSetting.AGENT_SUMMARY_MAX_COMPLETION_TOKENS]
-   */
-  AGENT_SUMMARY_MAX_COMPLETION_TOKENS,
-
-  /**
    * Maximum number of tokens to generate on completions. The global value applies to all agents,
    * unless overridden by their configuration.
    *
@@ -156,9 +149,6 @@ enum class DefaultSetting(val setting: ApplicationSetting) {
   AGENT_PRESENCE_PENALTY(ApplicationSetting(SettingKey.AGENT_PRESENCE_PENALTY, 0.0.toString())),
   AGENT_TITLE_MAX_COMPLETION_TOKENS(
     ApplicationSetting(SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS, 100.toString())
-  ),
-  AGENT_SUMMARY_MAX_COMPLETION_TOKENS(
-    ApplicationSetting(SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS, 10_000.toString())
   ),
   WHATSAPP_AGENT_MAX_COMPLETION_TOKENS(
     ApplicationSetting(SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS, 135.toString())

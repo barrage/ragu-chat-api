@@ -96,7 +96,6 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
             SettingUpdate(SettingKey.AGENT_PRESENCE_PENALTY, "0.5"),
             SettingUpdate(SettingKey.AGENT_MAX_COMPLETION_TOKENS, "100"),
             SettingUpdate(SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS, "10"),
-            SettingUpdate(SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS, "10"),
             SettingUpdate(SettingKey.WHATSAPP_AGENT_ID, "00000000-0000-0000-0000-000000000000"),
           )
       )
@@ -123,7 +122,6 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
     assertEquals(0.5, body[SettingKey.AGENT_PRESENCE_PENALTY].toDouble())
     assertEquals(100, body[SettingKey.AGENT_MAX_COMPLETION_TOKENS].toInt())
     assertEquals(10, body[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt())
-    assertEquals(10, body[SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS].toInt())
     assertEquals("00000000-0000-0000-0000-000000000000", body[SettingKey.WHATSAPP_AGENT_ID])
   }
 

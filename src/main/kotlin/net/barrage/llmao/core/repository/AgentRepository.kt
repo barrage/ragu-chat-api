@@ -254,10 +254,6 @@ class AgentRepository(private val dslContext: DSLContext) {
             AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
             create.configuration.instructions?.titleInstruction,
           )
-          .set(
-            AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
-            create.configuration.instructions?.summaryInstruction,
-          )
           .set(AGENT_CONFIGURATIONS.ERROR_MESSAGE, create.configuration.instructions?.errorMessage)
           .returning()
           .awaitSingle()
@@ -329,11 +325,6 @@ class AgentRepository(private val dslContext: DSLContext) {
                 ?: currentConfiguration.agentInstructions.titleInstruction,
             )
             .set(
-              AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
-              update.configuration.instructions?.summaryInstruction
-                ?: currentConfiguration.agentInstructions.summaryInstruction,
-            )
-            .set(
               AGENT_CONFIGURATIONS.ERROR_MESSAGE,
               update.configuration.instructions?.errorMessage
                 ?: currentConfiguration.agentInstructions.errorMessage,
@@ -377,7 +368,6 @@ class AgentRepository(private val dslContext: DSLContext) {
       update.presencePenalty != null && update.presencePenalty != current.presencePenalty ||
       update.instructions != null &&
         (update.instructions.titleInstruction != current.agentInstructions.titleInstruction ||
-          update.instructions.summaryInstruction != current.agentInstructions.summaryInstruction ||
           update.instructions.errorMessage != current.agentInstructions.errorMessage)
   }
 

@@ -5,7 +5,6 @@ import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.COMPLETIONS_COMPLETION_PROMPT
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_SUMMARY_PROMPT
-import net.barrage.llmao.COMPLETIONS_SUMMARY_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
@@ -47,8 +46,8 @@ class TokenUsageTests : IntegrationTest(useWiremock = true) {
       workflow =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
           .toChatAgent(
+            history = listOf(),
             providers = app.providers,
-            tools = null,
             settings = app.settingsService.getAllWithDefaults(),
             tokenTracker =
               TokenUsageTracker(
@@ -59,6 +58,7 @@ class TokenUsageTests : IntegrationTest(useWiremock = true) {
                 originId = chat.id,
                 repository = app.repository.tokenUsageW,
               ),
+            toolchain = null,
           )
     }
   }
@@ -91,24 +91,6 @@ class TokenUsageTests : IntegrationTest(useWiremock = true) {
     val usage =
       app.services.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION_TITLE
-      }!!
-    assertEquals("test", usage.origin.type)
-    assertEquals(chat.id, usage.origin.id)
-    assertEquals(admin.id, usage.userId)
-    assertEquals(agent.id, usage.agentId)
-  }
-
-  @Test
-  fun registersUsageWhenCallingSummaryCompletion() = test {
-    val response =
-      workflow.summarizeConversation(listOf(ChatMessage.user(COMPLETIONS_SUMMARY_PROMPT)))
-    assertEquals(COMPLETIONS_SUMMARY_RESPONSE, response.content)
-
-    // Use delays since storing the usage is done in a separate coroutine
-    delay(200)
-    val usage =
-      app.services.admin.listTokenUsage(agentId = agent.id).items.find {
-        it.usageType == TokenUsageType.COMPLETION_SUMMARY
       }!!
     assertEquals("test", usage.origin.type)
     assertEquals(chat.id, usage.origin.id)
