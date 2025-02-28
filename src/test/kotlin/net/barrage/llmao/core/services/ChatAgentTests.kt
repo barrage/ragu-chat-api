@@ -1,11 +1,8 @@
 package net.barrage.llmao.core.services
 
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.COMPLETIONS_COMPLETION_PROMPT
 import net.barrage.llmao.COMPLETIONS_RESPONSE
-import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
-import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
@@ -20,12 +17,11 @@ import net.barrage.llmao.core.models.DEFAULT_TITLE_INSTRUCTION
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.tokens.TokenUsageTracker
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class ChatAgentTests : IntegrationTest(useWiremock = true) {
-  private lateinit var workflow: ChatAgent
+  private lateinit var chatAgent: ChatAgent
   private lateinit var admin: User
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
@@ -45,11 +41,11 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
           summaryInstruction = "Custom summary instruction",
         )
       chat = postgres.testChat(admin.id, agent.id, null)
-      workflow =
+      chatAgent =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
           .toChatAgent(
+            history = listOf(),
             providers = app.providers,
-            tools = null,
             settings = app.settingsService.getAllWithDefaults(),
             tokenTracker =
               TokenUsageTracker(
@@ -60,6 +56,7 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
                 originId = chat.id,
                 repository = app.repository.tokenUsageW,
               ),
+            toolchain = null,
           )
     }
   }
@@ -67,67 +64,16 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyGeneratesChatTitle() = test {
     // Title responses are always the same regardless of the prompt
-    val response = workflow.createTitle("Test prompt - title", "Test response - title")
+    val response = chatAgent.createTitle("Test prompt - title", "Test response - title")
     assertEquals(COMPLETIONS_TITLE_RESPONSE, response.content)
-  }
-
-  @Test
-  fun successfullyStreamsChat() = test {
-    // To trigger streams, the following prompt has to be somewhere the message
-    val stream = workflow.chatCompletionStream(listOf(ChatMessage.user(COMPLETIONS_STREAM_PROMPT)))
-    val response = stream.toList().joinToString("") { chunk -> chunk.content ?: "" }
-    assertEquals(COMPLETIONS_STREAM_RESPONSE, response)
   }
 
   @Test
   fun successfullyCompletesChat() = test {
     // To trigger direct responses, the following prompt has to be somewhere the message
     val response =
-      workflow.chatCompletionWithRag(listOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT)))
+      chatAgent.chatCompletionWithRag(listOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT)))
     assertEquals(COMPLETIONS_RESPONSE, response.content)
-  }
-
-  @Test
-  fun summarizeConversationCorrectlyIncorporatesAgentInstructions() = test {
-    val conversationHistory =
-      """
-      User: What's the weather like today?
-      Assistant: It's sunny with a high of 75°F (24°C).
-      User: Great! Any chance of rain?
-      Assistant: There's a 10% chance of light rain in the evening.
-      """
-        .trimIndent()
-
-    val summaryPrompt =
-      agentConfiguration.agentInstructions.formatSummaryPrompt(conversationHistory)
-
-    assertTrue(summaryPrompt.contains("Custom summary instruction"))
-    assertTrue(summaryPrompt.contains(conversationHistory))
-  }
-
-  @Test
-  fun summarizeConversationUsesDefaultAgentInstructions() = test {
-    val defaultAgentConfiguration =
-      postgres.testAgentConfiguration(agent.id, llmProvider = "openai", model = "gpt-4o")
-
-    val conversationHistory =
-      """
-      User: What's the weather like today?
-      Assistant: It's sunny with a high of 75°F (24°C).
-      User: Great! Any chance of rain?
-      Assistant: There's a 10% chance of light rain in the evening.
-      """
-        .trimIndent()
-
-    val summaryPrompt =
-      defaultAgentConfiguration.agentInstructions.formatSummaryPrompt(conversationHistory)
-
-    assertTrue(
-      summaryPrompt.contains(
-        "Create a summary for the conversation below denoted by triple quotes."
-      )
-    )
-    assertTrue(summaryPrompt.contains(conversationHistory))
   }
 
   @Test

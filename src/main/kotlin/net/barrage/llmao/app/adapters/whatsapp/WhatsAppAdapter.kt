@@ -205,50 +205,51 @@ class WhatsAppAdapter(
 
     val conversation =
       ChatAgent(
-        id = agent.agent.id,
-        name = agent.agent.name,
-        model = agent.configuration.model,
-        llmProvider = agent.configuration.llmProvider,
-        context = agent.configuration.context,
-        collections =
+          agentId = agent.agent.id,
+          name = agent.agent.name,
+          model = agent.configuration.model,
+          llmProvider = agent.configuration.llmProvider,
+          context = agent.configuration.context,
+          collections =
           agent.collections.map {
-            ChatAgentCollection(
-              name = it.collection,
-              amount = it.amount,
-              instruction = it.instruction,
-              embeddingProvider = it.embeddingProvider,
-              embeddingModel = it.embeddingModel,
-              vectorProvider = it.vectorProvider,
-            )
+              ChatAgentCollection(
+                  name = it.collection,
+                  amount = it.amount,
+                  instruction = it.instruction,
+                  embeddingProvider = it.embeddingProvider,
+                  embeddingModel = it.embeddingModel,
+                  vectorProvider = it.vectorProvider,
+              )
           },
-        instructions = agent.configuration.agentInstructions,
-        tools = null,
-        completionParameters =
+          instructions = agent.configuration.agentInstructions,
+          completionParameters =
           ChatCompletionParameters(
-            model = agent.configuration.model,
-            temperature = agent.configuration.temperature,
-            presencePenalty =
+              model = agent.configuration.model,
+              temperature = agent.configuration.temperature,
+              presencePenalty =
               agent.configuration.presencePenalty
-                ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
-            maxTokens =
+                  ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+              maxTokens =
               agent.configuration.maxCompletionTokens
-                ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
+                  ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
           ),
-        configurationId = agent.configuration.id,
-        providers = providers,
+          configurationId = agent.configuration.id,
+          providers = providers,
 
-        // Safe to !! because we are fetching with defaults
-        titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-        summaryMaxTokens = settings[SettingKey.AGENT_SUMMARY_MAX_COMPLETION_TOKENS].toInt(),
-        tokenTracker =
+          // Safe to !! because we are fetching with defaults
+          titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+          tokenTracker =
           TokenUsageTracker(
-            userId = whatsAppNumber.userId,
-            agentId = agent.agent.id,
-            agentConfigurationId = agent.configuration.id,
-            origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
-            originId = chat.id,
-            repository = tokenUsageRepositoryW,
+              userId = whatsAppNumber.userId,
+              agentId = agent.agent.id,
+              agentConfigurationId = agent.configuration.id,
+              origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
+              originId = chat.id,
+              repository = tokenUsageRepositoryW,
           ),
+          history = history,
+          maxHistory = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+          toolchain = null,
       )
 
     history.add(ChatMessage.user(message))

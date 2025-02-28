@@ -34,7 +34,6 @@ class ChatWorkflowFactory(
     // TODO: Skip above check with single call
     val agent = agentService.getFull(agentId)
     val toolchain = toolchainFactory.createAgentToolchain(agentId, toolEmitter)
-    val tools = toolchain?.listToolSchemas()
     val settings = settingsService.getAllWithDefaults()
     val tokenTracker =
       TokenUsageTracker(
@@ -48,22 +47,23 @@ class ChatWorkflowFactory(
 
     val chatAgent =
       agent.toChatAgent(
+        history = listOf(),
         providers = providerState,
-        tools = tools,
+        toolchain = toolchain,
         settings = settings,
         tokenTracker = tokenTracker,
       )
 
+    val streamAgent = chatAgent.toStreaming(emitter)
+
     return ChatWorkflow(
       id = id,
       userId = userId,
-      agent = chatAgent,
+      streamAgent = streamAgent,
       emitter = emitter,
-      toolchain = toolchain,
       repository = chatWorkflowRepository,
       state = ChatWorkflowState.New,
       // summarizeAfterTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
-      tokenTracker = tokenTracker,
     )
   }
 
@@ -79,7 +79,6 @@ class ChatWorkflowFactory(
     val agent = agentService.getFull(chat.chat.agentId)
 
     val toolchain = toolchainFactory.createAgentToolchain(chat.chat.agentId, toolEmitter)
-    val tools = toolchain?.listToolSchemas()
     val settings = settingsService.getAllWithDefaults()
     val tokenTracker =
       TokenUsageTracker(
@@ -90,27 +89,26 @@ class ChatWorkflowFactory(
         origin = CHAT_TOKEN_ORIGIN,
         originId = id,
       )
+    val history = chat.messages.map(ChatMessage::fromModel)
 
     val chatAgent =
       agent.toChatAgent(
+        history = history.toMutableList(),
         providers = providerState,
-        tools = tools,
+        toolchain = toolchain,
         settings = settings,
         tokenTracker = tokenTracker,
       )
 
-    val history = chat.messages.map(ChatMessage::fromModel)
+    val streamAgent = chatAgent.toStreaming(emitter)
 
     return ChatWorkflow(
       id = chat.chat.id,
       userId = chat.chat.userId,
-      agent = chatAgent,
-      history = history as MutableList<ChatMessage>,
+      streamAgent = streamAgent,
       emitter = emitter,
-      toolchain = toolchain,
       repository = chatWorkflowRepository,
       state = ChatWorkflowState.Persisted(chat.chat.title!!),
-      tokenTracker = tokenTracker,
     )
   }
 }

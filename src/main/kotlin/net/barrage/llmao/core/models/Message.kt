@@ -65,7 +65,7 @@ data class MessageInsert(
   val chatId: KUUID,
   val sender: KUUID,
   val senderType: String,
-  val content: String,
+  val content: String?,
   val responseTo: KUUID? = null,
   val finishReason: FinishReason? = null,
 )
