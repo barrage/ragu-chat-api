@@ -8,6 +8,7 @@ import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
+import net.barrage.llmao.core.llm.History
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.Toolchain
@@ -73,13 +74,7 @@ class ChatAgent(
   internal val tokenTracker: TokenUsageTracker,
 
   /** The chat history. */
-  internal val history: MutableList<ChatMessage>,
-
-  /**
-   * If present, pops value from the front of the message history if the history gets larger than
-   * this. TODO: replace with token based.
-   */
-  private val maxHistory: Int = 20,
+  internal val history: History,
 ) {
 
   /** Available tools. */
@@ -147,16 +142,7 @@ class ChatAgent(
   }
 
   internal fun addToHistory(messages: List<ChatMessage>) {
-    history.addAll(messages)
-
-    if (history.size > maxHistory) {
-      history.removeFirst()
-    }
-  }
-
-  fun countHistoryTokens(history: List<ChatMessage>): Int {
-    val text = history.joinToString("\n") { it.content ?: "" }
-    return getEncoder(model).encode(text).size()
+    history.add(messages)
   }
 
   /**
@@ -247,6 +233,7 @@ class ChatAgent(
   }
 }
 
+/** Chat agent implementation that can hook up to an emitter and emit message chunks. */
 class ChatAgentStreaming(
   val chatAgent: ChatAgent,
 
@@ -283,6 +270,8 @@ class ChatAgentStreaming(
      * and we need to persist unfinished responses.
      */
     out: StringBuilder,
+
+    /** Current execution attempt, used to prevent infinite loops. */
     attempt: Int = 0,
   ) {
     LOG.debug("{} - starting stream (attempt: {})", chatAgent.agentId, attempt + 1)
@@ -328,6 +317,8 @@ class ChatAgentStreaming(
       collectToolCalls(toolCalls, chunk)
     }
 
+    // If the coroutine gets cancelled here, we are certain `out` will be cleared.
+
     // I may have seen some messages that have both tool calls and content
     // but I cannot confirm nor deny this
     assert(out.isNotEmpty() && toolCalls.isEmpty() || toolCalls.isNotEmpty() && out.isBlank())
@@ -367,7 +358,7 @@ class ChatAgentStreaming(
   }
 
   /** Start a chat completion stream using the parameters from the WorkflowAgent. */
-  suspend fun chatCompletionStream(
+  private suspend fun chatCompletionStream(
     input: List<ChatMessage>,
     useRag: Boolean = true,
     useTools: Boolean = true,
@@ -404,7 +395,7 @@ data class ChatAgentCollection(
 )
 
 fun AgentFull.toChatAgent(
-  history: List<ChatMessage>,
+  history: History,
   providers: ProviderState,
   toolchain: Toolchain?,
   /** Used for default values if the agent configuration does not specify them. */
@@ -444,8 +435,7 @@ fun AgentFull.toChatAgent(
     toolchain = toolchain,
     titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
     tokenTracker = tokenTracker,
-    history = history.toMutableList(),
-    maxHistory = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+    history = history,
   )
 
 fun ChatAgent.toStreaming(emitter: Emitter<ChatWorkflowMessage>) = ChatAgentStreaming(this, emitter)

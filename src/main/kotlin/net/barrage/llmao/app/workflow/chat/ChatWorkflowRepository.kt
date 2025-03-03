@@ -8,6 +8,7 @@ import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.MessageInsert
 import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
+import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -15,6 +16,8 @@ import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
+
+private const val NANO_OFFSET = 20L
 
 class ChatWorkflowRepository(private val dslContext: DSLContext) {
   suspend fun getChatWithMessages(id: KUUID): ChatWithMessages {
@@ -48,7 +51,7 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         )
         .from(MESSAGES)
         .where(MESSAGES.CHAT_ID.eq(id))
-        .orderBy(MESSAGES.CREATED_AT.asc(), MESSAGES.SENDER_TYPE.desc())
+        .orderBy(MESSAGES.CREATED_AT.asc())
         .asFlow()
         .map { record -> record.into(MESSAGES).toMessage() }
         .toList()
@@ -65,6 +68,7 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
   }
 
   suspend fun insertMessagePair(userMessage: MessageInsert, assistantMessage: MessageInsert) {
+    val now = KOffsetDateTime.now()
     dslContext.transactionCoroutine { ctx ->
       ctx
         .dsl()
@@ -74,6 +78,8 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         .set(MESSAGES.CONTENT, userMessage.content)
         .set(MESSAGES.SENDER, userMessage.sender)
         .set(MESSAGES.SENDER_TYPE, userMessage.senderType)
+        .set(MESSAGES.CREATED_AT, now)
+        .set(MESSAGES.UPDATED_AT, now)
         .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
 
       ctx
@@ -86,17 +92,10 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         .set(MESSAGES.SENDER_TYPE, assistantMessage.senderType)
         .set(MESSAGES.RESPONSE_TO, userMessage.id)
         .set(MESSAGES.FINISH_REASON, assistantMessage.finishReason?.value)
+        .set(MESSAGES.CREATED_AT, now.plusNanos(NANO_OFFSET))
+        .set(MESSAGES.UPDATED_AT, now.plusNanos(NANO_OFFSET))
         .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
     }
-  }
-
-  suspend fun insertSystemMessage(id: KUUID, message: String) {
-    dslContext
-      .insertInto(MESSAGES)
-      .set(MESSAGES.CHAT_ID, id)
-      .set(MESSAGES.SENDER_TYPE, "system")
-      .set(MESSAGES.CONTENT, message)
-      .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert system message")
   }
 
   suspend fun insertChat(
@@ -106,6 +105,7 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
     userMessage: MessageInsert,
     assistantMessage: MessageInsert,
   ) {
+    val now = KOffsetDateTime.now()
     return dslContext.transactionCoroutine { ctx ->
       ctx
         .dsl()
@@ -113,6 +113,8 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         .set(CHATS.ID, chatId)
         .set(CHATS.USER_ID, userId)
         .set(CHATS.AGENT_ID, agentId)
+        .set(CHATS.CREATED_AT, now)
+        .set(CHATS.UPDATED_AT, now)
         .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert chat")
 
       ctx
@@ -123,6 +125,8 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         .set(MESSAGES.CONTENT, userMessage.content)
         .set(MESSAGES.SENDER, userMessage.sender)
         .set(MESSAGES.SENDER_TYPE, userMessage.senderType)
+        .set(MESSAGES.CREATED_AT, now)
+        .set(MESSAGES.UPDATED_AT, now)
         .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
 
       ctx
@@ -135,6 +139,8 @@ class ChatWorkflowRepository(private val dslContext: DSLContext) {
         .set(MESSAGES.SENDER_TYPE, assistantMessage.senderType)
         .set(MESSAGES.RESPONSE_TO, userMessage.id)
         .set(MESSAGES.FINISH_REASON, assistantMessage.finishReason?.value)
+        .set(MESSAGES.CREATED_AT, now.plusNanos(NANO_OFFSET))
+        .set(MESSAGES.UPDATED_AT, now.plusNanos(NANO_OFFSET))
         .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message pair")
     }
   }

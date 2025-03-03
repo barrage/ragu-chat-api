@@ -1,18 +1,19 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
 import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
+import com.knuddels.jtokkit.api.EncodingRegistry
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
@@ -28,6 +29,9 @@ import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.History
+import net.barrage.llmao.core.llm.MessageBasedHistory
+import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -56,6 +60,7 @@ class WhatsAppAdapter(
   private val wappRepository: WhatsAppRepository,
   private val settingsService: SettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
+  private val encodingRegistry: EncodingRegistry,
 ) {
   private var whatsAppApi: WhatsAppApi
 
@@ -199,62 +204,72 @@ class WhatsAppAdapter(
     val agent = agentRepository.get(KUUID.fromString(wappAgentId))
     val chat = getOrInsertChat(whatsAppNumber.userId)
     val chatMessages = wappRepository.getMessages(chat.id, 20)
-    val history = chatMessages.map(WhatsAppMessage::toChatMessage).toMutableList()
+    val messages = chatMessages.map(WhatsAppMessage::toChatMessage).toMutableList()
 
     val settings = settingsService.getAllWithDefaults()
+    val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
+    val history: History =
+      if (tokenizer.isEmpty) {
+        MessageBasedHistory(messages = mutableListOf(), maxMessages = 20)
+      } else {
+        TokenBasedHistory(
+          messages = mutableListOf(),
+          tokenizer = tokenizer.get(),
+          maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+        )
+      }
 
     val conversation =
       ChatAgent(
-          agentId = agent.agent.id,
-          name = agent.agent.name,
-          model = agent.configuration.model,
-          llmProvider = agent.configuration.llmProvider,
-          context = agent.configuration.context,
-          collections =
+        agentId = agent.agent.id,
+        name = agent.agent.name,
+        model = agent.configuration.model,
+        llmProvider = agent.configuration.llmProvider,
+        context = agent.configuration.context,
+        collections =
           agent.collections.map {
-              ChatAgentCollection(
-                  name = it.collection,
-                  amount = it.amount,
-                  instruction = it.instruction,
-                  embeddingProvider = it.embeddingProvider,
-                  embeddingModel = it.embeddingModel,
-                  vectorProvider = it.vectorProvider,
-              )
+            ChatAgentCollection(
+              name = it.collection,
+              amount = it.amount,
+              instruction = it.instruction,
+              embeddingProvider = it.embeddingProvider,
+              embeddingModel = it.embeddingModel,
+              vectorProvider = it.vectorProvider,
+            )
           },
-          instructions = agent.configuration.agentInstructions,
-          completionParameters =
+        instructions = agent.configuration.agentInstructions,
+        completionParameters =
           ChatCompletionParameters(
-              model = agent.configuration.model,
-              temperature = agent.configuration.temperature,
-              presencePenalty =
+            model = agent.configuration.model,
+            temperature = agent.configuration.temperature,
+            presencePenalty =
               agent.configuration.presencePenalty
-                  ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
-              maxTokens =
+                ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+            maxTokens =
               agent.configuration.maxCompletionTokens
-                  ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
+                ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
           ),
-          configurationId = agent.configuration.id,
-          providers = providers,
+        configurationId = agent.configuration.id,
+        providers = providers,
 
-          // Safe to !! because we are fetching with defaults
-          titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-          tokenTracker =
+        // Safe to !! because we are fetching with defaults
+        titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+        tokenTracker =
           TokenUsageTracker(
-              userId = whatsAppNumber.userId,
-              agentId = agent.agent.id,
-              agentConfigurationId = agent.configuration.id,
-              origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
-              originId = chat.id,
-              repository = tokenUsageRepositoryW,
+            userId = whatsAppNumber.userId,
+            agentId = agent.agent.id,
+            agentConfigurationId = agent.configuration.id,
+            origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
+            originId = chat.id,
+            repository = tokenUsageRepositoryW,
           ),
-          history = history,
-          maxHistory = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
-          toolchain = null,
+        history = history,
+        toolchain = null,
       )
 
-    history.add(ChatMessage.user(message))
+    messages.add(ChatMessage.user(message))
 
-    val response = conversation.chatCompletionWithRag(history)
+    val response = conversation.chatCompletionWithRag(messages)
 
     // Safe to !! because we are not sending any tools in the message, which means the content
     // is always present

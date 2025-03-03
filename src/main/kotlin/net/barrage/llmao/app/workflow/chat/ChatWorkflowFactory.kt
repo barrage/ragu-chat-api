@@ -1,10 +1,15 @@
 package net.barrage.llmao.app.workflow.chat
 
+import com.knuddels.jtokkit.api.EncodingRegistry
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.History
+import net.barrage.llmao.core.llm.MessageBasedHistory
+import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.services.AgentService
+import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.tokens.TokenUsageTracker
@@ -20,6 +25,7 @@ class ChatWorkflowFactory(
   private val toolchainFactory: ToolchainFactory,
   private val settingsService: SettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
+  private val encodingRegistry: EncodingRegistry,
 ) {
   suspend fun newChatWorkflow(
     userId: KUUID,
@@ -45,9 +51,21 @@ class ChatWorkflowFactory(
         originId = id,
       )
 
+    val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
+    val history: History =
+      if (tokenizer.isEmpty) {
+        MessageBasedHistory(messages = mutableListOf(), maxMessages = 20)
+      } else {
+        TokenBasedHistory(
+          messages = mutableListOf(),
+          tokenizer = tokenizer.get(),
+          maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+        )
+      }
+
     val chatAgent =
       agent.toChatAgent(
-        history = listOf(),
+        history = history,
         providers = providerState,
         toolchain = toolchain,
         settings = settings,
@@ -63,7 +81,6 @@ class ChatWorkflowFactory(
       emitter = emitter,
       repository = chatWorkflowRepository,
       state = ChatWorkflowState.New,
-      // summarizeAfterTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
     )
   }
 
@@ -89,11 +106,24 @@ class ChatWorkflowFactory(
         origin = CHAT_TOKEN_ORIGIN,
         originId = id,
       )
-    val history = chat.messages.map(ChatMessage::fromModel)
+
+    val messages = chat.messages.map(ChatMessage::fromModel)
+
+    val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
+    val history: History =
+      if (tokenizer.isEmpty) {
+        MessageBasedHistory(messages = messages.toMutableList(), maxMessages = 20)
+      } else {
+        TokenBasedHistory(
+          messages = messages.toMutableList(),
+          tokenizer = tokenizer.get(),
+          maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+        )
+      }
 
     val chatAgent =
       agent.toChatAgent(
-        history = history.toMutableList(),
+        history = history,
         providers = providerState,
         toolchain = toolchain,
         settings = settings,

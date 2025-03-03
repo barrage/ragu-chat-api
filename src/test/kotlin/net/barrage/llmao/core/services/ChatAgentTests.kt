@@ -9,6 +9,7 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.app.workflow.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentFull
@@ -44,7 +45,7 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
       chatAgent =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
           .toChatAgent(
-            history = listOf(),
+            history = MessageBasedHistory(),
             providers = app.providers,
             settings = app.settingsService.getAllWithDefaults(),
             tokenTracker =

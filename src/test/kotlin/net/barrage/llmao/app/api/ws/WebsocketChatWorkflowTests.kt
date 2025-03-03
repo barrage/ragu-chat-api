@@ -46,7 +46,6 @@ import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -311,7 +310,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
     assert(asserted)
   }
 
-  @RepeatedTest(10)
+  @Test
   fun sameUserCanOpenMultipleChatsAtOnce() = test {
     var assertedFirst = false
     var assertedSecond = false

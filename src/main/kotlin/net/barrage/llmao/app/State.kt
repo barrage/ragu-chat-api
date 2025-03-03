@@ -1,5 +1,6 @@
 package net.barrage.llmao.app
 
+import com.knuddels.jtokkit.Encodings
 import io.ktor.server.config.ApplicationConfig
 import kotlin.reflect.KClass
 import kotlinx.coroutines.Job
@@ -114,6 +115,7 @@ class AdapterState(
           wappRepository = WhatsAppRepository(database),
           settingsService = settingsService,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
+          encodingRegistry = Encodings.newDefaultEncodingRegistry(),
         )
     }
     if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {

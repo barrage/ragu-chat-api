@@ -1,5 +1,6 @@
 package net.barrage.llmao
 
+import com.knuddels.jtokkit.Encodings
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopping
@@ -60,6 +61,7 @@ fun Application.module() {
       toolchainFactory = toolchainFactory,
       settingsService = state.settingsService,
       tokenUsageRepositoryW = state.repository.tokenUsageW,
+      encodingRegistry = Encodings.newDefaultEncodingRegistry(),
     ),
     listener = stateChangeListener,
     adapters = state.adapters,

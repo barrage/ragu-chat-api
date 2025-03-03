@@ -16,7 +16,6 @@ import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.error.AppError
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
-private const val MANUAL_CANCEL = "manual_cancel"
 
 /** Implementation of a workflow with a single agent. */
 class ChatWorkflow(
@@ -113,7 +112,10 @@ class ChatWorkflow(
             }
           }
           stream = null
-          streamAgent.chatAgent.addToHistory(messages = messageBuffer)
+
+          if (messageBuffer.isNotEmpty()) {
+            streamAgent.chatAgent.addToHistory(messages = messageBuffer)
+          }
         }
 
         scope.launch {
@@ -219,8 +221,6 @@ class ChatWorkflow(
   }
 
   /**
-   * Stops streaming and emits an error message.
-   *
    * An API error will be sent if it is an application error.
    *
    * Internal otherwise.
