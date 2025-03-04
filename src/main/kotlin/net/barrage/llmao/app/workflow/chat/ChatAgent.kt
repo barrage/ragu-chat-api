@@ -1,14 +1,9 @@
 package net.barrage.llmao.app.workflow.chat
 
-import com.knuddels.jtokkit.Encodings
-import com.knuddels.jtokkit.api.Encoding
-import com.knuddels.jtokkit.api.ModelType
-import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ChatMessageChunk
-import net.barrage.llmao.core.llm.History
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.Toolchain
@@ -24,7 +19,8 @@ import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
+
+private const val MAX_TOOL_ATTEMPTS: Int = 5
 
 /**
  * Handles LLM interactions for direct prompts without streaming and comes with utilities for
@@ -73,29 +69,57 @@ class ChatAgent(
   /** Used to track token usage. */
   internal val tokenTracker: TokenUsageTracker,
 
-  /** The chat history. */
-  internal val history: History,
+  /**
+   * The chat history. Has to be managed from outside since messages need to be stored, and we can
+   * only reason about which messages to add based on whether or not they are successfully stored.
+   */
+  internal val history: ChatHistory,
 ) {
 
   /** Available tools. */
   val tools: List<ToolDefinition>? = toolchain?.listToolSchemas()
 
-  suspend fun chatCompletionWithRag(input: List<ChatMessage>): ChatMessage {
-    val messages = input.toMutableList()
+  /**
+   * Execute chat completion without streaming.
+   *
+   * @param messageBuffer The message buffer for tracking messages. Has to contain the user message
+   *   initially.
+   */
+  suspend fun chatCompletion(messageBuffer: MutableList<ChatMessage>, attempt: Int = 0) {
+    if (attempt == 0) {
+      assert(messageBuffer.size == 1 && messageBuffer.first().role == "user")
+    }
+
+    LOG.debug("{} - starting completion (attempt: {})", agentId, attempt + 1)
+
+    if (messageBuffer.size == 1 && messageBuffer.first().role != "user") {
+      throw AppError.internal("Message buffer does not start with user message")
+    }
+
     val userMessage =
-      messages.lastOrNull { it.role == "user" }
+      messageBuffer.lastOrNull { it.role == "user" }
         ?: throw AppError.internal("No user message in input")
 
     // Safe to !! because user messages are never created with null content
     userMessage.content = executeRetrievalAugmentation(userMessage.content!!)
 
-    val systemMessage = ChatMessage.system(context)
+    val llmInput = mutableListOf(ChatMessage.system(context))
 
-    val llmInput = mutableListOf(systemMessage, *messages.toTypedArray())
+    for (message in history) {
+      llmInput.add(message.copy())
+    }
+
+    for (message in messageBuffer) {
+      llmInput.add(message.copy())
+    }
 
     val llm = providers.llm.getProvider(llmProvider)
 
-    val completion = llm.chatCompletion(llmInput, completionParameters)
+    val completion =
+      llm.chatCompletion(
+        messages = llmInput,
+        config = completionParameters.copy(tools = if (attempt < MAX_TOOL_ATTEMPTS) tools else null),
+      )
 
     completion.tokenUsage?.let { tokenUsage ->
       tokenTracker.store(
@@ -106,7 +130,26 @@ class ChatAgent(
       )
     }
 
-    return completion.choices.first().message
+    val message = completion.choices.first().message
+
+    messageBuffer.add(message)
+
+    if (message.toolCalls == null) {
+      return
+    }
+
+    LOG.debug(
+      "{} - (completion) calling tools: {}",
+      agentId,
+      message.toolCalls.joinToString(", ") { it.name },
+    )
+
+    for (toolCall in message.toolCalls) {
+      val result = toolchain!!.processToolCall(toolCall)
+      messageBuffer.add(ChatMessage.toolResult(result.content, toolCall.id))
+    }
+
+    chatCompletion(messageBuffer, attempt + 1)
   }
 
   suspend fun createTitle(prompt: String, response: String): ChatMessage {
@@ -139,10 +182,6 @@ class ChatAgent(
     }
 
     return completion.choices.first().message
-  }
-
-  internal fun addToHistory(messages: List<ChatMessage>) {
-    history.add(messages)
   }
 
   /**
@@ -221,16 +260,6 @@ class ChatAgent(
 
     return "${instructions}\n$prompt"
   }
-
-  private fun getEncoder(llm: String): Encoding {
-    val registry = Encodings.newDefaultEncodingRegistry()
-    for (type in ModelType.entries) {
-      if (type.name == llm) {
-        return registry.getEncodingForModel(type)
-      }
-    }
-    throw AppError.api(ErrorReason.InvalidParameter, "Cannot find tokenizer for model '$llm'")
-  }
 }
 
 /** Chat agent implementation that can hook up to an emitter and emit message chunks. */
@@ -274,7 +303,13 @@ class ChatAgentStreaming(
     /** Current execution attempt, used to prevent infinite loops. */
     attempt: Int = 0,
   ) {
+    if (attempt == 0) {
+      assert(messageBuffer.size == 1 && messageBuffer.first().role == "user")
+    }
+
     LOG.debug("{} - starting stream (attempt: {})", chatAgent.agentId, attempt + 1)
+
+    val llm = chatAgent.providers.llm.getProvider(chatAgent.llmProvider)
 
     // I seriously don't understand why this is needed but it is
     // the only way I've found to not alter the original messages
@@ -287,12 +322,21 @@ class ChatAgentStreaming(
       llmInput.add(message.copy())
     }
 
+    val userMessage =
+      llmInput.lastOrNull { it.role == "user" }
+        ?: throw AppError.internal("No user message in input")
+
+    // Safe to !! because user messages are never created with null content
+    userMessage.content = chatAgent.executeRetrievalAugmentation(userMessage.content!!)
+
+    llmInput.add(0, ChatMessage.system(chatAgent.context))
+
     val llmStream =
-      chatCompletionStream(
-        input = llmInput,
-        useRag = true,
-        // Stop sending tools if we are "stuck" in a loop
-        useTools = attempt < 5 && chatAgent.toolchain != null,
+      llm.completionStream(
+        llmInput,
+        chatAgent.completionParameters.copy(
+          tools = if (attempt < MAX_TOOL_ATTEMPTS) chatAgent.tools else null
+        ),
       )
 
     val toolCalls: MutableMap<Int, ToolCallData> = mutableMapOf()
@@ -339,7 +383,7 @@ class ChatAgentStreaming(
     // their results.
 
     LOG.debug(
-      "{} - calling tools: {}",
+      "{} - (stream) calling tools: {}",
       chatAgent.agentId,
       toolCalls.values.joinToString(", ") { it.name },
     )
@@ -357,31 +401,8 @@ class ChatAgentStreaming(
     stream(messageBuffer = messageBuffer, out = out, attempt = attempt + 1)
   }
 
-  /** Start a chat completion stream using the parameters from the WorkflowAgent. */
-  private suspend fun chatCompletionStream(
-    input: List<ChatMessage>,
-    useRag: Boolean = true,
-    useTools: Boolean = true,
-  ): Flow<ChatMessageChunk> {
-    val llmInput = input.toMutableList()
-
-    val llm = chatAgent.providers.llm.getProvider(chatAgent.llmProvider)
-
-    if (useRag) {
-      val userMessage =
-        llmInput.lastOrNull { it.role == "user" }
-          ?: throw AppError.internal("No user message in input")
-
-      // Safe to !! because user messages are never created with null content
-      userMessage.content = chatAgent.executeRetrievalAugmentation(userMessage.content!!)
-    }
-
-    llmInput.add(0, ChatMessage.system(chatAgent.context))
-
-    return llm.completionStream(
-      llmInput,
-      chatAgent.completionParameters.copy(tools = if (useTools) chatAgent.tools else null),
-    )
+  internal fun addToHistory(messages: List<ChatMessage>) {
+    chatAgent.history.add(messages)
   }
 }
 
@@ -395,7 +416,7 @@ data class ChatAgentCollection(
 )
 
 fun AgentFull.toChatAgent(
-  history: History,
+  history: ChatHistory,
   providers: ProviderState,
   toolchain: Toolchain?,
   /** Used for default values if the agent configuration does not specify them. */

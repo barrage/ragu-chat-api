@@ -72,9 +72,9 @@ class ChatAgentTests : IntegrationTest(useWiremock = true) {
   @Test
   fun successfullyCompletesChat() = test {
     // To trigger direct responses, the following prompt has to be somewhere the message
-    val response =
-      chatAgent.chatCompletionWithRag(listOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT)))
-    assertEquals(COMPLETIONS_RESPONSE, response.content)
+    val buffer = mutableListOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT))
+    chatAgent.chatCompletion(buffer)
+    assertEquals(COMPLETIONS_RESPONSE, buffer.last().content)
   }
 
   @Test

@@ -66,9 +66,9 @@ class TokenUsageTests : IntegrationTest(useWiremock = true) {
 
   @Test
   fun registersUsageWhenCallingChatCompletion() = test {
-    val response =
-      workflow.chatCompletionWithRag(listOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT)))
-    assertEquals(COMPLETIONS_RESPONSE, response.content)
+    val buffer = mutableListOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT))
+    workflow.chatCompletion(buffer)
+    assertEquals(COMPLETIONS_RESPONSE, buffer.last().content)
 
     // Use delays since storing the usage is done in a separate coroutine
     delay(200)

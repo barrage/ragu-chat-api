@@ -7,7 +7,7 @@ import com.knuddels.jtokkit.api.Encoding
  * The history should never include the agent's context, only the interactions with the LLM. Tool
  * calls also spend tokens, which is why it's important to include them in the history.
  */
-abstract class History(internal open val messages: MutableList<ChatMessage>) :
+abstract class ChatHistory(internal open val messages: MutableList<ChatMessage>) :
   Iterable<ChatMessage> {
 
   override fun iterator(): Iterator<ChatMessage> = messages.iterator()
@@ -22,7 +22,7 @@ class TokenBasedHistory(
   internal override val messages: MutableList<ChatMessage>,
   private val tokenizer: Encoding,
   private val maxTokens: Int,
-) : History(messages) {
+) : ChatHistory(messages) {
   private var currentTokens: Int =
     messages.fold(0) { acc, message ->
       var tokenCount = tokenizer.countTokensOrdinary(message.content)
@@ -74,7 +74,7 @@ class TokenBasedHistory(
 class MessageBasedHistory(
   internal override val messages: MutableList<ChatMessage> = mutableListOf(),
   private val maxMessages: Int = 10,
-) : History(messages) {
+) : ChatHistory(messages) {
   override fun add(messages: List<ChatMessage>) {
     this.messages.addAll(messages)
     trimToFit()

@@ -2,8 +2,8 @@ package net.barrage.llmao.app.workflow.chat
 
 import com.knuddels.jtokkit.api.EncodingRegistry
 import net.barrage.llmao.app.ProviderState
+import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.History
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolEvent
@@ -52,7 +52,7 @@ class ChatWorkflowFactory(
       )
 
     val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
-    val history: History =
+    val history: ChatHistory =
       if (tokenizer.isEmpty) {
         MessageBasedHistory(messages = mutableListOf(), maxMessages = 20)
       } else {
@@ -110,7 +110,7 @@ class ChatWorkflowFactory(
     val messages = chat.messages.map(ChatMessage::fromModel)
 
     val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
-    val history: History =
+    val history: ChatHistory =
       if (tokenizer.isEmpty) {
         MessageBasedHistory(messages = messages.toMutableList(), maxMessages = 20)
       } else {

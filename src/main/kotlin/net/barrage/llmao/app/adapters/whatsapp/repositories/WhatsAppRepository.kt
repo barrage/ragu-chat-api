@@ -244,7 +244,7 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       ?: throw AppError.api(ErrorReason.Internal, "Failed to insert WhatsApp number")
   }
 
-  suspend fun getMessages(chatId: KUUID, limit: Int? = null): List<WhatsAppMessage> {
+  suspend fun getMessages(chatId: KUUID): List<WhatsAppMessage> {
     return dslContext
       .select(
         WHATS_APP_MESSAGES.ID,
@@ -259,7 +259,6 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       .from(WHATS_APP_MESSAGES)
       .where(WHATS_APP_MESSAGES.CHAT_ID.eq(chatId))
       .orderBy(WHATS_APP_MESSAGES.CREATED_AT.asc(), WHATS_APP_MESSAGES.SENDER_TYPE.asc())
-      .apply { limit?.let { limit(it) } }
       .asFlow()
       .map { it.into(WHATS_APP_MESSAGES).toWhatsAppMessage() }
       .toList()

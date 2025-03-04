@@ -114,7 +114,7 @@ class ChatWorkflow(
           stream = null
 
           if (messageBuffer.isNotEmpty()) {
-            streamAgent.chatAgent.addToHistory(messages = messageBuffer)
+            streamAgent.addToHistory(messages = messageBuffer)
           }
         }
 
