@@ -28,7 +28,11 @@ interface AuthenticationProvider {
     val key = getPublicKey(client, keysEndpoint, jwt.keyId)
     val algorithm = Algorithm.RSA256(key, null)
     val verifier =
-      JWT.require(algorithm).withIssuer(tokenIssuer).withAnyOfAudience(*audience).build()
+      JWT.require(algorithm)
+        .withIssuer(tokenIssuer)
+        .withAnyOfAudience(*audience)
+        .acceptLeeway(30)
+        .build()
 
     try {
       verifier.verify(jwt)
