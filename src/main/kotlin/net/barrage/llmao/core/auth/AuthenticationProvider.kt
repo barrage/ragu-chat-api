@@ -8,6 +8,9 @@ import net.barrage.llmao.app.auth.getPublicKey
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
+internal val LOG =
+  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.auth.AuthenticationProvider")
+
 interface AuthenticationProvider {
   /** Return this provider's unique identifier. */
   fun id(): String
@@ -30,6 +33,7 @@ interface AuthenticationProvider {
     try {
       verifier.verify(jwt)
     } catch (e: Exception) {
+      LOG.error("Invalid token", e)
       throw AppError.api(ErrorReason.Authentication, "Invalid token")
     }
   }
