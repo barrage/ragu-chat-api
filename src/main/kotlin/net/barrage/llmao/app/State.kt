@@ -4,15 +4,11 @@ import com.knuddels.jtokkit.Encodings
 import io.ktor.server.config.ApplicationConfig
 import kotlin.reflect.KClass
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationRepository
-import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppSenderConfig
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.api.http.CookieFactory
-import net.barrage.llmao.app.auth.AuthenticationProviderFactory
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
@@ -29,7 +25,6 @@ import net.barrage.llmao.core.repository.SessionRepository
 import net.barrage.llmao.core.repository.UserRepository
 import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.core.services.AgentService
-import net.barrage.llmao.core.services.AuthenticationService
 import net.barrage.llmao.core.services.ChatService
 import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.settings.SettingsRepository
@@ -92,13 +87,6 @@ class AdapterState(
   val adapters = mutableMapOf<KClass<*>, Any>()
 
   init {
-    if (config.string(CHONKIT_AUTH_FEATURE_FLAG).toBoolean()) {
-      val chonkitAuthRepo = ChonkitAuthenticationRepository(database)
-      adapters[ChonkitAuthenticationService::class] = runBlocking {
-        ChonkitAuthenticationService.init(chonkitAuthRepo, config)
-      }
-    }
-
     if (config.string(WHATSAPP_FEATURE_FLAG).toBoolean()) {
       adapters[WhatsAppAdapter::class] =
         WhatsAppAdapter(
@@ -118,6 +106,7 @@ class AdapterState(
           encodingRegistry = Encodings.newDefaultEncodingRegistry(),
         )
     }
+
     if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
       val endpoint = config.string("jirakira.endpoint")
       val jiraKiraKeyStore = JiraKiraRepository(database)
@@ -154,19 +143,17 @@ class AdapterState(
 }
 
 class ProviderState(config: ApplicationConfig) {
-  val auth: AuthenticationProviderFactory = AuthenticationProviderFactory(config)
   val llm: LlmProviderFactory = LlmProviderFactory(config)
   val vector: VectorDatabaseProviderFactory = VectorDatabaseProviderFactory(config)
   val embedding: EmbeddingProviderFactory = EmbeddingProviderFactory(config)
   val imageStorage: ImageStorage = MinioImageStorage(config)
 
   fun list(): ProvidersResponse {
-    val authProviders = auth.listProviders()
     val llmProviders = llm.listProviders()
     val vectorProviders = vector.listProviders()
     val embeddingProviders = embedding.listProviders()
 
-    return ProvidersResponse(authProviders, llmProviders, vectorProviders, embeddingProviders)
+    return ProvidersResponse(llmProviders, vectorProviders, embeddingProviders)
   }
 
   /**
@@ -217,7 +204,6 @@ class ServiceState(
   val agent =
     AgentService(providers, repository.agent, repository.chat, listener, providers.imageStorage)
   val user = UserService(repository.user, repository.session, providers.imageStorage)
-  val auth = AuthenticationService(providers.auth, repository.session, repository.user)
   val admin =
     AdministrationService(
       providers = providers,
@@ -230,7 +216,6 @@ class ServiceState(
 
 @Serializable
 data class ProvidersResponse(
-  val auth: List<String>,
   val llm: List<String>,
   val vector: List<String>,
   val embedding: List<String>,

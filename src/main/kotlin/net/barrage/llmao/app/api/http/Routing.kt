@@ -7,8 +7,6 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.adapters.chonkit.ChonkitAuthenticationService
-import net.barrage.llmao.app.adapters.chonkit.chonkitAuthRouter
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.api.adminWhatsAppRoutes
 import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppHookRoutes
@@ -19,9 +17,7 @@ import net.barrage.llmao.app.api.http.controllers.adminSettingsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminUserRoutes
 import net.barrage.llmao.app.api.http.controllers.administrationRouter
 import net.barrage.llmao.app.api.http.controllers.agentsRoutes
-import net.barrage.llmao.app.api.http.controllers.authRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
-import net.barrage.llmao.app.api.http.controllers.devController
 import net.barrage.llmao.app.api.http.controllers.imageRoutes
 import net.barrage.llmao.app.api.http.controllers.specialistWorkflowRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraAdminRoutes
@@ -38,9 +34,6 @@ fun Application.configureRouting(state: ApplicationState) {
     // K8S specific route
     route("/__health") { get { call.respond(HttpStatusCode.OK) } }
 
-    // Unprotected authentication routes
-    authRoutes(state.services.auth, state.adapters)
-
     thirdPartyRoutes()
 
     // Add swagger-ui only if we're not in production.
@@ -49,20 +42,19 @@ fun Application.configureRouting(state: ApplicationState) {
     }
 
     // Admin API routes
-    authenticate("auth-session-admin") {
+    authenticate("admin") {
       adminAgentsRoutes(state.services.agent, state.settingsService)
       adminUserRoutes(state.services.user)
       adminChatsRoutes(state.services.chat)
       administrationRouter(state.services.admin)
       adminSettingsRoutes(state.settingsService)
-      state.adapters.runIfEnabled<ChonkitAuthenticationService, Unit> { chonkitAuthRouter(it) }
       state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
         jiraKiraAdminRoutes(it.jiraKiraRepository)
       }
     }
 
     // User API routes
-    authenticate("auth-session") {
+    authenticate("user") {
       specialistWorkflowRoutes(state.adapters)
       state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
         jiraKiraUserRoutes(it.jiraKiraRepository)
@@ -77,12 +69,8 @@ fun Application.configureRouting(state: ApplicationState) {
     // WhatsApp API routes
     state.adapters.runIfEnabled<WhatsAppAdapter, Unit> { whatsAppAdapter ->
       whatsAppHookRoutes(whatsAppAdapter)
-      authenticate("auth-session-admin") { adminWhatsAppRoutes(whatsAppAdapter) }
-      authenticate("auth-session") { whatsAppRoutes(whatsAppAdapter) }
-    }
-
-    if (application.environment.config.property("ktor.environment").getString() == "development") {
-      devController(state.services.auth, state.services.user, state.adapters)
+      authenticate("admin") { adminWhatsAppRoutes(whatsAppAdapter) }
+      authenticate("user") { whatsAppRoutes(whatsAppAdapter) }
     }
   }
 }

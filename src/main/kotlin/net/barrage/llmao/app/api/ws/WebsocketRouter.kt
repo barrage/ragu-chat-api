@@ -51,7 +51,7 @@ fun Application.websocketServer(
 
   routing {
     // Protected WS route for one time tokens.
-    authenticate("auth-session") {
+    authenticate("user") {
       route("/ws") {
         get(websocketGenerateToken()) {
           val user = call.user()
@@ -71,6 +71,7 @@ fun Application.websocketServer(
       val rawToken = call.queryParam("token")
 
       if (rawToken == null) {
+        LOG.debug("WS - closing due to missing token")
         close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
         return@webSocket
       }
@@ -78,7 +79,8 @@ fun Application.websocketServer(
       val token =
         try {
           KUUID.fromString(rawToken)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
+          LOG.debug("WS - closing due to invalid ID")
           close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
           return@webSocket
         }
@@ -86,6 +88,7 @@ fun Application.websocketServer(
       val userId = tokenManager.removeToken(token)
 
       if (userId == null) {
+        LOG.debug("WS - closing due to no token entry")
         close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
         return@webSocket
       }

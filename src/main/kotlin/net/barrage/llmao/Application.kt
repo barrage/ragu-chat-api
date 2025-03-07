@@ -12,12 +12,11 @@ import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
+import net.barrage.llmao.app.api.http.authMiddleware
 import net.barrage.llmao.app.api.http.configureCors
 import net.barrage.llmao.app.api.http.configureOpenApi
 import net.barrage.llmao.app.api.http.configureRequestValidation
 import net.barrage.llmao.app.api.http.configureRouting
-import net.barrage.llmao.app.api.http.configureSession
-import net.barrage.llmao.app.api.http.extendSession
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.EventListener
@@ -50,8 +49,10 @@ fun Application.module() {
       }
     )
   }
-  configureSession(state.services.auth)
-  extendSession(state.services.auth)
+  authMiddleware(
+    environment.config.string("jwt.issuer"),
+    environment.config.string("jwt.jwksEndpoint"),
+  )
   configureOpenApi()
   websocketServer(
     ChatWorkflowFactory(

@@ -113,7 +113,8 @@ dependencies {
   liquibaseRuntime("javax.xml.bind:jaxb-api:2.2.4")
   liquibaseRuntime("org.postgresql:postgresql:$postgresVersion")
   jooqGenerator("org.postgresql:postgresql:$postgresVersion")
-
+  implementation("io.ktor:ktor-server-auth:$ktorVersion")
+  implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
   // Weaviate client
   implementation("io.weaviate:client:4.8.3")
 

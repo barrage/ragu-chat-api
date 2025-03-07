@@ -69,7 +69,6 @@ private fun providers(): OpenApiRoute.() -> Unit = {
         body<ProvidersResponse> {
           example("example") {
             ProvidersResponse(
-              auth = listOf("google"),
               llm = listOf("openai"),
               vector = listOf("weaviate"),
               embedding = listOf("azure"),
