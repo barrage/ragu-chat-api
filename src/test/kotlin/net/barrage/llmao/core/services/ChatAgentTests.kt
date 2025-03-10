@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class ChatAgentTests : IntegrationTest(useWiremock = true) {
+class ChatAgentTests : IntegrationTest() {
   private lateinit var chatAgent: ChatAgent
   private lateinit var admin: User
   private lateinit var agent: Agent

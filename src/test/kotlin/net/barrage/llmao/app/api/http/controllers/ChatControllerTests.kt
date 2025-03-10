@@ -17,6 +17,7 @@ import java.util.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
@@ -28,8 +29,7 @@ import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.sessionCookie
-import net.barrage.llmao.core.ValidationError
+import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -68,7 +68,8 @@ class ChatControllerTests : IntegrationTest() {
   @Test
   fun shouldRetrieveAllChatsDefaultPagination() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response = client.get("/chats") { header("Cookie", sessionCookie(userSession.sessionId)) }
+    val response =
+      client.get("/chats") { header("Cookie", userAccessToken()) }
 
     assertEquals(200, response.status.value)
     val body = response.body<CountedList<Chat>>()
@@ -82,7 +83,7 @@ class ChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/chats?sortBy=createdAt&sortOrder=desc") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
       }
 
     assertEquals(200, response.status.value)
@@ -98,7 +99,7 @@ class ChatControllerTests : IntegrationTest() {
     val updatedTitle = UpdateChatTitleDTO("Updated Title")
     val response =
       client.put("/chats/${chatOne.id}") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
         contentType(ContentType.Application.Json)
         setBody(updatedTitle)
       }
@@ -115,7 +116,7 @@ class ChatControllerTests : IntegrationTest() {
     val updatedTitle = UpdateChatTitleDTO("")
     val response =
       client.put("/chats/${chatOne.id}") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
         contentType(ContentType.Application.Json)
         setBody(updatedTitle)
       }
@@ -131,7 +132,7 @@ class ChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.delete("/chats/${chatDelete.id}") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
       }
 
     assertEquals(204, response.status.value)
@@ -140,7 +141,7 @@ class ChatControllerTests : IntegrationTest() {
 
     val check =
       client.get("/chats/${chatDelete.id}") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
       }
 
     assertEquals(404, check.status.value)
@@ -151,7 +152,7 @@ class ChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/chats/${chatOne.id}/messages?page=1&perPage=25") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
       }
 
     assertEquals(200, response.status.value)
@@ -167,7 +168,7 @@ class ChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/chats/${UUID.randomUUID()}/messages?page=1&perPage=25") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
       }
 
     assertEquals(404, response.status.value)
@@ -179,7 +180,7 @@ class ChatControllerTests : IntegrationTest() {
     val evaluation = EvaluateMessage(true)
     val response =
       client.patch("/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
@@ -196,7 +197,7 @@ class ChatControllerTests : IntegrationTest() {
     val evaluation = EvaluateMessage(true)
     val response =
       client.patch("/chats/${chatOne.id}/messages/${messageOne.id}") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
@@ -212,7 +213,7 @@ class ChatControllerTests : IntegrationTest() {
     val evaluation = EvaluateMessage(true, "good job")
     val response =
       client.patch("/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header("Cookie", sessionCookie(userSession.sessionId))
+        header("Cookie", userAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
@@ -229,7 +230,7 @@ class ChatControllerTests : IntegrationTest() {
     val evaluationOne = EvaluateMessage(true, "what a marvelous response")
     val responseOne =
       client.patch("/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
+        header(HttpHeaders.Cookie, userAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluationOne)
       }
@@ -237,7 +238,7 @@ class ChatControllerTests : IntegrationTest() {
 
     val responseTwo =
       client.get("/chats/${chatOne.id}/messages?page=1&perPage=1") {
-        header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
+        header(HttpHeaders.Cookie, userAccessToken())
       }
     assertEquals(HttpStatusCode.OK, responseTwo.status)
 
@@ -251,7 +252,7 @@ class ChatControllerTests : IntegrationTest() {
     val evaluationTwo = EvaluateMessage(null)
     val responseThree =
       client.patch("/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
+        header(HttpHeaders.Cookie, userAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluationTwo)
       }
@@ -262,7 +263,7 @@ class ChatControllerTests : IntegrationTest() {
 
     val responseFour =
       client.get("/chats/${chatOne.id}/messages?page=1&perPage=1") {
-        header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
+        header(HttpHeaders.Cookie, userAccessToken())
       }
     assertEquals(HttpStatusCode.OK, responseFour.status)
 
@@ -277,7 +278,9 @@ class ChatControllerTests : IntegrationTest() {
   fun shouldRetrieveChatWithAgent() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/chats/${chatOne.id}") { header("Cookie", sessionCookie(userSession.sessionId)) }
+      client.get("/chats/${chatOne.id}") {
+        header("Cookie", userAccessToken())
+      }
 
     assertEquals(200, response.status.value)
     val body = response.body<ChatWithAgent>()

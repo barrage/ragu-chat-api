@@ -17,15 +17,16 @@ import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
+import java.time.Instant
 import java.util.*
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.CHONKIT_AUTH_FEATURE_FLAG
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.app.workflow.IncomingMessageSerializer
 import net.barrage.llmao.core.EventListener
+import net.barrage.llmao.core.types.KOffsetDateTime
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -39,7 +40,7 @@ open class IntegrationTest(
   private val useWeaviate: Boolean = false,
 
   /** If `true`, start a wiremock container for all external APIs. */
-  private val useWiremock: Boolean = false,
+  private val useWiremock: Boolean = true,
 
   /** If `true`, initialize the minio container and the minio client. */
   private val useMinio: Boolean = false,
@@ -54,9 +55,6 @@ open class IntegrationTest(
   /** If `true`, enables the Chonkit authentication module. */
   enableChonkitAuth: Boolean = false,
   enableWhatsApp: Boolean = false,
-
-  /** Enabled OAuth providers. */
-  oAuthProviders: List<String> = listOf("google", "apple", "carnet"),
 ) {
   val postgres: TestPostgres = TestPostgres()
   private var minio: TestMinio? = null
@@ -85,14 +83,11 @@ open class IntegrationTest(
       )
 
     // Feature adapters
-    cfg =
-      cfg.mergeWith(
-        MapApplicationConfig(
-          CHONKIT_AUTH_FEATURE_FLAG to enableChonkitAuth.toString(),
-          WHATSAPP_FEATURE_FLAG to enableWhatsApp.toString(),
-          *oAuthProviders.map { "ktor.features.oauth.$it" to "true" }.toTypedArray(),
-        )
-      )
+    cfg = cfg.mergeWith(MapApplicationConfig(WHATSAPP_FEATURE_FLAG to enableWhatsApp.toString()))
+
+    val now = Instant.now().epochSecond
+    val max = KOffsetDateTime.MAX.toEpochSecond()
+    cfg = cfg.mergeWith(MapApplicationConfig("jwt.leeway" to (max - now).toString()))
   }
 
   /**
@@ -176,6 +171,8 @@ open class IntegrationTest(
 
             // Has to match the URL from the Infobip SDK.
             "infobip.endpoint" to wiremockUrlOverride,
+            "jwt.issuer" to wiremockUrlOverride,
+            "jwt.jwksEndpoint" to "$wiremockUrlOverride/jwks/",
           )
         )
       return
@@ -205,6 +202,10 @@ open class IntegrationTest(
     cfg =
       cfg.mergeWith(
         MapApplicationConfig(
+          // The JWT issuer should be the same as in the hardcoded tokens,
+          // in our case that's the authentik instance we originally got the tokens from
+          "jwt.issuer" to "https://authentik.barrage.dev/application/o/ragu/",
+          "jwt.jwksEndpoint" to "$url/$AUTH_WM/application/o/ragu/jwks/",
           "llm.openai.endpoint" to "$url/$OPENAI_WM/v1/",
           "llm.openai.apiKey" to "super-duper-secret-openai-api-key",
           "embeddings.openai.endpoint" to "$url/$OPENAI_WM/v1/",
@@ -212,20 +213,8 @@ open class IntegrationTest(
           "embeddings.azure.endpoint" to "$url/$AZURE_WM/openai/deployments",
           "embeddings.azure.apiKey" to "super-duper-secret-azure-api-key",
           "embeddings.fembed.endpoint" to "$url/$FEMBED_WM",
-          "vault.endpoint" to "$url/$VAULT_WM",
           "infobip.endpoint" to url,
           "infobip.apiKey" to "super-duper-secret-infobip-api-key",
-          "oauth.apple.tokenEndpoint" to "$url/$APPLE_VM/auth/token",
-          "oauth.apple.keysEndpoint" to "$url/$APPLE_VM/auth/keys",
-          "oauth.apple.clientId" to "clientId",
-          "oauth.apple.serviceId" to "serviceId",
-          "oauth.google.tokenEndpoint" to "$url/$GOOGLE_WM/auth/token",
-          "oauth.google.keysEndpoint" to "$url/$GOOGLE_WM/auth/keys",
-          "oauth.google.clientId" to "aud.apps.googleusercontent.com",
-          "oauth.carnet.tokenEndpoint" to "$url/$CARNET_WM/auth/token",
-          "oauth.carnet.keysEndpoint" to "$url/$CARNET_WM/auth/jwks",
-          "oauth.carnet.userInfoEndpoint" to "$url/$CARNET_WM/auth/userinfo",
-          "oauth.carnet.logoutEndpoint" to "$url/$CARNET_WM/auth/logout",
           "llm.ollama.endpoint" to "$url/$OLLAMA_WM",
           "jirakira.endpoint" to "$url/$JIRA_WM",
         )
@@ -248,18 +237,17 @@ open class IntegrationTest(
   }
 }
 
-/** Has to be the same name as `session.cookieName`. */
-fun sessionCookie(sessionId: UUID): String = "kappi=id%3D%2523s$sessionId"
+/** Has to be verifiable with the Wiremock auth sever public key. */
+fun adminAccessToken(): String = "access_token=$VALID_ADMIN_ACCESS_TOKEN"
+
+fun userAccessToken(): String = "access_token=$VALID_USER_ACCESS_TOKEN"
 
 // Wiremock URL discriminators
 
+const val AUTH_WM = "__auth"
 const val OPENAI_WM = "__openai"
 const val AZURE_WM = "__azure"
 const val FEMBED_WM = "__fembed"
-const val VAULT_WM = "__vault"
-const val GOOGLE_WM = "__google"
-const val APPLE_VM = "__apple"
-const val CARNET_WM = "__carnet"
 const val OLLAMA_WM = "__ollama"
 const val JIRA_WM = "__jira"
 
@@ -322,3 +310,9 @@ private fun generateP8PrivateKey(): String {
 
   return Base64.getEncoder().encodeToString(pkcs8EncodedKeySpec.encoded)
 }
+
+const val VALID_ADMIN_ACCESS_TOKEN =
+  "eyJhbGciOiJSUzI1NiIsImtpZCI6ImQyOWI3YWVhN2Y0MzBmNzljYzJkMmE1YzI2MjhmZTMyIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2F1dGhlbnRpay5iYXJyYWdlLmRldi9hcHBsaWNhdGlvbi9vL3JhZ3UvIiwic3ViIjoiYjQ5ODJkMjctYTIzOC00M2MzLTgxOWMtY2I2Mzc4NGE0Y2JjIiwiYXVkIjoiSE5BTnBabFM4VzdzRjluQUE2dVo2NVlFUGExdHlmV214dlQxckpBUCIsImV4cCI6MTc0MTU5MzgxNywiaWF0IjoxNzQxNTkzNTE3LCJhdXRoX3RpbWUiOjE3NDE1OTM0NzMsImFjciI6ImdvYXV0aGVudGlrLmlvL3Byb3ZpZGVycy9vYXV0aDIvZGVmYXVsdCIsInNpZCI6IjMxZWY4N2Y1Mzk3YjY2MzBlYmI4ZDE4MDE2OGQwNDRjYTg0YjI4ODAwMDNiODI0MzdiNGJlY2FhZTc1MjE4OWUiLCJhdmF0YXIiOiJodHRwczovL3l0My5nb29nbGV1c2VyY29udGVudC5jb20veXRjL0FJZHJvX2tLb3pGN3JSM3AzMUNlOHpJQlk2RXA2Q0lWYUtTc3N6R1NoNExLeTVwdmhCWT1zMTYwLWMtay1jMHgwMGZmZmZmZi1uby1yaiIsImVtYWlsIjoiam9zaXAuYmVua29kYWtvdmljQGJhcnJhZ2UubmV0IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImVudGl0bGVtZW50cyI6WyJhZG1pbiJdLCJyb2xlcyI6WyJhZG1pbiJdLCJuYW1lIjoiQmlibGl1cyBHbG9yaXVzIE1heGltdXMgb2YgdGhlIFRhaW50ZWQgUmVhbG1zIG9mIEZvcmJpZGRlbiBLbm93bGVkZ2UiLCJnaXZlbl9uYW1lIjoiQmlibGl1cyBHbG9yaXVzIE1heGltdXMgb2YgdGhlIFRhaW50ZWQgUmVhbG1zIG9mIEZvcmJpZGRlbiBLbm93bGVkZ2UiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJqZWJlbmtvIiwibmlja25hbWUiOiJqZWJlbmtvIiwiZ3JvdXBzIjpbImF1dGhlbnRpa19hZG1pbnMiLCJyYWd1X2FkbWlucyJdLCJhenAiOiJITkFOcFpsUzhXN3NGOW5BQTZ1WjY1WUVQYTF0eWZXbXh2VDFySkFQIiwidWlkIjoia3JlZXI5b2d6ekJDekc5aVJFQkVuYm9DZTZ6YlRDQ096UFUzUTRwUiJ9.aaCF9JggVPQs716pOveM-bJQ7BHfsWzVmCRDpo2f3ekf0J70OzllY_Oj61jil9G4wBUwGXyCtmvWVkntvEKHrwcEVGczdV_hbsI7YgeXes_FPM2h_8wrmxy3zwPpm-rVGUhXesCyS6XvvJP3gUNZbY_l7bnhLpj6o8KePGa5XY406AeRrF5cxdfX0vEk6jRTibG_yxtMjhed0Cp3gVfCPIWOgaskNZZ3exsDQ0UcDMX14cnOchgIUpDj-nffvVhngGS2s5srwmKFNzlTzzoBDEPhk5all4Q-HfJzjeKS5l5-JlctgHYVTx0bMnY1uJSsRiq55CtNfTBmQe1EZUPuH3UPJGmig4fd0bUPAAcaJqnwF51XufRnnWm1wUD-i0ZsPM6V2_ovjdoG9DYSHJ7OqRfvaCE7kw35shu_UfdDoz2FE0_MM-h2wuRdlzw-VDK3Zewerp_NgMv0ssS5lO3pQw5wRZB6wtOBaXniJHGaMIf2BxgY0ALjiyWaRId8r5dYegipOP4thCoYqPFLu5supAkKePhhq0iym-qBZKcW5jfNVYjnEj5c9_P47hAmddDh11xj-MYAJh7WgGVTLu-klJtPyw9UUae7Pju-YFDK1YIuNsCdIbwPpLHGYhn8dBcQoRnKUsDdGfmLDmp_IUIISKQTnUHACS9IiPvNl4Xo7to"
+
+const val VALID_USER_ACCESS_TOKEN =
+  "eyJhbGciOiJSUzI1NiIsImtpZCI6ImQyOWI3YWVhN2Y0MzBmNzljYzJkMmE1YzI2MjhmZTMyIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2F1dGhlbnRpay5iYXJyYWdlLmRldi9hcHBsaWNhdGlvbi9vL3JhZ3UvIiwic3ViIjoiYjMwM2NjMWYtMzQ4Yi00ZWVmLWJlYmUtMWI5NTBlN2U3MTA2IiwiYXVkIjoiSE5BTnBabFM4VzdzRjluQUE2dVo2NVlFUGExdHlmV214dlQxckpBUCIsImV4cCI6MTc0MTYwNDk0OCwiaWF0IjoxNzQxNjA0NjQ4LCJhdXRoX3RpbWUiOjE3NDE2MDQwMDgsImFjciI6ImdvYXV0aGVudGlrLmlvL3Byb3ZpZGVycy9vYXV0aDIvZGVmYXVsdCIsInNpZCI6IjVmMTAzZDY1MGU0NTdmODdlM2I5ZWFiYmIwZmQwZGRjZjU4ODJjZjhjYTExZmY2ZDkyNGJhZGRmY2QzNmM3YjQiLCJhdmF0YXIiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NJajlJYmhoZ210MzI4Qk80TmkxazVfMXdyMnNnRzB0b1JYVHVkR3RWZm0wUy1mNlVnPXM5Ni1jIiwiZW1haWwiOiJtYXRlai5sYW5kZWthQGJhcnJhZ2UubmV0IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImVudGl0bGVtZW50cyI6WyJ1c2VyIl0sInJvbGVzIjpbInVzZXIiXSwibmFtZSI6Ik1hdGVqIExhbmRla2EiLCJnaXZlbl9uYW1lIjoiTWF0ZWogTGFuZGVrYSIsInByZWZlcnJlZF91c2VybmFtZSI6Im1hdGVqLmxhbmRla2FAYmFycmFnZS5uZXQiLCJuaWNrbmFtZSI6Im1hdGVqLmxhbmRla2FAYmFycmFnZS5uZXQiLCJncm91cHMiOlsicmFndV91c2VycyJdLCJhenAiOiJITkFOcFpsUzhXN3NGOW5BQTZ1WjY1WUVQYTF0eWZXbXh2VDFySkFQIiwidWlkIjoiRXJWTlBYZVlBMkNPZ0VybGJXWEExa3BWUU1temhaYkYweWNhM0RoRCJ9.FfIWiDDJf6w6V8L__mZVXipq1OPm8Kbml3jlAv31NVwxZChlt8LAk9-ep5MzZXWpBy6fO2bZh0dSRzxyYeFyLdhPkd8nBN45WUJ2FxS_DELl-uaA8C56FY64Pdmiyq_CqQZnBNSaWMOItyog9kKhwE1tRo1Sz7Xg_3uzhAtDBbF2OoZQ0_iG90XmnyzBfUMLryS5ixK5AwhCjjFnYXVQufDVcX7kHR3VDhJmlQmAck7E_FoTRaOY8vtjBjHocRBjK7unlxldSVjX-W_tBwrExXlr_79hYTsLAQVjTqoH30W-nPY0YYa1ZXJcBhQP6NHwh43ZWyiixHdXfsbxQ0k5W8_cvrcXobhAtjYpEbdk1dE0l_tcTe6z6BMvTAupX8fpqiYAHijd0pbLH6lTyb09Y_M66fLOic30_gwRX5oL3XnVvoFB9IswrZAqROJNzb1DrAU40RhVn8-gr25hjnB1VM8Opbs1E8GWEt1Ru3CxHz7bKWIOPzmmeHESoi8a3FneDSyjKMlhTVS3CVOnrvKv2fF7OVq2_TA0f6vcz7r2E57o83ffXANiQ5koWM1C6_6w7EfDHcC-u-4adwPPwQ32XG8nduGhDJmy_6hGTMY8bU6IjKmXBL48l50uBWoFaSqt__m3zDrzst4k_QNQ8lj_5zcQHgTGPb_RxQY66LE055s"

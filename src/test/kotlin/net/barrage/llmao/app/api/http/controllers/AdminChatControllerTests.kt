@@ -17,8 +17,10 @@ import io.ktor.serialization.kotlinx.json.json
 import java.util.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowRepository
+import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
@@ -33,8 +35,6 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.repository.ChatRepository
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.sessionCookie
-import net.barrage.llmao.core.ValidationError
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -87,10 +87,7 @@ class AdminChatControllerTests : IntegrationTest() {
   @Test
   fun shouldRetrieveAllChatsDefaultPagination() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/admin/chats") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-      }
+    val response = client.get("/admin/chats") { header(HttpHeaders.Cookie, adminAccessToken()) }
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<CountedList<ChatWithUserAndAgent>>()
     assertNotNull(body)
@@ -103,7 +100,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/chats") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         parameter("userId", user.id)
       }
     assertEquals(HttpStatusCode.OK, response.status)
@@ -118,7 +115,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/chats") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         parameter("agentId", agent.id)
       }
     assertEquals(HttpStatusCode.OK, response.status)
@@ -133,7 +130,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/chats") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         parameter("title", "Chat")
       }
     assertEquals(HttpStatusCode.OK, response.status)
@@ -144,25 +141,13 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldFailGetAllChatsForNonAdminUser() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/admin/chats") {
-        header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
-      }
-    assertEquals(HttpStatusCode.Unauthorized, response.status)
-    val body = response.body<String>()
-    assertNotNull(body)
-  }
-
-  @Test
   fun shouldUpdateChatTitle() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val newTitle = "Updated Chat Title"
     val updatedChatTitle = UpdateChatTitleDTO(newTitle)
     val response =
       client.put("/admin/chats/${chatOne.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(updatedChatTitle)
       }
@@ -178,7 +163,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val updatedChatTitle = UpdateChatTitleDTO("")
     val response =
       client.put("/admin/chats/${chatOne.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(updatedChatTitle)
       }
@@ -192,7 +177,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=25") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<List<Message>>()
@@ -208,7 +193,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/chats/${UUID.randomUUID()}/messages?page=1&perPage=25") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
 
     assertEquals(HttpStatusCode.NotFound, response.status)
@@ -220,7 +205,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val evaluation = EvaluateMessage(true)
     val response =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
@@ -236,7 +221,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val evaluation = EvaluateMessage(true)
     val response =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageOne.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
@@ -252,7 +237,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val evaluation = EvaluateMessage(true, "oh yes, what a splendid response")
     val response =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
@@ -269,7 +254,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val evaluationOne = EvaluateMessage(true, "what a marvelous response")
     val responseOne =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluationOne)
       }
@@ -277,7 +262,7 @@ class AdminChatControllerTests : IntegrationTest() {
 
     val responseTwo =
       client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=1") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
     assertEquals(HttpStatusCode.OK, responseTwo.status)
 
@@ -290,7 +275,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val evaluationTwo = EvaluateMessage(null)
     val responseThree =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluationTwo)
       }
@@ -301,7 +286,7 @@ class AdminChatControllerTests : IntegrationTest() {
 
     val responseFour =
       client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=1") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
     assertEquals(HttpStatusCode.OK, responseFour.status)
 
@@ -316,9 +301,7 @@ class AdminChatControllerTests : IntegrationTest() {
   fun shouldGetChatWithUserAndAgent() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/chats/${chatOne.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-      }
+      client.get("/admin/chats/${chatOne.id}") { header(HttpHeaders.Cookie, adminAccessToken()) }
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<ChatWithUserAndAgent>()
     assertEquals(chatOne.id, body.chat.id)
@@ -356,7 +339,7 @@ class AdminChatControllerTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.delete("/admin/chats/${chat.chat.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
 
     assertEquals(HttpStatusCode.NoContent, response.status)

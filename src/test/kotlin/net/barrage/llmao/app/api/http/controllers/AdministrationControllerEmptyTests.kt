@@ -6,9 +6,9 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -29,9 +29,7 @@ class AdministrationControllerEmptyDBTests : IntegrationTest() {
   fun getAdminDashboardCounts() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/dashboard/counts") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/admin/dashboard/counts") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(200, response.status.value)
   }
@@ -41,7 +39,7 @@ class AdministrationControllerEmptyDBTests : IntegrationTest() {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/dashboard/chat/history?period=WEEK") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
 
     assertEquals(HttpStatusCode.OK, response.status)

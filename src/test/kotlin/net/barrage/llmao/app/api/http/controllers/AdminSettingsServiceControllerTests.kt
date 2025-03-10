@@ -11,13 +11,13 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.settings.ApplicationSettings
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsUpdate
-import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
@@ -41,7 +41,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
 
     val response =
       client.put("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(update)
       }
@@ -50,7 +50,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
 
     val responseCheck =
       client.get("/admin/settings?setting=chatMaxHistoryTokens") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
 
     assertEquals(HttpStatusCode.OK, response.status)
@@ -65,7 +65,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
     val update = """{"settings": "updates": [{"setting": "nonExistingSetting", "value": "15"}]}"""
     val response =
       client.put("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(update)
       }
@@ -78,7 +78,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
     val update = """{"settings": "removals": ["nonExistingSetting"]}"""
     val response =
       client.put("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(update)
       }
@@ -102,7 +102,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
 
     val response =
       client.put("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(update)
       }
@@ -110,9 +110,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
     assertEquals(HttpStatusCode.OK, response.status)
 
     val responseCheck =
-      client.get("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-      }
+      client.get("/admin/settings") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, response.status)
 
@@ -138,16 +136,14 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
 
     val response =
       client.put("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(update)
       }
 
     val updateCheck =
       client
-        .get("/admin/settings") {
-          header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-        }
+        .get("/admin/settings") { header(HttpHeaders.Cookie, adminAccessToken()) }
         .body<ApplicationSettings>()
 
     assertEquals("00000000-0000-0000-0000-000000000000", updateCheck[SettingKey.WHATSAPP_AGENT_ID])
@@ -162,7 +158,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
 
     val responseRemove =
       client.put("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(remove)
       }
@@ -170,9 +166,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
     assertEquals(HttpStatusCode.OK, responseRemove.status)
 
     val responseCheck =
-      client.get("/admin/settings") {
-        header(HttpHeaders.Cookie, sessionCookie(userAdminSession.sessionId))
-      }
+      client.get("/admin/settings") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, responseCheck.status)
 

@@ -48,12 +48,12 @@ fun Application.configureOpenApi() {
       description = "Development Server"
     }
     security {
-      securityScheme("cookieAuth") {
-        name = environment.config.property("cookies.session.cookieName").getString()
-        type = AuthType.API_KEY
+      securityScheme("jwt") {
+        name = "access_token"
+        type = AuthType.OAUTH2
         location = AuthKeyLocation.COOKIE
       }
-      defaultSecuritySchemeNames = listOf("cookieAuth")
+      defaultSecuritySchemeNames = listOf("jwt")
     }
     schemas {
       generator = {

@@ -25,9 +25,9 @@ import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_PROMPT
 import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.workflow.IncomingMessageSerializer
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.chatSession
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Session
@@ -42,7 +42,7 @@ import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.sendMessage
-import net.barrage.llmao.sessionCookie
+import net.barrage.llmao.wsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -53,7 +53,7 @@ private const val TEST_COLLECTION = "KusturicaChatTests"
 
 private const val SIZE = 1536
 
-class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeaviate = true) {
+class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
   private lateinit var user: User
   private lateinit var session: Session
 
@@ -82,7 +82,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val validAgent = createValidAgent()
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       openNewChat(validAgent.agent.id)
 
       var buffer = ""
@@ -124,7 +124,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val validAgent = createValidAgent()
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       openNewChat(validAgent.agent.id)
 
       var buffer = ""
@@ -171,7 +171,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val invalidAgent = createInvalidAgent()
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       openNewChat(invalidAgent.agent.id)
 
       sendMessage("Will this trigger a stream response?") { incoming ->
@@ -199,7 +199,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val validAgent = createValidAgent()
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
@@ -243,7 +243,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val validAgent = createValidAgent()
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       val chatOne = openNewChat(validAgent.agent.id)
       val errorOne =
         assertThrows<AppError> { app.services.chat.getChat(chatOne, Pagination(1, 50)) }
@@ -270,7 +270,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val validAgent = createValidAgent()
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
@@ -334,7 +334,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
     runBlocking {
       launch {
         var buffer = ""
-        client1.chatSession(session.sessionId) {
+        client1.wsSession {
           openNewChat(validAgent.agent.id)
           // Wait a bit before actually sending the message
           delay(500)
@@ -363,7 +363,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
       delay(500)
 
       var buffer = ""
-      client2.chatSession(session.sessionId) {
+      client2.wsSession {
         openNewChat(validAgent.agent.id)
         sendMessage("Will this trigger a stream response?") { incoming ->
           for (frame in incoming) {
@@ -402,18 +402,14 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
     val httpClient = createClient { install(ContentNegotiation) { json() } }
     val agent = createValidAgent()
 
-    // Necessary for the agent update route
-    val admin = postgres.testUser(email = "chad@eternal.grind", admin = true)
-    val adminSession = postgres.testSession(admin.id)
-
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       openNewChat(agent.agent.id)
       var buffer = ""
       sendMessage("Will this trigger a stream response?") { incoming ->
         // Block on this so we can see what happens.
         runBlocking {
           httpClient.put("/admin/agents/${agent.agent.id}") {
-            header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+            header(HttpHeaders.Cookie, adminAccessToken())
             contentType(ContentType.Application.Json)
             setBody(UpdateAgent(active = false))
           }
@@ -459,7 +455,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val validAgent = createValidAgent("This is an error message.")
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       openNewChat(validAgent.agent.id)
 
       sendMessage("Give me an error") { incoming ->
@@ -488,7 +484,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWiremock = true, useWeavia
 
     val prompt = "Will this trigger a stream response?"
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
       var buffer = ""

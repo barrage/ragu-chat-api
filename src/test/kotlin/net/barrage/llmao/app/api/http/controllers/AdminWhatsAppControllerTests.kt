@@ -8,6 +8,7 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentUpdate
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
@@ -23,15 +24,13 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class AdminWhatsAppControllerTests :
-  IntegrationTest(useWeaviate = true, useWiremock = true, enableWhatsApp = true) {
+class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsApp = true) {
   private lateinit var adminUser: User
   private lateinit var peasantUser: User
   private lateinit var adminSession: Session
@@ -98,10 +97,7 @@ class AdminWhatsAppControllerTests :
   fun successfullySetsWhatsAppAgent() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
 
-    val response =
-      client.get("/admin/whatsapp/agent") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
-      }
+    val response = client.get("/admin/whatsapp/agent") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
     val body = response.body<AgentFull>()
@@ -110,7 +106,7 @@ class AdminWhatsAppControllerTests :
 
     val responseUpdate =
       client.put("/admin/whatsapp/agent") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(WhatsAppAgentUpdate(whatsAppAgentTwo.id))
       }
@@ -118,9 +114,7 @@ class AdminWhatsAppControllerTests :
     assertEquals(200, responseUpdate.status.value)
 
     val responseGetUpdated =
-      client.get("/admin/whatsapp/agent") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
-      }
+      client.get("/admin/whatsapp/agent") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, responseGetUpdated.status.value)
 
@@ -135,7 +129,7 @@ class AdminWhatsAppControllerTests :
 
     val responseUpdate =
       client.put("/admin/whatsapp/agent") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(WhatsAppAgentUpdate(KUUID.randomUUID()))
       }
@@ -148,10 +142,7 @@ class AdminWhatsAppControllerTests :
   @Test
   fun adminGetWhatsAppAgent() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/admin/whatsapp/agent") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
-      }
+    val response = client.get("/admin/whatsapp/agent") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
     val body = response.body<AgentFull>()
@@ -164,7 +155,7 @@ class AdminWhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/whatsapp/numbers/${peasantUser.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
       }
 
     assertEquals(200, response.status.value)
@@ -179,7 +170,7 @@ class AdminWhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.post("/admin/whatsapp/numbers/${peasantUser.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234566"))
       }
@@ -197,7 +188,7 @@ class AdminWhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.post("/admin/whatsapp/numbers/${peasantUser.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234567"))
       }
@@ -213,7 +204,7 @@ class AdminWhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.put("/admin/whatsapp/numbers/${peasantUser.id}/${whatsAppNumber.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234569"))
       }
@@ -229,7 +220,7 @@ class AdminWhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.delete("/admin/whatsapp/numbers/${peasantUser.id}/${whatsAppNumber.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
       }
 
     assertEquals(204, response.status.value)
@@ -238,10 +229,7 @@ class AdminWhatsAppControllerTests :
   @Test
   fun adminGetAllWhatsAppChats() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/admin/whatsapp/chats") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
-      }
+    val response = client.get("/admin/whatsapp/chats") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
     val body = response.body<CountedList<WhatsAppChatWithUserName>>()
@@ -255,7 +243,7 @@ class AdminWhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/whatsapp/chats/${whatsAppChat.id}") {
-        header("Cookie", sessionCookie(adminSession.sessionId))
+        header("Cookie", adminAccessToken())
       }
 
     assertEquals(200, response.status.value)

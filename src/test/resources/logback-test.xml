@@ -26,4 +26,6 @@
         <appender-ref ref="CONSOLE"/>
     </root>
     <logger name="org.liquibase" level="OFF"/>
+    <logger name="io.ktor.server.auth" level="TRACE"/>
+    <logger name="io.ktor.server.auth.jwt" level="TRACE"/>
 </configuration>

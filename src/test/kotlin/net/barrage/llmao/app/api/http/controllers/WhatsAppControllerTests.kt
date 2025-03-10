@@ -25,15 +25,14 @@ import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.sessionCookie
+import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class WhatsAppControllerTests :
-  IntegrationTest(useWeaviate = true, useWiremock = true, enableWhatsApp = true) {
+class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsApp = true) {
   private lateinit var peasantUser: User
   private lateinit var peasantSession: Session
   private lateinit var whatsAppNumber: WhatsAppNumber
@@ -132,8 +131,7 @@ class WhatsAppControllerTests :
   @Test
   fun getWhatsAppNumbersForUser() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/whatsapp/numbers") { header("Cookie", sessionCookie(peasantSession.sessionId)) }
+    val response = client.get("/whatsapp/numbers") { header("Cookie", userAccessToken()) }
 
     assertEquals(200, response.status.value)
     val body = response.body<List<WhatsAppNumber>>()
@@ -147,7 +145,7 @@ class WhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.post("/whatsapp/numbers") {
-        header("Cookie", sessionCookie(peasantSession.sessionId))
+        header("Cookie", userAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234565"))
       }
@@ -165,7 +163,7 @@ class WhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.put("/whatsapp/numbers/${whatsAppNumber.id}") {
-        header("Cookie", sessionCookie(peasantSession.sessionId))
+        header("Cookie", userAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234564"))
       }
@@ -181,7 +179,7 @@ class WhatsAppControllerTests :
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.delete("/whatsapp/numbers/${whatsAppNumber.id}") {
-        header("Cookie", sessionCookie(peasantSession.sessionId))
+        header("Cookie", userAccessToken())
       }
 
     assertEquals(204, response.status.value)
@@ -190,8 +188,7 @@ class WhatsAppControllerTests :
   @Test
   fun getWhatsAppChatsForUser() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/whatsapp/chats") { header("Cookie", sessionCookie(peasantSession.sessionId)) }
+    val response = client.get("/whatsapp/chats") { header("Cookie", userAccessToken()) }
 
     assertEquals(200, response.status.value)
     val body = response.body<WhatsAppChatWithUserAndMessages>()

@@ -12,7 +12,7 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
-import net.barrage.llmao.sessionCookie
+import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
@@ -37,8 +37,7 @@ class AgentControllerTests : IntegrationTest() {
   @Test
   fun listingAgentsWorksDefaultPagination() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/agents") { header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId)) }
+    val response = client.get("/agents") { header(HttpHeaders.Cookie, userAccessToken()) }
     assertEquals(200, response.status.value)
     val body = response.body<CountedList<Agent>>()
     assertNotNull(body)
@@ -49,9 +48,7 @@ class AgentControllerTests : IntegrationTest() {
   fun getAgentById() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/agents/${agent.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(userSession.sessionId))
-      }
+      client.get("/agents/${agent.id}") { header(HttpHeaders.Cookie, userAccessToken()) }
     assertEquals(200, response.status.value)
     val body = response.body<Agent>()
     assertNotNull(body)

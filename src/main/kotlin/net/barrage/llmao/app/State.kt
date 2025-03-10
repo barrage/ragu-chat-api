@@ -37,7 +37,6 @@ import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
 import org.jooq.DSLContext
 
-const val CHONKIT_AUTH_FEATURE_FLAG = "ktor.features.chonkitAuthServer"
 const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
 const val JIRAKIRA_FEATURE_FLAG = "ktor.features.specialists.jirakira"
 

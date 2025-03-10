@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class TokenUsageTests : IntegrationTest(useWiremock = true) {
+class TokenUsageTests : IntegrationTest() {
   private lateinit var workflow: ChatAgent
   private lateinit var admin: User
   private lateinit var agent: Agent

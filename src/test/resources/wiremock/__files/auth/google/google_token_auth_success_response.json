@@ -1,7 +1,0 @@
-{
-  "access_token": "token1.token2.token3",
-  "expires_in": 3595,
-  "scope": "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid",
-  "token_type": "Bearer",
-  "id_token": "{{{ jwt iss='tokenIssuer' aud='aud.apps.googleusercontent.com' azp='aud.apps.googleusercontent.com' sub='4206969420' email='test@user.me' email_verified=true maxAge='1 days' alg='RS256' typ='JWT' hd='barrage.net' at_hash='at_hash' name='Test User' picture='https://not.set.com' given_name='Test' family_name='User' }}}"
-}

@@ -7,13 +7,13 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateCollectionAddition
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsResult
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
@@ -72,7 +72,7 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
 
     val response =
       client.put("/admin/agents/${agentOne.id}/collections") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(updateCollections)
       }
@@ -104,7 +104,7 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
 
     val response =
       client.put("/admin/agents/${agentOne.id}/collections") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(updateCollections)
       }
@@ -136,13 +136,13 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
       )
 
     client.put("/admin/agents/${agentOne.id}/collections") {
-      header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      header(HttpHeaders.Cookie, adminAccessToken())
       contentType(ContentType.Application.Json)
       setBody(updateCollections)
     }
 
     client.put("/admin/agents/${agentTwo.id}/collections") {
-      header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+      header(HttpHeaders.Cookie, adminAccessToken())
       contentType(ContentType.Application.Json)
       setBody(updateCollections)
     }
@@ -163,7 +163,7 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
 
     val response =
       client.delete("/admin/agents/collections?collection=Kusturica&provider=weaviate") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
 
     val agentOneAfter = app.services.agent.getFull(agentOne.id)

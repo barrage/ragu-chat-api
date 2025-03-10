@@ -7,30 +7,26 @@ import kotlinx.serialization.SerializationException
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraMessage
-import net.barrage.llmao.chatSession
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsUpdate
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage
+import net.barrage.llmao.wsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class WebsocketJiraKiraWorkflowTests : IntegrationTest(useWiremock = true) {
-  private lateinit var user: User
-  private lateinit var session: Session
+class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
+  val userId = KUUID.randomUUID()
 
   @BeforeAll
   fun setup() {
     runBlocking {
-      user = postgres.testUser(email = "not@important.org", admin = false)
-      session = postgres.testSession(user.id)
-      postgres.testJiraApiKey(user.id, "JIRA_API_KEY")
+      postgres.testJiraApiKey(userId, "JIRA_API_KEY")
       postgres.testSettings(
         SettingsUpdate(listOf(SettingUpdate(SettingKey.JIRA_TIME_SLOT_ATTRIBUTE_KEY, "_Customer_")))
       )
@@ -46,7 +42,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest(useWiremock = true) {
   fun jiraKiraSuccessfulCompletionNoToolsUsed() = wsTest { client ->
     var asserted = false
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       openNewChat(workflowType = "JIRAKIRA")
 
       sendMessage(
@@ -72,7 +68,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest(useWiremock = true) {
   fun jiraKiraSuccessfulCompletionWithToolsUsed() = wsTest { client ->
     var assertions = 0
 
-    client.chatSession(session.sessionId) {
+    client.wsSession {
       openNewChat(workflowType = "JIRAKIRA")
 
       sendMessage("JIRA_KIRA_CREATE_WORKLOG") { incoming ->

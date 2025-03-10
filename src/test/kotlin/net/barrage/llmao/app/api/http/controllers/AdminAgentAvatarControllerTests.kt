@@ -10,6 +10,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentFull
@@ -19,7 +20,6 @@ import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
@@ -81,7 +81,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   fun agentUploadAvatarJpeg() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         header("Content-Type", "image/jpeg")
         setBody("test".toByteArray())
       }
@@ -89,9 +89,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(201, response.status.value)
 
     val responseCheck =
-      client.get("/avatars/${agentOne.id}.jpeg") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/avatars/${agentOne.id}.jpeg") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(200, responseCheck.status.value)
     assertEquals("image/jpeg", responseCheck.headers["Content-Type"])
@@ -102,7 +100,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   fun agentUploadAvatarPng() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         header("Content-Type", "image/png")
         setBody("test".toByteArray())
       }
@@ -112,9 +110,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals("${agentOne.id}.png", body)
 
     val responseCheck =
-      client.get("/avatars/${agentOne.id}.png") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/avatars/${agentOne.id}.png") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(200, responseCheck.status.value)
     assertEquals("image/png", responseCheck.headers["Content-Type"])
@@ -125,7 +121,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   fun agentDeleteAvatar() = test { client ->
     val responseUpload =
       client.post("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         header("Content-Type", "image/jpeg")
         setBody("test".toByteArray())
       }
@@ -134,15 +130,13 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
 
     val responseDelete =
       client.delete("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
 
     assertEquals(204, responseDelete.status.value)
 
     val responseCheck =
-      client.get("/admin/agents/${agentOne.id}") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/admin/agents/${agentOne.id}") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(200, responseCheck.status.value)
 
@@ -152,9 +146,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertNull(bodyCheck.agent.avatar, "Avatar should be null")
 
     val responseCheckAvatar =
-      client.get("/avatars/${agentOne.id}.jpeg") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/avatars/${agentOne.id}.jpeg") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(404, responseCheckAvatar.status.value)
   }
@@ -163,7 +155,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   fun agentFailUploadAvatarWrongContentType() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         header("Content-Type", "text/plain")
         setBody("test".toByteArray())
       }
@@ -178,7 +170,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   fun agentFailUploadAvatarTooLarge() = test { client ->
     val response =
       client.post("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         header("Content-Type", "image/jpeg")
         setBody("test123".repeat(1000000).toByteArray())
       }
@@ -190,7 +182,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   fun agentAvatarUploadOverwrite() = test { client ->
     val responseUploadOriginal =
       client.post("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         header("Content-Type", "image/jpeg")
         setBody("foo".toByteArray())
       }
@@ -198,9 +190,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(201, responseUploadOriginal.status.value)
 
     val responseCheck =
-      client.get("/avatars/${agentOne.id}.jpeg") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/avatars/${agentOne.id}.jpeg") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(200, responseCheck.status.value)
     assertEquals("image/jpeg", responseCheck.headers["Content-Type"])
@@ -208,7 +198,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
 
     val responseUploadOverwrite =
       client.post("/admin/agents/${agentOne.id}/avatars") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
         header("Content-Type", "image/png")
         setBody("bar".toByteArray())
       }
@@ -216,9 +206,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(201, responseUploadOverwrite.status.value)
 
     val responseCheckOverwrite =
-      client.get("/avatars/${agentOne.id}.png") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/avatars/${agentOne.id}.png") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(200, responseCheckOverwrite.status.value)
     assertEquals("image/png", responseCheckOverwrite.headers["Content-Type"])

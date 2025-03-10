@@ -34,7 +34,7 @@ fun ApplicationCall.user(): User {
   return user
 }
 
-fun Application.authMiddleware(issuer: String, jwksEndpoint: String) {
+fun Application.authMiddleware(issuer: String, jwksEndpoint: String, leeway: Long) {
   val jwkProvider =
     JwkProviderBuilder(URL(jwksEndpoint))
       .cached(10, 24, TimeUnit.HOURS)
@@ -43,7 +43,7 @@ fun Application.authMiddleware(issuer: String, jwksEndpoint: String) {
 
   install(Authentication) {
     jwt("admin") {
-      verifier(jwkProvider, issuer) { acceptLeeway(10) }
+      verifier(jwkProvider, issuer) { acceptLeeway(leeway) }
       // This is a janky way to get the access token cookie from the frontend
       // and we should investigate how to handle this later
       authHeader {
@@ -65,7 +65,7 @@ fun Application.authMiddleware(issuer: String, jwksEndpoint: String) {
     }
 
     jwt("user") {
-      verifier(jwkProvider, issuer) { acceptLeeway(10) }
+      verifier(jwkProvider, issuer) { acceptLeeway(leeway) }
       // This is a janky way to get the access token cookie from the frontend
       // and we should investigate how to handle this later
       authHeader {
@@ -78,11 +78,12 @@ fun Application.authMiddleware(issuer: String, jwksEndpoint: String) {
       }
       validate { credential ->
         val entitlements = credential.payload.getClaim("entitlements").asList(String::class.java)
-        if (entitlements.contains("admin") || entitlements.contains("user")) {
-          JWTPrincipal(credential.payload)
-        } else {
-          null
+        for (entitlement in entitlements) {
+          if (entitlement == "admin" || entitlement == "user") {
+            return@validate JWTPrincipal(credential.payload)
+          }
         }
+        null
       }
     }
   }

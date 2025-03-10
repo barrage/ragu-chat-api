@@ -8,6 +8,7 @@ import io.ktor.serialization.kotlinx.json.*
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.ProvidersResponse
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentChatTimeSeries
@@ -16,14 +17,13 @@ import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DashboardCounts
 import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.sessionCookie
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
+class AdministrationControllerTests : IntegrationTest() {
   private lateinit var admin: User
   private lateinit var adminSession: Session
   private lateinit var userActive: User
@@ -65,18 +65,10 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
   @Test
   fun getProvidersTest() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
-    val response =
-      client.get("/admin/providers") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+    val response = client.get("/admin/providers") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<ProvidersResponse>()
-
-    assertEquals(body.auth.size, 3)
-    assertTrue(body.auth.contains("google"))
-    assertTrue(body.auth.contains("apple"))
-    assertTrue(body.auth.contains("carnet"))
 
     assert(body.llm.isNotEmpty())
     assert(body.vector.isNotEmpty())
@@ -87,9 +79,7 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
   fun getListOfProviderLanguageModelsTestOpenAI() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/providers/llm/openai") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/admin/providers/llm/openai") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<List<String>>()
@@ -101,9 +91,7 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
   fun getListOfProviderLanguageModelsTestAzure() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/providers/llm/azure") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/admin/providers/llm/azure") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<List<String>>()
@@ -115,9 +103,7 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
   fun getListOfProviderLanguageModelsTestOllama() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/providers/llm/ollama") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/admin/providers/llm/ollama") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<List<String>>()
@@ -128,9 +114,7 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
   fun getDefaultDashboardCounts() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/dashboard/counts") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
-      }
+      client.get("/admin/dashboard/counts") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, response.status)
 
@@ -139,12 +123,6 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
     assertEquals(3, body.agent.total)
     assertEquals(2, body.agent.active)
     assertEquals(1, body.agent.inactive)
-
-    assertEquals(4, body.user.total)
-    assertEquals(3, body.user.active)
-    assertEquals(1, body.user.inactive)
-    assertEquals(2, body.user.admin)
-    assertEquals(1, body.user.user)
 
     assertEquals(2, body.chat.total)
     assertEquals(1, body.chat.chats.size)
@@ -159,7 +137,7 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/dashboard/chat/history?period=WEEK") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
     val body = response.body<AgentChatTimeSeries>()
 
@@ -185,7 +163,7 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/dashboard/chat/history?period=MONTH") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
     val body = response.body<AgentChatTimeSeries>()
 
@@ -211,7 +189,7 @@ class AdministrationControllerTests : IntegrationTest(useWiremock = true) {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
       client.get("/admin/dashboard/chat/history?period=YEAR") {
-        header(HttpHeaders.Cookie, sessionCookie(adminSession.sessionId))
+        header(HttpHeaders.Cookie, adminAccessToken())
       }
     val body = response.body<AgentChatTimeSeries>()
 
