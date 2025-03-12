@@ -55,7 +55,7 @@ fun Application.websocketServer(
       route("/ws") {
         get(websocketGenerateToken()) {
           val user = call.user()
-          val token = tokenManager.registerToken(user.id)
+          val token = tokenManager.registerToken(user)
           call.respond(HttpStatusCode.OK, "$token")
         }
       }
@@ -85,20 +85,20 @@ fun Application.websocketServer(
           return@webSocket
         }
 
-      val userId = tokenManager.removeToken(token)
+      val user = tokenManager.removeToken(token)
 
-      if (userId == null) {
+      if (user == null) {
         LOG.debug("WS - closing due to no token entry")
         close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
         return@webSocket
       }
 
-      val session = WebsocketSession(userId, token)
+      val session = WebsocketSession(user, token)
 
       val emitter = WebsocketEmitter.new<OutgoingSystemMessage>(this)
       server.registerSystemEmitter(session, emitter)
 
-      LOG.debug("Websocket connection opened for '{}' with token '{}'", userId, token)
+      LOG.debug("Websocket connection opened for '{}' with token '{}'", user.username, token)
 
       runCatching {
           for (frame in incoming) {
@@ -134,7 +134,7 @@ fun Application.websocketServer(
             DateTimeFormatter.ofPattern("yyyy/MM/dd:HH:mm:ss").withZone(ZoneId.systemDefault())
           LOG.debug(
             "Connection for user-token '{}'-'{}' closed. Start: {}, End: {}, Duration: {}ms",
-            userId,
+            user.id,
             token,
             formatter.format(Instant.ofEpochMilli(connectionStart.toEpochMilli())),
             formatter.format(Instant.now()),
@@ -149,7 +149,7 @@ fun Application.websocketServer(
         DateTimeFormatter.ofPattern("yyyy/MM/dd:HH:mm:ss").withZone(ZoneId.systemDefault())
       LOG.debug(
         "Connection for user-token '{}'-'{}' closed. Start: {}, End: {}, Duration: {}ms",
-        userId,
+        user.id,
         token,
         formatter.format(Instant.ofEpochMilli(connectionStart.toEpochMilli())),
         formatter.format(Instant.now()),

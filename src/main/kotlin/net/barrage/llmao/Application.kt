@@ -59,7 +59,8 @@ fun Application.module() {
     ChatWorkflowFactory(
       providerState = state.providers,
       agentService = state.services.agent,
-      chatWorkflowRepository = state.repository.chatWorkflow,
+      chatRepositoryWrite = state.repository.chatWrite,
+      chatRepositoryRead = state.repository.chatRead,
       toolchainFactory = toolchainFactory,
       settingsService = state.settingsService,
       tokenUsageRepositoryW = state.repository.tokenUsageW,

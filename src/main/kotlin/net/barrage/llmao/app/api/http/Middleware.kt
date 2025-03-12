@@ -10,26 +10,17 @@ import io.ktor.server.auth.jwt.jwt
 import java.net.URL
 import java.util.concurrent.TimeUnit
 import net.barrage.llmao.core.models.User
-import net.barrage.llmao.core.models.common.Role
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.tryUuid
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 /** Obtain the current user initiating the request. */
 fun ApplicationCall.user(): User {
   val principal = request.call.principal<JWTPrincipal>()!!
   val user =
     User(
-      id = tryUuid(principal.subject!!),
+      id = principal.subject ?: throw AppError.api(ErrorReason.Authentication, "Missing subject"),
       email = principal.payload.getClaim("email").asString(),
-      fullName = principal.payload.getClaim("given_name").asString(),
-      active = true,
-      role = Role.ADMIN,
-      avatar = principal.payload.getClaim("avatar").asString(),
-      createdAt = KOffsetDateTime.now(),
-      updatedAt = KOffsetDateTime.now(),
-      deletedAt = null,
-      firstName = "TODO()",
-      lastName = "",
+      username = principal.payload.getClaim("given_name").asString(),
     )
   return user
 }

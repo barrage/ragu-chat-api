@@ -18,7 +18,7 @@ import net.barrage.llmao.app.api.http.queryListChatsFilters
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.ChatWithUserAndAgent
+import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.common.CountedList
@@ -65,11 +65,12 @@ fun Route.adminChatsRoutes(service: ChatService) {
           call.respond(HttpStatusCode.OK, messages)
         }
 
-        patch("/{messageId}", adminEvaluate()) {
+        patch("/{messageGroupId}", adminEvaluate()) {
           val input: EvaluateMessage = call.receive()
           val chatId = call.pathUuid("chatId")
-          val messageId = call.pathUuid("messageId")
-          val message = service.evaluateMessage(chatId, messageId, input)
+          val messageGroupId = call.pathUuid("messageGroupId")
+          val message =
+            service.evaluateMessage(chatId = chatId, messageGroupId = messageGroupId, input)
           call.respond(HttpStatusCode.OK, message)
         }
       }
@@ -112,7 +113,7 @@ private fun adminGetChatWithUserAndAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "Single chat"
-        body<ChatWithUserAndAgent> {}
+        body<ChatWithAgent> {}
       }
     HttpStatusCode.NotFound to
       {

@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.embeddings
 
-data class Embeddings(
-  val embeddings: List<Double>,
-  val tokensUsed: Int? = null,
-)
+import net.barrage.llmao.core.tokens.TokenUsageAmount
+
+data class Embeddings(val embeddings: List<Double>, val usage: TokenUsageAmount? = null)

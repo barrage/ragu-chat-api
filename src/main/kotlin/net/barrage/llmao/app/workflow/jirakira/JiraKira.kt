@@ -15,6 +15,9 @@ import net.barrage.llmao.core.llm.ToolCallResult
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
+import net.barrage.llmao.core.models.SpecialistMessageInsert
+import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.tokens.TokenUsageTracker
 import net.barrage.llmao.core.tokens.TokenUsageType
 import net.barrage.llmao.core.types.KUUID
@@ -28,7 +31,7 @@ class JiraKira(
   /** The workflow ID. */
   private val workflowId: KUUID,
   /** The user ID of the user who initiated the workflow. */
-  private val userId: KUUID,
+  private val user: User,
   private val jiraApi: JiraApi,
   private val jiraUser: JiraUser,
   private val llm: LlmProvider,
@@ -59,6 +62,7 @@ class JiraKira(
    */
   private val worklogAttributes: List<WorklogAttribute>,
   private val repository: JiraKiraRepository,
+  private val specialistRepositoryWrite: SpecialistRepositoryWrite,
 ) {
   /** Lazily initialized when calling [completion] for the first time. */
   private lateinit var toolDefinitions: List<ToolDefinition>
@@ -316,31 +320,26 @@ class JiraKira(
   }
 
   private suspend fun trackWorkflow() {
-    repository.insertJiraKiraWorkflow(workflowId = workflowId, userId = userId)
+    specialistRepositoryWrite.insertWorkflow(
+      workflowId = workflowId,
+      userId = user.id,
+      username = user.username,
+    )
   }
 
   private suspend fun storePendingBuffer(buffer: MutableList<ChatMessage>) {
-    val userMessage = buffer.removeFirst()
-
-    repository.insertJiraKiraMessages(
-      JiraKiraMessageInsert(
-        workflowId = workflowId,
-        sender = userId,
-        senderType = "user",
-        content = userMessage.content,
-        toolCalls = null,
-        toolCallId = null,
-      ),
-      buffer.map { message ->
-        JiraKiraMessageInsert(
-          workflowId = workflowId,
-          sender = null,
-          senderType = message.role,
-          content = message.content,
-          toolCalls = Json.encodeToString(message.toolCalls),
-          toolCallId = message.toolCallId,
-        )
-      },
+    specialistRepositoryWrite.insertMessages(
+      workflowId = workflowId,
+      messages =
+        buffer.map { message ->
+          SpecialistMessageInsert(
+            senderType = message.role,
+            content = message.content,
+            toolCalls = Json.encodeToString(message.toolCalls),
+            toolCallId = message.toolCallId,
+            finishReason = message.finishReason,
+          )
+        },
     )
   }
 
@@ -455,15 +454,6 @@ const val JIRA_KIRA_CONTEXT =
 @Serializable data class IssueKeyOrId(val issueKeyOrId: String)
 
 @Serializable data class ProjectKey(val project: String)
-
-data class JiraKiraMessageInsert(
-  val workflowId: KUUID,
-  val sender: KUUID?,
-  val senderType: String,
-  val content: String?,
-  val toolCalls: String?,
-  val toolCallId: String?,
-)
 
 sealed class JiraKiraState {
   data object New : JiraKiraState()

@@ -3,6 +3,9 @@ package net.barrage.llmao.core.llm
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.MessageInsert
+import net.barrage.llmao.core.tokens.TokenUsageAmount
+import net.barrage.llmao.core.types.KUUID
 
 @Serializable
 data class ChatMessageChunk(
@@ -10,7 +13,7 @@ data class ChatMessageChunk(
   val created: Long,
   val content: String? = null,
   val stopReason: FinishReason? = null,
-  val tokenUsage: Int?,
+  val tokenUsage: TokenUsageAmount?,
   val toolCalls: List<ToolCallChunk>? = null,
 )
 
@@ -28,6 +31,15 @@ data class ChatMessage(
   var content: String?,
   @SerialName("tool_calls") val toolCalls: List<ToolCallData>? = null,
   @SerialName("tool_call_id") val toolCallId: String? = null,
+
+  /**
+   * Here to capture the finish reason of the chat choice. Since we are calling completions
+   * recursively due to tools, we have to capture the finish reason here.
+   *
+   * If this is present on the assistant message, the reason reflects why the LLM stopped
+   * generating.
+   */
+  var finishReason: FinishReason? = null,
 ) {
   companion object {
     fun fromModel(model: Message): ChatMessage {
@@ -50,6 +62,17 @@ data class ChatMessage(
       return ChatMessage("tool", content, toolCallId = toolCallId)
     }
   }
+
+  fun toInsert(finishReason: FinishReason? = null): MessageInsert {
+    return MessageInsert(
+      id = KUUID.randomUUID(),
+      senderType = role,
+      content = content,
+      finishReason = finishReason,
+      toolCalls = toolCalls,
+      toolCallId = toolCallId,
+    )
+  }
 }
 
 @Serializable
@@ -66,7 +89,7 @@ data class ChatCompletion(
   val choices: List<ChatChoice>,
 
   /** The total amount of tokens spent. */
-  val tokenUsage: Int?,
+  val tokenUsage: TokenUsageAmount?,
 )
 
 @Serializable

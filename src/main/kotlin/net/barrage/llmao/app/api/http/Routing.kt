@@ -14,7 +14,6 @@ import net.barrage.llmao.app.adapters.whatsapp.api.whatsAppRoutes
 import net.barrage.llmao.app.api.http.controllers.adminAgentsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminSettingsRoutes
-import net.barrage.llmao.app.api.http.controllers.adminUserRoutes
 import net.barrage.llmao.app.api.http.controllers.administrationRouter
 import net.barrage.llmao.app.api.http.controllers.agentsRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
@@ -23,7 +22,6 @@ import net.barrage.llmao.app.api.http.controllers.specialistWorkflowRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraAdminRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraUserRoutes
 import net.barrage.llmao.app.api.http.controllers.thirdPartyRoutes
-import net.barrage.llmao.app.api.http.controllers.userRoutes
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
@@ -44,7 +42,6 @@ fun Application.configureRouting(state: ApplicationState) {
     // Admin API routes
     authenticate("admin") {
       adminAgentsRoutes(state.services.agent, state.settingsService)
-      adminUserRoutes(state.services.user)
       adminChatsRoutes(state.services.chat)
       administrationRouter(state.services.admin)
       adminSettingsRoutes(state.settingsService)
@@ -61,7 +58,6 @@ fun Application.configureRouting(state: ApplicationState) {
       }
 
       agentsRoutes(state.services.agent)
-      userRoutes(state.services.user)
       chatsRoutes(state.services.chat)
     }
 

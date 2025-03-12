@@ -4,17 +4,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
 import net.barrage.llmao.tables.references.JIRA_API_KEYS
-import net.barrage.llmao.tables.references.JIRA_KIRA_MESSAGES
-import net.barrage.llmao.tables.references.JIRA_KIRA_WORKFLOWS
 import net.barrage.llmao.tables.references.JIRA_WORKLOG_ATTRIBUTES
 import org.jooq.DSLContext
-import org.jooq.kotlin.coroutines.transactionCoroutine
 
 class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore {
-  override suspend fun setUserApiKey(userId: KUUID, apiKey: String) {
+  override suspend fun setUserApiKey(userId: String, apiKey: String) {
     dslContext
       .insertInto(JIRA_API_KEYS)
       .set(JIRA_API_KEYS.USER_ID, userId)
@@ -22,7 +17,7 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
       .awaitFirstOrNull()
   }
 
-  override suspend fun getUserApiKey(userId: KUUID): String? {
+  override suspend fun getUserApiKey(userId: String): String? {
     return dslContext
       .select(JIRA_API_KEYS.API_KEY)
       .from(JIRA_API_KEYS)
@@ -32,7 +27,7 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
       ?.apiKey
   }
 
-  override suspend fun removeUserApiKey(userId: KUUID) {
+  override suspend fun removeUserApiKey(userId: String) {
     dslContext.deleteFrom(JIRA_API_KEYS).where(JIRA_API_KEYS.USER_ID.eq(userId)).awaitFirstOrNull()
   }
 
@@ -67,49 +62,5 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
       .deleteFrom(JIRA_WORKLOG_ATTRIBUTES)
       .where(JIRA_WORKLOG_ATTRIBUTES.ID.eq(id))
       .awaitFirstOrNull()
-  }
-
-  suspend fun insertJiraKiraWorkflow(workflowId: KUUID, userId: KUUID) {
-    dslContext
-      .dsl()
-      .insertInto(JIRA_KIRA_WORKFLOWS)
-      .set(JIRA_KIRA_WORKFLOWS.ID, workflowId)
-      .set(JIRA_KIRA_WORKFLOWS.USER_ID, userId)
-      .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert workflow")
-  }
-
-  suspend fun insertJiraKiraMessages(
-    userMessage: JiraKiraMessageInsert,
-    messages: List<JiraKiraMessageInsert>,
-  ) {
-    return dslContext.transactionCoroutine { ctx ->
-      val messageId =
-        ctx
-          .dsl()
-          .insertInto(JIRA_KIRA_MESSAGES)
-          .set(JIRA_KIRA_MESSAGES.WORKFLOW_ID, userMessage.workflowId)
-          .set(JIRA_KIRA_MESSAGES.SENDER, userMessage.sender)
-          .set(JIRA_KIRA_MESSAGES.SENDER_TYPE, userMessage.senderType)
-          .set(JIRA_KIRA_MESSAGES.TOOL_CALLS, userMessage.toolCalls)
-          .set(JIRA_KIRA_MESSAGES.TOOL_CALL_ID, userMessage.toolCallId)
-          .set(JIRA_KIRA_MESSAGES.CONTENT, userMessage.content)
-          .returning(JIRA_KIRA_MESSAGES.ID)
-          .awaitFirstOrNull()
-          ?.id ?: throw AppError.internal("Failed to insert message")
-
-      for (message in messages) {
-        ctx
-          .dsl()
-          .insertInto(JIRA_KIRA_MESSAGES)
-          .set(JIRA_KIRA_MESSAGES.WORKFLOW_ID, message.workflowId)
-          .set(JIRA_KIRA_MESSAGES.SENDER, message.sender)
-          .set(JIRA_KIRA_MESSAGES.SENDER_TYPE, message.senderType)
-          .set(JIRA_KIRA_MESSAGES.TOOL_CALLS, message.toolCalls)
-          .set(JIRA_KIRA_MESSAGES.TOOL_CALL_ID, message.toolCallId)
-          .set(JIRA_KIRA_MESSAGES.CONTENT, message.content)
-          .set(JIRA_KIRA_MESSAGES.RESPONSE_TO, messageId)
-          .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message")
-      }
-    }
   }
 }

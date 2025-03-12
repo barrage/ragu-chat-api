@@ -8,11 +8,11 @@ import net.barrage.llmao.tables.records.TokenUsageRecord
 @Serializable
 data class TokenUsage(
   val id: Int,
-  val userId: KUUID?,
+  val userId: String?,
   val agentId: KUUID?,
   val agentConfigurationId: KUUID?,
   val origin: TokenUsageOrigin,
-  val amount: Int,
+  val amount: TokenUsageAmount,
   val usageType: TokenUsageType,
   val model: String,
   val provider: String,
@@ -26,14 +26,29 @@ fun TokenUsageRecord.toTokenUsage() =
     agentId = this.agentId,
     agentConfigurationId = this.agentConfigurationId,
     origin = TokenUsageOrigin(this.origin, this.originId),
-    amount = this.amount,
+    amount =
+      TokenUsageAmount(
+        this.promptTokensAmount,
+        this.completionTokensAmount,
+        this.totalTokensAmount,
+      ),
     usageType = TokenUsageType.valueOf(this.usageType),
     model = this.model,
     provider = this.provider,
     createdAt = this.createdAt!!,
   )
 
-@Serializable data class TokenUsageOrigin(val type: String, val id: KUUID?)
+@Serializable data class TokenUsageAmount(val prompt: Int?, val completion: Int?, val total: Int?)
+
+/** Origin of token usage. */
+@Serializable
+data class TokenUsageOrigin(
+  /** The origin type, i.e. the type of workflow that caused the usage. */
+  val type: String,
+
+  /** The workflow ID. */
+  val id: KUUID?,
+)
 
 @Serializable
 enum class TokenUsageType {
@@ -45,7 +60,4 @@ enum class TokenUsageType {
 
   /** Tokens were used in title generation. */
   COMPLETION_TITLE,
-
-  /** Tokens were used in summary generation. */
-  COMPLETION_SUMMARY,
 }

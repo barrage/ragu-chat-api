@@ -6,9 +6,9 @@ import net.barrage.llmao.core.models.common.Role
 import net.barrage.llmao.core.models.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.models.common.SearchFiltersAdminChats
 import net.barrage.llmao.core.models.common.SearchFiltersAdminUsers
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.tryUuid
 
 @Serializable
 data class SearchFiltersAdminUsersQuery(
@@ -59,22 +59,8 @@ data class SearchFiltersAdminChatQuery(
 
   fun toSearchFiltersAdminChats(): SearchFiltersAdminChats {
     return SearchFiltersAdminChats(
-      userId =
-        userId?.let {
-          try {
-            KUUID.fromString(it)
-          } catch (_: Exception) {
-            throw AppError.api(ErrorReason.InvalidParameter, "Invalid userId")
-          }
-        },
-      agentId =
-        agentId?.let {
-          try {
-            KUUID.fromString(it)
-          } catch (_: Exception) {
-            throw AppError.api(ErrorReason.InvalidParameter, "Invalid agentId")
-          }
-        },
+      userId = userId,
+      agentId = agentId?.let { tryUuid(it) },
       title = if (title.isNullOrBlank()) null else title,
     )
   }

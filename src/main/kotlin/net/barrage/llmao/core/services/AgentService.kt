@@ -14,7 +14,7 @@ import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CollectionInsert
 import net.barrage.llmao.core.models.CreateAgent
 import net.barrage.llmao.core.models.Image
-import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.MessageGroupAggregate
 import net.barrage.llmao.core.models.UpdateAgent
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsFailure
@@ -24,7 +24,7 @@ import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.models.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.repository.AgentRepository
-import net.barrage.llmao.core.repository.ChatRepository
+import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
@@ -36,7 +36,7 @@ private val LOG =
 class AgentService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
-  private val chatRepository: ChatRepository,
+  private val chatRepositoryRead: ChatRepositoryRead,
   private val stateChangeListener: EventListener<StateChangeEvent>,
   private val avatarStorage: ImageStorage,
 ) {
@@ -60,7 +60,7 @@ class AgentService(
    * display purposes.
    */
   suspend fun getFull(id: KUUID): AgentFull {
-    return agentRepository.get(id)
+    return agentRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
   }
 
   suspend fun create(create: CreateAgent): AgentWithConfiguration {
@@ -126,7 +126,7 @@ class AgentService(
     versionId: KUUID,
   ): AgentConfigurationWithEvaluationCounts {
     val agentConfiguration = agentRepository.getAgentConfiguration(agentId, versionId)
-    val configurationMessageCounts = chatRepository.getAgentConfigurationMessageCounts(versionId)
+    val configurationMessageCounts = chatRepositoryRead.getAgentConfigurationMessageCounts(versionId)
     return AgentConfigurationWithEvaluationCounts(agentConfiguration, configurationMessageCounts)
   }
 
@@ -135,10 +135,10 @@ class AgentService(
     versionId: KUUID,
     evaluation: Boolean? = null,
     pagination: PaginationSort,
-  ): CountedList<Message> {
+  ): CountedList<MessageGroupAggregate> {
     agentRepository.getAgentConfiguration(agentId, versionId)
 
-    return chatRepository.getAgentConfigurationEvaluatedMessages(versionId, evaluation, pagination)
+    return chatRepositoryRead.getAgentConfigurationEvaluatedMessages(versionId, evaluation, pagination)
   }
 
   suspend fun rollbackVersion(agentId: KUUID, versionId: KUUID): AgentWithConfiguration {

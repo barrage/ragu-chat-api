@@ -3,6 +3,8 @@ package net.barrage.llmao.app.workflow.jirakira
 import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.core.httpClient
 import net.barrage.llmao.core.llm.ToolEvent
+import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
@@ -21,16 +23,17 @@ class JiraKiraWorkflowFactory(
   private val settingsService: SettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   val jiraKiraRepository: JiraKiraRepository,
+  private val specialistRepositoryWrite: SpecialistRepositoryWrite,
 ) {
   suspend fun newJiraKiraWorkflow(
-    userId: KUUID,
+    user: User,
     emitter: Emitter<JiraKiraMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
   ): JiraKiraWorkflow {
     val workflowId = KUUID.randomUUID()
 
     val userJiraApiKey =
-      jiraKiraRepository.getUserApiKey(userId)
+      jiraKiraRepository.getUserApiKey(user.id)
         ?: throw AppError.api(ErrorReason.InvalidOperation, "No Jira API key found for user")
 
     val settings = settingsService.getAllWithDefaults()
@@ -52,7 +55,7 @@ class JiraKiraWorkflowFactory(
 
     return JiraKiraWorkflow(
       id = workflowId,
-      userId = userId,
+      user = user,
       jirakira =
         JiraKira(
           jiraApi = jiraApi,
@@ -61,7 +64,8 @@ class JiraKiraWorkflowFactory(
           tokenTracker =
             TokenUsageTracker(
               repository = tokenUsageRepositoryW,
-              userId = userId,
+              userId = user.id,
+              username = user.username,
               agentId = null,
               agentConfigurationId = null,
               origin = JIRAKIRA_TOKEN_ORIGIN,
@@ -73,8 +77,9 @@ class JiraKiraWorkflowFactory(
           timeSlotAttributeKey = jiraTimeSlotAttributeKey,
           worklogAttributes = worklogAttributes,
           workflowId = workflowId,
-          userId = userId,
+          user = user,
           repository = jiraKiraRepository,
+          specialistRepositoryWrite = specialistRepositoryWrite,
         ),
     )
   }

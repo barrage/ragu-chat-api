@@ -8,8 +8,7 @@ import net.barrage.llmao.core.models.DashboardCounts
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Period
 import net.barrage.llmao.core.repository.AgentRepository
-import net.barrage.llmao.core.repository.ChatRepository
-import net.barrage.llmao.core.repository.UserRepository
+import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.tokens.TokenUsage
 import net.barrage.llmao.core.tokens.TokenUsageRepositoryRead
 import net.barrage.llmao.core.types.KOffsetDateTime
@@ -20,8 +19,7 @@ import net.barrage.llmao.error.ErrorReason
 class AdministrationService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
-  private val chatRepository: ChatRepository,
-  private val userRepository: UserRepository,
+  private val chatRepositoryRead: ChatRepositoryRead,
   private val tokenUsageRepository: TokenUsageRepositoryRead,
 ) {
   suspend fun listLanguageModels(provider: String): List<String> {
@@ -34,15 +32,11 @@ class AdministrationService(
   }
 
   suspend fun dashboardCounts(): DashboardCounts {
-    return DashboardCounts(
-      chatRepository.getChatCounts(),
-      agentRepository.getAgentCounts(),
-      userRepository.getUserCounts(),
-    )
+    return DashboardCounts(chatRepositoryRead.getChatCounts(), agentRepository.getAgentCounts())
   }
 
   suspend fun getChatHistoryCountsByAgent(period: Period): AgentChatTimeSeries {
-    val agentChatsPerDate = chatRepository.agentsChatHistoryCounts(period)
+    val agentChatsPerDate = chatRepositoryRead.agentsChatHistoryCounts(period)
 
     val timeSeries = AgentChatTimeSeries.builder<Long, String>(period, 0)
 
@@ -66,7 +60,7 @@ class AdministrationService(
   }
 
   suspend fun listTokenUsage(
-    userId: KUUID? = null,
+    userId: String? = null,
     agentId: KUUID? = null,
   ): CountedList<TokenUsage> {
     return tokenUsageRepository.listUsage(userId, agentId)

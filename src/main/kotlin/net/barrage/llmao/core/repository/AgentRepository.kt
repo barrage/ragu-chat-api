@@ -14,7 +14,6 @@ import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentCounts
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.AgentTool
-import net.barrage.llmao.core.models.AgentToolCall
 import net.barrage.llmao.core.models.AgentWithConfiguration
 import net.barrage.llmao.core.models.CollectionInsert
 import net.barrage.llmao.core.models.CollectionRemove
@@ -30,7 +29,6 @@ import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toAgentCollection
 import net.barrage.llmao.core.models.toAgentConfiguration
 import net.barrage.llmao.core.models.toAgentTool
-import net.barrage.llmao.core.models.toAgentToolCall
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
@@ -38,7 +36,6 @@ import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import net.barrage.llmao.tables.references.AGENT_TOOLS
-import net.barrage.llmao.tables.references.AGENT_TOOL_CALLS
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.SortField
@@ -119,7 +116,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
           AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-          AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
           AGENT_CONFIGURATIONS.ERROR_MESSAGE,
           AGENT_CONFIGURATIONS.CREATED_AT,
           AGENT_CONFIGURATIONS.UPDATED_AT,
@@ -143,7 +139,7 @@ class AgentRepository(private val dslContext: DSLContext) {
     return CountedList(total, agents)
   }
 
-  suspend fun get(id: KUUID): AgentFull {
+  suspend fun get(id: KUUID): AgentFull? {
     return dslContext
       .select(
         AGENTS.ID,
@@ -165,7 +161,6 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
         AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-        AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
         AGENT_CONFIGURATIONS.ERROR_MESSAGE,
         AGENT_CONFIGURATIONS.CREATED_AT,
         AGENT_CONFIGURATIONS.UPDATED_AT,
@@ -181,7 +176,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
         val collections = getCollections(id)
         AgentFull(agent, configuration, collections)
-      } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
+      }
   }
 
   suspend fun getAgent(agentId: KUUID): Agent {
@@ -558,7 +553,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
           AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-          AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
           AGENT_CONFIGURATIONS.ERROR_MESSAGE,
           AGENT_CONFIGURATIONS.CREATED_AT,
           AGENT_CONFIGURATIONS.UPDATED_AT,
@@ -588,7 +582,6 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
         AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-        AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
         AGENT_CONFIGURATIONS.ERROR_MESSAGE,
         AGENT_CONFIGURATIONS.CREATED_AT,
         AGENT_CONFIGURATIONS.UPDATED_AT,
@@ -677,33 +670,6 @@ class AgentRepository(private val dslContext: DSLContext) {
         .and(AGENT_TOOLS.TOOL_NAME.eq(tool))
         .awaitSingle()
     }
-  }
-
-  // Message Tool Calls methods
-  suspend fun recordToolCall(
-    messageId: KUUID,
-    toolName: String,
-    arguments: String,
-    result: String,
-  ): AgentToolCall {
-    return dslContext
-      .insertInto(AGENT_TOOL_CALLS)
-      .set(AGENT_TOOL_CALLS.MESSAGE_ID, messageId)
-      .set(AGENT_TOOL_CALLS.TOOL_NAME, toolName)
-      .set(AGENT_TOOL_CALLS.TOOL_ARGUMENTS, arguments)
-      .set(AGENT_TOOL_CALLS.TOOL_RESULT, result)
-      .returning()
-      .awaitSingle()
-      .toAgentToolCall()
-  }
-
-  suspend fun getMessageToolCalls(messageId: KUUID): List<AgentToolCall> {
-    return dslContext
-      .selectFrom(AGENT_TOOL_CALLS)
-      .where(AGENT_TOOL_CALLS.MESSAGE_ID.eq(messageId))
-      .asFlow()
-      .map { it.toAgentToolCall() }
-      .toList()
   }
 }
 

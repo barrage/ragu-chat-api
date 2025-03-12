@@ -12,11 +12,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
-import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
+import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.user
+import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 
@@ -37,16 +37,16 @@ fun Route.whatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
     }
 
     post(createWhatsAppNumberForUser()) {
-      val loggedInUser = call.user()
-      val number = call.receive<PhoneNumber>()
-      val user = whatsAppAdapter.addNumber(loggedInUser.id, number)
-      call.respond(user)
+      val user = call.user()
+      val number = call.receive<UpdateNumber>()
+      val created = whatsAppAdapter.addNumber(user.id, user.username, number)
+      call.respond(created)
     }
 
     put("/{numberId}", updateWhatsAppNumberForUser()) {
       val loggedInUser = call.user()
       val numberId = call.pathUuid("numberId")
-      val updatedNumber = call.receive<PhoneNumber>()
+      val updatedNumber = call.receive<UpdateNumber>()
       val updatedUser = whatsAppAdapter.updateNumber(loggedInUser.id, numberId, updatedNumber)
       call.respond(updatedUser)
     }
@@ -61,8 +61,7 @@ fun Route.whatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 
   route("/whatsapp/chats") {
     get(getWhatsAppChatForUser()) {
-      val loggedInUser = call.user()
-      val chats = whatsAppAdapter.getChatByUserId(loggedInUser.id)
+      val chats = whatsAppAdapter.getChatByUserId(call.user().id)
       call.respond(chats)
     }
   }
@@ -100,7 +99,7 @@ private fun getWhatsAppNumbersForUser(): OpenApiRoute.() -> Unit = {
 private fun createWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
   tags("whatsapp/numbers")
   description = "Create WhatsApp number for user"
-  request { body<PhoneNumber> { description = "New WhatsApp number" } }
+  request { body<UpdateNumber> { description = "New WhatsApp number" } }
   response {
     HttpStatusCode.OK to
       {
@@ -123,7 +122,7 @@ private fun updateWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
       description = "Number ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    body<PhoneNumber> { description = "Updated WhatsApp number" }
+    body<UpdateNumber> { description = "Updated WhatsApp number" }
   }
   response {
     HttpStatusCode.OK to
@@ -171,7 +170,7 @@ private fun getWhatsAppChatForUser(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "WhatsApp chat retrieved successfully"
-        body<WhatsAppChatWithUserAndMessages>()
+        body<ChatWithMessages>()
       }
     HttpStatusCode.InternalServerError to
       {

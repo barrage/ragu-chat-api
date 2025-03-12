@@ -12,6 +12,7 @@ import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolEvent
+import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
@@ -110,7 +111,7 @@ class WebsocketSessionManager(
               val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
               val workflow =
                 factory.newChatWorkflow(
-                  userId = session.userId,
+                  user = session.user,
                   agentId =
                     message.agentId
                       ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing agentId"),
@@ -132,7 +133,7 @@ class WebsocketSessionManager(
 
               val workflow =
                 jkFactory.newJiraKiraWorkflow(
-                  session.userId,
+                  user = session.user,
                   emitter = WebsocketEmitter.new(ws),
                   toolEmitter = WebsocketEmitter.new(ws),
                 )
@@ -167,7 +168,11 @@ class WebsocketSessionManager(
 
         val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
         val existingWorkflow =
-          factory.fromExistingChatWorkflow(id = message.workflowId, emitter = emitter)
+          factory.fromExistingChatWorkflow(
+            id = message.workflowId,
+            user = session.user,
+            emitter = emitter,
+          )
 
         workflows[session] = existingWorkflow
         systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(message.workflowId))
@@ -196,4 +201,4 @@ class WebsocketSessionManager(
   }
 }
 
-data class WebsocketSession(val userId: KUUID, val token: KUUID)
+data class WebsocketSession(val user: User, val token: KUUID)

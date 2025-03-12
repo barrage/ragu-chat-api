@@ -50,7 +50,7 @@ fun Route.administrationRouter(service: AdministrationService) {
   }
 
   get("/admin/tokens/usage", listTokenUsage()) {
-    val userId = call.queryParam("userId")?.let { KUUID.fromString(it) }
+    val userId = call.queryParam("userId")
     val agentId = call.queryParam("agentId")?.let { KUUID.fromString(it) }
     val usage = service.listTokenUsage(userId = userId, agentId = agentId)
     call.respond(HttpStatusCode.OK, usage)

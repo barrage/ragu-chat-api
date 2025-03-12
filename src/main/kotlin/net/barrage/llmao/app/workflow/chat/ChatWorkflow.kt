@@ -9,7 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.models.MessageInsert
+import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
@@ -23,7 +23,7 @@ class ChatWorkflow(
   val id: KUUID,
 
   /** The proompter. */
-  val userId: KUUID,
+  val user: User,
 
   /** Output handle. Only chat related events are sent via this reference. */
   private val emitter: Emitter<ChatWorkflowMessage>,
@@ -32,7 +32,7 @@ class ChatWorkflow(
   private val streamAgent: ChatAgentStreaming,
 
   /** Responsible for persisting chat data. */
-  private val repository: ChatWorkflowRepository,
+  private val repository: ChatRepositoryWrite,
 
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
@@ -157,67 +157,57 @@ class ChatWorkflow(
       return null
     }
 
-    val userMessage = messages.removeFirst()
+    val userMessage = messages.first()
     assert(userMessage.role == "user") { "First message must be from the user" }
 
-    val assistantMessage = messages.removeLast()
+    val assistantMessage = messages.last()
+
+    // Adjust finish reason in case of stream cancellations
+    assistantMessage.finishReason = finishReason
     assert(assistantMessage.role == "assistant") { "Last message must be from the assistant" }
 
-    val userMessageInsert =
-      MessageInsert(
-        id = KUUID.randomUUID(),
-        chatId = id,
-        content = userMessage.content,
-        sender = userId,
-        senderType = "user",
-        responseTo = null,
-        finishReason = null,
-      )
-
-    val assistantMessageInsert =
-      MessageInsert(
-        id = KUUID.randomUUID(),
-        chatId = id,
-        content = assistantMessage.content,
-        sender = streamAgent.chatAgent.configurationId,
-        senderType = "assistant",
-        responseTo = userMessageInsert.id,
-        finishReason = finishReason,
-      )
-
-    when (state) {
-      ChatWorkflowState.New -> {
-        LOG.debug("{} - persisting chat with message pair", id)
-        repository.insertChat(
-          chatId = id,
-          userId = userId,
-          agentId = streamAgent.chatAgent.agentId,
-          userMessage = userMessageInsert,
-          assistantMessage = assistantMessageInsert,
-        )
-
-        LOG.debug("{} - generating title", id)
-        val title =
-          streamAgent.chatAgent.createTitle(
-            userMessage.content ?: "",
-            assistantMessage.content ?: "",
+    val messageGroupId =
+      when (state) {
+        ChatWorkflowState.New -> {
+          LOG.debug("{} - persisting chat with message pair", id)
+          repository.insertChat(
+            chatId = id,
+            userId = user.id,
+            username = user.username,
+            agentId = streamAgent.chatAgent.agentId,
           )
+          val groupId =
+            repository.insertMessages(
+              chatId = id,
+              agentConfigurationId = streamAgent.chatAgent.configurationId,
+              messages = messages.map { it.toInsert() },
+            )
 
-        // Safe to !! because title generation never sends tools to the LLM
-        repository.updateTitle(id, userId, title.content!!)
-        emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title.content!!))
-        state = ChatWorkflowState.Persisted(title.content!!)
-      }
-      is ChatWorkflowState.Persisted -> {
-        LOG.debug("{} - persisting message pair", id)
-        repository.insertMessagePair(
-          userMessage = userMessageInsert,
-          assistantMessage = assistantMessageInsert,
-        )
-      }
-    }
+          LOG.debug("{} - generating title", id)
+          val title =
+            streamAgent.chatAgent.createTitle(
+              userMessage.content ?: "",
+              assistantMessage.content ?: "",
+            )
 
-    return assistantMessageInsert.id
+          // Safe to !! because title generation never sends tools to the LLM
+          repository.updateTitle(id, user.id, title.content!!)
+          emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title.content!!))
+          state = ChatWorkflowState.Persisted(title.content!!)
+
+          groupId
+        }
+        is ChatWorkflowState.Persisted -> {
+          LOG.debug("{} - persisting message pair", id)
+          repository.insertMessages(
+            chatId = id,
+            agentConfigurationId = streamAgent.chatAgent.configurationId,
+            messages = messages.map { it.toInsert() },
+          )
+        }
+      }
+
+    return messageGroupId
   }
 
   /**

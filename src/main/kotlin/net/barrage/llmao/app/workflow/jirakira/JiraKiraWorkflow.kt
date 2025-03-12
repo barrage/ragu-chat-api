@@ -3,12 +3,12 @@ package net.barrage.llmao.app.workflow.jirakira
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.error.AppError
 
-class JiraKiraWorkflow(val id: KUUID, val userId: KUUID, private val jirakira: JiraKira) :
-  Workflow {
+class JiraKiraWorkflow(val id: KUUID, val user: User, private val jirakira: JiraKira) : Workflow {
   private val scope = CoroutineScope(Dispatchers.Default)
 
   override fun id(): KUUID {

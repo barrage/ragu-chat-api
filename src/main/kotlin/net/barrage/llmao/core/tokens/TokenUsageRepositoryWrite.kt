@@ -7,12 +7,15 @@ import org.jooq.DSLContext
 
 class TokenUsageRepositoryWrite(private val dslContext: DSLContext) {
   suspend fun insert(
-    userId: KUUID?,
+    userId: String?,
+    username: String?,
     agentId: KUUID?,
     agentConfigurationId: KUUID?,
     origin: String,
     originId: KUUID?,
-    amount: Int,
+    amountPrompt: Int?,
+    amountCompletion: Int?,
+    amountTotal: Int?,
     usageType: TokenUsageType,
     model: String,
     provider: String,
@@ -21,22 +24,28 @@ class TokenUsageRepositoryWrite(private val dslContext: DSLContext) {
       .insertInto(TOKEN_USAGE)
       .columns(
         TOKEN_USAGE.USER_ID,
+        TOKEN_USAGE.USERNAME,
         TOKEN_USAGE.AGENT_ID,
         TOKEN_USAGE.AGENT_CONFIGURATION_ID,
         TOKEN_USAGE.ORIGIN,
         TOKEN_USAGE.ORIGIN_ID,
-        TOKEN_USAGE.AMOUNT,
+        TOKEN_USAGE.PROMPT_TOKENS_AMOUNT,
+        TOKEN_USAGE.COMPLETION_TOKENS_AMOUNT,
+        TOKEN_USAGE.TOTAL_TOKENS_AMOUNT,
         TOKEN_USAGE.USAGE_TYPE,
         TOKEN_USAGE.MODEL,
         TOKEN_USAGE.PROVIDER,
       )
       .values(
         userId,
+        username,
         agentId,
         agentConfigurationId,
         origin,
         originId,
-        amount,
+        amountPrompt,
+        amountCompletion,
+        amountTotal,
         usageType.name,
         model,
         provider,

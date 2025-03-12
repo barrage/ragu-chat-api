@@ -15,14 +15,14 @@ class TokenUsageRepositoryRead(private val dslContext: DSLContext) {
   suspend fun getTotalTokenUsageForPeriod(from: KOffsetDateTime, to: KOffsetDateTime): Int {
     val query =
       dslContext
-        .select(DSL.sum(TOKEN_USAGE.AMOUNT))
+        .select(DSL.sum(TOKEN_USAGE.TOTAL_TOKENS_AMOUNT))
         .from(TOKEN_USAGE)
         .where(TOKEN_USAGE.CREATED_AT.between(from, to))
 
     return query.awaitSingle().value1().toInt()
   }
 
-  suspend fun listUsage(userId: KUUID? = null, agentId: KUUID? = null): CountedList<TokenUsage> {
+  suspend fun listUsage(userId: String? = null, agentId: KUUID? = null): CountedList<TokenUsage> {
     val total =
       dslContext
         .selectCount()

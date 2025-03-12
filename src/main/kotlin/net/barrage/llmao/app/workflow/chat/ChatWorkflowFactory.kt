@@ -8,6 +8,9 @@ import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
+import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.common.Pagination
+import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingsService
@@ -15,20 +18,23 @@ import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.tokens.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 private const val CHAT_TOKEN_ORIGIN = "workflow.chat"
 
 class ChatWorkflowFactory(
   private val providerState: ProviderState,
   private val agentService: AgentService,
-  private val chatWorkflowRepository: ChatWorkflowRepository,
+  private val chatRepositoryWrite: ChatRepositoryWrite,
+  private val chatRepositoryRead: ChatRepositoryRead,
   private val toolchainFactory: ToolchainFactory,
   private val settingsService: SettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val encodingRegistry: EncodingRegistry,
 ) {
   suspend fun newChatWorkflow(
-    userId: KUUID,
+    user: User,
     agentId: KUUID,
     emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
@@ -44,7 +50,8 @@ class ChatWorkflowFactory(
     val tokenTracker =
       TokenUsageTracker(
         repository = tokenUsageRepositoryW,
-        userId = userId,
+        userId = user.id,
+        username = user.username,
         agentId = agentId,
         agentConfigurationId = agent.configuration.id,
         origin = CHAT_TOKEN_ORIGIN,
@@ -76,20 +83,24 @@ class ChatWorkflowFactory(
 
     return ChatWorkflow(
       id = id,
-      userId = userId,
       streamAgent = streamAgent,
       emitter = emitter,
-      repository = chatWorkflowRepository,
+      repository = chatRepositoryWrite,
       state = ChatWorkflowState.New,
+      user = user,
     )
   }
 
   suspend fun fromExistingChatWorkflow(
+    user: User,
     id: KUUID,
     emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
   ): ChatWorkflow {
-    val chat = chatWorkflowRepository.getChatWithMessages(id)
+    // TODO
+    val chat =
+      chatRepositoryRead.getWithMessages(id = id, userId = user.id, pagination = Pagination(1, 200))
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     agentService.getActive(chat.chat.agentId)
 
@@ -101,13 +112,14 @@ class ChatWorkflowFactory(
       TokenUsageTracker(
         repository = tokenUsageRepositoryW,
         userId = chat.chat.userId,
+        username = chat.chat.username,
         agentId = chat.chat.agentId,
         agentConfigurationId = agent.configuration.id,
         origin = CHAT_TOKEN_ORIGIN,
         originId = id,
       )
 
-    val messages = chat.messages.map(ChatMessage::fromModel)
+    val messages = chat.messages.items.flatMap { it.messages }.map(ChatMessage::fromModel)
 
     val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
     val history: ChatHistory =
@@ -134,10 +146,10 @@ class ChatWorkflowFactory(
 
     return ChatWorkflow(
       id = chat.chat.id,
-      userId = chat.chat.userId,
+      user = user,
       streamAgent = streamAgent,
       emitter = emitter,
-      repository = chatWorkflowRepository,
+      repository = chatRepositoryWrite,
       state = ChatWorkflowState.Persisted(chat.chat.title!!),
     )
   }

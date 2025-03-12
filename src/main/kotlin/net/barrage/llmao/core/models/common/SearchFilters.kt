@@ -6,4 +6,4 @@ data class SearchFiltersAdminUsers(val name: String?, val active: Boolean?, val 
 
 data class SearchFiltersAdminAgents(val name: String?, val active: Boolean?)
 
-data class SearchFiltersAdminChats(val userId: KUUID?, val agentId: KUUID?, val title: String?)
+data class SearchFiltersAdminChats(val userId: String?, val agentId: KUUID?, val title: String?)

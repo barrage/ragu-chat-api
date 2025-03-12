@@ -12,13 +12,13 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentUpdate
-import net.barrage.llmao.app.adapters.whatsapp.models.PhoneNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
+import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
@@ -39,28 +39,28 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 
   route("/admin/whatsapp/numbers") {
     get("/{userId}", adminGetWhatsAppNumbersForUser()) {
-      val userId = call.pathUuid("userId")
+      val userId = call.parameters["userId"]!!
       val userNumbers = whatsAppAdapter.getNumbers(userId)
       call.respond(userNumbers)
     }
 
     post("/{userId}", adminAddWhatsAppNumberForUser()) {
-      val userId = call.pathUuid("userId")
-      val number = call.receive<PhoneNumber>()
-      val user = whatsAppAdapter.addNumber(userId, number)
+      val userId = call.parameters["userId"]!!
+      val number = call.receive<UpdateNumber>()
+      val user = whatsAppAdapter.addNumber(userId, null, number)
       call.respond(user)
     }
 
     put("/{userId}/{numberId}", adminUpdateWhatsAppNumberForUser()) {
-      val userId = call.pathUuid("userId")
+      val userId = call.parameters["userId"]!!
       val numberId = call.pathUuid("numberId")
-      val updatedNumber = call.receive<PhoneNumber>()
+      val updatedNumber = call.receive<UpdateNumber>()
       val user = whatsAppAdapter.updateNumber(userId, numberId, updatedNumber)
       call.respond(user)
     }
 
     delete("/{userId}/{numberId}", adminDeleteWhatsAppNumberForUser()) {
-      val userId = call.pathUuid("userId")
+      val userId = call.parameters["userId"]!!
       val numberId = call.pathUuid("numberId")
       whatsAppAdapter.deleteNumber(userId, numberId)
       call.respond(HttpStatusCode.NoContent)
@@ -76,7 +76,7 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 
     get("/{chatId}", adminGetWhatsAppChat()) {
       val chatId = call.pathUuid("chatId")
-      val chat = whatsAppAdapter.getChatWithMessages(chatId)
+      val chat = whatsAppAdapter.getChatById(chatId)
       call.respond(chat)
     }
   }
@@ -149,7 +149,7 @@ private fun adminAddWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
       description = "User ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    body<PhoneNumber> { description = "New WhatsApp number" }
+    body<UpdateNumber> { description = "New WhatsApp number" }
   }
   response {
     HttpStatusCode.OK to
@@ -177,7 +177,7 @@ private fun adminUpdateWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
       description = "Number ID"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    body<PhoneNumber> { description = "Updated WhatsApp number" }
+    body<UpdateNumber> { description = "Updated WhatsApp number" }
   }
   response {
     HttpStatusCode.OK to
@@ -224,7 +224,7 @@ private fun adminGetAllWhatsAppChats(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "A list of WhatsApp chats"
-        body<CountedList<WhatsAppChatWithUserName>>()
+        body<CountedList<Chat>>()
       }
     HttpStatusCode.InternalServerError to
       {
@@ -247,7 +247,7 @@ private fun adminGetWhatsAppChat(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "WhatsApp chat retrieved successfully"
-        body<WhatsAppChatWithUserAndMessages>()
+        body<ChatWithMessages>()
       }
     HttpStatusCode.InternalServerError to
       {

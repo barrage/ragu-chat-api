@@ -13,20 +13,18 @@ import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowRepository
+import net.barrage.llmao.app.workflow.chat.ChatRepositoryWrite
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraRepository
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.initDatabase
 import net.barrage.llmao.core.repository.AgentRepository
-import net.barrage.llmao.core.repository.ChatRepository
-import net.barrage.llmao.core.repository.SessionRepository
-import net.barrage.llmao.core.repository.UserRepository
+import net.barrage.llmao.core.repository.ChatRepositoryRead
+import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.services.ChatService
-import net.barrage.llmao.core.services.UserService
 import net.barrage.llmao.core.settings.SettingsRepository
 import net.barrage.llmao.core.settings.SettingsService
 import net.barrage.llmao.core.storage.ImageStorage
@@ -62,11 +60,9 @@ class ApplicationState(
 }
 
 class RepositoryState(database: DSLContext) {
-  val user: UserRepository = UserRepository(database)
-  val session: SessionRepository = SessionRepository(database)
   val agent: AgentRepository = AgentRepository(database)
-  val chat: ChatRepository = ChatRepository(database)
-  val chatWorkflow: ChatWorkflowRepository = ChatWorkflowRepository(database)
+  val chatRead: ChatRepositoryRead = ChatRepositoryRead(database, "CHAT")
+  val chatWrite: ChatRepositoryWrite = ChatRepositoryWrite(database, "CHAT")
   val settings: SettingsRepository = SettingsRepository(database)
   val tokenUsageR: TokenUsageRepositoryRead = TokenUsageRepositoryRead(database)
   val tokenUsageW: TokenUsageRepositoryWrite = TokenUsageRepositoryWrite(database)
@@ -99,7 +95,9 @@ class AdapterState(
             ),
           providers = providers,
           agentRepository = repository.agent,
-          wappRepository = WhatsAppRepository(database),
+          chatRepositoryRead = ChatRepositoryRead(database, "WHATSAPP"),
+          chatRepositoryWrite = ChatRepositoryWrite(database, "WHATSAPP"),
+          whatsAppRepository = WhatsAppRepository(database),
           settingsService = settingsService,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           encodingRegistry = Encodings.newDefaultEncodingRegistry(),
@@ -116,6 +114,7 @@ class AdapterState(
           settingsService = settingsService,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           jiraKiraRepository = jiraKiraKeyStore,
+          specialistRepositoryWrite = SpecialistRepositoryWrite(database, "JIRAKIRA"),
         )
       adapters[JiraKiraWorkflowFactory::class] = jiraKiraWorkflowFactory
     }
@@ -199,16 +198,14 @@ class ServiceState(
   repository: RepositoryState,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val chat = ChatService(repository.chat, repository.agent, repository.user)
+  val chat = ChatService(repository.chatRead, repository.agent)
   val agent =
-    AgentService(providers, repository.agent, repository.chat, listener, providers.imageStorage)
-  val user = UserService(repository.user, repository.session, providers.imageStorage)
+    AgentService(providers, repository.agent, repository.chatRead, listener, providers.imageStorage)
   val admin =
     AdministrationService(
       providers = providers,
       agentRepository = repository.agent,
-      chatRepository = repository.chat,
-      userRepository = repository.user,
+      chatRepositoryRead = repository.chatRead,
       tokenUsageRepository = repository.tokenUsageR,
     )
 }

@@ -7,6 +7,7 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import net.barrage.llmao.core.embeddings.Embedder
 import net.barrage.llmao.core.embeddings.Embeddings
+import net.barrage.llmao.core.tokens.TokenUsageAmount
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
@@ -51,7 +52,14 @@ class AzureEmbedder(endpoint: String, deployment: String, apiVersion: String, ap
 
     // We always get embeddings in a 1:1 manner relative to the input
     // Above check ensures we are always in bounds
-    return Embeddings(response.embeddings.map { it.embedding }[0], response.usage.totalTokens)
+    return Embeddings(
+      response.embeddings.map { it.embedding }[0],
+      TokenUsageAmount(
+        prompt = response.usage.promptTokens,
+        completion = response.usage.completionTokens,
+        total = response.usage.totalTokens,
+      ),
+    )
   }
 
   override suspend fun vectorSize(model: String): Int {

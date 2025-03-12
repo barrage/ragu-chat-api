@@ -213,7 +213,7 @@ class ChatAgent(
           .getProvider(collection.embeddingProvider)
           .embed(prompt, collection.embeddingModel)
 
-      embeddings.tokensUsed?.let { tokenUsage ->
+      embeddings.usage?.let { tokenUsage ->
         tokenTracker.store(
           amount = tokenUsage,
           usageType = TokenUsageType.EMBEDDING,
