@@ -6,8 +6,6 @@ import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
@@ -25,16 +23,12 @@ import org.junit.jupiter.api.Test
 class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
-  private lateinit var user: User
-  private lateinit var session: Session
 
   @BeforeAll
   fun setup() {
     runBlocking {
       agent = postgres.testAgent()
       agentConfiguration = postgres.testAgentConfiguration(agentId = agent.id)
-      user = postgres.testUser(email = "not@important.org", admin = false)
-      session = postgres.testSession(user.id)
     }
   }
 

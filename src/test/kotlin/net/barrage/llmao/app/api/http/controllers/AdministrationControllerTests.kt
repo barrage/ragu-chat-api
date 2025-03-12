@@ -8,6 +8,7 @@ import io.ktor.serialization.kotlinx.json.*
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.ProvidersResponse
 import net.barrage.llmao.core.models.Agent
@@ -15,8 +16,6 @@ import net.barrage.llmao.core.models.AgentChatTimeSeries
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.DashboardCounts
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -24,10 +23,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class AdministrationControllerTests : IntegrationTest() {
-  private lateinit var admin: User
-  private lateinit var adminSession: Session
-  private lateinit var userActive: User
-  private lateinit var userInactive: User
   private lateinit var agentOne: Agent
   private lateinit var agentOneConfiguration: AgentConfiguration
   private lateinit var agentTwo: Agent
@@ -40,13 +35,6 @@ class AdministrationControllerTests : IntegrationTest() {
   @BeforeAll
   fun setup() {
     runBlocking {
-      admin = postgres.testUser(admin = true, active = true, email = "admin@barrage.net")
-      adminSession = postgres.testSession(admin.id)
-
-      userActive = postgres.testUser(admin = false, active = true, email = "user@barrage.net")
-      userInactive =
-        postgres.testUser(admin = false, active = false, email = "inactive@barrage.net")
-
       agentOne = postgres.testAgent(active = true, name = "TestAgentOne")
       agentOneConfiguration = postgres.testAgentConfiguration(agentOne.id, llmProvider = "openai")
 
@@ -57,8 +45,8 @@ class AdministrationControllerTests : IntegrationTest() {
       agentThreeConfiguration =
         postgres.testAgentConfiguration(agentThree.id, llmProvider = "azure")
 
-      chatOne = postgres.testChat(userActive.id, agentOne.id)
-      chatTwo = postgres.testChat(userActive.id, agentOne.id)
+      chatOne = postgres.testChat(USER_USER, agentOne.id)
+      chatTwo = postgres.testChat(USER_USER, agentOne.id)
     }
   }
 

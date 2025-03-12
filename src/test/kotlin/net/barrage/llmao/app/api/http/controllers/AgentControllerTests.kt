@@ -9,8 +9,6 @@ import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,16 +19,12 @@ import org.junit.jupiter.api.Test
 class AgentControllerTests : IntegrationTest() {
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
-  private lateinit var user: User
-  private lateinit var userSession: Session
 
   @BeforeAll
   fun setup() {
     runBlocking {
       agent = postgres.testAgent()
       agentConfiguration = postgres.testAgentConfiguration(agent.id)
-      user = postgres.testUser(admin = false)
-      userSession = postgres.testSession(user.id)
     }
   }
 

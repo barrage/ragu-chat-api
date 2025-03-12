@@ -9,32 +9,17 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.settings.ApplicationSettings
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsUpdate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class AdminSettingsServiceControllerTests : IntegrationTest() {
-  private lateinit var userAdminSession: Session
-  private lateinit var userAdmin: User
-
-  @BeforeAll
-  fun setup() {
-    runBlocking {
-      userAdmin = postgres.testUser(admin = true)
-      userAdminSession = postgres.testSession(userAdmin.id)
-    }
-  }
-
   @Test
   fun updatesSingleSetting() = test { client ->
     val update = SettingsUpdate(listOf(SettingUpdate(SettingKey.CHAT_MAX_HISTORY_TOKENS, "15")))

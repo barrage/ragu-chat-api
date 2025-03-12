@@ -30,9 +30,7 @@ import net.barrage.llmao.app.workflow.IncomingMessageSerializer
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.AgentFull
-import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateAgent
-import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
@@ -45,7 +43,6 @@ import net.barrage.llmao.sendMessage
 import net.barrage.llmao.wsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -54,17 +51,6 @@ private const val TEST_COLLECTION = "KusturicaChatTests"
 private const val SIZE = 1536
 
 class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
-  private lateinit var user: User
-  private lateinit var session: Session
-
-  @BeforeAll
-  fun setup() {
-    runBlocking {
-      user = postgres.testUser(email = "not@important.org", admin = false)
-      session = postgres.testSession(user.id)
-    }
-  }
-
   /**
    * Tests if the whole application flow works as expected.
    *
@@ -227,7 +213,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
       val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(2, chat.messages.size)
+      assertEquals(2, chat.messages.items.size)
     }
 
     deleteVectors()
@@ -302,7 +288,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       }
 
       val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(2, chat.messages.size)
+      assertEquals(2, chat.messages.items.size)
     }
 
     deleteVectors()
@@ -527,9 +513,9 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
       val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(4, chat.messages.size)
+      assertEquals(4, chat.messages.items.size)
 
-      val messages = chat.messages.reversed()
+      val messages = chat.messages.items.reversed().flatMap { it.messages }
 
       assertEquals("0: $prompt", messages[0].content)
       assertEquals(COMPLETIONS_STREAM_RESPONSE, messages[1].content)

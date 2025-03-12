@@ -17,7 +17,6 @@ import java.io.FileOutputStream
 import java.io.PrintStream
 import java.lang.Thread.sleep
 import java.time.Duration
-import java.time.OffsetDateTime
 import java.util.*
 import kotlinx.coroutines.reactive.awaitSingle
 import liquibase.Liquibase
@@ -25,17 +24,20 @@ import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentCollection
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.MessageGroupAggregate
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.toAgent
 import net.barrage.llmao.core.models.toAgentCollection
 import net.barrage.llmao.core.models.toAgentConfiguration
 import net.barrage.llmao.core.models.toChat
 import net.barrage.llmao.core.models.toMessage
+import net.barrage.llmao.core.models.toMessageGroup
+import net.barrage.llmao.core.models.toMessageGroupEvaluation
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.types.KUUID
@@ -47,6 +49,8 @@ import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.JIRA_API_KEYS
 import net.barrage.llmao.tables.references.JIRA_WORKLOG_ATTRIBUTES
 import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.MESSAGE_GROUPS
+import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
@@ -151,56 +155,8 @@ class TestPostgres {
     connectionPool.dispose()
   }
 
-  suspend fun testUser(
-    email: String = "test@user.me",
-    admin: Boolean,
-    active: Boolean = true,
-    fullName: String = "Test User",
-    firstName: String = "Test",
-    lastName: String = "User",
-    deletedAt: OffsetDateTime? = null,
-  ): User {
-    return dslContext
-      .insertInto(USERS)
-      .columns(
-        USERS.EMAIL,
-        USERS.FULL_NAME,
-        USERS.FIRST_NAME,
-        USERS.LAST_NAME,
-        USERS.ROLE,
-        USERS.ACTIVE,
-        USERS.DELETED_AT,
-      )
-      .values(
-        email,
-        fullName,
-        firstName,
-        lastName,
-        if (admin) "ADMIN" else "USER",
-        active,
-        deletedAt,
-      )
-      .returning()
-      .awaitSingle()
-      .toUser()
-  }
-
   suspend fun deleteTestAgent(id: UUID) {
     dslContext.deleteFrom(AGENTS).where(AGENTS.ID.eq(id)).awaitSingle()
-  }
-
-  suspend fun deleteTestUser(id: UUID) {
-    dslContext.deleteFrom(USERS).where(USERS.ID.eq(id)).awaitSingle()
-  }
-
-  suspend fun testSession(userId: UUID): Session {
-    return dslContext
-      .insertInto(SESSIONS)
-      .columns(SESSIONS.USER_ID, SESSIONS.EXPIRES_AT)
-      .values(userId, OffsetDateTime.now().plusDays(1))
-      .returning()
-      .awaitSingle()
-      .toSessionData()
   }
 
   suspend fun testAgent(name: String = "Test", active: Boolean = true): Agent {
@@ -223,7 +179,6 @@ class TestPostgres {
     presencePenalty: Double? = null,
     maxCompletionTokens: Int? = null,
     titleInstruction: String? = null,
-    summaryInstruction: String? = null,
     errorMessage: String? = null,
   ): AgentConfiguration {
     val configuration =
@@ -239,7 +194,6 @@ class TestPostgres {
           AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
           AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-          AGENT_CONFIGURATIONS.SUMMARY_INSTRUCTION,
           AGENT_CONFIGURATIONS.ERROR_MESSAGE,
         )
         .values(
@@ -252,7 +206,6 @@ class TestPostgres {
           presencePenalty,
           maxCompletionTokens,
           titleInstruction,
-          summaryInstruction,
           errorMessage,
         )
         .returning()
@@ -291,55 +244,87 @@ class TestPostgres {
       .toAgentCollection()
   }
 
-  suspend fun testChat(userId: UUID, agentId: UUID, title: String? = "Test Chat Title"): Chat {
+  suspend fun testChat(
+    user: User,
+    agentId: UUID,
+    title: String? = "Test Chat Title",
+    type: String = "CHAT",
+  ): Chat {
     return dslContext
       .insertInto(CHATS)
       .set(CHATS.ID, UUID.randomUUID())
-      .set(CHATS.USER_ID, userId)
+      .set(CHATS.USER_ID, user.id)
+      .set(CHATS.USERNAME, user.username)
       .set(CHATS.AGENT_ID, agentId)
       .set(CHATS.TITLE, title)
+      .set(CHATS.TYPE, type)
       .returning()
       .awaitSingle()
       .toChat()
   }
 
-  suspend fun testChatMessage(
+  suspend fun testMessagePair(
     chatId: UUID,
-    userId: UUID,
-    content: String = "Test message",
-    senderType: String = "user",
-    responseTo: UUID? = null,
+    agentConfigurationId: KUUID,
+    userContent: String = "Test message",
+    assistantContent: String = "Test response",
     evaluation: Boolean? = null,
     feedback: String? = null,
-  ): Message {
-    val message =
+  ): MessageGroupAggregate {
+    val messageGroup =
+      dslContext
+        .insertInto(MESSAGE_GROUPS)
+        .set(MESSAGE_GROUPS.CHAT_ID, chatId)
+        .set(MESSAGE_GROUPS.AGENT_CONFIGURATION_ID, agentConfigurationId)
+        .returning()
+        .awaitSingle()
+
+    val userMessage =
       dslContext
         .insertInto(MESSAGES)
-        .set(MESSAGES.CHAT_ID, chatId)
-        .set(MESSAGES.SENDER, userId)
-        .set(MESSAGES.SENDER_TYPE, senderType)
-        .set(MESSAGES.CONTENT, content)
-        .set(MESSAGES.RESPONSE_TO, responseTo)
+        .set(MESSAGES.MESSAGE_GROUP_ID, messageGroup.id)
+        .set(MESSAGES.ORDER, 0)
+        .set(MESSAGES.SENDER_TYPE, "user")
+        .set(MESSAGES.CONTENT, userContent)
         .returning()
         .awaitSingle()
         .toMessage()
 
-    if (evaluation != null) {
+    val assistantMessage =
       dslContext
-        .insertInto(MESSAGE_EVALUATIONS)
-        .set(MESSAGE_EVALUATIONS.MESSAGE_ID, message.id)
-        .set(MESSAGE_EVALUATIONS.EVALUATION, evaluation)
-        .set(MESSAGE_EVALUATIONS.FEEDBACK, feedback)
+        .insertInto(MESSAGES)
+        .set(MESSAGES.MESSAGE_GROUP_ID, messageGroup.id)
+        .set(MESSAGES.ORDER, 1)
+        .set(MESSAGES.SENDER_TYPE, "assistant")
+        .set(MESSAGES.CONTENT, assistantContent)
+        .set(MESSAGES.FINISH_REASON, FinishReason.Stop.value)
+        .returning()
         .awaitSingle()
-    }
+        .toMessage()
 
-    return message
+    val evaluated =
+      evaluation?.let {
+        dslContext
+          .insertInto(MESSAGE_GROUP_EVALUATIONS)
+          .set(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID, messageGroup.id)
+          .set(MESSAGE_GROUP_EVALUATIONS.EVALUATION, evaluation)
+          .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, feedback)
+          .returning()
+          .awaitSingle()
+      }
+
+    return MessageGroupAggregate(
+      group = messageGroup.toMessageGroup(),
+      messages = mutableListOf(userMessage, assistantMessage),
+      evaluation = evaluated?.toMessageGroupEvaluation(),
+    )
   }
 
-  suspend fun testWhatsAppNumber(userId: UUID, phoneNumber: String): WhatsAppNumber {
+  suspend fun testWhatsAppNumber(user: User, phoneNumber: String): WhatsAppNumber {
     return dslContext
       .insertInto(WHATS_APP_NUMBERS)
-      .set(WHATS_APP_NUMBERS.USER_ID, userId)
+      .set(WHATS_APP_NUMBERS.USER_ID, user.id)
+      .set(WHATS_APP_NUMBERS.USERNAME, user.username)
       .set(WHATS_APP_NUMBERS.PHONE_NUMBER, phoneNumber)
       .returning()
       .awaitSingle()
@@ -368,40 +353,7 @@ class TestPostgres {
       .awaitSingle()
   }
 
-  suspend fun testWhatsAppChat(userId: UUID): WhatsAppChat {
-    return dslContext
-      .insertInto(WHATS_APP_CHATS)
-      .set(WHATS_APP_CHATS.ID, UUID.randomUUID())
-      .set(WHATS_APP_CHATS.USER_ID, userId)
-      .returning()
-      .awaitSingle()
-      .toWhatsAppChat()
-  }
-
-  suspend fun deleteTestWhatsAppChat(id: UUID) {
-    dslContext.deleteFrom(WHATS_APP_CHATS).where(WHATS_APP_CHATS.ID.eq(id)).awaitSingle()
-  }
-
-  suspend fun testWhatsAppMessage(
-    chatId: UUID,
-    userId: UUID,
-    content: String = "Test message",
-    senderType: String = "user",
-    responseTo: UUID? = null,
-  ): WhatsAppMessage {
-    return dslContext
-      .insertInto(WHATS_APP_MESSAGES)
-      .set(WHATS_APP_MESSAGES.CHAT_ID, chatId)
-      .set(WHATS_APP_MESSAGES.SENDER, userId)
-      .set(WHATS_APP_MESSAGES.SENDER_TYPE, senderType)
-      .set(WHATS_APP_MESSAGES.CONTENT, content)
-      .set(WHATS_APP_MESSAGES.RESPONSE_TO, responseTo)
-      .returning()
-      .awaitSingle()
-      .toWhatsAppMessage()
-  }
-
-  suspend fun testJiraApiKey(userId: UUID, apiKey: String) {
+  suspend fun testJiraApiKey(userId: String, apiKey: String) {
     dslContext
       .insertInto(JIRA_API_KEYS)
       .set(JIRA_API_KEYS.USER_ID, userId)

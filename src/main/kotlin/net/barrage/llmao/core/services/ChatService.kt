@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.services
 
-import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.ChatWithMessages
@@ -15,8 +14,6 @@ import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-
-private val LOG = KtorSimpleLogger("net.barrage.llmao.core.services.ChatService")
 
 /** Handles Chat CRUD. */
 class ChatService(

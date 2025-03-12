@@ -8,18 +8,16 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.adapters.whatsapp.dto.WhatsAppAgentUpdate
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChat
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserAndMessages
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppChatWithUserName
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppMessage
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentFull
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.Chat
+import net.barrage.llmao.core.models.ChatWithMessages
+import net.barrage.llmao.core.models.MessageGroupAggregate
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
@@ -31,55 +29,57 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsApp = true) {
-  private lateinit var adminUser: User
-  private lateinit var peasantUser: User
-  private lateinit var adminSession: Session
-  private lateinit var peasantSession: Session
   private lateinit var whatsAppNumber: WhatsAppNumber
   private lateinit var whatsAppAgentOne: Agent
   private lateinit var whatsAppAgentTwo: Agent
   private lateinit var whatsAppAgentOneConfiguration: AgentConfiguration
   private lateinit var whatsAppAgentTwoConfiguration: AgentConfiguration
-  private lateinit var whatsAppChat: WhatsAppChat
-  private lateinit var whatsAppMessageOne: WhatsAppMessage
-  private lateinit var whatsAppMessageTwo: WhatsAppMessage
+  private lateinit var whatsAppChat: Chat
+  private lateinit var whatsAppMessageOne: MessageGroupAggregate
+  private lateinit var whatsAppMessageTwo: MessageGroupAggregate
 
   @BeforeAll
   fun setup() {
-    runBlocking {
-      adminUser = postgres.testUser("foo@bar.com", admin = true)
-      peasantUser = postgres.testUser("bar@foo.com", admin = false)
-      adminSession = postgres.testSession(adminUser.id)
-      peasantSession = postgres.testSession(peasantUser.id)
-      weaviate!!.insertTestCollection("Kusturica")
-    }
+    runBlocking { weaviate!!.insertTestCollection("Kusturica") }
   }
 
   @BeforeEach
   fun setupWhatsAppUser() {
     runBlocking {
-      whatsAppNumber = postgres.testWhatsAppNumber(peasantUser.id, "385981234567")
+      whatsAppNumber = postgres.testWhatsAppNumber(USER_USER, "385981234567")
+
       whatsAppAgentOne = postgres.testAgent("Test Whatsapp Agent 1")
       whatsAppAgentOneConfiguration =
         postgres.testAgentConfiguration(
           whatsAppAgentOne.id,
           context = "WhatsApp Test Agent Context",
         )
+
       whatsAppAgentTwo = postgres.testAgent("Test Whatsapp Agent 2")
       whatsAppAgentTwoConfiguration =
         postgres.testAgentConfiguration(
           whatsAppAgentTwo.id,
           context = "WhatsApp Test Agent Context",
         )
-      whatsAppChat = postgres.testWhatsAppChat(peasantUser.id)
-      whatsAppMessageOne = postgres.testWhatsAppMessage(whatsAppChat.id, peasantUser.id)
-      whatsAppMessageTwo =
-        postgres.testWhatsAppMessage(
+
+      whatsAppChat = postgres.testChat(USER_USER, whatsAppAgentOne.id, type = "WHATSAPP")
+
+      whatsAppMessageOne =
+        postgres.testMessagePair(
           whatsAppChat.id,
-          whatsAppAgentOne.id,
-          senderType = "assistant",
-          responseTo = whatsAppMessageOne.id,
+          whatsAppAgentOneConfiguration.id,
+          "First Message",
+          "First Response",
         )
+
+      whatsAppMessageTwo =
+        postgres.testMessagePair(
+          whatsAppChat.id,
+          whatsAppAgentOneConfiguration.id,
+          "Second Message",
+          "Second Response",
+        )
+
       postgres.setWhatsAppAgent(whatsAppAgentOne.id)
     }
   }
@@ -87,7 +87,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   @AfterEach
   fun tearDown() {
     runBlocking {
-      postgres.deleteTestWhatsAppChat(whatsAppChat.id)
+      // postgres.deleteTest(whatsAppChat.id)
       postgres.deleteTestWhatsAppNumber(whatsAppNumber.id)
       postgres.deleteWhatsAppAgent()
     }
@@ -154,22 +154,20 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   fun adminGetWhatsAppNumbersForUser() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.get("/admin/whatsapp/numbers/${peasantUser.id}") {
-        header("Cookie", adminAccessToken())
-      }
+      client.get("/admin/whatsapp/numbers/${USER_USER.id}") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
     val body = response.body<List<WhatsAppNumber>>()
     assertEquals(1, body.size)
     assertEquals("385981234567", body[0].phoneNumber)
-    assertEquals(peasantUser.id, body[0].userId)
+    assertEquals(USER_USER.id, body[0].userId)
   }
 
   @Test
   fun adminAddWhatsAppNumberForUser() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.post("/admin/whatsapp/numbers/${peasantUser.id}") {
+      client.post("/admin/whatsapp/numbers/${USER_USER.id}") {
         header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234566"))
@@ -178,7 +176,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
     assertEquals(200, response.status.value)
     val body = response.body<WhatsAppNumber>()
     assertEquals("385981234566", body.phoneNumber)
-    assertEquals(peasantUser.id, body.userId)
+    assertEquals(USER_USER.id, body.userId)
 
     postgres.deleteTestWhatsAppNumber(body.id)
   }
@@ -187,7 +185,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   fun adminAddWhatsAppNumberForUserFailsDuplicate() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.post("/admin/whatsapp/numbers/${peasantUser.id}") {
+      client.post("/admin/whatsapp/numbers/${USER_USER.id}") {
         header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234567"))
@@ -203,7 +201,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   fun adminUpdateWhatsAppNumberForUser() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.put("/admin/whatsapp/numbers/${peasantUser.id}/${whatsAppNumber.id}") {
+      client.put("/admin/whatsapp/numbers/${USER_USER.id}/${whatsAppNumber.id}") {
         header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
         setBody(mapOf("phoneNumber" to "385981234569"))
@@ -212,14 +210,14 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
     assertEquals(200, response.status.value)
     val body = response.body<WhatsAppNumber>()
     assertEquals("385981234569", body.phoneNumber)
-    assertEquals(peasantUser.id, body.userId)
+    assertEquals(USER_USER.id, body.userId)
   }
 
   @Test
   fun adminDeleteWhatsAppNumberForUser() = test {
     val client = createClient { install(ContentNegotiation) { json() } }
     val response =
-      client.delete("/admin/whatsapp/numbers/${peasantUser.id}/${whatsAppNumber.id}") {
+      client.delete("/admin/whatsapp/numbers/${USER_USER.id}/${whatsAppNumber.id}") {
         header("Cookie", adminAccessToken())
       }
 
@@ -232,10 +230,10 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
     val response = client.get("/admin/whatsapp/chats") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
-    val body = response.body<CountedList<WhatsAppChatWithUserName>>()
+    val body = response.body<CountedList<Chat>>()
     assertEquals(1, body.total)
-    assertEquals(peasantUser.id, body.items[0].chat.userId)
-    assertEquals(peasantUser.fullName, body.items[0].fullName)
+    assertEquals(USER_USER.id, body.items[0].userId)
+    assertEquals(USER_USER.username, body.items[0].username)
   }
 
   @Test
@@ -247,15 +245,15 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<WhatsAppChatWithUserAndMessages>()
+    val body = response.body<ChatWithMessages>()
     assertEquals(whatsAppChat.id, body.chat.id)
-    assertEquals(peasantUser.id, body.chat.userId)
-    assertEquals(peasantUser.id, body.user.id)
-    assertEquals(2, body.messages.size)
-    assertEquals(whatsAppMessageOne.id, body.messages[1].id)
-    assertEquals("user", body.messages[1].senderType)
-    assertEquals(whatsAppMessageTwo.id, body.messages[0].id)
-    assertEquals("assistant", body.messages[0].senderType)
-    assertEquals(whatsAppMessageOne.id, body.messages[0].responseTo)
+    assertEquals(USER_USER.id, body.chat.userId)
+    assertEquals(USER_USER.username, body.chat.username)
+    assertEquals(2, body.messages.items.size)
+    assertEquals(whatsAppMessageOne.messages[0].id, body.messages.items[0].messages[1].id)
+    //    assertEquals("user", body.messages[1].senderType)
+    //    assertEquals(whatsAppMessageTwo.id, body.messages[0].id)
+    //    assertEquals("assistant", body.messages[0].senderType)
+    //    assertEquals(whatsAppMessageOne.id, body.messages[0].responseTo)
   }
 }

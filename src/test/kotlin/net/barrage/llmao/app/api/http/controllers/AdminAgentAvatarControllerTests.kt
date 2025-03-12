@@ -10,14 +10,13 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.AgentFull
 import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.Message
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.models.MessageGroupAggregate
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -30,50 +29,40 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   private lateinit var agentOneConfigurationV1: AgentConfiguration
   private lateinit var agentOneConfigurationV2: AgentConfiguration
   private lateinit var agentOneChat: Chat
-  private lateinit var chatPositiveMessage: Message
-  private lateinit var chatNegativeMessage: Message
+  private lateinit var chatPositiveMessage: MessageGroupAggregate
+  private lateinit var chatNegativeMessage: MessageGroupAggregate
   private lateinit var agentTwo: Agent
   private lateinit var agentTwoConfiguration: AgentConfiguration
-  private lateinit var adminUser: User
-  private lateinit var peasantUser: User
-  private lateinit var adminSession: Session
-  private lateinit var peasantSession: Session
 
   @BeforeAll
   fun setup() {
     runBlocking {
-      adminUser = postgres.testUser("foo@bar.com", admin = true)
-      peasantUser = postgres.testUser("bar@foo.com", admin = false)
       agentOne = postgres.testAgent(name = "TestAgentOne")
+      agentTwo = postgres.testAgent(name = "TestAgentTwo", active = false)
+
       agentOneConfigurationV1 = postgres.testAgentConfiguration(agentOne.id, version = 1)
       agentOneConfigurationV2 = postgres.testAgentConfiguration(agentOne.id, version = 2)
-      agentOneChat = postgres.testChat(peasantUser.id, agentOne.id)
-      val chatMessageOne =
-        postgres.testChatMessage(agentOneChat.id, peasantUser.id, "First Message", "user")
+      agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id)
+
+      agentOneChat = postgres.testChat(USER_USER, agentOne.id)
+
       chatPositiveMessage =
-        postgres.testChatMessage(
+        postgres.testMessagePair(
           agentOneChat.id,
           agentOneConfigurationV1.id,
           "First Message",
-          "assistant",
-          responseTo = chatMessageOne.id,
+          "First Response",
           evaluation = true,
         )
-      val chatMessageTwo =
-        postgres.testChatMessage(agentOneChat.id, peasantUser.id, "Second Message", "user")
+
       chatNegativeMessage =
-        postgres.testChatMessage(
+        postgres.testMessagePair(
           agentOneChat.id,
           agentOneConfigurationV1.id,
           "Second Message",
-          "assistant",
-          responseTo = chatMessageTwo.id,
+          "Second Response",
           evaluation = false,
         )
-      agentTwo = postgres.testAgent(name = "TestAgentTwo", active = false)
-      agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id)
-      adminSession = postgres.testSession(adminUser.id)
-      peasantSession = postgres.testSession(peasantUser.id)
     }
   }
 

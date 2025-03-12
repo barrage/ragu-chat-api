@@ -4,27 +4,12 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.core.models.Session
-import net.barrage.llmao.core.models.User
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class AdministrationControllerEmptyDBTests : IntegrationTest() {
-  private lateinit var admin: User
-  private lateinit var adminSession: Session
-
-  @BeforeAll
-  fun setup() {
-    runBlocking {
-      admin = postgres.testUser(admin = true, active = true, email = "admin@barrage.net")
-      adminSession = postgres.testSession(admin.id)
-    }
-  }
-
   @Test
   fun getAdminDashboardCounts() = test {
     val client = createClient { install(ContentNegotiation) { json() } }

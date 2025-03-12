@@ -9,12 +9,9 @@ import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.Session
 import net.barrage.llmao.core.models.UpdateCollectionAddition
 import net.barrage.llmao.core.models.UpdateCollections
 import net.barrage.llmao.core.models.UpdateCollectionsResult
-import net.barrage.llmao.core.models.User
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -23,8 +20,6 @@ import org.junit.jupiter.api.Test
 class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) {
   private lateinit var agentOne: Agent
   private lateinit var agentTwo: Agent
-  private lateinit var adminUser: User
-  private lateinit var adminSession: Session
 
   @BeforeAll
   fun setup() {
@@ -37,19 +32,8 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
       agentOne = postgres.testAgent()
       agentTwo = postgres.testAgent()
 
-      adminUser = postgres.testUser("foo@bar.com", admin = true)
-      adminSession = postgres.testSession(adminUser.id)
-
       postgres.testAgentConfiguration(agentOne.id, version = 1)
       postgres.testAgentConfiguration(agentTwo.id, version = 1)
-    }
-  }
-
-  @AfterEach
-  fun afterEach() {
-    runBlocking {
-      postgres.deleteTestAgent(agentOne.id)
-      postgres.deleteTestUser(adminUser.id)
     }
   }
 
