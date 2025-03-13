@@ -2,9 +2,9 @@ package net.barrage.llmao.core.llm
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.models.Message
-import net.barrage.llmao.core.models.MessageInsert
-import net.barrage.llmao.core.tokens.TokenUsageAmount
+import net.barrage.llmao.core.model.Message
+import net.barrage.llmao.core.model.MessageInsert
+import net.barrage.llmao.core.token.TokenUsageAmount
 import net.barrage.llmao.core.types.KUUID
 
 @Serializable

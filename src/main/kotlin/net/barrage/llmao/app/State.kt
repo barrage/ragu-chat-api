@@ -4,34 +4,28 @@ import com.knuddels.jtokkit.Encodings
 import io.ktor.server.config.ApplicationConfig
 import kotlin.reflect.KClass
 import kotlinx.coroutines.Job
-import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppSenderConfig
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
-import net.barrage.llmao.app.api.http.CookieFactory
+import net.barrage.llmao.app.chat.ChatType
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
+import net.barrage.llmao.app.specialist.SpecialistType
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraRepository
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraRepository
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.EventListener
+import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.RepositoryState
+import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.admin.AdministrationService
+import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.chat.ChatService
 import net.barrage.llmao.core.initDatabase
-import net.barrage.llmao.core.repository.AgentRepository
-import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
-import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
-import net.barrage.llmao.core.services.AdministrationService
-import net.barrage.llmao.core.services.AgentService
-import net.barrage.llmao.core.services.ChatService
-import net.barrage.llmao.core.settings.SettingsRepository
-import net.barrage.llmao.core.settings.SettingsService
-import net.barrage.llmao.core.storage.ImageStorage
-import net.barrage.llmao.core.tokens.TokenUsageRepositoryRead
-import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
 import net.barrage.llmao.string
 import org.jooq.DSLContext
 
@@ -43,29 +37,49 @@ class ApplicationState(
   applicationStopping: Job,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val providers = ProviderState(config)
+  val providers =
+    ProviderState(
+      llm = LlmProviderFactory(config),
+      vector = VectorDatabaseProviderFactory(config),
+      embedding = EmbeddingProviderFactory(config),
+      imageStorage = MinioImageStorage(config),
+    )
   val repository: RepositoryState
-  val adapters: AdapterState
   val services: ServiceState
-  val settingsService: SettingsService
+  val adapters: AdapterState
 
   init {
-    CookieFactory.init(config)
     val database = initDatabase(config, applicationStopping)
     repository = RepositoryState(database)
-    settingsService = SettingsService(repository.settings)
-    services = ServiceState(providers, repository, listener)
-    adapters = AdapterState(config, database, providers, settingsService, repository)
+    services =
+      ServiceState(
+        chat = ChatService(repository.chatRead(ChatType.CHAT.value), repository.agent),
+        agent =
+          AgentService(
+            providers,
+            repository.agent,
+            repository.chatRead(ChatType.CHAT.value),
+            listener,
+            providers.imageStorage,
+          ),
+        admin =
+          AdministrationService(
+            providers,
+            repository.agent,
+            repository.chatRead(ChatType.CHAT.value),
+            repository.tokenUsageR,
+          ),
+        settings = Settings(repository.settings),
+      )
+    adapters =
+      AdapterState(
+        config = config,
+        database = database,
+        providers = providers,
+        settings = services.settings,
+        repository = repository,
+      )
   }
-}
-
-class RepositoryState(database: DSLContext) {
-  val agent: AgentRepository = AgentRepository(database)
-  val chatRead: ChatRepositoryRead = ChatRepositoryRead(database, "CHAT")
-  val chatWrite: ChatRepositoryWrite = ChatRepositoryWrite(database, "CHAT")
-  val settings: SettingsRepository = SettingsRepository(database)
-  val tokenUsageR: TokenUsageRepositoryRead = TokenUsageRepositoryRead(database)
-  val tokenUsageW: TokenUsageRepositoryWrite = TokenUsageRepositoryWrite(database)
 }
 
 /**
@@ -76,7 +90,7 @@ class AdapterState(
   config: ApplicationConfig,
   database: DSLContext,
   providers: ProviderState,
-  settingsService: SettingsService,
+  settings: Settings,
   repository: RepositoryState,
 ) {
   val adapters = mutableMapOf<KClass<*>, Any>()
@@ -95,10 +109,10 @@ class AdapterState(
             ),
           providers = providers,
           agentRepository = repository.agent,
-          chatRepositoryRead = ChatRepositoryRead(database, "WHATSAPP"),
-          chatRepositoryWrite = ChatRepositoryWrite(database, "WHATSAPP"),
+          chatRepositoryRead = repository.chatRead(ChatType.WHATSAPP.value),
+          chatRepositoryWrite = repository.chatWrite(ChatType.WHATSAPP.value),
           whatsAppRepository = WhatsAppRepository(database),
-          settingsService = settingsService,
+          settings = settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           encodingRegistry = Encodings.newDefaultEncodingRegistry(),
         )
@@ -111,10 +125,10 @@ class AdapterState(
         JiraKiraWorkflowFactory(
           endpoint = endpoint,
           providers = providers,
-          settingsService = settingsService,
+          settings = settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           jiraKiraRepository = jiraKiraKeyStore,
-          specialistRepositoryWrite = SpecialistRepositoryWrite(database, "JIRAKIRA"),
+          specialistRepositoryWrite = repository.specialistWrite(SpecialistType.JIRAKIRA.value),
         )
       adapters[JiraKiraWorkflowFactory::class] = jiraKiraWorkflowFactory
     }
@@ -139,80 +153,3 @@ class AdapterState(
     return adapters[T::class] as T
   }
 }
-
-class ProviderState(config: ApplicationConfig) {
-  val llm: LlmProviderFactory = LlmProviderFactory(config)
-  val vector: VectorDatabaseProviderFactory = VectorDatabaseProviderFactory(config)
-  val embedding: EmbeddingProviderFactory = EmbeddingProviderFactory(config)
-  val imageStorage: ImageStorage = MinioImageStorage(config)
-
-  fun list(): ProvidersResponse {
-    val llmProviders = llm.listProviders()
-    val vectorProviders = vector.listProviders()
-    val embeddingProviders = embedding.listProviders()
-
-    return ProvidersResponse(llmProviders, vectorProviders, embeddingProviders)
-  }
-
-  /**
-   * Checks whether the providers and their respective models are supported. Data passed to this
-   * function should come from already validated DTOs.
-   */
-  suspend fun validateSupportedConfigurationParams(
-    llmProvider: String? = null,
-    model: String? = null,
-    vectorProvider: String? = null,
-    embeddingProvider: String? = null,
-    embeddingModel: String? = null,
-  ) {
-    if (llmProvider != null && model != null) {
-      // Throws if invalid provider
-      val llm = llm.getProvider(llmProvider)
-      if (!llm.supportsModel(model)) {
-        throw AppError.api(
-          ErrorReason.InvalidParameter,
-          "Provider '${llm.id()}' does not support model '${model}'",
-        )
-      }
-    }
-
-    if (vectorProvider != null) {
-      // Throws if invalid provider
-      vector.getProvider(vectorProvider)
-    }
-
-    if (embeddingProvider != null && embeddingModel != null) {
-      val embedder = embedding.getProvider(embeddingProvider)
-      if (!embedder.supportsModel(embeddingModel)) {
-        throw AppError.api(
-          ErrorReason.InvalidParameter,
-          "Provider '${embedder.id()}' does not support model '${embeddingModel}'",
-        )
-      }
-    }
-  }
-}
-
-class ServiceState(
-  providers: ProviderState,
-  repository: RepositoryState,
-  listener: EventListener<StateChangeEvent>,
-) {
-  val chat = ChatService(repository.chatRead, repository.agent)
-  val agent =
-    AgentService(providers, repository.agent, repository.chatRead, listener, providers.imageStorage)
-  val admin =
-    AdministrationService(
-      providers = providers,
-      agentRepository = repository.agent,
-      chatRepositoryRead = repository.chatRead,
-      tokenUsageRepository = repository.tokenUsageR,
-    )
-}
-
-@Serializable
-data class ProvidersResponse(
-  val llm: List<String>,
-  val vector: List<String>,
-  val embedding: List<String>,
-)

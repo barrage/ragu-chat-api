@@ -8,16 +8,16 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.app.workflow.chat.ChatAgent
-import net.barrage.llmao.app.workflow.chat.toChatAgent
+import net.barrage.llmao.app.chat.ChatAgent
+import net.barrage.llmao.app.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.MessageBasedHistory
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentConfiguration
-import net.barrage.llmao.core.models.AgentFull
-import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.tokens.TokenUsageTracker
-import net.barrage.llmao.core.tokens.TokenUsageType
+import net.barrage.llmao.core.model.Agent
+import net.barrage.llmao.core.model.AgentConfiguration
+import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.core.model.Chat
+import net.barrage.llmao.core.token.TokenUsageTracker
+import net.barrage.llmao.core.token.TokenUsageType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -45,7 +45,7 @@ class TokenUsageTests : IntegrationTest() {
           .toChatAgent(
             history = MessageBasedHistory(),
             providers = app.providers,
-            settings = app.settingsService.getAllWithDefaults(),
+            settings = app.services.settings.getAllWithDefaults(),
             tokenTracker =
               TokenUsageTracker(
                 userId = ADMIN_USER.id,

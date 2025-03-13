@@ -7,7 +7,7 @@ import kotlinx.serialization.SerializationException
 import net.barrage.llmao.ADMIN_USER
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraMessage
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraMessage
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate

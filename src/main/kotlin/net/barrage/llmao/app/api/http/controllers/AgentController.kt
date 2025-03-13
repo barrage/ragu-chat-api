@@ -9,12 +9,12 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPaginationSort
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.common.CountedList
-import net.barrage.llmao.core.models.common.PaginationSort
-import net.barrage.llmao.core.services.AgentService
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.model.Agent
+import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
 
 fun Route.agentsRoutes(agentService: AgentService) {
   route("/agents") {

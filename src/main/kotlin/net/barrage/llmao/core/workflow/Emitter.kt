@@ -1,6 +1,6 @@
 package net.barrage.llmao.core.workflow
 
-import net.barrage.llmao.error.AppError
+import net.barrage.llmao.core.AppError
 
 /** Handle for emitting realtime events from workflows. */
 interface Emitter<T> {

@@ -1,6 +1,6 @@
 package net.barrage.llmao.app.api.ws
 
-import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 
 /** Handles the registration and removal of WS tokens. */

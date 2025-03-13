@@ -22,10 +22,10 @@ import net.barrage.llmao.app.api.http.controllers.specialistWorkflowRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraAdminRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraUserRoutes
 import net.barrage.llmao.app.api.http.controllers.thirdPartyRoutes
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 fun Application.configureRouting(state: ApplicationState) {
   routing {
@@ -41,10 +41,10 @@ fun Application.configureRouting(state: ApplicationState) {
 
     // Admin API routes
     authenticate("admin") {
-      adminAgentsRoutes(state.services.agent, state.settingsService)
+      adminAgentsRoutes(state.services.agent, state.services.settings)
       adminChatsRoutes(state.services.chat)
       administrationRouter(state.services.admin)
-      adminSettingsRoutes(state.settingsService)
+      adminSettingsRoutes(state.services.settings)
       state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
         jiraKiraAdminRoutes(it.jiraKiraRepository)
       }

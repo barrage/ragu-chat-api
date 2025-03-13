@@ -9,11 +9,11 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
-import net.barrage.llmao.core.settings.SettingsService
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.settings.SettingsUpdate
-import net.barrage.llmao.error.AppError
 
-fun Route.adminSettingsRoutes(settingsService: SettingsService) {
+fun Route.adminSettingsRoutes(settingsService: Settings) {
   route("/admin/settings") {
     put(updateSettings()) {
       val parameters: SettingsUpdate = call.receive()

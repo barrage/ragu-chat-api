@@ -3,10 +3,10 @@ package net.barrage.llmao.app.embeddings
 import io.ktor.server.config.*
 import net.barrage.llmao.app.embeddings.openai.AzureEmbedder
 import net.barrage.llmao.app.embeddings.openai.OpenAIEmbedder
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderFactory
-import net.barrage.llmao.core.embeddings.Embedder
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.string
 
 class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embedder>() {

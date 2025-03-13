@@ -19,13 +19,14 @@ import net.barrage.llmao.app.api.http.configureOpenApi
 import net.barrage.llmao.app.api.http.configureRequestValidation
 import net.barrage.llmao.app.api.http.configureRouting
 import net.barrage.llmao.app.api.ws.websocketServer
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
+import net.barrage.llmao.app.chat.ChatType
+import net.barrage.llmao.app.chat.ChatWorkflowFactory
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 fun main(args: Array<String>) {
   EngineMain.main(args)
@@ -59,10 +60,10 @@ fun Application.module() {
     ChatWorkflowFactory(
       providerState = state.providers,
       agentService = state.services.agent,
-      chatRepositoryWrite = state.repository.chatWrite,
-      chatRepositoryRead = state.repository.chatRead,
+      chatRepositoryWrite = state.repository.chatWrite(ChatType.CHAT.value),
+      chatRepositoryRead = state.repository.chatRead(ChatType.CHAT.value),
       toolchainFactory = toolchainFactory,
-      settingsService = state.settingsService,
+      settings = state.services.settings,
       tokenUsageRepositoryW = state.repository.tokenUsageW,
       encodingRegistry = Encodings.newDefaultEncodingRegistry(),
     ),

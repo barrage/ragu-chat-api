@@ -1,16 +1,15 @@
 package net.barrage.llmao.app.api.http
 
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.application
 import io.ktor.server.request.contentLength
 import io.ktor.server.request.contentType
 import io.ktor.server.request.receiveChannel
 import io.ktor.util.toByteArray
-import net.barrage.llmao.core.models.Image
-import net.barrage.llmao.core.models.ImageType
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.model.Image
+import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.string
 
 /** Extract all the request parameters for an image upload and run the block. */

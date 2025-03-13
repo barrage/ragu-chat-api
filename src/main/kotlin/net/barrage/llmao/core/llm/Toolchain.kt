@@ -2,7 +2,7 @@ package net.barrage.llmao.core.llm
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.app.ServiceState
+import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.workflow.Emitter
 
 /**

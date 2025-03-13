@@ -4,13 +4,13 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentConfiguration
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.model.Agent
+import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.receiveJson
 import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.wsSession

@@ -19,11 +19,11 @@ import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.dto.Message
 import net.barrage.llmao.app.adapters.whatsapp.dto.Price
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentConfiguration
-import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.ChatWithMessages
-import net.barrage.llmao.core.models.MessageGroupAggregate
+import net.barrage.llmao.core.model.Agent
+import net.barrage.llmao.core.model.AgentConfiguration
+import net.barrage.llmao.core.model.Chat
+import net.barrage.llmao.core.model.ChatWithMessages
+import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals

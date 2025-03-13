@@ -10,9 +10,9 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.respond
 import io.ktor.util.logging.*
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ValidationError
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.plugins.GlobalErrorHandler")
 
@@ -87,4 +87,20 @@ private suspend fun ApplicationCall.handleJsonConvert(err: JsonConvertException)
   // In case of missing fields, only the message will be present
   val message = err.localizedMessage
   respond(HttpStatusCode.BadRequest, AppError.Companion.api(ErrorReason.InvalidParameter, message))
+}
+
+fun AppError.code(): HttpStatusCode {
+  return when (errorReason) {
+    ErrorReason.Authentication -> HttpStatusCode.Unauthorized
+    ErrorReason.CannotDeleteSelf -> HttpStatusCode.Conflict
+    ErrorReason.CannotUpdateSelf -> HttpStatusCode.Conflict
+    ErrorReason.EntityDoesNotExist -> HttpStatusCode.NotFound
+    ErrorReason.EntityAlreadyExists -> HttpStatusCode.Conflict
+    ErrorReason.InvalidProvider -> HttpStatusCode.BadRequest
+    ErrorReason.InvalidParameter -> HttpStatusCode.BadRequest
+    ErrorReason.InvalidOperation -> HttpStatusCode.BadRequest
+    ErrorReason.PayloadTooLarge -> HttpStatusCode.PayloadTooLarge
+    ErrorReason.InvalidContentType -> HttpStatusCode.BadRequest
+    else -> HttpStatusCode.InternalServerError
+  }
 }

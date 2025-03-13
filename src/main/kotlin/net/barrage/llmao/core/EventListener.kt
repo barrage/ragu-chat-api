@@ -1,6 +1,5 @@
 package net.barrage.llmao.core
 
-import io.ktor.util.logging.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

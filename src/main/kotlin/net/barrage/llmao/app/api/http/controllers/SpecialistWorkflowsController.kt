@@ -8,9 +8,9 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.AdapterState
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.app.workflow.WorkflowType
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
-import net.barrage.llmao.error.AppError
+import net.barrage.llmao.core.AppError
 
 private const val JIRA_KIRA_NAME = "Gojira"
 

@@ -24,7 +24,7 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import java.time.OffsetDateTime
 import java.util.*
-import net.barrage.llmao.core.models.common.Role
+import net.barrage.llmao.core.model.common.Role
 import net.barrage.llmao.core.types.KUUID
 
 fun Route.openApiRoutes() {

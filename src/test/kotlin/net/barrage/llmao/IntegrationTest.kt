@@ -26,7 +26,7 @@ import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.app.workflow.IncomingMessageSerializer
 import net.barrage.llmao.core.EventListener
-import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KOffsetDateTime
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll

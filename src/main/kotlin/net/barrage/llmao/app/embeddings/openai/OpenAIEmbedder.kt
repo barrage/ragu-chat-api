@@ -4,11 +4,11 @@ import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
-import net.barrage.llmao.core.embeddings.Embedder
-import net.barrage.llmao.core.embeddings.Embeddings
-import net.barrage.llmao.core.tokens.TokenUsageAmount
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.embedding.Embedder
+import net.barrage.llmao.core.embedding.Embeddings
+import net.barrage.llmao.core.token.TokenUsageAmount
 
 /**
  * @param endpoint The Azure endpoint to use. Should include the resource identifier.

@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraMessage
+import net.barrage.llmao.app.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraMessage
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 

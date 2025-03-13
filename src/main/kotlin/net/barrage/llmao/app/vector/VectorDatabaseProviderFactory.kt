@@ -1,11 +1,10 @@
 package net.barrage.llmao.app.vector
 
-import io.ktor.server.application.*
 import io.ktor.server.config.*
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.vector.VectorDatabase
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 class VectorDatabaseProviderFactory(config: ApplicationConfig) : ProviderFactory<VectorDatabase>() {
   private val weaviate: Weaviate

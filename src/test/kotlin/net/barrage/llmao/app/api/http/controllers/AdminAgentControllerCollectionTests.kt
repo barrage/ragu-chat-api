@@ -8,10 +8,10 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.UpdateCollectionAddition
-import net.barrage.llmao.core.models.UpdateCollections
-import net.barrage.llmao.core.models.UpdateCollectionsResult
+import net.barrage.llmao.core.model.Agent
+import net.barrage.llmao.core.model.UpdateCollectionAddition
+import net.barrage.llmao.core.model.UpdateCollections
+import net.barrage.llmao.core.model.UpdateCollectionsResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach

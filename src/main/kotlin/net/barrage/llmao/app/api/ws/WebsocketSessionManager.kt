@@ -4,22 +4,22 @@ import io.ktor.server.websocket.WebSocketServerSession
 import io.ktor.util.logging.KtorSimpleLogger
 import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.app.AdapterState
+import net.barrage.llmao.app.chat.ChatWorkflowFactory
+import net.barrage.llmao.app.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.app.workflow.IncomingMessage
 import net.barrage.llmao.app.workflow.WorkflowType
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.Workflow
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 private val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketSessionManager")
 

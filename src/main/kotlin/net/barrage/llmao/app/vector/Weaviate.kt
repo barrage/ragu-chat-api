@@ -7,13 +7,13 @@ import io.weaviate.client.base.Result
 import io.weaviate.client.v1.graphql.model.GraphQLError
 import io.weaviate.client.v1.schema.model.Property
 import kotlin.properties.Delegates
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.core.vector.VectorDatabase
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.vector.Weaviate")
 

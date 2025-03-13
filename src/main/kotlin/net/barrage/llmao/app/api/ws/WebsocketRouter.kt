@@ -19,15 +19,15 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.user
+import net.barrage.llmao.app.chat.ChatWorkflowFactory
 import net.barrage.llmao.app.workflow.IncomingMessage
 import net.barrage.llmao.app.workflow.IncomingMessageSerializer
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")

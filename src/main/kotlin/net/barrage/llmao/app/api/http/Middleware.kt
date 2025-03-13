@@ -9,9 +9,9 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import java.net.URL
 import java.util.concurrent.TimeUnit
-import net.barrage.llmao.core.models.User
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.model.User
 
 /** Obtain the current user initiating the request. */
 fun ApplicationCall.user(): User {

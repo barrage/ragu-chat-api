@@ -17,16 +17,16 @@ import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryListChatsFilters
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
-import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.ChatWithAgent
-import net.barrage.llmao.core.models.EvaluateMessage
-import net.barrage.llmao.core.models.MessageGroupAggregate
-import net.barrage.llmao.core.models.common.CountedList
-import net.barrage.llmao.core.models.common.Pagination
-import net.barrage.llmao.core.models.common.PaginationSort
-import net.barrage.llmao.core.services.ChatService
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.chat.ChatService
+import net.barrage.llmao.core.model.Chat
+import net.barrage.llmao.core.model.ChatWithAgent
+import net.barrage.llmao.core.model.EvaluateMessage
+import net.barrage.llmao.core.model.MessageGroupAggregate
+import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.Pagination
+import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
 
 fun Route.adminChatsRoutes(service: ChatService) {
   route("/admin/chats") {

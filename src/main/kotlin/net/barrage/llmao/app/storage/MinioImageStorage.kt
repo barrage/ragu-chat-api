@@ -9,10 +9,10 @@ import io.minio.RemoveObjectArgs
 import io.minio.StatObjectArgs
 import io.minio.errors.ErrorResponseException
 import io.minio.errors.MinioException
-import net.barrage.llmao.core.models.Image
-import net.barrage.llmao.core.models.ImageType
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.model.Image
+import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.storage.ImageStorage
-import net.barrage.llmao.error.AppError
 import net.barrage.llmao.string
 
 private const val AVATAR_PREFIX = "avatars"

@@ -1,6 +1,6 @@
 package net.barrage.llmao.core.storage
 
-import net.barrage.llmao.core.models.Image
+import net.barrage.llmao.core.model.Image
 
 interface ImageStorage {
   /** Store the given image object. */

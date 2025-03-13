@@ -8,13 +8,13 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 
 class AzureAI(
   /** The `resourceId` identifying the Azure resource. */

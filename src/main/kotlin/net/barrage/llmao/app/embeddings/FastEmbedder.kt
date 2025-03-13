@@ -5,9 +5,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.embeddings.Embedder
-import net.barrage.llmao.core.embeddings.Embeddings
-import net.barrage.llmao.core.httpClient
+import net.barrage.llmao.app.api.http.httpClient
+import net.barrage.llmao.core.embedding.Embedder
+import net.barrage.llmao.core.embedding.Embeddings
 
 class FastEmbedder(private val endpoint: String) : Embedder {
   private val client: HttpClient = httpClient()

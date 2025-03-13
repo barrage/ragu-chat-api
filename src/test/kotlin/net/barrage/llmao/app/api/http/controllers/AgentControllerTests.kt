@@ -7,9 +7,9 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentConfiguration
-import net.barrage.llmao.core.models.common.CountedList
+import net.barrage.llmao.core.model.Agent
+import net.barrage.llmao.core.model.AgentConfiguration
+import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

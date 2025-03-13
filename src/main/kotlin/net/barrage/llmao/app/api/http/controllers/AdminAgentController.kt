@@ -20,25 +20,25 @@ import net.barrage.llmao.app.api.http.queryListAgentsFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.runWithImage
-import net.barrage.llmao.core.models.Agent
-import net.barrage.llmao.core.models.AgentCollection
-import net.barrage.llmao.core.models.AgentConfiguration
-import net.barrage.llmao.core.models.AgentConfigurationWithEvaluationCounts
-import net.barrage.llmao.core.models.AgentFull
-import net.barrage.llmao.core.models.AgentWithConfiguration
-import net.barrage.llmao.core.models.CreateAgent
-import net.barrage.llmao.core.models.Message
-import net.barrage.llmao.core.models.UpdateAgent
-import net.barrage.llmao.core.models.UpdateCollections
-import net.barrage.llmao.core.models.UpdateCollectionsResult
-import net.barrage.llmao.core.models.UpdateTools
-import net.barrage.llmao.core.models.common.CountedList
-import net.barrage.llmao.core.models.common.PaginationSort
-import net.barrage.llmao.core.services.AgentService
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.model.Agent
+import net.barrage.llmao.core.model.AgentCollection
+import net.barrage.llmao.core.model.AgentConfiguration
+import net.barrage.llmao.core.model.AgentConfigurationWithEvaluationCounts
+import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.core.model.AgentUpdateTools
+import net.barrage.llmao.core.model.AgentWithConfiguration
+import net.barrage.llmao.core.model.CreateAgent
+import net.barrage.llmao.core.model.Message
+import net.barrage.llmao.core.model.UpdateAgent
+import net.barrage.llmao.core.model.UpdateCollections
+import net.barrage.llmao.core.model.UpdateCollectionsResult
+import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.settings.SettingKey
-import net.barrage.llmao.core.settings.SettingsService
+import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
 import net.barrage.llmao.tryUuid
 
 /** Agent DTO for display purposes. */
@@ -65,12 +65,12 @@ fun AgentFull.toAgentDisplay(activeWappAgentId: KUUID?) =
     whatsapp = agent.id == activeWappAgentId,
   )
 
-fun Route.adminAgentsRoutes(agentService: AgentService, settingsService: SettingsService) {
+fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
   route("/admin/agents") {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val filters = call.query(SearchFiltersAdminAgentsQuery::class).toSearchFiltersAdminAgents()
-      val activeWappAgentId = settingsService.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
+      val activeWappAgentId = settings.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
       val agents =
         agentService.listAgentsAdmin(pagination, filters).map {
           it.toAgentDisplay(activeWappAgentId)
@@ -88,7 +88,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settingsService: Setting
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
         val activeWappAgentId =
-          settingsService.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
+          settings.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
         val agent = agentService.getFull(id)
         call.respond(HttpStatusCode.OK, agent.toAgentDisplay(activeWappAgentId))
       }
@@ -115,7 +115,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settingsService: Setting
 
         put(updateAgentTools()) {
           val agentId = call.pathUuid("id")
-          val updateTools = call.receive<UpdateTools>()
+          val updateTools = call.receive<AgentUpdateTools>()
           agentService.updateAgentTools(agentId, updateTools)
           call.respond(HttpStatusCode.OK)
         }
@@ -226,7 +226,7 @@ private fun updateAgentTools(): OpenApiRoute.() -> Unit = {
       description = "Agent ID"
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    body<UpdateTools> {
+    body<AgentUpdateTools> {
       description = "The updated tools for the agent"
       required = true
     }

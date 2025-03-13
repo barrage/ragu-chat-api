@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.ChatChoice
 import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
@@ -34,9 +36,7 @@ import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.ToolCallChunk
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.tokens.TokenUsageAmount
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
+import net.barrage.llmao.core.token.TokenUsageAmount
 
 private val SUPPORTED_MODELS =
   listOf("gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini")

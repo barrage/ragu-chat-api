@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.workflow.Emitter
-import net.barrage.llmao.error.AppError
 
 private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketEmitter")

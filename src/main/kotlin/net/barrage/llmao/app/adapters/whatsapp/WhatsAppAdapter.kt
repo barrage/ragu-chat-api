@@ -15,37 +15,37 @@ import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
 import com.knuddels.jtokkit.api.EncodingRegistry
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.app.ProviderState
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
 import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
-import net.barrage.llmao.app.workflow.chat.ChatAgent
-import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
+import net.barrage.llmao.app.chat.ChatAgent
+import net.barrage.llmao.app.chat.ChatAgentCollection
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.agent.AgentRepository
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.llm.TokenBasedHistory
-import net.barrage.llmao.core.models.AgentFull
-import net.barrage.llmao.core.models.Chat
-import net.barrage.llmao.core.models.ChatWithMessages
-import net.barrage.llmao.core.models.common.CountedList
-import net.barrage.llmao.core.models.common.Pagination
-import net.barrage.llmao.core.models.common.PaginationSort
-import net.barrage.llmao.core.repository.AgentRepository
+import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.core.model.Chat
+import net.barrage.llmao.core.model.ChatWithMessages
+import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.Pagination
+import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
-import net.barrage.llmao.core.settings.SettingsService
+import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.settings.SettingsUpdate
-import net.barrage.llmao.core.tokens.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.tokens.TokenUsageTracker
+import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
+import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.error.AppError
-import net.barrage.llmao.error.ErrorReason
 import net.barrage.llmao.tryUuid
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
@@ -62,7 +62,7 @@ class WhatsAppAdapter(
   private val whatsAppRepository: WhatsAppRepository,
   private val chatRepositoryRead: ChatRepositoryRead,
   private val chatRepositoryWrite: ChatRepositoryWrite,
-  private val settingsService: SettingsService,
+  private val settings: Settings,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val encodingRegistry: EncodingRegistry,
 ) {
@@ -77,7 +77,7 @@ class WhatsAppAdapter(
 
   suspend fun getAgent(): AgentFull {
     val agentId =
-      settingsService.get(SettingKey.WHATSAPP_AGENT_ID)
+      settings.get(SettingKey.WHATSAPP_AGENT_ID)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not configured")
 
     return agentRepository.get(tryUuid(agentId))
@@ -93,12 +93,12 @@ class WhatsAppAdapter(
         updates = listOf(SettingUpdate(SettingKey.WHATSAPP_AGENT_ID, agentId.toString()))
       )
 
-    settingsService.update(update)
+    settings.update(update)
   }
 
   suspend fun unsetAgent() {
     val update = SettingsUpdate(removals = listOf(SettingKey.WHATSAPP_AGENT_ID))
-    settingsService.update(update)
+    settings.update(update)
   }
 
   suspend fun getNumbers(userId: String): List<WhatsAppNumber> {
@@ -161,7 +161,7 @@ class WhatsAppAdapter(
 
   suspend fun handleIncomingMessage(input: InfobipResponseDTO) {
     val agentId =
-      settingsService.get(SettingKey.WHATSAPP_AGENT_ID)
+      settings.get(SettingKey.WHATSAPP_AGENT_ID)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not configured")
 
     val agent =
@@ -230,7 +230,7 @@ class WhatsAppAdapter(
     val messages =
       chatMessages.items.flatMap { it.messages.map { ChatMessage.fromModel(it) } }.toMutableList()
 
-    val settings = settingsService.getAllWithDefaults()
+    val settings = settings.getAllWithDefaults()
     val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
     val history: ChatHistory =
       if (tokenizer.isEmpty) {
