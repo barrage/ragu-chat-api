@@ -13,6 +13,21 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.User
 
+private enum class Entitlement {
+  ADMIN,
+  USER;
+
+  companion object {
+    fun admin(): String {
+      return ADMIN.name.lowercase()
+    }
+
+    fun user(): String {
+      return USER.name.lowercase()
+    }
+  }
+}
+
 /** Obtain the current user initiating the request. */
 fun ApplicationCall.user(): User {
   val principal = request.call.principal<JWTPrincipal>()!!
@@ -25,7 +40,12 @@ fun ApplicationCall.user(): User {
   return user
 }
 
-fun Application.authMiddleware(issuer: String, jwksEndpoint: String, leeway: Long) {
+fun Application.authMiddleware(
+  issuer: String,
+  jwksEndpoint: String,
+  leeway: Long,
+  entitlementsClaim: String,
+) {
   val jwkProvider =
     JwkProviderBuilder(URL(jwksEndpoint))
       .cached(10, 24, TimeUnit.HOURS)
@@ -38,16 +58,13 @@ fun Application.authMiddleware(issuer: String, jwksEndpoint: String, leeway: Lon
       // This is a janky way to get the access token cookie from the frontend
       // and we should investigate how to handle this later
       authHeader {
-        val token = it.request.cookies["access_token"]
-        if (token != null) {
+        it.request.cookies["access_token"]?.let { token ->
           HttpAuthHeader.Single(AuthScheme.Bearer, token)
-        } else {
-          null
-        }
+        } ?: it.request.parseAuthorizationHeader()
       }
       validate { credential ->
-        val entitlements = credential.payload.getClaim("entitlements").asList(String::class.java)
-        if (entitlements.contains("admin")) {
+        val entitlements = credential.payload.getClaim(entitlementsClaim).asList(String::class.java)
+        if (entitlements.contains(Entitlement.admin())) {
           JWTPrincipal(credential.payload)
         } else {
           null
@@ -60,17 +77,14 @@ fun Application.authMiddleware(issuer: String, jwksEndpoint: String, leeway: Lon
       // This is a janky way to get the access token cookie from the frontend
       // and we should investigate how to handle this later
       authHeader {
-        val token = it.request.cookies["access_token"]
-        if (token != null) {
+        it.request.cookies["access_token"]?.let { token ->
           HttpAuthHeader.Single(AuthScheme.Bearer, token)
-        } else {
-          null
-        }
+        } ?: it.request.parseAuthorizationHeader()
       }
       validate { credential ->
-        val entitlements = credential.payload.getClaim("entitlements").asList(String::class.java)
+        val entitlements = credential.payload.getClaim(entitlementsClaim).asList(String::class.java)
         for (entitlement in entitlements) {
-          if (entitlement == "admin" || entitlement == "user") {
+          if (entitlement == Entitlement.admin() || entitlement == Entitlement.user()) {
             return@validate JWTPrincipal(credential.payload)
           }
         }

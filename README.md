@@ -70,89 +70,31 @@ also provide feedback for the evaluation.
 The evaluations and feedbacks are visible to the admin on the agent's page. The admin can then change the agent's
 configuration to improve the quality of the agent's responses.
 
-## Authentication
+## Authorization
 
-Application authentication is performed using OAuth with third-party providers,
-incorporating [Proof Key for Code Exchange (PKCE)](https://datatracker.ietf.org/doc/html/rfc7636) to enhance security
-against man-in-the-middle attacks.
+Kappi uses JWT access tokens for authorization. It can be configured to accept tokens from any OAuth 2.0 + OIDC
+compatible authorization server.
 
-In addition to the standard parameters in the OAuth flow (code, grant_type, and redirect_uri), 2 parameters are
-required:
+Specifically, the following fields are used to extract user info:
 
-- `provider` - which provider to use for the OAuth flow.
-- `source` - the client identifier, i.e. where the authentication attempt is coming from.
-  This can be one of `web`, `ios`, or `android`.
-
-### Google
-
-When requesting an authorization code from Google,
-the following scopes are required:
-
-```
-https://www.googleapis.com/auth/userinfo.profile
-https://www.googleapis.com/auth/userinfo.email
-openid
+```json
+{
+  "sub": "user_id",
+  "email": "user_email",
+  "given_name": "user_name"
+}
 ```
 
-The postman collection contains examples of the URLs used for the initial
-OAuth flow start.
+Kappi's users are grouped into two groups: `admin` and `user`. These groups (also known as entitlements) must be present
+in the access token because they are used to reason about a user's permissions. Administrators have full access to the
+API, including the "backoffice", whereas users can only access the chat endpoints related to them.
 
-### Chonkit Authorization
+The following is a list of all configurable parameters for JWT authorization:
 
-Kappi serves as an authorization server for Chonkit.
-Both Chonkit and Kappi use
-the [Vault transit engine](https://developer.hashicorp.com/vault/docs/secrets/transit) to verify and sign tokens,
-respectively.
-
-Chonkit access tokens are generated in Kappi. Web clients should rely on the browser mechanisms to forward
-the token to Chonkit, since they will be deployed on the same domain. The following steps outline the
-general flow:
-
-1. User logs in to Kappi.
-2. The web client sends a request to the Kappi `/auth/chonkit/token` endpoint. This step is optional as
-   web clients will automatically get an access token (in the body AND cookie) on the `/auth/login` route.
-3. An access and refresh token are generated and returned to the client.
-4. The web client stores the access token in an HTTP only, secure cookie and forwards it to Chonkit.
-5. Chonkit verifies the token signature and, if valid, allows the request.
-
-It is the responsibility of the web client to refresh the access token when it expires by sending a request to
-the `/auth/chonkit/refresh` endpoint.
-
-## User Management
-
-During application setup, initial admin can be inserted into the database manually or by filling `admin` properties in
-the `application.conf` that will automatically insert the user as an admin into the database. The initial user must have
-a valid email in regard to one of the authentication providers used in the application, and they must have their role
-set to `admin`. When developing locally this can be done with the database seed script as described
-in [Migrations and seeders](#migrations-and-seeders). When deploying to production it is recommended to insert initial
-admin using `application.conf`.
-
-Admin user can then manage access the application and manage other users by using the `/admin/users` endpoints.
-
-Adding new users to the application can be done in two ways:
-
-- individual user creation using the `POST /admin/users` endpoint
-- bulk user creation from a CSV file using the `POST /admin/users/import-csv` endpoint
-
-### CSV format
-
-This way of importing users is useful when you have a large number of users to add to the application. Please note
-that the CSV file must be in the correct format and that the file must not be larger than 5MB.
-
-The CSV file should have the following format:
-
-```csv
-FullName,FirstName,LastName,Email,Role
-```
-
-`FullName`, `Email` and `Role` are required fields, while `FirstName` and `LastName` are optional. In case of missing or
-invalid fields, the user will not be imported and an error will be returned. Note that users with emails that already
-exist in the database will be skipped.
-
-### User avatars
-
-Users can upload images to the application for their profiles. These images are stored in a MinIO bucket, they can only
-be in `jpg` or `png` format, and can be up to 5MB in size. Admin users can upload avatars for other users.
+- `jwt.issuer` - The issuer of the JWT, i.e. the issuer that is expected to be found in the `iss` claim.
+- `jwt.jwksEndpoint` - The endpoint where the JWT's public key can be found.
+- `jwt.leeway` - The leeway for `nbf`, `iat`, and `exp` claims in seconds. Configurable to make testing easier.
+- `jwt.entitlementsClaim` - The claim in the access JWT that holds the user's entitlements (groups).
 
 ## Setup
 
@@ -214,7 +156,7 @@ To rollback migrations to the tag, run the following command:
 ./gradlew liquibaseRollback -PliquibaseCommandValue={version_tag}
 ```
 
-To seed the database with the initial agent and users, run
+To seed the database with the initial agent, run
 
 ```bash
 psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/initial.sql 
@@ -241,7 +183,7 @@ in `config/application.example.conf`.
 
 ## WebSocket
 
-Kappi uses WebSocket for real-time communication between clients and LLM providers.
+Kappi uses WebSockets for real-time communication between clients and LLM providers.
 
 To open a WebSocket connection with the server, the client must first create a one-time token by sending a `GET` request
 to the `/ws` endpoint and pass it to the WebSocket connection as a `token={token}` query parameter. This token is used

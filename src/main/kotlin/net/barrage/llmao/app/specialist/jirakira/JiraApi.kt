@@ -4,7 +4,6 @@ import com.nimbusds.jose.util.StandardCharset
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
@@ -246,14 +245,16 @@ class JiraApi(
         LOG.error("Failed to parse Jira error ({})", url, e)
         throw AppError.internal("An error occurred when calling the Jira API")
       }
-    LOG.error("Jira API call failed ({})", url, error)
+    // Log the original error, now the Throwable
+    LOG.error("Jira API call failed ({})", url)
+    LOG.error("$error")
     throw error
   }
 }
 
 @Serializable
 data class JiraError(val errorMessages: List<String>, val errors: Map<String, String>) :
-  Throwable()
+  Throwable(errorMessages.joinToString(", "))
 
 /** Customer account attribute. */
 @Serializable data class TimeSlotAttribute(val key: String, val value: String)
