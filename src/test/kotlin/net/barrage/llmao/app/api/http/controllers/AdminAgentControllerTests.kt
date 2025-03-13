@@ -472,7 +472,7 @@ class AdminAgentControllerTests : IntegrationTest() {
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<CountedList<Message>>()
+    val body = response.body<CountedList<MessageGroupAggregate>>()
     assertEquals(2, body.total)
     // assertEquals("First Message", body.items.first { it.evaluation == true }.content)
     // assertEquals("Second Message", body.items.first { it.evaluation == false }.content)

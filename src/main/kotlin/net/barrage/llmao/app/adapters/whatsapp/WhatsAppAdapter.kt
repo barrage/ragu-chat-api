@@ -23,7 +23,6 @@ import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
-import net.barrage.llmao.app.workflow.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
@@ -37,6 +36,7 @@ import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
+import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsService
@@ -86,6 +86,7 @@ class WhatsAppAdapter(
 
   suspend fun setAgent(agentId: KUUID) {
     agentRepository.get(agentId)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
 
     val update =
       SettingsUpdate(

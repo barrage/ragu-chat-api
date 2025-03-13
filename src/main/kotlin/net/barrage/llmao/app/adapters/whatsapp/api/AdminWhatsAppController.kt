@@ -30,10 +30,16 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
       val agent = whatsAppAdapter.getAgent()
       call.respond(HttpStatusCode.OK, agent)
     }
+
     put(adminSetWhatsAppAgent()) {
       val update = call.receive<WhatsAppAgentUpdate>()
       val agent = whatsAppAdapter.setAgent(update.agentId)
       call.respond(agent)
+    }
+
+    delete(adminUnsetWhatsAppAgent()) {
+      whatsAppAdapter.unsetAgent()
+      call.respond(HttpStatusCode.NoContent)
     }
   }
 
@@ -113,6 +119,19 @@ private fun adminSetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while setting agent"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun adminUnsetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
+  tags("admin/whatsapp/agent")
+  description = "Unset the currently assigned WhatsApp agent"
+  response {
+    HttpStatusCode.NoContent to { description = "WhatsApp agent unset successfully" }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while unsetting agent"
         body<List<AppError>> {}
       }
   }

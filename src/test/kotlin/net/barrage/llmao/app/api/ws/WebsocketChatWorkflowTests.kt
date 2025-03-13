@@ -213,7 +213,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
       val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(2, chat.messages.items.size)
+      assertEquals(2, chat.messages.items[0].messages.size)
     }
 
     deleteVectors()
@@ -288,7 +288,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       }
 
       val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(2, chat.messages.items.size)
+      assertEquals(2, chat.messages.items[0].messages.size)
     }
 
     deleteVectors()
@@ -346,7 +346,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         }
       }
 
-      delay(500)
+      delay(1000)
 
       var buffer = ""
       client2.wsSession {
@@ -513,13 +513,17 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
       val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(4, chat.messages.items.size)
 
-      val messages = chat.messages.items.reversed().flatMap { it.messages }
+      // These are the two message groups
+      assertEquals(2, chat.messages.items.size)
 
-      assertEquals("0: $prompt", messages[0].content)
+      val messages = chat.messages.items.flatMap { it.messages }
+
+      // Latest messages are the first one in the list
+
+      assertEquals("1: $prompt", messages[0].content)
       assertEquals(COMPLETIONS_STREAM_RESPONSE, messages[1].content)
-      assertEquals("1: $prompt", messages[2].content)
+      assertEquals("0: $prompt", messages[2].content)
       assertEquals(COMPLETIONS_STREAM_RESPONSE, messages[3].content)
 
       asserted = true

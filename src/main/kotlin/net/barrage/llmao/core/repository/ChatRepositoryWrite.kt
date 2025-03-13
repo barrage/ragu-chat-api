@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.chat
+package net.barrage.llmao.core.repository
 
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle

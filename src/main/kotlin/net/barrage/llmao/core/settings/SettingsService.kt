@@ -10,11 +10,14 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
 
+internal val LOG =
+  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.settings.SettingsService")
+
 /** The main API for managing application settings. */
-class SettingsService(private val settingsRepository: SettingsRepository) {
+class SettingsService(private val repository: SettingsRepository) {
   /** Return all application settings, populating the list with any missing values with defaults. */
   suspend fun getAllWithDefaults(): ApplicationSettings {
-    val settings = settingsRepository.listAll().toMutableList()
+    val settings = repository.listAll().toMutableList()
 
     DefaultSetting.entries.forEach { default ->
       if (settings.none { it.name == default.setting.name }) {
@@ -32,12 +35,12 @@ class SettingsService(private val settingsRepository: SettingsRepository) {
   }
 
   suspend fun get(key: SettingKey): String? {
-    return settingsRepository.getValue(key)
+    return repository.getValue(key)
   }
 
   suspend fun update(updates: SettingsUpdate) {
     updates.validate()
-    settingsRepository.update(updates)
+    repository.update(updates)
   }
 }
 

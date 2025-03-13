@@ -1,4 +1,4 @@
-package net.barrage.llmao.error
+package net.barrage.llmao.app.api.http
 
 import io.ktor.http.*
 import io.ktor.serialization.JsonConvertException
@@ -7,10 +7,12 @@ import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.requestvalidation.RequestValidationException
 import io.ktor.server.plugins.statuspages.*
-import io.ktor.server.response.*
+import io.ktor.server.response.respond
 import io.ktor.util.logging.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.ValidationError
+import net.barrage.llmao.error.AppError
+import net.barrage.llmao.error.ErrorReason
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.plugins.GlobalErrorHandler")
 
@@ -23,14 +25,14 @@ fun Application.configureErrorHandling() {
     exception<NoSuchElementException> { call, err ->
       call.respond(
         HttpStatusCode.NotFound,
-        AppError.api(ErrorReason.EntityDoesNotExist, err.message ?: err.localizedMessage),
+        AppError.Companion.api(ErrorReason.EntityDoesNotExist, err.message ?: err.localizedMessage),
       )
     }
 
     exception<IllegalArgumentException> { call, err ->
       call.respond(
         HttpStatusCode.BadRequest,
-        AppError.api(ErrorReason.InvalidParameter, err.message ?: err.localizedMessage),
+        AppError.Companion.api(ErrorReason.InvalidParameter, err.message ?: err.localizedMessage),
       )
     }
 
@@ -39,7 +41,7 @@ fun Application.configureErrorHandling() {
     exception<NotFoundException> { call, err ->
       call.respond(
         HttpStatusCode.NotFound,
-        AppError.api(ErrorReason.EntityDoesNotExist, err.message ?: err.localizedMessage),
+        AppError.Companion.api(ErrorReason.EntityDoesNotExist, err.message ?: err.localizedMessage),
       )
     }
 
@@ -67,7 +69,7 @@ fun Application.configureErrorHandling() {
     exception<JsonConvertException> { call, err ->
       call.respond(
         HttpStatusCode.BadRequest,
-        AppError.api(ErrorReason.InvalidParameter, err.localizedMessage),
+        AppError.Companion.api(ErrorReason.InvalidParameter, err.localizedMessage),
       )
     }
 
@@ -81,10 +83,8 @@ fun Application.configureErrorHandling() {
   }
 }
 
-private suspend fun ApplicationCall.handleJsonConvert(
-  err: JsonConvertException
-) {
+private suspend fun ApplicationCall.handleJsonConvert(err: JsonConvertException) {
   // In case of missing fields, only the message will be present
   val message = err.localizedMessage
-  respond(HttpStatusCode.BadRequest, AppError.api(ErrorReason.InvalidParameter, message))
+  respond(HttpStatusCode.BadRequest, AppError.Companion.api(ErrorReason.InvalidParameter, message))
 }

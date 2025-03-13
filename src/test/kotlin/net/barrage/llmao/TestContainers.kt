@@ -263,6 +263,10 @@ class TestPostgres {
       .toChat()
   }
 
+  suspend fun deleteTestChat(id: UUID) {
+    dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).awaitSingle()
+  }
+
   suspend fun testMessagePair(
     chatId: UUID,
     agentConfigurationId: KUUID,

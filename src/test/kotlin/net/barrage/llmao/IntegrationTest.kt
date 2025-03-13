@@ -93,7 +93,7 @@ open class IntegrationTest(
 
   /**
    * The main test execution function that uses configuration obtained from the test containers as
-   * the application environment.
+   * the application environment and provides a client with JSON serialization enabled.
    */
   fun test(block: suspend ApplicationTestBuilder.(client: HttpClient) -> Unit) = testApplication {
     environment { config = cfg }

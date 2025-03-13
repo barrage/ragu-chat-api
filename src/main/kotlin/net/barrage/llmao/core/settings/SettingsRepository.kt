@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
+import net.barrage.llmao.error.AppError
 import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.excluded
@@ -29,8 +30,16 @@ class SettingsRepository(private val dslContext: DSLContext) {
       )
       .from(APPLICATION_SETTINGS)
       .asFlow()
-      .map { it.into(APPLICATION_SETTINGS).toModel() }
+      .map {
+        try {
+          it.into(APPLICATION_SETTINGS).toModel()
+        } catch (e: AppError) {
+          LOG.warn("Failed to parse setting", e)
+          null
+        }
+      }
       .toList()
+      .filterNotNull()
   }
 
   suspend fun list(keys: List<String>): List<ApplicationSetting> {
@@ -44,8 +53,16 @@ class SettingsRepository(private val dslContext: DSLContext) {
       .from(APPLICATION_SETTINGS)
       .where(APPLICATION_SETTINGS.NAME.`in`(keys))
       .asFlow()
-      .map { it.into(APPLICATION_SETTINGS).toModel() }
+      .map {
+        try {
+          it.into(APPLICATION_SETTINGS).toModel()
+        } catch (e: AppError) {
+          LOG.warn("Failed to parse setting", e)
+          null
+        }
+      }
       .toList()
+      .filterNotNull()
   }
 
   suspend fun update(update: SettingsUpdate) {

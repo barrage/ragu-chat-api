@@ -13,7 +13,6 @@ import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
-import net.barrage.llmao.app.workflow.chat.ChatRepositoryWrite
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraRepository
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.EventListener
@@ -21,6 +20,7 @@ import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.initDatabase
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
+import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.services.AdministrationService
 import net.barrage.llmao.core.services.AgentService

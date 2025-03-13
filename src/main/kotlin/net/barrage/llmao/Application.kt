@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.api.http.authMiddleware
 import net.barrage.llmao.app.api.http.configureCors
+import net.barrage.llmao.app.api.http.configureErrorHandling
 import net.barrage.llmao.app.api.http.configureOpenApi
 import net.barrage.llmao.app.api.http.configureRequestValidation
 import net.barrage.llmao.app.api.http.configureRouting
@@ -25,7 +26,6 @@ import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.error.AppError
 import net.barrage.llmao.error.ErrorReason
-import net.barrage.llmao.error.configureErrorHandling
 
 fun main(args: Array<String>) {
   EngineMain.main(args)

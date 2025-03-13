@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.models.User
+import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow

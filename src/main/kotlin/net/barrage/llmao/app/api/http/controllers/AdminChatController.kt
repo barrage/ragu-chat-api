@@ -20,7 +20,7 @@ import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.EvaluateMessage
-import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.MessageGroupAggregate
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -61,7 +61,7 @@ fun Route.adminChatsRoutes(service: ChatService) {
         get(adminGetMessages()) {
           val chatId = call.pathUuid("chatId")
           val pagination = call.query(Pagination::class)
-          val messages: List<Message> = service.getMessages(chatId, pagination = pagination)
+          val messages = service.getMessages(chatId, pagination = pagination)
           call.respond(HttpStatusCode.OK, messages)
         }
 
@@ -69,9 +69,8 @@ fun Route.adminChatsRoutes(service: ChatService) {
           val input: EvaluateMessage = call.receive()
           val chatId = call.pathUuid("chatId")
           val messageGroupId = call.pathUuid("messageGroupId")
-          val message =
-            service.evaluateMessage(chatId = chatId, messageGroupId = messageGroupId, input)
-          call.respond(HttpStatusCode.OK, message)
+          service.evaluateMessage(chatId = chatId, messageGroupId = messageGroupId, input)
+          call.respond(HttpStatusCode.NoContent)
         }
       }
     }
@@ -142,7 +141,7 @@ private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
     HttpStatusCode.OK to
       {
         description = "A list of Message objects representing all the messages from a chat"
-        body<List<Message>> {}
+        body<CountedList<MessageGroupAggregate>> {}
       }
     HttpStatusCode.InternalServerError to
       {

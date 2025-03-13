@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -12,7 +11,6 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
 import java.util.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.ADMIN_USER
@@ -20,17 +18,16 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
-import net.barrage.llmao.app.workflow.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.models.Agent
 import net.barrage.llmao.core.models.AgentConfiguration
 import net.barrage.llmao.core.models.Chat
 import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.EvaluateMessage
-import net.barrage.llmao.core.models.Message
 import net.barrage.llmao.core.models.MessageGroupAggregate
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.repository.ChatRepositoryRead
+import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
@@ -42,8 +39,8 @@ class AdminChatControllerTests : IntegrationTest() {
   private lateinit var chatOne: Chat
   private lateinit var chatTwo: Chat
   private lateinit var chatThree: Chat
-  private lateinit var messageOne: MessageGroupAggregate
-  private lateinit var messageTwo: MessageGroupAggregate
+  private lateinit var messageGroupOne: MessageGroupAggregate
+  private lateinit var messageGroupTwo: MessageGroupAggregate
   private lateinit var chatRepositoryWrite: ChatRepositoryWrite
   private lateinit var chatRepositoryRead: ChatRepositoryRead
 
@@ -57,14 +54,14 @@ class AdminChatControllerTests : IntegrationTest() {
       chatTwo = postgres.testChat(USER_USER, agent.id)
       chatThree = postgres.testChat(ADMIN_USER, agent.id)
 
-      messageOne =
+      messageGroupOne =
         postgres.testMessagePair(
           chatId = chatOne.id,
           agentConfigurationId = agentConfiguration.id,
           userContent = "First Message",
           assistantContent = "First Response",
         )
-      messageTwo =
+      messageGroupTwo =
         postgres.testMessagePair(
           chatId = chatOne.id,
           agentConfigurationId = agentConfiguration.id,
@@ -77,8 +74,7 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldRetrieveAllChatsDefaultPagination() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldRetrieveAllChatsDefaultPagination() = test { client ->
     val response = client.get("/admin/chats") { header(HttpHeaders.Cookie, adminAccessToken()) }
     assertEquals(HttpStatusCode.OK, response.status)
     val body = response.body<CountedList<ChatWithAgent>>()
@@ -88,8 +84,7 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldRetrieveAllChatsFilterByUserId() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldRetrieveAllChatsFilterByUserId() = test { client ->
     val response =
       client.get("/admin/chats") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -103,8 +98,7 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldRetrieveAllChatsFilterByAgentId() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldRetrieveAllChatsFilterByAgentId() = test { client ->
     val response =
       client.get("/admin/chats") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -118,8 +112,7 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldRetrieveAllChatsFilterByTitle() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldRetrieveAllChatsFilterByTitle() = test { client ->
     val response =
       client.get("/admin/chats") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -133,8 +126,7 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldUpdateChatTitle() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldUpdateChatTitle() = test { client ->
     val newTitle = "Updated Chat Title"
     val updatedChatTitle = UpdateChatTitleDTO(newTitle)
     val response =
@@ -150,8 +142,7 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldUpdateChatTitleValidationFails() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldUpdateChatTitleValidationFails() = test { client ->
     val updatedChatTitle = UpdateChatTitleDTO("")
     val response =
       client.put("/admin/chats/${chatOne.id}") {
@@ -165,24 +156,42 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldRetrieveMessagesForChat() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldRetrieveMessagesForChat() = test { client ->
     val response =
       client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=25") {
         header(HttpHeaders.Cookie, adminAccessToken())
       }
     assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<List<Message>>()
-    assertNotNull(body)
-    assertEquals(2, body.size)
-    // Messages are sorted by createdAt DESC
-    // assertEquals(messageOne.id, body[1].id)
-    // assertEquals(messageTwo.id, body[0].id)
+
+    val body = response.body<CountedList<MessageGroupAggregate>>()
+
+    assertEquals(2, body.items.size)
+    assertEquals(2, body.total)
+
+    val groupOnePrompt = messageGroupOne.messages[0]
+    val groupOneResponse = messageGroupOne.messages[1]
+
+    val groupTwoPrompt = messageGroupTwo.messages[0]
+    val groupTwoResponse = messageGroupTwo.messages[1]
+
+    // Message groups are sorted by createdAt DESC
+
+    val checkGroupOne = body.items[1]
+    val checkGroupTwo = body.items[0]
+
+    assertEquals(messageGroupOne.group.id, checkGroupOne.group.id)
+
+    assertEquals(groupOnePrompt.id, checkGroupOne.messages[0].id)
+    assertEquals(groupOneResponse.id, checkGroupOne.messages[1].id)
+
+    assertEquals(messageGroupTwo.group.id, checkGroupTwo.group.id)
+
+    assertEquals(groupTwoPrompt.id, checkGroupTwo.messages[0].id)
+    assertEquals(groupTwoResponse.id, checkGroupTwo.messages[1].id)
   }
 
   @Test
-  fun shouldThrowErrorWhenRetrievingMessagesForNonExistingChat() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldThrowErrorWhenRetrievingMessagesForNonExistingChat() = test { client ->
     val response =
       client.get("/admin/chats/${UUID.randomUUID()}/messages?page=1&perPage=25") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -192,90 +201,106 @@ class AdminChatControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun shouldEvaluateMessageFromChat() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldEvaluateMessageFromChat() = test { client ->
     val evaluation = EvaluateMessage(true)
     val response =
-      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.group.id}") {
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
-    assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<EvaluateMessage>()
-    assertNotNull(body)
-    assertEquals(true, body.evaluation)
+    assertEquals(HttpStatusCode.NoContent, response.status)
+
+    val messages =
+      client
+        .get("/admin/chats/${chatOne.id}/messages?page=1&perPage=25") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+        }
+        .body<CountedList<MessageGroupAggregate>>()
+
+    assertEquals(2, messages.items.size)
+    assertEquals(true, messages.items[0].evaluation?.evaluation)
+    assertEquals(null, messages.items[0].evaluation?.feedback)
   }
 
   @Test
-  fun shouldEvaluateMessageFromChatWithFeedback() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldEvaluateMessageFromChatWithFeedback() = test { client ->
     val evaluation = EvaluateMessage(true, "oh yes, what a splendid response")
     val response =
-      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.group.id}") {
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
         setBody(evaluation)
       }
-    assertEquals(HttpStatusCode.OK, response.status)
-    val body = response.body<EvaluateMessage>()
-    assertNotNull(body)
-    assertEquals(true, body.evaluation)
-    assertEquals("oh yes, what a splendid response", body.feedback)
+    assertEquals(HttpStatusCode.NoContent, response.status)
+
+    val messages =
+      client
+        .get("/admin/chats/${chatOne.id}/messages?page=1&perPage=25") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+        }
+        .body<CountedList<MessageGroupAggregate>>()
+
+    assertEquals(2, messages.items.size)
+    assertEquals(true, messages.items[0].evaluation?.evaluation)
+    assertEquals("oh yes, what a splendid response", messages.items[0].evaluation?.feedback)
+
+    assertEquals(null, messages.items[1].evaluation)
   }
 
   @Test
-  fun shouldRemoveEvaluateMessageFromChat() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-    val evaluationOne = EvaluateMessage(true, "what a marvelous response")
-    val responseOne =
-      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.group.id}") {
+  fun shouldRemoveEvaluateMessageFromChat() = test { client ->
+    val evaluationUpdate = EvaluateMessage(true, "what a marvelous response")
+    val responseEvaluation =
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
-        setBody(evaluationOne)
+        setBody(evaluationUpdate)
       }
-    assertEquals(HttpStatusCode.OK, responseOne.status)
 
-    val responseTwo =
+    assertEquals(HttpStatusCode.NoContent, responseEvaluation.status)
+
+    val responseEvaluationCheck =
       client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=1") {
         header(HttpHeaders.Cookie, adminAccessToken())
       }
-    assertEquals(HttpStatusCode.OK, responseTwo.status)
 
-    val bodyOne = responseTwo.body<List<Message>>()
-    // assertEquals(1, bodyOne.size)
-    // assertEquals(messageTwo.id, bodyOne[0].id)
-    // assertEquals(true, bodyOne[0].evaluation)
-    // assertEquals("what a marvelous response", bodyOne[0].feedback)
+    assertEquals(HttpStatusCode.OK, responseEvaluationCheck.status)
 
-    val evaluationTwo = EvaluateMessage(null)
-    val responseThree =
-      client.patch("/admin/chats/${chatOne.id}/messages/${messageTwo.group.id}") {
+    val evaluationCheckBody = responseEvaluationCheck.body<CountedList<MessageGroupAggregate>>()
+
+    assertEquals(1, evaluationCheckBody.items.size)
+    assertEquals(messageGroupTwo.group.id, evaluationCheckBody.items[0].group.id)
+    assertEquals(true, evaluationCheckBody.items[0].evaluation!!.evaluation)
+    assertEquals("what a marvelous response", evaluationCheckBody.items[0].evaluation!!.feedback)
+
+    val evaluationRemove = EvaluateMessage(null)
+    val responseRemoveEvaluation =
+      client.patch("/admin/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, adminAccessToken())
         contentType(ContentType.Application.Json)
-        setBody(evaluationTwo)
+        setBody(evaluationRemove)
       }
-    assertEquals(HttpStatusCode.OK, responseThree.status)
-    val bodyTwo = responseThree.body<EvaluateMessage>()
-    assertEquals(null, bodyTwo.evaluation)
-    assertEquals(null, bodyTwo.feedback)
 
-    val responseFour =
+    assertEquals(HttpStatusCode.NoContent, responseRemoveEvaluation.status)
+
+    val responseRemoveEvaluationCheck =
       client.get("/admin/chats/${chatOne.id}/messages?page=1&perPage=1") {
         header(HttpHeaders.Cookie, adminAccessToken())
       }
-    assertEquals(HttpStatusCode.OK, responseFour.status)
 
-    val bodyThree = responseFour.body<List<Message>>()
-    assertEquals(1, bodyThree.size)
-    //    assertEquals(messageTwo.id, bodyThree[0].id)
-    //    assertEquals(null, bodyThree[0].evaluation)
-    //    assertEquals(null, bodyThree[0].feedback)
+    assertEquals(HttpStatusCode.OK, responseRemoveEvaluationCheck.status)
+
+    val removeEvaluationCheckBody =
+      responseRemoveEvaluationCheck.body<CountedList<MessageGroupAggregate>>()
+
+    assertEquals(1, removeEvaluationCheckBody.items.size)
+    assertEquals(messageGroupTwo.group.id, removeEvaluationCheckBody.items[0].group.id)
+    assertEquals(null, removeEvaluationCheckBody.items[0].evaluation)
   }
 
   @Test
-  fun shouldGetChatWithUserAndAgent() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun shouldGetChatWithUserAndAgent() = test { client ->
     val response =
       client.get("/admin/chats/${chatOne.id}") { header(HttpHeaders.Cookie, adminAccessToken()) }
     assertEquals(HttpStatusCode.OK, response.status)
@@ -285,47 +310,47 @@ class AdminChatControllerTests : IntegrationTest() {
     assertEquals(agent.id, body.agent.id)
   }
 
-//  @Test
-//  fun shouldDeleteChatWithExistingMessages() = test {
-//    val newChat = postgres.testChat(USER_USER, agent.id)
-//    val chat = chatRepositoryRead.getWithMessages(newChat.id, Pagination(1, 200))!!
-//
-//    val userMessage =
-//      MessageInsert(
-//        id = UUID.randomUUID(),
-//        chatId = chat.chat.id,
-//        content = "Test Message",
-//        sender = user.id,
-//        senderType = "user",
-//        responseTo = null,
-//        finishReason = null,
-//      )
-//
-//    val agentMessage =
-//      MessageInsert(
-//        id = UUID.randomUUID(),
-//        chatId = chat.chat.id,
-//        content = "Test Message",
-//        sender = agent.id,
-//        senderType = "assistant",
-//        responseTo = userMessage.id,
-//        finishReason = FinishReason.Stop,
-//      )
-//
-//    val client = createClient { install(ContentNegotiation) { json() } }
-//    val response =
-//      client.delete("/admin/chats/${chat.chat.id}") {
-//        header(HttpHeaders.Cookie, adminAccessToken())
-//      }
-//
-//    assertEquals(HttpStatusCode.NoContent, response.status)
-//
-//    assertThrows<AppError> { chatRepositoryRead.getChatWithMessages(chat.chat.id) }
-//
-//    val deletedUserMessage = chatRepositoryRead.getMessage(chat.chat.id, userMessage.id)
-//    val deletedAgentMessage = chatRepositoryRead.getMessage(chat.chat.id, agentMessage.id)
-//
-//    assertNull(deletedUserMessage)
-//    assertNull(deletedAgentMessage)
-//  }
+  //  @Test
+  //  fun shouldDeleteChatWithExistingMessages() = test {
+  //    val newChat = postgres.testChat(USER_USER, agent.id)
+  //    val chat = chatRepositoryRead.getWithMessages(newChat.id, Pagination(1, 200))!!
+  //
+  //    val userMessage =
+  //      MessageInsert(
+  //        id = UUID.randomUUID(),
+  //        chatId = chat.chat.id,
+  //        content = "Test Message",
+  //        sender = user.id,
+  //        senderType = "user",
+  //        responseTo = null,
+  //        finishReason = null,
+  //      )
+  //
+  //    val agentMessage =
+  //      MessageInsert(
+  //        id = UUID.randomUUID(),
+  //        chatId = chat.chat.id,
+  //        content = "Test Message",
+  //        sender = agent.id,
+  //        senderType = "assistant",
+  //        responseTo = userMessage.id,
+  //        finishReason = FinishReason.Stop,
+  //      )
+  //
+  //    val client = createClient { install(ContentNegotiation) { json() } }
+  //    val response =
+  //      client.delete("/admin/chats/${chat.chat.id}") {
+  //        header(HttpHeaders.Cookie, adminAccessToken())
+  //      }
+  //
+  //    assertEquals(HttpStatusCode.NoContent, response.status)
+  //
+  //    assertThrows<AppError> { chatRepositoryRead.getChatWithMessages(chat.chat.id) }
+  //
+  //    val deletedUserMessage = chatRepositoryRead.getMessage(chat.chat.id, userMessage.id)
+  //    val deletedAgentMessage = chatRepositoryRead.getMessage(chat.chat.id, agentMessage.id)
+  //
+  //    assertNull(deletedUserMessage)
+  //    assertNull(deletedAgentMessage)
+  //  }
 }

@@ -5,6 +5,7 @@ import net.barrage.llmao.core.models.ChatWithAgent
 import net.barrage.llmao.core.models.ChatWithMessages
 import net.barrage.llmao.core.models.EvaluateMessage
 import net.barrage.llmao.core.models.Message
+import net.barrage.llmao.core.models.MessageGroupAggregate
 import net.barrage.llmao.core.models.common.CountedList
 import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.models.common.PaginationSort
@@ -107,12 +108,14 @@ class ChatService(
     id: KUUID,
     userId: String? = null,
     pagination: Pagination,
-  ): List<Message> {
+  ): CountedList<MessageGroupAggregate> {
     val messages =
       chatRepositoryRead.getMessages(chatId = id, userId = userId, pagination = pagination)
+
     if (messages.total == 0) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
     }
-    return messages.items.flatMap { it.messages }
+
+    return messages
   }
 }

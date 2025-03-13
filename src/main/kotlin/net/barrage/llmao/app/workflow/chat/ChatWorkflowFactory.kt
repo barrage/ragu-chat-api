@@ -11,6 +11,7 @@ import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.models.User
 import net.barrage.llmao.core.models.common.Pagination
 import net.barrage.llmao.core.repository.ChatRepositoryRead
+import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.services.AgentService
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingsService
