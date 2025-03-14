@@ -68,7 +68,7 @@ data class ChatMessage(
       id = KUUID.randomUUID(),
       senderType = role,
       content = content,
-      finishReason = finishReason,
+      finishReason = this.finishReason ?: finishReason,
       toolCalls = toolCalls,
       toolCallId = toolCallId,
     )
