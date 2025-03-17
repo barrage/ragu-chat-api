@@ -197,10 +197,6 @@ class ChatAgent(
       return prompt
     }
 
-    val systemMessage = ChatMessage.system(context)
-
-    LOG.trace("Created system message {}", systemMessage)
-
     var collectionInstructions = ""
 
     // Maps providers to lists of CollectionQuery
@@ -224,10 +220,22 @@ class ChatAgent(
 
       if (!providerQueries.containsKey(collection.vectorProvider)) {
         providerQueries[collection.vectorProvider] =
-          mutableListOf(CollectionQuery(collection.name, collection.amount, embeddings.embeddings))
+          mutableListOf(
+            CollectionQuery(
+              name = collection.name,
+              amount = collection.amount,
+              maxDistance = collection.maxDistance,
+              vector = embeddings.embeddings,
+            )
+          )
       } else {
         providerQueries[collection.vectorProvider]!!.add(
-          CollectionQuery(collection.name, collection.amount, embeddings.embeddings)
+          CollectionQuery(
+            name = collection.name,
+            amount = collection.amount,
+            maxDistance = collection.maxDistance,
+            vector = embeddings.embeddings,
+          )
         )
       }
     }
@@ -406,12 +414,27 @@ class ChatAgentStreaming(
   }
 }
 
+/** Wrapper for all the info an agent needs to perform RAG. */
 data class ChatAgentCollection(
+  /** Collection name. */
   val name: String,
+
+  /** Max amount of results to return when querying. */
   val amount: Int,
+
+  /** The instruction to prepend to the collection data. */
   val instruction: String,
+
+  /** Filter any results above this distance. */
+  val maxDistance: Double?,
+
+  /** The embedding provider used to embed the query. */
   val embeddingProvider: String,
+
+  /** The model to use for embeddings. */
   val embeddingModel: String,
+
+  /** Which vector database implementation is used to store the vectors. */
   val vectorProvider: String,
 )
 
@@ -419,6 +442,7 @@ fun AgentFull.toChatAgent(
   history: ChatHistory,
   providers: ProviderState,
   toolchain: Toolchain?,
+  completionParameters: ChatCompletionParameters,
   /** Used for default values if the agent configuration does not specify them. */
   settings: ApplicationSettings,
   tokenTracker: TokenUsageTracker,
@@ -432,25 +456,17 @@ fun AgentFull.toChatAgent(
     collections =
       collections.map {
         ChatAgentCollection(
-          it.collection,
-          it.amount,
-          it.instruction,
-          it.embeddingProvider,
-          it.embeddingModel,
-          it.vectorProvider,
+          name = it.collection,
+          amount = it.amount,
+          instruction = it.instruction,
+          maxDistance = it.maxDistance,
+          embeddingProvider = it.embeddingProvider,
+          embeddingModel = it.embeddingModel,
+          vectorProvider = it.vectorProvider,
         )
       },
     instructions = configuration.agentInstructions,
-    completionParameters =
-      ChatCompletionParameters(
-        model = configuration.model,
-        temperature = configuration.temperature,
-        presencePenalty =
-          configuration.presencePenalty ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
-        maxTokens =
-          configuration.maxCompletionTokens
-            ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
-      ),
+    completionParameters = completionParameters,
     configurationId = configuration.id,
     providers = providers,
     toolchain = toolchain,

@@ -21,7 +21,7 @@ import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
 import net.barrage.llmao.app.chat.ChatAgent
-import net.barrage.llmao.app.chat.ChatAgentCollection
+import net.barrage.llmao.app.chat.toChatAgent
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
@@ -243,52 +243,36 @@ class WhatsAppAdapter(
         )
       }
 
-    return ChatAgent(
-      agentId = agent.agent.id,
-      name = agent.agent.name,
-      model = agent.configuration.model,
-      llmProvider = agent.configuration.llmProvider,
-      context = agent.configuration.context,
-      collections =
-        agent.collections.map {
-          ChatAgentCollection(
-            name = it.collection,
-            amount = it.amount,
-            instruction = it.instruction,
-            embeddingProvider = it.embeddingProvider,
-            embeddingModel = it.embeddingModel,
-            vectorProvider = it.vectorProvider,
-          )
-        },
-      instructions = agent.configuration.agentInstructions,
-      completionParameters =
-        ChatCompletionParameters(
-          model = agent.configuration.model,
-          temperature = agent.configuration.temperature,
-          presencePenalty =
-            agent.configuration.presencePenalty
-              ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
-          maxTokens =
-            agent.configuration.maxCompletionTokens
-              ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
-        ),
-      configurationId = agent.configuration.id,
-      providers = providers,
+    val completionParameters =
+      ChatCompletionParameters(
+        model = agent.configuration.model,
+        temperature = agent.configuration.temperature,
+        presencePenalty =
+          agent.configuration.presencePenalty
+            ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+        maxTokens =
+          agent.configuration.maxCompletionTokens
+            ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
+      )
 
-      // Safe to !! because we are fetching with defaults
-      titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-      tokenTracker =
-        TokenUsageTracker(
-          userId = userId,
-          username = username,
-          agentId = agent.agent.id,
-          agentConfigurationId = agent.configuration.id,
-          origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
-          originId = chat.id,
-          repository = tokenUsageRepositoryW,
-        ),
+    val tokenTracker =
+      TokenUsageTracker(
+        userId = userId,
+        username = username,
+        agentId = agent.agent.id,
+        agentConfigurationId = agent.configuration.id,
+        origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
+        originId = chat.id,
+        repository = tokenUsageRepositoryW,
+      )
+
+    return agent.toChatAgent(
       history = history,
+      providers = providers,
+      settings = settings,
       toolchain = null,
+      tokenTracker = tokenTracker,
+      completionParameters = completionParameters,
     )
   }
 

@@ -5,6 +5,7 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.MessageBasedHistory
@@ -71,6 +72,18 @@ class ChatWorkflowFactory(
         )
       }
 
+    val completionParameters =
+      ChatCompletionParameters(
+        model = agent.configuration.model,
+        temperature = agent.configuration.temperature,
+        presencePenalty =
+          agent.configuration.presencePenalty
+            ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+        maxTokens =
+          agent.configuration.maxCompletionTokens
+            ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
+      )
+
     val chatAgent =
       agent.toChatAgent(
         history = history,
@@ -78,6 +91,7 @@ class ChatWorkflowFactory(
         toolchain = toolchain,
         settings = settings,
         tokenTracker = tokenTracker,
+        completionParameters = completionParameters,
       )
 
     val streamAgent = chatAgent.toStreaming(emitter)
@@ -134,6 +148,18 @@ class ChatWorkflowFactory(
         )
       }
 
+    val completionParameters =
+      ChatCompletionParameters(
+        model = agent.configuration.model,
+        temperature = agent.configuration.temperature,
+        presencePenalty =
+          agent.configuration.presencePenalty
+            ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+        maxTokens =
+          agent.configuration.maxCompletionTokens
+            ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
+      )
+
     val chatAgent =
       agent.toChatAgent(
         history = history,
@@ -141,6 +167,7 @@ class ChatWorkflowFactory(
         toolchain = toolchain,
         settings = settings,
         tokenTracker = tokenTracker,
+        completionParameters = completionParameters,
       )
 
     val streamAgent = chatAgent.toStreaming(emitter)

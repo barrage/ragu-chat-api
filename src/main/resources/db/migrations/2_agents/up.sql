@@ -74,6 +74,9 @@ CREATE TABLE agent_collections (
     -- Amount of items to retrieve from collection.
     amount INTEGER NOT NULL,
 
+    -- The maximum distance allowed for retrieved vectors.
+    max_distance FLOAT,
+
     -- Which model to use when embedding text for querying this collection.
     embedding_model TEXT NOT NULL,
 

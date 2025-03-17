@@ -15,6 +15,7 @@ data class AgentCollection(
   val instruction: String,
   val collection: String,
   val amount: Int,
+  val maxDistance: Double?,
   val embeddingProvider: String,
   val embeddingModel: String,
   val vectorProvider: String,
@@ -32,6 +33,7 @@ fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
     embeddingProvider = embeddingProvider,
     embeddingModel = embeddingModel,
     vectorProvider = vectorProvider,
+    maxDistance = maxDistance,
     createdAt = createdAt!!,
     updatedAt = updatedAt!!,
   )

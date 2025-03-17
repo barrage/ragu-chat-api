@@ -46,4 +46,16 @@ data class VectorCollectionInfo(
  * Used by vector databases to obtain the most similar results from a collection. The `vector`
  * length must always be the same as the collection's vector size.
  */
-data class CollectionQuery(val name: String, val amount: Int, val vector: List<Double>)
+data class CollectionQuery(
+  /** The name of the collection to query. */
+  val name: String,
+
+  /** The maximum amount of vectors to return. */
+  val amount: Int,
+
+  /** The search vector. */
+  val vector: List<Double>,
+
+  /** Filter any results above this distance. */
+  val maxDistance: Double?,
+)
