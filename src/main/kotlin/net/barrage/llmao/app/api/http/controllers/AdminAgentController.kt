@@ -87,8 +87,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
     route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
-        val activeWappAgentId =
-          settings.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
+        val activeWappAgentId = settings.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
         val agent = agentService.getFull(id)
         call.respond(HttpStatusCode.OK, agent.toAgentDisplay(activeWappAgentId))
       }
@@ -119,13 +118,6 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
           agentService.updateAgentTools(agentId, updateTools)
           call.respond(HttpStatusCode.OK)
         }
-      }
-
-      put("/collections", updateAgentCollections()) {
-        val agentId = call.pathUuid("id")
-        val update: UpdateCollections = call.receive()
-        val updateResult = agentService.updateCollections(agentId, update)
-        call.respond(HttpStatusCode.OK, updateResult)
       }
 
       route("/avatars") {
@@ -185,11 +177,20 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
       }
     }
 
-    delete("/collections", removeCollectionFromAllAgents()) {
-      val collection = call.queryParam("collection")!!
-      val provider = call.queryParam("provider")!!
-      agentService.removeCollectionFromAllAgents(collection, provider)
-      call.respond(HttpStatusCode.NoContent)
+    route("/collections") {
+      put(updateAgentCollections()) {
+        val agentId = call.pathUuid("id")
+        val update: UpdateCollections = call.receive()
+        val updateResult = agentService.updateCollections(agentId, update)
+        call.respond(HttpStatusCode.OK, updateResult)
+      }
+
+      delete(removeCollectionFromAllAgents()) {
+        val collection = call.queryParam("collection")!!
+        val provider = call.queryParam("provider")!!
+        agentService.removeCollectionFromAllAgents(collection, provider)
+        call.respond(HttpStatusCode.NoContent)
+      }
     }
 
     get("/tools", getAgentTools()) {

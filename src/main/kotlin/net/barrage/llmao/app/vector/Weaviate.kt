@@ -35,6 +35,8 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
       return mapOf()
     }
 
+    LOG.debug("executing queries in: {}", queries.joinToString(", ") { it.name })
+
     val query = constructQuery(queries)
 
     val requestResult = client.graphQL().raw().withQuery(query).run()
@@ -50,14 +52,14 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
       // Happens when the collection is empty. We do not want to error on empty collections.
       if (result.errors.find { it.message.startsWith("Cannot query field") } != null) {
         LOG.warn(
-          "Invalid field detected, skipping; This could be due to leftover fields during development or the collection being empty."
+          "invalid field detected, skipping; This could be due to leftover fields during development or the collection being empty."
         )
         LOG.warn("Original error: {}", result.errors)
         return mapOf()
       }
       throw queryError(result.errors)
     } else if (result.data == null) {
-      LOG.warn("Weaviate did not return any data; Result: {}", result)
+      LOG.warn("weaviate - no data in query; result: {}", result)
       return mapOf()
     }
 
@@ -85,15 +87,33 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
         val content = properties["content"] as String?
         val documentId = properties["document_id"] as String?
 
+        val additional = properties["_additional"] as Map<*, *>
+
+        val distance = additional["distance"] as Double?
+
+        if (
+          distance != null &&
+            collectionQuery.maxDistance != null &&
+            distance > collectionQuery.maxDistance
+        ) {
+          LOG.warn("skipping result with distance $distance > ${collectionQuery.maxDistance}")
+          continue
+        }
+
         if (content == null) {
-          LOG.error("Weaviate query error: Content is null (collection: $collectionName)")
+          LOG.error("query error: Content is null (collection: $collectionName)")
           continue
         }
 
         results[collectionName]!!.add(VectorData(content, documentId))
       }
 
-      LOG.debug("Successful query in '{}' ({}/{} results)", collectionName, vectorData.size, amount)
+      LOG.debug(
+        "successful query in '{}' ({}/{} results)",
+        collectionName,
+        results[collectionName]!!.size,
+        amount,
+      )
     }
 
     return results
@@ -110,13 +130,13 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
     if (response.hasErrors()) {
       LOG.error(
-        "Weaviate request error: {}, with status: {}",
+        "request error: {}, with status: {}",
         response.error.messages.first().message,
         response.error.statusCode,
       )
       return null
     } else if (response.result == null) {
-      LOG.error("Weaviate schema error; Result is null; Response: {}", response)
+      LOG.error("schema error; Result is null; Response: {}", response)
       return null
     }
 
@@ -132,25 +152,31 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     for (query in queries) {
       val vector = query.vector.joinToString(",")
       finalQuery +=
-        " Get { ${query.name}(limit: ${query.amount}, nearVector: { vector: [$vector] }) { content } }"
+        """Get { ${query.name}
+            | (
+            | limit: ${query.amount},
+            | nearVector: { vector: [$vector] }
+            | )
+            | { content _additional { distance } } }"""
+          .trimMargin()
     }
     return "$finalQuery }"
   }
 
   /** Error in transport to Weaviate. */
   private fun requestError(weaviateError: io.weaviate.client.base.WeaviateError): AppError {
-    LOG.error("Weaviate GraphQL error: $weaviateError")
+    LOG.error("GraphQL error: $weaviateError")
     return AppError.api(ErrorReason.VectorDatabase, "Weaviate GraphQL error: $weaviateError")
   }
 
   /** Internal error when remapping GraphQL data. We do not expose our n00bery to clients. */
   private fun mappingError(error: String): AppError {
-    LOG.error("Weaviate mapping error: $error")
+    LOG.error("mapping error: $error")
     return AppError.internal()
   }
 
   private fun queryError(errors: Array<GraphQLError>): AppError {
-    LOG.error("Weaviate query error")
+    LOG.error("query error")
 
     var message = ""
 

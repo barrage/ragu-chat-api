@@ -370,6 +370,36 @@ class AgentRepository(private val dslContext: DSLContext) {
       .awaitSingle()
   }
 
+  suspend fun getAgentCounts(): AgentCounts {
+    val total: Int = dslContext.selectCount().from(AGENTS).awaitSingle().value1() ?: 0
+
+    val active: Int =
+      dslContext.selectCount().from(AGENTS).where(AGENTS.ACTIVE.isTrue).awaitSingle().value1() ?: 0
+
+    val inactive = total - active
+
+    val counts =
+      dslContext
+        .select(AGENT_CONFIGURATIONS.LLM_PROVIDER, DSL.count())
+        .from(AGENTS)
+        .leftJoin(AGENT_CONFIGURATIONS)
+        .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
+        .where(AGENTS.ACTIVE.isTrue)
+        .groupBy(AGENT_CONFIGURATIONS.LLM_PROVIDER)
+        .asFlow()
+        .toList()
+
+    val out = mutableMapOf<String, Int>()
+
+    for ((agent, count) in counts) {
+      out[agent!!] = count
+    }
+
+    return AgentCounts(total, active, inactive, out)
+  }
+
+  // AGENT AVATAR
+
   suspend fun updateAvatar(id: KUUID, avatarPath: String) {
     dslContext.update(AGENTS).set(AGENTS.AVATAR, avatarPath).where(AGENTS.ID.eq(id)).awaitSingle()
   }
@@ -377,6 +407,8 @@ class AgentRepository(private val dslContext: DSLContext) {
   suspend fun removeAvatar(id: KUUID) {
     dslContext.update(AGENTS).setNull(AGENTS.AVATAR).where(AGENTS.ID.eq(id)).awaitSingle()
   }
+
+  // AGENT COLLECTIONS
 
   suspend fun updateCollections(
     agentId: KUUID,
@@ -401,6 +433,7 @@ class AgentRepository(private val dslContext: DSLContext) {
               AGENT_COLLECTIONS.VECTOR_PROVIDER,
               AGENT_COLLECTIONS.AMOUNT,
               AGENT_COLLECTIONS.INSTRUCTION,
+              AGENT_COLLECTIONS.MAX_DISTANCE,
             )
             .apply {
               additions.forEach { collection ->
@@ -412,6 +445,7 @@ class AgentRepository(private val dslContext: DSLContext) {
                   collection.info.vectorProvider,
                   collection.amount,
                   collection.instruction,
+                  collection.maxDistance,
                 )
               }
             }
@@ -423,6 +457,7 @@ class AgentRepository(private val dslContext: DSLContext) {
             .doUpdate()
             .set(AGENT_COLLECTIONS.AMOUNT, excluded(AGENT_COLLECTIONS.AMOUNT))
             .set(AGENT_COLLECTIONS.INSTRUCTION, excluded(AGENT_COLLECTIONS.INSTRUCTION))
+            .set(AGENT_COLLECTIONS.MAX_DISTANCE, excluded(AGENT_COLLECTIONS.MAX_DISTANCE))
             .awaitLast()
         } catch (e: DataAccessException) {
           LOG.error("Error adding collections", e)
@@ -475,6 +510,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_COLLECTIONS.INSTRUCTION,
         AGENT_COLLECTIONS.COLLECTION,
         AGENT_COLLECTIONS.AMOUNT,
+        AGENT_COLLECTIONS.MAX_DISTANCE,
         AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
         AGENT_COLLECTIONS.EMBEDDING_MODEL,
         AGENT_COLLECTIONS.VECTOR_PROVIDER,
@@ -488,33 +524,7 @@ class AgentRepository(private val dslContext: DSLContext) {
       .toList()
   }
 
-  suspend fun getAgentCounts(): AgentCounts {
-    val total: Int = dslContext.selectCount().from(AGENTS).awaitSingle().value1() ?: 0
-
-    val active: Int =
-      dslContext.selectCount().from(AGENTS).where(AGENTS.ACTIVE.isTrue).awaitSingle().value1() ?: 0
-
-    val inactive = total - active
-
-    val counts =
-      dslContext
-        .select(AGENT_CONFIGURATIONS.LLM_PROVIDER, DSL.count())
-        .from(AGENTS)
-        .leftJoin(AGENT_CONFIGURATIONS)
-        .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
-        .where(AGENTS.ACTIVE.isTrue)
-        .groupBy(AGENT_CONFIGURATIONS.LLM_PROVIDER)
-        .asFlow()
-        .toList()
-
-    val out = mutableMapOf<String, Int>()
-
-    for ((agent, count) in counts) {
-      out[agent!!] = count
-    }
-
-    return AgentCounts(total, active, inactive, out)
-  }
+  // AGENT CONFIGURATION
 
   suspend fun getAgentConfigurationVersions(
     agentId: KUUID,

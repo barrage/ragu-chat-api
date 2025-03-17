@@ -212,7 +212,14 @@ fun processAdditions(
     val collection = vectorDb.getCollectionInfo(collectionAdd.name)
 
     if (collection != null) {
-      additions.add(CollectionInsert(collectionAdd.amount, collectionAdd.instruction, collection))
+      additions.add(
+        CollectionInsert(
+          amount = collectionAdd.amount,
+          instruction = collectionAdd.instruction,
+          maxDistance = collectionAdd.maxDistance,
+          info = collection,
+        )
+      )
     } else {
       LOG.warn("Collection '${collectionAdd.name}' does not exist")
       failures.add(UpdateCollectionsFailure(collectionAdd.name, "Collection does not exist"))
