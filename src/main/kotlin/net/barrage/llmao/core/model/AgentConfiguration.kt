@@ -71,7 +71,7 @@ data class CreateAgentConfiguration(
   @NotBlank val llmProvider: String,
   @NotBlank val model: String,
   @Range(min = 0.0, max = 1.0) val temperature: Double? = 0.1,
-  val maxCompletionTokens: Int? = null,
+  @Range(min = 1.0) val maxCompletionTokens: Int? = null,
   @Range(min = -2.0, max = 2.0) val presencePenalty: Double? = 0.0,
   val instructions: AgentInstructions? = null,
 ) : Validation

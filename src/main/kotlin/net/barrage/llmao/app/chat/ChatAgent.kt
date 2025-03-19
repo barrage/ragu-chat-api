@@ -246,12 +246,21 @@ class ChatAgent(
     // Query each vector provider for the most similar vectors
     providerQueries.forEach { (provider, queries) ->
       val vectorDb = providers.vector.getProvider(provider)
-      relatedChunks[provider] = vectorDb.query(queries)
+      try {
+        relatedChunks[provider] = vectorDb.query(queries)
+      } catch (e: Throwable) {
+        LOG.error("Failed to query vector database", e)
+      }
     }
 
     for (collection in collections) {
       val instruction = collection.instruction
-      // Safe to !! because the providers must be present here if they were mapped above
+
+      if (relatedChunks[collection.vectorProvider] == null) {
+        LOG.warn("No results for collection: {}", collection.name)
+        continue
+      }
+
       val collectionData =
         relatedChunks[collection.vectorProvider]!![collection.name]?.joinToString("\n") {
           it.content
