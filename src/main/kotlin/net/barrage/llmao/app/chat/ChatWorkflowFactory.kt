@@ -82,6 +82,7 @@ class ChatWorkflowFactory(
         maxTokens =
           agent.configuration.maxCompletionTokens
             ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
+        tools = toolchain?.listToolSchemas(),
       )
 
     val chatAgent =
@@ -158,6 +159,7 @@ class ChatWorkflowFactory(
         maxTokens =
           agent.configuration.maxCompletionTokens
             ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
+        tools = toolchain?.listToolSchemas(),
       )
 
     val chatAgent =

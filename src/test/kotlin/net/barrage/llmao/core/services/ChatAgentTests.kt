@@ -9,6 +9,7 @@ import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.chat.ChatAgent
 import net.barrage.llmao.app.chat.toChatAgent
+import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.model.Agent
@@ -38,6 +39,14 @@ class ChatAgentTests : IntegrationTest() {
           model = "gpt-4o",
           titleInstruction = COMPLETIONS_TITLE_PROMPT,
         )
+      val chatCompletionParameters =
+        ChatCompletionParameters(
+          model = "gpt-4o",
+          temperature = agentConfiguration.temperature,
+          presencePenalty = agentConfiguration.presencePenalty ?: 0.0,
+          maxTokens = agentConfiguration.maxCompletionTokens,
+          tools = null,
+        )
       chat = postgres.testChat(ADMIN_USER, agent.id, null)
       chatAgent =
         AgentFull(agent, configuration = agentConfiguration, collections = listOf())
@@ -56,6 +65,7 @@ class ChatAgentTests : IntegrationTest() {
                 username = ADMIN_USER.username,
               ),
             toolchain = null,
+            completionParameters = chatCompletionParameters,
           )
     }
   }

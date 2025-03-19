@@ -175,22 +175,20 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
           }
         }
       }
-    }
 
-    route("/collections") {
-      put(updateAgentCollections()) {
+      put("/collections", updateAgentCollections()) {
         val agentId = call.pathUuid("id")
         val update: UpdateCollections = call.receive()
         val updateResult = agentService.updateCollections(agentId, update)
         call.respond(HttpStatusCode.OK, updateResult)
       }
+    }
 
-      delete(removeCollectionFromAllAgents()) {
-        val collection = call.queryParam("collection")!!
-        val provider = call.queryParam("provider")!!
-        agentService.removeCollectionFromAllAgents(collection, provider)
-        call.respond(HttpStatusCode.NoContent)
-      }
+    delete("/collections", removeCollectionFromAllAgents()) {
+      val collection = call.queryParam("collection")!!
+      val provider = call.queryParam("provider")!!
+      agentService.removeCollectionFromAllAgents(collection, provider)
+      call.respond(HttpStatusCode.NoContent)
     }
 
     get("/tools", getAgentTools()) {
