@@ -64,7 +64,7 @@ class ChatRepositoryWrite(private val dslContext: DSLContext, private val type: 
           .set(MESSAGES.SENDER_TYPE, message.senderType)
           .set(MESSAGES.CONTENT, message.content)
           .set(MESSAGES.FINISH_REASON, message.finishReason?.value)
-          .set(MESSAGES.TOOL_CALLS, Json.encodeToString(message.toolCalls))
+          .set(MESSAGES.TOOL_CALLS, message.toolCalls?.let { Json.encodeToString(it) })
           .set(MESSAGES.TOOL_CALL_ID, message.toolCallId)
           .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert message")
       }
