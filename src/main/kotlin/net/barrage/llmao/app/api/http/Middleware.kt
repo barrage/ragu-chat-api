@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.api.http
 
 import com.auth0.jwk.JwkProviderBuilder
+import com.auth0.jwt.interfaces.Verification
 import io.ktor.http.auth.AuthScheme
 import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.server.application.*
@@ -45,6 +46,7 @@ fun Application.authMiddleware(
   jwksEndpoint: String,
   leeway: Long,
   entitlementsClaim: String,
+  audience: String,
 ) {
   val jwkProvider =
     JwkProviderBuilder(URL(jwksEndpoint))
@@ -52,16 +54,23 @@ fun Application.authMiddleware(
       .rateLimited(10, 1, TimeUnit.MINUTES)
       .build()
 
+  val verification: Verification.() -> Unit = {
+    acceptLeeway(leeway)
+    withAudience(audience)
+  }
+
+  // This is a janky way to get the access token cookie from the frontend
+  // and we should investigate how to handle this later
+  val tokenExtractor: (ApplicationCall) -> HttpAuthHeader? = { call ->
+    call.request.cookies["access_token"]?.let { token ->
+      HttpAuthHeader.Single(AuthScheme.Bearer, token)
+    } ?: call.request.parseAuthorizationHeader()
+  }
+
   install(Authentication) {
     jwt("admin") {
-      verifier(jwkProvider, issuer) { acceptLeeway(leeway) }
-      // This is a janky way to get the access token cookie from the frontend
-      // and we should investigate how to handle this later
-      authHeader {
-        it.request.cookies["access_token"]?.let { token ->
-          HttpAuthHeader.Single(AuthScheme.Bearer, token)
-        } ?: it.request.parseAuthorizationHeader()
-      }
+      verifier(jwkProvider, issuer, verification)
+      authHeader(tokenExtractor)
       validate { credential ->
         val entitlements = credential.payload.getClaim(entitlementsClaim).asList(String::class.java)
         if (entitlements.contains(Entitlement.admin())) {
@@ -73,14 +82,8 @@ fun Application.authMiddleware(
     }
 
     jwt("user") {
-      verifier(jwkProvider, issuer) { acceptLeeway(leeway) }
-      // This is a janky way to get the access token cookie from the frontend
-      // and we should investigate how to handle this later
-      authHeader {
-        it.request.cookies["access_token"]?.let { token ->
-          HttpAuthHeader.Single(AuthScheme.Bearer, token)
-        } ?: it.request.parseAuthorizationHeader()
-      }
+      verifier(jwkProvider, issuer, verification)
+      authHeader(tokenExtractor)
       validate { credential ->
         val entitlements = credential.payload.getClaim(entitlementsClaim).asList(String::class.java)
         for (entitlement in entitlements) {

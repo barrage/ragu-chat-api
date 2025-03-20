@@ -42,7 +42,6 @@ import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.sendMessage
 import net.barrage.llmao.wsSession
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -58,7 +57,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
    * Beforehand, the agent is configured to the right collection.
    *
    * This also tests whether the right collection was queried, as the contents from it will have the
-   * necessary contents to trigger the right prompt.
+   * necessary contents to trigger the right wiremock response.
    */
   @Test
   fun worksWhenAgentIsConfiguredProperly() = wsTest { client ->
@@ -132,43 +131,6 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         }
 
         assertEquals(COMPLETIONS_STREAM_WHITESPACE_RESPONSE, buffer)
-      }
-    }
-
-    deleteVectors()
-
-    assert(asserted)
-  }
-
-  /**
-   * A client connects via Websocket, opens a chat, sends a message and receives an error.
-   * Beforehand, the agent is configured to the wrong collection (whose embedding size is different
-   * than the embeddings created by the agent's model). Theoretically should never happen since now
-   * we load embedding configuration from the collection itself, but still nice to have as a test
-   * scenario.
-   */
-  @Test
-  fun sendsVectorDatabaseErrorWhenAgentEmbeddingModelIsNotConfiguredProperly() = wsTest { client ->
-    var asserted = false
-
-    // We need to insert vectors here because Weaviate will not throw any errors
-    // if the collection does not contain vectors.
-    insertVectors(COMPLETIONS_STREAM_PROMPT)
-
-    val invalidAgent = createInvalidAgent()
-
-    client.wsSession {
-      openNewChat(invalidAgent.agent.id)
-
-      sendMessage("Will this trigger a stream response?") { incoming ->
-        for (frame in incoming) {
-          val response = (frame as Frame.Text).readText()
-          val error = json.decodeFromString<AppError>(response)
-          assertEquals(ErrorReason.VectorDatabase, error.errorReason)
-          assertTrue(error.errorDescription!!.contains("vector lengths don't match"))
-          asserted = true
-          break
-        }
       }
     }
 

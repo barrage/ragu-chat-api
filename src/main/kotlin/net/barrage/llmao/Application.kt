@@ -51,10 +51,11 @@ fun Application.module() {
     )
   }
   authMiddleware(
-    environment.config.string("jwt.issuer"),
-    environment.config.string("jwt.jwksEndpoint"),
-    environment.config.long("jwt.leeway"),
-    environment.config.string("jwt.entitlementsClaim"),
+    issuer = environment.config.string("jwt.issuer"),
+    jwksEndpoint = environment.config.string("jwt.jwksEndpoint"),
+    leeway = environment.config.long("jwt.leeway"),
+    entitlementsClaim = environment.config.string("jwt.entitlementsClaim"),
+    audience = environment.config.string("jwt.audience"),
   )
   configureOpenApi()
   websocketServer(
