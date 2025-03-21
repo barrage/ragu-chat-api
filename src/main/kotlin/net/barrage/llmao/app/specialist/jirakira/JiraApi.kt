@@ -407,7 +407,7 @@ data class Issue(
   val id: Int,
   val accountKey: String,
   val estimatedRemainingSeconds: Int? = null,
-  val epicIssue: EpicIssue,
+  val epicIssue: EpicIssue?,
   val projectId: Int,
   val projectKey: String,
   val issueType: String,
@@ -416,7 +416,7 @@ data class Issue(
   val reporterKey: String,
   val issueStatus: String,
   val components: List<String>,
-  val epicKey: String,
+  val epicKey: String?,
   val internalIssue: Boolean,
 )
 
