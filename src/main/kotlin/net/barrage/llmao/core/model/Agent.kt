@@ -77,9 +77,9 @@ data class CreateAgent(
 @Serializable
 data class UpdateAgent(
   @NotBlank val name: String? = null,
-  val description: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  @NotBlank val description: PropertyUpdate<String>? = PropertyUpdate.Undefined,
   val active: Boolean? = null,
-  val language: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  @NotBlank val language: PropertyUpdate<String>? = PropertyUpdate.Undefined,
   val configuration: UpdateAgentConfiguration? = null,
 ) : Validation
 

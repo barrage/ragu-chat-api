@@ -5,7 +5,7 @@ import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 
 /**
- * Data class to update **nullable** properties.
+ * Data class to update **nullable** properties. Should be used only on primitives.
  *
  * If you need to update **required** properties, use a nullable primitive directly. For example, if
  * you need to update a required string property, define the payload as

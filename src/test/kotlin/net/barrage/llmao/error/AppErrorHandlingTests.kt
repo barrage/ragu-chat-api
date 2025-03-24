@@ -19,6 +19,7 @@ import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Range
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.types.KUUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -145,6 +146,40 @@ class AppErrorHandlingTests : IntegrationTest() {
   fun rangeValidationFailure() = test {
     @Serializable
     data class ValidationTestJson(@Range(min = 0.0, max = 1.0) val foo: Double) : Validation
+
+    routing {
+      put("/error-test") {
+        val data = call.receive<ValidationTestJson>()
+        val results = data.validate()
+        if (results is ValidationResult.Invalid) {
+          throw RequestValidationException(call, reasons = results.reasons)
+        }
+      }
+    }
+
+    val invalidJson = "{ \"foo\": 6.9 }"
+
+    val client = createClient { install(ContentNegotiation) { json() } }
+
+    val response =
+      client.put("/error-test") {
+        contentType(ContentType.Application.Json)
+        setBody(invalidJson)
+      }
+
+    val error = response.body<List<ValidationError>>()[0]
+
+    assertEquals(422, response.status.value)
+    assertEquals("range", error.code)
+    assertEquals("foo", error.fieldName)
+    assertEquals("Value must be in range 0.0 - 1.0", error.message)
+  }
+
+  @Test
+  fun rangeUpdateValidationFailure() = test {
+    @Serializable
+    data class ValidationTestJson(@Range(min = 0.0, max = 1.0) val foo: PropertyUpdate<Double>) :
+      Validation
 
     routing {
       put("/error-test") {

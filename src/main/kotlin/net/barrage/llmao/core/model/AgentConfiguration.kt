@@ -84,7 +84,8 @@ data class UpdateAgentConfiguration(
   @NotBlank val llmProvider: String? = null,
   @NotBlank val model: String? = null,
   @Range(min = 0.0, max = 1.0) val temperature: Double? = null,
-  val maxCompletionTokens: PropertyUpdate<Int> = PropertyUpdate.Undefined,
+  @Range(min = 1.0) val maxCompletionTokens: PropertyUpdate<Int> = PropertyUpdate.Undefined,
+  @Range(min = -2.0, max = 2.0)
   val presencePenalty: PropertyUpdate<Double> = PropertyUpdate.Undefined,
   val instructions: UpdateAgentInstructions? = null,
 ) : Validation {
