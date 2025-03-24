@@ -9,6 +9,7 @@ import kotlinx.coroutines.reactive.awaitLast
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.dslSet
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -22,6 +23,7 @@ import net.barrage.llmao.core.model.CollectionRemove
 import net.barrage.llmao.core.model.CreateAgent
 import net.barrage.llmao.core.model.UpdateAgent
 import net.barrage.llmao.core.model.UpdateAgentConfiguration
+import net.barrage.llmao.core.model.UpdateAgentInstructions
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.SearchFiltersAdminAgents
@@ -31,6 +33,8 @@ import net.barrage.llmao.core.model.toAgentCollection
 import net.barrage.llmao.core.model.toAgentConfiguration
 import net.barrage.llmao.core.model.toAgentTool
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.tables.records.AgentConfigurationsRecord
+import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
@@ -38,6 +42,8 @@ import net.barrage.llmao.tables.references.AGENT_TOOLS
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.SortField
+import org.jooq.UpdateSetMoreStep
+import org.jooq.UpdateSetStep
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
@@ -274,7 +280,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         .join(AGENTS)
         .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
         .where(AGENTS.ID.eq(id))
-        .awaitSingle()
+        .awaitFirstOrNull()
         ?.into(AGENT_CONFIGURATIONS)
         ?.toAgentConfiguration()
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id' does not exist")
@@ -282,7 +288,7 @@ class AgentRepository(private val dslContext: DSLContext) {
     return dslContext.transactionCoroutine { tx ->
       val context = DSL.using(tx)
 
-      // TODO: Move this to service layer
+      // TODO: Move this check to service layer
       val configuration =
         // if configuration or instructions are updated, create a new version
         if (
@@ -308,17 +314,20 @@ class AgentRepository(private val dslContext: DSLContext) {
             .set(AGENT_CONFIGURATIONS.TEMPERATURE, update.configuration.temperature)
             .set(
               AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
-              update.configuration.maxCompletionTokens,
+              update.configuration.maxCompletionTokens.value(),
             )
-            .set(AGENT_CONFIGURATIONS.PRESENCE_PENALTY, update.configuration.presencePenalty)
+            .set(
+              AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
+              update.configuration.presencePenalty.value(),
+            )
             .set(
               AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-              update.configuration.instructions?.titleInstruction
+              update.configuration.instructions?.titleInstruction?.value()
                 ?: currentConfiguration.agentInstructions.titleInstruction,
             )
             .set(
               AGENT_CONFIGURATIONS.ERROR_MESSAGE,
-              update.configuration.instructions?.errorMessage
+              update.configuration.instructions?.errorMessage?.value()
                 ?: currentConfiguration.agentInstructions.errorMessage,
             )
             .returning()
@@ -332,11 +341,7 @@ class AgentRepository(private val dslContext: DSLContext) {
       val agent =
         context
           .update(AGENTS)
-          .set(AGENTS.NAME, DSL.coalesce(DSL.`val`(update.name), AGENTS.NAME))
-          .set(AGENTS.DESCRIPTION, DSL.coalesce(DSL.`val`(update.description), AGENTS.DESCRIPTION))
-          .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
-          .set(AGENTS.ACTIVE, DSL.coalesce(DSL.`val`(update.active), AGENTS.ACTIVE))
-          .set(AGENTS.LANGUAGE, DSL.coalesce(DSL.`val`(update.language), AGENTS.LANGUAGE))
+          .let { update.applyUpdates(it) }
           .where(AGENTS.ID.eq(id))
           .returning()
           .awaitSingle()
@@ -355,12 +360,14 @@ class AgentRepository(private val dslContext: DSLContext) {
       update.llmProvider != null && update.llmProvider != current.llmProvider ||
       update.model != null && update.model != current.model ||
       update.temperature != null && update.temperature != current.temperature ||
-      update.maxCompletionTokens != null &&
-        update.maxCompletionTokens != current.maxCompletionTokens ||
-      update.presencePenalty != null && update.presencePenalty != current.presencePenalty ||
+      update.maxCompletionTokens.value() != null &&
+        update.maxCompletionTokens.value() != current.maxCompletionTokens ||
+      update.presencePenalty.value() != null &&
+        update.presencePenalty.value() != current.presencePenalty ||
       update.instructions != null &&
-        (update.instructions.titleInstruction != current.agentInstructions.titleInstruction ||
-          update.instructions.errorMessage != current.agentInstructions.errorMessage)
+        (update.instructions.titleInstruction?.value() !=
+          current.agentInstructions.titleInstruction ||
+          update.instructions.errorMessage?.value() != current.agentInstructions.errorMessage)
   }
 
   suspend fun delete(id: KUUID): Int {
@@ -460,7 +467,7 @@ class AgentRepository(private val dslContext: DSLContext) {
             .set(AGENT_COLLECTIONS.MAX_DISTANCE, excluded(AGENT_COLLECTIONS.MAX_DISTANCE))
             .awaitLast()
         } catch (e: DataAccessException) {
-          LOG.error("Error adding collections", e)
+          // LOG.error("Error adding collections", e)
           throw AppError.internal(e.message ?: "Failed to add collections")
         }
       }
@@ -485,7 +492,7 @@ class AgentRepository(private val dslContext: DSLContext) {
             )
             .awaitLast()
         } catch (e: DataAccessException) {
-          LOG.error("Error removing collections", e)
+          // LOG.error("Error removing collections", e)
           throw AppError.internal(e.message ?: "Failed to remove collections")
         }
       }
@@ -685,4 +692,38 @@ private fun SearchFiltersAdminAgents.generateConditions(): Condition {
   val activeCondition = if (active == null) DSL.noCondition() else AGENTS.ACTIVE.eq(active)
 
   return DSL.and(nameCondition, activeCondition)
+}
+
+private fun UpdateAgent.applyUpdates(
+  value: UpdateSetStep<AgentsRecord>
+): UpdateSetMoreStep<AgentsRecord> {
+  var value = value as UpdateSetMoreStep<AgentsRecord>
+  value = name.dslSet(value, AGENTS.NAME)
+  value = description.dslSet(value, AGENTS.DESCRIPTION)
+  value = active.dslSet(value, AGENTS.ACTIVE)
+  value = language.dslSet(value, AGENTS.LANGUAGE)
+  return value
+}
+
+private fun UpdateAgentConfiguration.dslSet(
+  value: UpdateSetStep<AgentConfigurationsRecord>
+): UpdateSetMoreStep<AgentConfigurationsRecord> {
+  var value = value as UpdateSetMoreStep<AgentConfigurationsRecord>
+  value = context.dslSet(value, AGENT_CONFIGURATIONS.CONTEXT)
+  value = llmProvider.dslSet(value, AGENT_CONFIGURATIONS.LLM_PROVIDER)
+  value = model.dslSet(value, AGENT_CONFIGURATIONS.MODEL)
+  value = temperature.dslSet(value, AGENT_CONFIGURATIONS.TEMPERATURE)
+  value = maxCompletionTokens.dslSet(value, AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS)
+  value = presencePenalty.dslSet(value, AGENT_CONFIGURATIONS.PRESENCE_PENALTY)
+  value = instructions?.applyUpdates(value) ?: value
+  return value
+}
+
+private fun UpdateAgentInstructions.applyUpdates(
+  value: UpdateSetStep<AgentConfigurationsRecord>
+): UpdateSetMoreStep<AgentConfigurationsRecord> {
+  var value = value as UpdateSetMoreStep<AgentConfigurationsRecord>
+  value = titleInstruction.dslSet(value, AGENT_CONFIGURATIONS.TITLE_INSTRUCTION)
+  value = errorMessage.dslSet(value, AGENT_CONFIGURATIONS.ERROR_MESSAGE)
+  return value
 }

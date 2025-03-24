@@ -4,6 +4,7 @@ import java.time.LocalDate
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Validation
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.TimeSeries
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
@@ -76,9 +77,9 @@ data class CreateAgent(
 @Serializable
 data class UpdateAgent(
   @NotBlank val name: String? = null,
-  @NotBlank val description: String? = null,
+  val description: PropertyUpdate<String>? = PropertyUpdate.Undefined,
   val active: Boolean? = null,
-  @NotBlank val language: String? = null,
+  val language: PropertyUpdate<String>? = PropertyUpdate.Undefined,
   val configuration: UpdateAgentConfiguration? = null,
 ) : Validation
 

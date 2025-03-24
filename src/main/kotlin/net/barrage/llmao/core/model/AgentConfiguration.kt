@@ -7,6 +7,7 @@ import net.barrage.llmao.core.SchemaValidation
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.addSchemaErr
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
@@ -82,10 +83,10 @@ data class UpdateAgentConfiguration(
   @NotBlank val context: String? = null,
   @NotBlank val llmProvider: String? = null,
   @NotBlank val model: String? = null,
-  @Range(min = 0.0, max = 1.0) val temperature: Double? = 0.1,
-  val maxCompletionTokens: Int? = null,
-  @Range(min = -2.0, max = 2.0) val presencePenalty: Double? = 0.0,
-  val instructions: AgentInstructions? = null,
+  @Range(min = 0.0, max = 1.0) val temperature: Double? = null,
+  val maxCompletionTokens: PropertyUpdate<Int> = PropertyUpdate.Undefined,
+  val presencePenalty: PropertyUpdate<Double> = PropertyUpdate.Undefined,
+  val instructions: UpdateAgentInstructions? = null,
 ) : Validation {
   fun validateCombinations(): List<ValidationError> {
     val errors = mutableListOf<ValidationError>()

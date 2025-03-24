@@ -28,7 +28,9 @@ import net.barrage.llmao.core.model.CreateAgentConfiguration
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.UpdateAgent
 import net.barrage.llmao.core.model.UpdateAgentConfiguration
+import net.barrage.llmao.core.model.UpdateAgentInstructions
 import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.types.KUUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -215,17 +217,17 @@ class AdminAgentControllerTests : IntegrationTest() {
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
-        description = "description",
+        description = PropertyUpdate.Value("description"),
         active = true,
-        language = "english",
+        language = PropertyUpdate.Value("english"),
         configuration =
           UpdateAgentConfiguration(
             context = "context",
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.5,
-            maxCompletionTokens = 100,
-            presencePenalty = 0.5,
+            maxCompletionTokens = PropertyUpdate.Value(100),
+            presencePenalty = PropertyUpdate.Value(0.5),
             instructions = null,
           ),
       )
@@ -256,16 +258,20 @@ class AdminAgentControllerTests : IntegrationTest() {
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
-        description = "description",
+        description = PropertyUpdate.Value("description"),
         active = true,
-        language = "english",
+        language = PropertyUpdate.Value("english"),
         configuration =
           UpdateAgentConfiguration(
             context = "context",
             llmProvider = "azure",
             model = "gpt-4",
             temperature = 0.5,
-            instructions = AgentInstructions(titleInstruction = "title", errorMessage = "error"),
+            instructions =
+              UpdateAgentInstructions(
+                titleInstruction = PropertyUpdate.Value("title"),
+                errorMessage = PropertyUpdate.Value("error"),
+              ),
           ),
       )
 
@@ -301,9 +307,9 @@ class AdminAgentControllerTests : IntegrationTest() {
     val updateAgent =
       UpdateAgent(
         name = "MyAgent",
-        description = "description",
+        description = PropertyUpdate.Value("description"),
         active = true,
-        language = "english",
+        language = PropertyUpdate.Value("english"),
       )
 
     val response =
@@ -341,17 +347,17 @@ class AdminAgentControllerTests : IntegrationTest() {
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
-        description = "description",
+        description = PropertyUpdate.Value("description"),
         active = true,
-        language = "english",
+        language = PropertyUpdate.Value("english"),
         configuration =
           UpdateAgentConfiguration(
             context = "Test",
             llmProvider = "openai",
             model = "gpt-4",
             temperature = 0.1,
-            presencePenalty = 0.1,
-            maxCompletionTokens = 100,
+            presencePenalty = PropertyUpdate.Value(0.1),
+            maxCompletionTokens = PropertyUpdate.Value(100),
           ),
       )
 
@@ -376,9 +382,9 @@ class AdminAgentControllerTests : IntegrationTest() {
     val updateAgent =
       UpdateAgent(
         name = "TestAgentOneUpdated",
-        description = "description",
+        description = PropertyUpdate.Value("description"),
         active = true,
-        language = "english",
+        language = PropertyUpdate.Value("english"),
         configuration =
           UpdateAgentConfiguration(
             context = "context",

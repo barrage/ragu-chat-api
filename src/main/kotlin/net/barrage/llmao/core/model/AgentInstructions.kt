@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.model
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.model.common.PropertyUpdate
 
 const val DEFAULT_TITLE_INSTRUCTION =
   """
@@ -35,3 +36,9 @@ data class AgentInstructions(
     return errorMessage ?: "An error occurred. Please try again later."
   }
 }
+
+@Serializable
+data class UpdateAgentInstructions(
+  val titleInstruction: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  val errorMessage: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+)

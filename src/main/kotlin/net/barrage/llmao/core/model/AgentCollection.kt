@@ -61,7 +61,7 @@ data class UpdateCollectionAddition(
   @NotBlank val name: String,
   val amount: Int,
   val instruction: String,
-  val maxDistance: Double? = null
+  val maxDistance: Double? = null,
 ) : Validation
 
 @Serializable

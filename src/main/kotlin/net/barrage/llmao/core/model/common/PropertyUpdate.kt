@@ -31,6 +31,13 @@ sealed class PropertyUpdate<out T> {
   data object Undefined : PropertyUpdate<Nothing>()
 
   data class Value<T>(val value: T) : PropertyUpdate<T>()
+
+  fun value(): T? {
+    return when (this) {
+      is Value -> value
+      else -> null
+    }
+  }
 }
 
 class PropertyUpdateSerializer<T>(private val classSerializer: KSerializer<T>) :
