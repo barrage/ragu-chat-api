@@ -21,7 +21,6 @@ import net.barrage.llmao.app.api.http.controllers.imageRoutes
 import net.barrage.llmao.app.api.http.controllers.specialistWorkflowRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraAdminRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraUserRoutes
-import net.barrage.llmao.app.api.http.controllers.thirdPartyRoutes
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -29,10 +28,7 @@ import net.barrage.llmao.core.types.KUUID
 
 fun Application.configureRouting(state: ApplicationState) {
   routing {
-    // K8S specific route
     route("/__health") { get { call.respond(HttpStatusCode.OK) } }
-
-    thirdPartyRoutes()
 
     // Add swagger-ui only if we're not in production.
     if (application.environment.config.property("ktor.environment").getString() != "production") {

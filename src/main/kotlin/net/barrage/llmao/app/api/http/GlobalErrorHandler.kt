@@ -18,11 +18,15 @@ internal val LOG = KtorSimpleLogger("net.barrage.llmao.plugins.GlobalErrorHandle
 
 fun Application.configureErrorHandling() {
   install(StatusPages) {
-    exception<AppError> { call, err -> call.respond(err.code(), err) }
+    exception<AppError> { call, err ->
+      LOG.error(err)
+      call.respond(err.code(), err)
+    }
 
     // Java exceptions
 
     exception<NoSuchElementException> { call, err ->
+      LOG.error(err)
       call.respond(
         HttpStatusCode.NotFound,
         AppError.Companion.api(ErrorReason.EntityDoesNotExist, err.message ?: err.localizedMessage),
@@ -30,6 +34,7 @@ fun Application.configureErrorHandling() {
     }
 
     exception<IllegalArgumentException> { call, err ->
+      LOG.error(err)
       call.respond(
         HttpStatusCode.BadRequest,
         AppError.Companion.api(ErrorReason.InvalidParameter, err.message ?: err.localizedMessage),
@@ -39,6 +44,7 @@ fun Application.configureErrorHandling() {
     // KTOR specific exceptions
 
     exception<NotFoundException> { call, err ->
+      LOG.error(err)
       call.respond(
         HttpStatusCode.NotFound,
         AppError.Companion.api(ErrorReason.EntityDoesNotExist, err.message ?: err.localizedMessage),
@@ -46,6 +52,7 @@ fun Application.configureErrorHandling() {
     }
 
     exception<BadRequestException> { call, err ->
+      LOG.error(err)
       if (err.cause is JsonConvertException) {
         call.handleJsonConvert(err.cause!! as JsonConvertException)
         return@exception
@@ -62,11 +69,13 @@ fun Application.configureErrorHandling() {
     }
 
     exception<RequestValidationException> { call, err ->
+      LOG.error(err)
       val errors = err.reasons.map { Json.decodeFromString<ValidationError>(it) }
       call.respond(HttpStatusCode.UnprocessableEntity, errors)
     }
 
     exception<JsonConvertException> { call, err ->
+      LOG.error(err)
       call.respond(
         HttpStatusCode.BadRequest,
         AppError.Companion.api(ErrorReason.InvalidParameter, err.localizedMessage),
@@ -74,7 +83,7 @@ fun Application.configureErrorHandling() {
     }
 
     exception<Exception> { call, err ->
-      LOG.error("${err::class} | ${err.message} | ${err.cause} | ${err.cause?.cause}")
+      LOG.error(err)
       call.respond(
         HttpStatusCode.InternalServerError,
         err.message ?: "An unexpected error occurred.",

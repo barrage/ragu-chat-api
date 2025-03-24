@@ -10,8 +10,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 
-internal val LOG =
-  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.settings.Settings")
+internal val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.settings.Settings")
 
 /** The main API for managing application settings. */
 class Settings(private val repository: SettingsRepository) {

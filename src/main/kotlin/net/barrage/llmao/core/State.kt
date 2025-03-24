@@ -9,8 +9,8 @@ import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
-import net.barrage.llmao.core.settings.SettingsRepository
 import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.settings.SettingsRepository
 import net.barrage.llmao.core.specialist.SpecialistRepositoryWrite
 import net.barrage.llmao.core.storage.ImageStorage
 import net.barrage.llmao.core.token.TokenUsageRepositoryRead
