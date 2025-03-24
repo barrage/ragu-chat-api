@@ -18,6 +18,7 @@ import net.barrage.llmao.app.api.http.configureErrorHandling
 import net.barrage.llmao.app.api.http.configureOpenApi
 import net.barrage.llmao.app.api.http.configureRequestValidation
 import net.barrage.llmao.app.api.http.configureRouting
+import net.barrage.llmao.app.api.http.noAuth
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.app.chat.ChatType
 import net.barrage.llmao.app.chat.ChatWorkflowFactory
@@ -50,13 +51,19 @@ fun Application.module() {
       }
     )
   }
-  authMiddleware(
-    issuer = environment.config.string("jwt.issuer"),
-    jwksEndpoint = environment.config.string("jwt.jwksEndpoint"),
-    leeway = environment.config.long("jwt.leeway"),
-    entitlementsClaim = environment.config.string("jwt.entitlementsClaim"),
-    audience = environment.config.string("jwt.audience"),
-  )
+
+  if (environment.config.string("jwt.enabled").toBoolean()) {
+    authMiddleware(
+      issuer = environment.config.string("jwt.issuer"),
+      jwksEndpoint = environment.config.string("jwt.jwksEndpoint"),
+      leeway = environment.config.long("jwt.leeway"),
+      entitlementsClaim = environment.config.string("jwt.entitlementsClaim"),
+      audience = environment.config.string("jwt.audience"),
+    )
+  } else {
+    noAuth()
+  }
+
   configureOpenApi()
   websocketServer(
     ChatWorkflowFactory(

@@ -66,6 +66,7 @@ class ChatAgentTests : IntegrationTest() {
               ),
             toolchain = null,
             completionParameters = chatCompletionParameters,
+            allowedGroups = listOf("admin", "user"),
           )
     }
   }

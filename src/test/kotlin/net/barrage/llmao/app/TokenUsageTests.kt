@@ -67,6 +67,7 @@ class TokenUsageTests : IntegrationTest() {
               ),
             toolchain = null,
             completionParameters = completionParameters,
+            allowedGroups = listOf("admin", "user"),
           )
     }
   }
