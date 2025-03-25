@@ -4,6 +4,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminWsSession
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.Agent
@@ -13,7 +14,6 @@ import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.receiveJson
 import net.barrage.llmao.sendClientSystem
-import net.barrage.llmao.wsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -83,7 +83,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   fun rejectsMessageInvalidJson() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       send("asdf")
       val response = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(response)
@@ -99,7 +99,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   fun openingNewChatWorks() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
       val response = (incoming.receive() as Frame.Text).readText()
       val message = receiveJson<OutgoingSystemMessage.WorkflowOpen>(response)
@@ -114,7 +114,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   fun openingNewChatWorksWithAlreadyOpenChat() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       val openChat = IncomingSystemMessage.CreateNewWorkflow(agent.id)
 
       sendClientSystem(openChat)
@@ -138,7 +138,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   fun openingExistingChatWorks() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
 
       val first = (incoming.receive() as Frame.Text).readText()
@@ -162,7 +162,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   fun openingExistingChatFailsDoesNotExist() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       val openChat = IncomingSystemMessage.LoadExistingWorkflow(KUUID.randomUUID())
       sendClientSystem(openChat)
 
@@ -180,7 +180,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   fun closesChannelOnCloseFrame() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       send(Frame.Close())
       val result = incoming.receiveCatching()
       assert(result.isClosed)
@@ -194,7 +194,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
   fun openingChatFailsAgentDoesNotExist() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       val openChat = IncomingSystemMessage.CreateNewWorkflow(KUUID.randomUUID())
       sendClientSystem(openChat)
 

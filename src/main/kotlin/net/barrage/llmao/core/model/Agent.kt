@@ -1,6 +1,8 @@
 package net.barrage.llmao.core.model
 
 import java.time.LocalDate
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Validation
@@ -74,12 +76,17 @@ data class CreateAgent(
 ) : Validation
 
 /** DTO for updating an agent. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class UpdateAgent(
   @NotBlank val name: String? = null,
-  @NotBlank val description: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  @NotBlank
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val description: PropertyUpdate<String>? = PropertyUpdate.Undefined,
   val active: Boolean? = null,
-  @NotBlank val language: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  @NotBlank
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val language: PropertyUpdate<String>? = PropertyUpdate.Undefined,
   val configuration: UpdateAgentConfiguration? = null,
 ) : Validation
 

@@ -1,6 +1,9 @@
 package net.barrage.llmao.core.model
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.model.common.PropertyUpdate
 
 const val DEFAULT_TITLE_INSTRUCTION =
@@ -37,8 +40,13 @@ data class AgentInstructions(
   }
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class UpdateAgentInstructions(
+  @NotBlank
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
   val titleInstruction: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  @NotBlank
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
   val errorMessage: PropertyUpdate<String>? = PropertyUpdate.Undefined,
 )

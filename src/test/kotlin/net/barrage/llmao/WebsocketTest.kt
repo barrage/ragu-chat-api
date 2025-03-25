@@ -16,8 +16,13 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 
 val json = Json { ignoreUnknownKeys = true }
 
-suspend fun HttpClient.wsSession(block: suspend ClientWebSocketSession.() -> Unit) {
+suspend fun HttpClient.adminWsSession(block: suspend ClientWebSocketSession.() -> Unit) {
   val token = get("/ws") { header(HttpHeaders.Cookie, adminAccessToken()) }.bodyAsText()
+  webSocket("/?token=$token") { block() }
+}
+
+suspend fun HttpClient.userWsSession(block: suspend ClientWebSocketSession.() -> Unit) {
+  val token = get("/ws") { header(HttpHeaders.Cookie, userAccessToken()) }.bodyAsText()
   webSocket("/?token=$token") { block() }
 }
 

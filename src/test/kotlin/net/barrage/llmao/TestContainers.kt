@@ -19,6 +19,7 @@ import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.*
 import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.serialization.encodeToString
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -409,6 +410,7 @@ class TestWeaviate {
     size: Int = 1536,
     embeddingProvider: String = "azure",
     embeddingModel: String = "text-embedding-ada-002",
+    groups: List<String>? = null,
   ) {
 
     val idProperty =
@@ -438,19 +440,30 @@ class TestWeaviate {
         .dataType(listOf("text"))
         .build()
 
+    val properties =
+      mutableListOf<Property>(
+        idProperty,
+        sizeProperty,
+        nameProperty,
+        embeddingProviderProperty,
+        embeddingModelProperty,
+      )
+
+    groups?.let {
+      properties.add(
+        Property.builder()
+          .name("groups")
+          .description(json.encodeToString(it))
+          .dataType(listOf("text[]"))
+          .build()
+      )
+    }
+
     val newClass =
       WeaviateClass.builder()
         .className(name)
         .description("Test vector collection")
-        .properties(
-          listOf(
-            idProperty,
-            sizeProperty,
-            nameProperty,
-            embeddingProviderProperty,
-            embeddingModelProperty,
-          )
-        )
+        .properties(properties)
         .build()
 
     client.schema().classCreator().withClass(newClass).run()

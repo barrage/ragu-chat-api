@@ -1,5 +1,7 @@
 package net.barrage.llmao.core.model
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Range
@@ -77,6 +79,7 @@ data class CreateAgentConfiguration(
   val instructions: AgentInstructions? = null,
 ) : Validation
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @SchemaValidation("validateCombinations")
 data class UpdateAgentConfiguration(
@@ -84,8 +87,15 @@ data class UpdateAgentConfiguration(
   @NotBlank val llmProvider: String? = null,
   @NotBlank val model: String? = null,
   @Range(min = 0.0, max = 1.0) val temperature: Double? = null,
-  @Range(min = 1.0) val maxCompletionTokens: PropertyUpdate<Int> = PropertyUpdate.Undefined,
+
+  /** Max completion tokens the agent is allowed to generate during completion. */
+  @Range(min = 1.0)
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val maxCompletionTokens: PropertyUpdate<Int> = PropertyUpdate.Undefined,
+
+  /** Repetition penalty. */
   @Range(min = -2.0, max = 2.0)
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
   val presencePenalty: PropertyUpdate<Double> = PropertyUpdate.Undefined,
   val instructions: UpdateAgentInstructions? = null,
 ) : Validation {

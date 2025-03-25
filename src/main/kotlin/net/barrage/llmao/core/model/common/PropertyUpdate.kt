@@ -25,6 +25,12 @@ import kotlinx.serialization.encoding.*
  * - update == null -> Set property to null
  * - update is Undefined -> Leave property as is
  * - update is Value -> Set property to value
+ *
+ * **Serialization caveat**
+ *
+ * When serializing (encoding) this in tests, we have to omit the `Undefined` value. Since
+ * serializers delegate to this serializer only on *value* creation, we need to annotate
+ * [PropertyUpdate] fields with `@EncodeDefault(EncodeDefault.Mode.NEVER)`.
  */
 @Serializable(with = PropertyUpdateSerializer::class)
 sealed class PropertyUpdate<out T> {
@@ -46,12 +52,12 @@ class PropertyUpdateSerializer<T>(private val classSerializer: KSerializer<T>) :
     buildClassSerialDescriptor("PropertyUpdate", classSerializer.descriptor)
 
   override fun serialize(encoder: Encoder, value: PropertyUpdate<T>) =
-    // We never serialize this
-    if (value is PropertyUpdate.Value) {
-      classSerializer.serialize(encoder, value.value)
-    } else {}
+    // We serialize this only in tests
+    when (value) {
+      is PropertyUpdate.Value -> classSerializer.serialize(encoder, value.value)
+      is PropertyUpdate.Undefined -> {}
+    }
 
-  @OptIn(ExperimentalSerializationApi::class)
   override fun deserialize(decoder: Decoder): PropertyUpdate<T> {
     return classSerializer.deserialize(decoder).let { PropertyUpdate.Value(it) }
   }

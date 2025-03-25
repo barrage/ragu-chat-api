@@ -7,6 +7,7 @@ import io.weaviate.client.base.Result
 import io.weaviate.client.v1.graphql.model.GraphQLError
 import io.weaviate.client.v1.schema.model.Property
 import kotlin.properties.Delegates
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KUUID
@@ -198,6 +199,9 @@ private fun VectorCollectionInfo.Companion.fromWeaviateProperties(
   lateinit var embeddingModel: String
   lateinit var embeddingProvider: String
   val vectorProvider = "weaviate"
+  var groups: List<String>? = null
+
+  println(properties)
 
   for (property in properties) {
     when (property.name) {
@@ -206,6 +210,7 @@ private fun VectorCollectionInfo.Companion.fromWeaviateProperties(
       "name" -> name = property.description
       "embedding_model" -> embeddingModel = property.description
       "embedding_provider" -> embeddingProvider = property.description
+      "groups" -> groups = Json.decodeFromString(property.description)
     }
   }
 
@@ -216,5 +221,6 @@ private fun VectorCollectionInfo.Companion.fromWeaviateProperties(
     embeddingModel = embeddingModel,
     embeddingProvider = embeddingProvider,
     vectorProvider = vectorProvider,
+    groups = groups,
   )
 }

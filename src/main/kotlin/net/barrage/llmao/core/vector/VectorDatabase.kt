@@ -22,6 +22,7 @@ data class VectorData(
   val documentId: String?,
 )
 
+/** Has to follow the schema for Ragu vector collections. */
 @Serializable
 data class VectorCollectionInfo(
   val collectionId: KUUID,
@@ -40,6 +41,9 @@ data class VectorCollectionInfo(
 
   /** Underlying vector storage provider. */
   val vectorProvider: String,
+
+  /** Which groups can access this collection. */
+  val groups: List<String>? = null,
 )
 
 /**

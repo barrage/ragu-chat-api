@@ -1,0 +1,53 @@
+{
+  "id": "0e028e20-6004-4321-9831-879f06b50fd5",
+  "name": "openai_v1_chat_completions_stream",
+  "request": {
+    "url": "/__openai/v1/chat/completions",
+    "headers": {
+      "Accept": {
+        "contains": "text/event-stream"
+      }
+    },
+    "method": "POST",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.messages[1].content",
+          "equalTo": "INSUFFICIENT_PERMISSIONS_TEST"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "openai/openai_v1_chat_completions_empty_stream_response.txt",
+    "headers": {
+      "x-request-id": "req_610203e780db60ebd99fd9c962d8b1a8",
+      "x-ratelimit-limit-tokens": "2000000",
+      "openai-organization": "barrage",
+      "CF-RAY": "8e5706a50c93ec26-ZAG",
+      "Server": "cloudflare",
+      "X-Content-Type-Options": "nosniff",
+      "x-ratelimit-reset-requests": "6ms",
+      "x-ratelimit-remaining-tokens": "1999832",
+      "x-ratelimit-remaining-requests": "9999",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+      "Date": "Wed, 20 Nov 2024 08:21:22 GMT",
+      "x-ratelimit-reset-tokens": "5ms",
+      "access-control-expose-headers": "X-Request-ID",
+      "CF-Cache-Status": "DYNAMIC",
+      "x-ratelimit-limit-requests": "10000",
+      "Set-Cookie": [
+        "__cf_bm=lyrw.z53FUi2X_5FmsoDegWAcrT8V1.7_FvG2WvdAKM-1732090882-1.0.1.1-QBc9RSt4U9R5dA.CTqJsdHRLY9E8C8BrAcSA6NYMzfJYIvzVF_ZMs.9uXfb8PE7CuDfnJrkxF9Cr1FLm3afFVQ; path=/; expires=Wed, 20-Nov-24 08:51:22 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None",
+        "_cfuvid=UCmLMA.lnMaX2DupvsJaotwMbLjj.f3imZCcgOF0FfM-1732090882146-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None"
+      ],
+      "openai-version": "2020-10-01",
+      "openai-processing-ms": "248",
+      "alt-svc": "h3=\":443\"; ma=86400",
+      "Content-Type": "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid": "0e028e20-6004-4321-9831-879f06b50fd5",
+  "persistent": true,
+  "insertionIndex": 39
+}

@@ -267,12 +267,15 @@ class WhatsAppAdapter(
       )
 
     return agent.toChatAgent(
+      userId = userId,
       history = history,
       providers = providers,
       settings = settings,
       toolchain = null,
       tokenTracker = tokenTracker,
       completionParameters = completionParameters,
+      // TODO: Replace with authorization config in future.
+      allowedGroups = listOf("user"),
     )
   }
 

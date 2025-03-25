@@ -87,6 +87,8 @@ class ChatWorkflowFactory(
 
     val chatAgent =
       agent.toChatAgent(
+        userId = user.id,
+        allowedGroups = user.entitlements,
         history = history,
         providers = providerState,
         toolchain = toolchain,
@@ -164,6 +166,8 @@ class ChatWorkflowFactory(
 
     val chatAgent =
       agent.toChatAgent(
+        userId = user.id,
+        allowedGroups = user.entitlements,
         history = history,
         providers = providerState,
         toolchain = toolchain,

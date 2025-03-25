@@ -33,6 +33,17 @@ class ChatAgent(
   /** Has to be kept here because collections can be from different providers. */
   internal val providers: ProviderState,
 
+  /** ID of the user who created the chat. Used to link to the user's account on the auth server. */
+  val userId: String,
+
+  /**
+   * Used to check collection permissions. If the `groups` properties in collections is present,
+   * this set will be used to check whether the agent can access that collection.
+   *
+   * If this set contains a group from the groups property, the agent can access that collection.
+   */
+  val availableGroups: Set<String>,
+
   /** Agent ID. */
   val agentId: KUUID,
 
@@ -204,6 +215,45 @@ class ChatAgent(
 
     // Embed the input per collection provider and model
     for (collection in collections) {
+      val collectionInfo =
+        providers.vector.getProvider(collection.vectorProvider).getCollectionInfo(collection.name)
+
+      if (collectionInfo == null) {
+        LOG.warn("Collection '{}' does not exist, skipping", collection.name)
+        continue
+      }
+
+      // Check collection permissions
+      var allowed = true
+
+      // No groups assigned means collection is visible to everyone
+      collectionInfo.groups?.let {
+        // Empty groups also
+        if (it.isEmpty()) {
+          return@let
+        }
+
+        allowed = false
+
+        for (group in it) {
+          if (availableGroups.contains(group)) {
+            allowed = true
+            break
+          }
+        }
+      }
+
+      if (!allowed) {
+        LOG.warn(
+          "Collection '{}' is not available to user '{}'; required: {}, user: {}",
+          collection.name,
+          userId,
+          collectionInfo.groups,
+          availableGroups,
+        )
+        continue
+      }
+
       val embeddings =
         providers.embedding
           .getProvider(collection.embeddingProvider)
@@ -218,26 +268,25 @@ class ChatAgent(
         )
       }
 
-      if (!providerQueries.containsKey(collection.vectorProvider)) {
-        providerQueries[collection.vectorProvider] =
-          mutableListOf(
-            CollectionQuery(
-              name = collection.name,
-              amount = collection.amount,
-              maxDistance = collection.maxDistance,
-              vector = embeddings.embeddings,
-            )
-          )
-      } else {
-        providerQueries[collection.vectorProvider]!!.add(
-          CollectionQuery(
-            name = collection.name,
-            amount = collection.amount,
-            maxDistance = collection.maxDistance,
-            vector = embeddings.embeddings,
-          )
+      providerQueries[collection.vectorProvider]?.add(
+        CollectionQuery(
+          name = collection.name,
+          amount = collection.amount,
+          maxDistance = collection.maxDistance,
+          vector = embeddings.embeddings,
         )
-      }
+      )
+        ?: run {
+          providerQueries[collection.vectorProvider] =
+            mutableListOf(
+              CollectionQuery(
+                name = collection.name,
+                amount = collection.amount,
+                maxDistance = collection.maxDistance,
+                vector = embeddings.embeddings,
+              )
+            )
+        }
     }
 
     // Holds Provider -> Collection -> VectorData
@@ -275,7 +324,7 @@ class ChatAgent(
       if (collectionInstructions.isEmpty()) ""
       else "Instructions: ${"\"\"\""}\n$collectionInstructions\n${"\"\"\""}"
 
-    return "${instructions}\n$prompt"
+    return if (instructions.isBlank()) prompt else "$instructions\n$prompt"
   }
 }
 
@@ -448,6 +497,8 @@ data class ChatAgentCollection(
 )
 
 fun AgentFull.toChatAgent(
+  userId: String,
+  allowedGroups: List<String>,
   history: ChatHistory,
   providers: ProviderState,
   toolchain: Toolchain?,
@@ -457,6 +508,7 @@ fun AgentFull.toChatAgent(
   tokenTracker: TokenUsageTracker,
 ) =
   ChatAgent(
+    userId = userId,
     agentId = agent.id,
     name = agent.name,
     model = configuration.model,
@@ -482,6 +534,7 @@ fun AgentFull.toChatAgent(
     titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
     tokenTracker = tokenTracker,
     history = history,
+    availableGroups = allowedGroups.toSet(),
   )
 
 fun ChatAgent.toStreaming(emitter: Emitter<ChatWorkflowMessage>) = ChatAgentStreaming(this, emitter)

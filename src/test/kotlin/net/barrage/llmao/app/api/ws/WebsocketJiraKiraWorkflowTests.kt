@@ -15,7 +15,7 @@ import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage
-import net.barrage.llmao.wsSession
+import net.barrage.llmao.adminWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -40,7 +40,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
   fun jiraKiraSuccessfulCompletionNoToolsUsed() = wsTest { client ->
     var asserted = false
 
-    client.wsSession {
+    client.adminWsSession {
       openNewChat(workflowType = "JIRAKIRA")
 
       sendMessage(
@@ -66,7 +66,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
   fun jiraKiraSuccessfulCompletionWithToolsUsed() = wsTest { client ->
     var assertions = 0
 
-    client.wsSession {
+    client.adminWsSession {
       openNewChat(workflowType = "JIRAKIRA")
 
       sendMessage("JIRA_KIRA_CREATE_WORKLOG") { incoming ->

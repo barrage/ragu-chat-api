@@ -26,6 +26,7 @@ import net.barrage.llmao.COMPLETIONS_STREAM_WHITESPACE_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
+import net.barrage.llmao.adminWsSession
 import net.barrage.llmao.app.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.workflow.IncomingMessageSerializer
 import net.barrage.llmao.core.AppError
@@ -40,8 +41,9 @@ import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.sendMessage
-import net.barrage.llmao.wsSession
+import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -50,6 +52,52 @@ private const val TEST_COLLECTION = "KusturicaChatTests"
 private const val SIZE = 1536
 
 class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
+  @BeforeAll
+  fun setup() {
+    runBlocking { weaviate!!.insertTestCollection(TEST_COLLECTION, SIZE) }
+  }
+
+  @Test
+  fun collectionIsSkippedIfUserDoesNotBelongToItsGroups() = wsTest { client ->
+    val collectionName = "KusturicaChatUserTest"
+    weaviate!!.insertTestCollection(collectionName, SIZE, groups = listOf("admin"))
+
+    val streamResponsePrompt = Pair(COMPLETIONS_STREAM_PROMPT, List(SIZE) { Random.nextFloat() })
+    weaviate!!.insertVectors(collectionName, listOf(streamResponsePrompt))
+
+    val agent = createValidAgent(collection = collectionName)
+
+    var asserted = false
+
+    client.userWsSession {
+      openNewChat(agent.agent.id)
+
+      var buffer = ""
+
+      // Wiremock is configured to return an empty stream for this prompt
+      sendMessage("INSUFFICIENT_PERMISSIONS_TEST") { incoming ->
+        for (frame in incoming) {
+          val response = (frame as Frame.Text).readText()
+          try {
+            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            buffer += message.chunk
+          } catch (_: SerializationException) {}
+
+          try {
+            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            assert(message.reason == FinishReason.Stop)
+            asserted = true
+            break
+          } catch (_: SerializationException) {}
+        }
+      }
+
+      assert(buffer.isBlank())
+    }
+
+    assert(asserted)
+  }
+
   /**
    * Tests if the whole application flow works as expected.
    *
@@ -67,7 +115,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val validAgent = createValidAgent()
 
-    client.wsSession {
+    client.adminWsSession {
       openNewChat(validAgent.agent.id)
 
       var buffer = ""
@@ -109,7 +157,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val validAgent = createValidAgent()
 
-    client.wsSession {
+    client.adminWsSession {
       openNewChat(validAgent.agent.id)
 
       var buffer = ""
@@ -147,7 +195,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val validAgent = createValidAgent()
 
-    client.wsSession {
+    client.adminWsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
@@ -191,7 +239,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val validAgent = createValidAgent()
 
-    client.wsSession {
+    client.adminWsSession {
       val chatOne = openNewChat(validAgent.agent.id)
       val errorOne =
         assertThrows<AppError> { app.services.chat.getChat(chatOne, Pagination(1, 50)) }
@@ -218,7 +266,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val validAgent = createValidAgent()
 
-    client.wsSession {
+    client.adminWsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
@@ -282,7 +330,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     runBlocking {
       launch {
         var buffer = ""
-        client1.wsSession {
+        client1.adminWsSession {
           openNewChat(validAgent.agent.id)
           // Wait a bit before actually sending the message
           delay(500)
@@ -311,7 +359,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       delay(1000)
 
       var buffer = ""
-      client2.wsSession {
+      client2.adminWsSession {
         openNewChat(validAgent.agent.id)
         sendMessage("Will this trigger a stream response?") { incoming ->
           for (frame in incoming) {
@@ -350,7 +398,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val httpClient = createClient { install(ContentNegotiation) { json() } }
     val agent = createValidAgent()
 
-    client.wsSession {
+    client.adminWsSession {
       openNewChat(agent.agent.id)
       var buffer = ""
       sendMessage("Will this trigger a stream response?") { incoming ->
@@ -403,7 +451,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val validAgent = createValidAgent("This is an error message.")
 
-    client.wsSession {
+    client.adminWsSession {
       openNewChat(validAgent.agent.id)
 
       sendMessage("Give me an error") { incoming ->
@@ -432,7 +480,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val prompt = "Will this trigger a stream response?"
 
-    client.wsSession {
+    client.adminWsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
       var buffer = ""
@@ -498,7 +546,10 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
   // Valid and invalid here refer to configuration, not the actual models and objects.
 
-  private suspend fun createValidAgent(errorMessage: String? = null): AgentFull {
+  private suspend fun createValidAgent(
+    errorMessage: String? = null,
+    collection: String = TEST_COLLECTION,
+  ): AgentFull {
     val validAgent = postgres.testAgent()
 
     val validAgentConfiguration =
@@ -513,7 +564,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val validAgentCollection =
       postgres.testAgentCollection(
         agentId = validAgent.id,
-        collection = TEST_COLLECTION,
+        collection = collection,
         amount = 2,
         instruction = "Use the valuable information below to solve the three body problem.",
         embeddingProvider = "openai",
@@ -522,30 +573,6 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       )
 
     return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection))
-  }
-
-  private suspend fun createInvalidAgent(): AgentFull {
-    val invalidAgent = postgres.testAgent()
-
-    val invalidAgentConfiguration =
-      postgres.testAgentConfiguration(
-        agentId = invalidAgent.id,
-        llmProvider = "openai",
-        model = "gpt-4o",
-      )
-
-    val invalidAgentCollection =
-      postgres.testAgentCollection(
-        invalidAgent.id,
-        TEST_COLLECTION,
-        2,
-        "Use the valuable information below to pass the butter.",
-        embeddingProvider = "openai",
-        embeddingModel = "text-embedding-3-large", // 3072
-        vectorProvider = "weaviate",
-      )
-
-    return AgentFull(invalidAgent, invalidAgentConfiguration, listOf(invalidAgentCollection))
   }
 
   private fun insertVectors(content: String) {
