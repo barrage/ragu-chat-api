@@ -90,7 +90,7 @@ class WebsocketSessionManager(
     val workflow =
       workflows[session] ?: throw AppError.api(ErrorReason.Websocket, "Workflow not opened")
 
-    LOG.debug("{} - sending input to workflow '{}'", session, workflow.id())
+    LOG.debug("{} - sending input to workflow '{}'", session.user.id, workflow.id())
 
     workflow.execute(message)
   }
@@ -149,7 +149,7 @@ class WebsocketSessionManager(
 
         LOG.debug(
           "{} - started workflow ({}) total workflows in manager: {}",
-          session,
+          session.user.id,
           id,
           workflows.size,
         )
@@ -159,7 +159,7 @@ class WebsocketSessionManager(
 
         // Prevent loading the same chat
         if (workflow != null && workflow.id() == message.workflowId) {
-          LOG.debug("{} - workflow already open ({})", session, workflow.id())
+          LOG.debug("{} - workflow already open ({})", session.user.id, workflow.id())
           systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(workflow.id()))
           return
         }
@@ -177,7 +177,7 @@ class WebsocketSessionManager(
         workflows[session] = existingWorkflow
         systemSessions[session]?.emit(OutgoingSystemMessage.WorkflowOpen(message.workflowId))
 
-        LOG.debug("{} - opened workflow {}", session, existingWorkflow.id)
+        LOG.debug("{} - opened workflow {}", session.user.id, existingWorkflow.id)
       }
       is IncomingSystemMessage.CloseWorkflow -> {
         workflows.remove(session)?.let {
@@ -185,7 +185,7 @@ class WebsocketSessionManager(
           it.cancelStream()
           LOG.debug(
             "{} - closed workflow ({}) total workflows in manager: {}",
-            session,
+            session.user.id,
             it.id(),
             workflows.size,
           )
@@ -193,7 +193,7 @@ class WebsocketSessionManager(
       }
       is IncomingSystemMessage.CancelWorkflowStream -> {
         workflows[session]?.let {
-          LOG.debug("{} - cancelling stream in workflow '{}'", session, it.id())
+          LOG.debug("{} - cancelling stream in workflow '{}'", session.user.id, it.id())
           it.cancelStream()
         }
       }
