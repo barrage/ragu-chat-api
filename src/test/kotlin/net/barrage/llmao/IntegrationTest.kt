@@ -52,9 +52,6 @@ open class IntegrationTest(
    * environment variable, but we do not live in an ideal world.
    */
   private val wiremockUrlOverride: String? = null,
-
-  /** If `true`, enables the Chonkit authentication module. */
-  enableChonkitAuth: Boolean = false,
   enableWhatsApp: Boolean = false,
 ) {
   val postgres: TestPostgres = TestPostgres()

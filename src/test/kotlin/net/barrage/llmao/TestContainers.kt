@@ -18,8 +18,8 @@ import java.io.PrintStream
 import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.*
+import kotlin.random.Random
 import kotlinx.coroutines.reactive.awaitSingle
-import kotlinx.serialization.encodeToString
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -395,6 +395,8 @@ class TestPostgres {
   }
 }
 
+internal val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.TestContainers")
+
 class TestWeaviate {
   val container: WeaviateContainer =
     WeaviateContainer("cr.weaviate.io/semitechnologies/weaviate:1.25.5")
@@ -413,51 +415,15 @@ class TestWeaviate {
     groups: List<String>? = null,
   ) {
 
-    val idProperty =
-      Property.builder()
-        .name("collection_id")
-        .description(KUUID.randomUUID().toString())
-        .dataType(listOf("text"))
-        .build()
-
-    val sizeProperty =
-      Property.builder().name("size").description(size.toString()).dataType(listOf("text")).build()
-
-    val nameProperty =
-      Property.builder().name("name").description(name).dataType(listOf("text")).build()
-
-    val embeddingProviderProperty =
-      Property.builder()
-        .name("embedding_provider")
-        .description(embeddingProvider)
-        .dataType(listOf("text"))
-        .build()
-
-    val embeddingModelProperty =
-      Property.builder()
-        .name("embedding_model")
-        .description(embeddingModel)
-        .dataType(listOf("text"))
-        .build()
-
     val properties =
       mutableListOf<Property>(
-        idProperty,
-        sizeProperty,
-        nameProperty,
-        embeddingProviderProperty,
-        embeddingModelProperty,
+        Property.builder().name("collection_id").dataType(listOf("uuid")).build(),
+        Property.builder().name("size").dataType(listOf("int")).build(),
+        Property.builder().name("name").description(name).dataType(listOf("text")).build(),
+        Property.builder().name("embedding_provider").dataType(listOf("text")).build(),
+        Property.builder().name("embedding_model").dataType(listOf("text")).build(),
+        Property.builder().name("groups").dataType(listOf("text[]")).build(),
       )
-
-    groups?.let {
-      properties.add(
-        Property.builder()
-          .name("groups")
-          .description(json.encodeToString(it))
-          .dataType(listOf("text[]"))
-          .build()
-      )
-    }
 
     val newClass =
       WeaviateClass.builder()
@@ -466,7 +432,30 @@ class TestWeaviate {
         .properties(properties)
         .build()
 
+    val idVector: List<Float> = List(size) { Random.nextFloat() }
     client.schema().classCreator().withClass(newClass).run()
+    val result =
+      client
+        .data()
+        .creator()
+        .withClassName(name)
+        .withVector(idVector.toTypedArray())
+        .withID(UUID(0L, 0L).toString())
+        .withProperties(
+          mapOf(
+            "name" to name,
+            "collection_id" to KUUID.randomUUID(),
+            "size" to size,
+            "embedding_provider" to embeddingProvider,
+            "embedding_model" to embeddingModel,
+            "groups" to groups,
+          )
+        )
+        .run()
+
+    assert(result.error == null)
+
+    LOG.info("inserted test collection: {}", name)
   }
 
   fun insertVectors(collection: String, vectors: List<Pair<String, List<Float>>>) {
@@ -498,7 +487,13 @@ class TestWeaviate {
       .batch()
       .objectsBatchDeleter()
       .withClassName(collection)
-      .withWhere(WhereFilter.builder().operator(Operator.Like).path("id").valueString("*").build())
+      .withWhere(
+        WhereFilter.builder()
+          .operator(Operator.NotEqual)
+          .path("id")
+          .valueString(UUID(0L, 0L).toString())
+          .build()
+      )
       .run()
   }
 }

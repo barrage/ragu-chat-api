@@ -5,9 +5,7 @@ import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
 import io.weaviate.client.base.Result
 import io.weaviate.client.v1.graphql.model.GraphQLError
-import io.weaviate.client.v1.schema.model.Property
-import kotlin.properties.Delegates
-import kotlinx.serialization.json.Json
+import java.util.UUID
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KUUID
@@ -38,9 +36,7 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
     LOG.debug("executing queries in: {}", queries.joinToString(", ") { it.name })
 
-    val query = constructQuery(queries)
-
-    val requestResult = client.graphQL().raw().withQuery(query).run()
+    val requestResult = client.graphQL().raw().withQuery(constructQuery(queries)).run()
 
     if (requestResult.hasErrors()) {
       throw requestError(requestResult.error)
@@ -60,7 +56,7 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
       }
       throw queryError(result.errors)
     } else if (result.data == null) {
-      LOG.warn("weaviate - no data in query; result: {}", result)
+      LOG.warn("no data in query; result: {}", result)
       return mapOf()
     }
 
@@ -87,7 +83,6 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
         val content = properties["content"] as String?
         val documentId = properties["document_id"] as String?
-
         val additional = properties["_additional"] as Map<*, *>
 
         val distance = additional["distance"] as Double?
@@ -101,13 +96,13 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
           continue
         }
 
-        if (content == null) {
-          LOG.error("query error: Content is null (collection: $collectionName)")
-          continue
-        }
-
-        results[collectionName]!!.add(VectorData(content, documentId))
+        content?.let { results[collectionName]!!.add(VectorData(it, documentId)) }
+          ?: LOG.error(
+            "query error: content is null (collection: $collectionName, payload: $payload)"
+          )
       }
+
+      println(results)
 
       LOG.debug(
         "successful query in '{}' ({}/{} results)",
@@ -121,9 +116,39 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
   }
 
   override fun getCollectionInfo(name: String): VectorCollectionInfo? {
+    // Validate the collection exists
     val clazz =
       handleResponseError { client.schema().classGetter().withClassName(name).run() } ?: return null
-    return VectorCollectionInfo.fromWeaviateProperties(clazz.properties)
+
+    // Get identity vector which is always nil UUID
+    // and contains the collection info
+    val classProperties =
+      client
+        .data()
+        .objectsGetter()
+        .withClassName(clazz.className)
+        .withID(UUID(0L, 0L).toString())
+        .withLimit(1)
+        .run()
+
+    if (classProperties.result == null) {
+      LOG.warn("collection info error, result is null; Response: {}", classProperties)
+      return null
+    }
+
+    if (classProperties.result.isEmpty()) {
+      LOG.warn("collection info does not contain identity vector; Response: {}", classProperties)
+      return null
+    }
+
+    val properties = classProperties.result.first().properties
+
+    if (properties == null) {
+      LOG.warn("collection info does not contain properties; Response: {}", classProperties)
+      return null
+    }
+
+    return VectorCollectionInfo.fromWeaviateProperties(properties)
   }
 
   private fun <T> handleResponseError(block: () -> Result<T?>): T? {
@@ -152,9 +177,11 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
     var finalQuery = "query { "
     for (query in queries) {
       val vector = query.vector.joinToString(",")
+      // Skip nil ID (identity vector) in the query
       finalQuery +=
         """Get { ${query.name}
             | (
+            | where: { operator: NotEqual, path: ["id"], valueText: "${UUID(0L, 0L)}" }
             | limit: ${query.amount},
             | nearVector: { vector: [$vector] }
             | )
@@ -191,36 +218,40 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 }
 
 private fun VectorCollectionInfo.Companion.fromWeaviateProperties(
-  properties: List<Property>
+  properties: Map<String, Any>
 ): VectorCollectionInfo {
-  lateinit var id: KUUID
-  lateinit var name: String
-  var size by Delegates.notNull<Int>()
-  lateinit var embeddingModel: String
-  lateinit var embeddingProvider: String
-  val vectorProvider = "weaviate"
-  var groups: List<String>? = null
+  val collectionId =
+    properties["collection_id"]?.let { KUUID.fromString(it as String) }
+      ?: throw AppError.internal("missing collection property: collection_id")
 
-  println(properties)
+  val name =
+    properties["name"]?.let { it as String }
+      ?: throw AppError.internal("missing collection property: name")
 
-  for (property in properties) {
-    when (property.name) {
-      "collection_id" -> id = KUUID.fromString(property.description)
-      "size" -> size = property.description.toInt()
-      "name" -> name = property.description
-      "embedding_model" -> embeddingModel = property.description
-      "embedding_provider" -> embeddingProvider = property.description
-      "groups" -> groups = Json.decodeFromString(property.description)
-    }
-  }
+  // Even though tests insert a size as an int, it is returned as a double.
+  // Further investigation necessary
+  val size =
+    properties["size"] as? Int
+      ?: (properties["size"] as? Double)?.toInt()
+      ?: throw AppError.internal("missing collection property: size")
+
+  val embeddingModel =
+    properties["embedding_model"]?.let { it as String }
+      ?: throw AppError.internal("missing collection property: embedding_model")
+
+  val embeddingProvider =
+    properties["embedding_provider"]?.let { it as String }
+      ?: throw AppError.internal("missing collection property: embedding_provider")
+
+  val groups = properties["groups"]?.let { it as? List<String> }
 
   return VectorCollectionInfo(
-    collectionId = id,
+    collectionId = collectionId,
     name = name,
     size = size,
     embeddingModel = embeddingModel,
     embeddingProvider = embeddingProvider,
-    vectorProvider = vectorProvider,
+    vectorProvider = "weaviate",
     groups = groups,
   )
 }

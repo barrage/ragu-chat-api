@@ -7,6 +7,7 @@ import kotlinx.serialization.SerializationException
 import net.barrage.llmao.ADMIN_USER
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminWsSession
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraMessage
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.settings.SettingKey
@@ -15,7 +16,6 @@ import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage
-import net.barrage.llmao.adminWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

@@ -95,6 +95,8 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       assert(buffer.isBlank())
     }
 
+    deleteVectors()
+
     assert(asserted)
   }
 
