@@ -6,4 +6,8 @@ data class User(
   val username: String?,
   val email: String?,
   val entitlements: List<String>,
-)
+) {
+  fun isAdmin(): Boolean {
+    return entitlements.contains("admin")
+  }
+}

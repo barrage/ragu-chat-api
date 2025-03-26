@@ -574,7 +574,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         vectorProvider = "weaviate",
       )
 
-    return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection))
+    return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection), listOf())
   }
 
   private fun insertVectors(content: String) {

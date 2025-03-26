@@ -52,7 +52,7 @@ class AppErrorHandlingTests : IntegrationTest() {
 
     assertEquals(400, response.status.value)
     assertEquals(error.errorReason, ErrorReason.InvalidParameter)
-    assert(error.errorDescription!!.startsWith("Illegal input"))
+    assert(error.errorMessage!!.startsWith("Illegal input"))
   }
 
   @Test
@@ -241,6 +241,6 @@ class AppErrorHandlingTests : IntegrationTest() {
 
     assertEquals(400, response.status.value)
     assertEquals(ErrorReason.InvalidParameter, error.errorReason)
-    assert(error.errorDescription!!.contains("not a valid UUID"))
+    assert(error.errorMessage!!.contains("not a valid UUID"))
   }
 }

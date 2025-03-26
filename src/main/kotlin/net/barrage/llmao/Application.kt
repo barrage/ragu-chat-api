@@ -99,6 +99,6 @@ fun tryUuid(value: String): KUUID {
   return try {
     KUUID.fromString(value)
   } catch (e: IllegalArgumentException) {
-    throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID")
+    throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID", original = e)
   }
 }

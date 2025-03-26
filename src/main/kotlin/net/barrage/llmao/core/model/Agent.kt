@@ -63,6 +63,7 @@ data class AgentFull(
   val agent: Agent,
   val configuration: AgentConfiguration,
   val collections: List<AgentCollection>,
+  val groups: List<String>,
 )
 
 /** DTO for creating an agent. */
@@ -101,6 +102,9 @@ data class AgentChatsOnDate(
   /** Amount of chats opened. */
   val amount: Long,
 )
+
+@Serializable
+data class AgentGroupUpdate(val add: List<String>? = null, val remove: List<String>? = null)
 
 /**
  * Used to create time series data for the amount of chats an agents has had in a given period.

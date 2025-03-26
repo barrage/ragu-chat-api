@@ -40,7 +40,9 @@ class ChatService(
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
     }
 
-    val agent = agentRepository.getAgent(chat.agentId)
+    val agent =
+      agentRepository.getAgent(chat.agentId)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
 
     return ChatWithAgent(chat, agent)
   }
@@ -50,7 +52,9 @@ class ChatService(
       chatRepositoryRead.get(id)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
-    val agent = agentRepository.getAgent(chat.agentId)
+    val agent =
+      agentRepository.getAgent(chat.agentId)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
 
     return ChatWithAgent(chat, agent)
   }

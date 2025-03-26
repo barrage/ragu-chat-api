@@ -45,6 +45,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
+import net.barrage.llmao.tables.references.AGENT_PERMISSIONS
 import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.JIRA_API_KEYS
@@ -160,14 +161,29 @@ class TestPostgres {
     dslContext.deleteFrom(AGENTS).where(AGENTS.ID.eq(id)).awaitSingle()
   }
 
-  suspend fun testAgent(name: String = "Test", active: Boolean = true): Agent {
-    return dslContext
-      .insertInto(AGENTS)
-      .columns(AGENTS.NAME, AGENTS.DESCRIPTION, AGENTS.ACTIVE, AGENTS.ACTIVE, AGENTS.LANGUAGE)
-      .values(name, "Test", active, active, "croatian")
-      .returning()
-      .awaitSingle()
-      .toAgent()
+  suspend fun testAgent(
+    name: String = "Test",
+    active: Boolean = true,
+    groups: List<String>? = null,
+  ): Agent {
+    val agent =
+      dslContext
+        .insertInto(AGENTS)
+        .columns(AGENTS.NAME, AGENTS.DESCRIPTION, AGENTS.ACTIVE, AGENTS.ACTIVE, AGENTS.LANGUAGE)
+        .values(name, "Test", active, active, "croatian")
+        .returning()
+        .awaitSingle()
+        .toAgent()
+
+    groups?.let {
+      dslContext
+        .insertInto(AGENT_PERMISSIONS)
+        .columns(AGENT_PERMISSIONS.AGENT_ID, AGENT_PERMISSIONS.GROUP)
+        .apply { groups.forEach { group -> values(agent.id, group) } }
+        .awaitSingle()
+    }
+
+    return agent
   }
 
   suspend fun testAgentConfiguration(

@@ -12,6 +12,7 @@ import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.core.model.AgentGroupUpdate
 import net.barrage.llmao.core.model.AgentTool
 import net.barrage.llmao.core.model.AgentUpdateTools
 import net.barrage.llmao.core.model.AgentWithConfiguration
@@ -39,8 +40,12 @@ class AgentService(
   private val stateChangeListener: EventListener<StateChangeEvent>,
   private val avatarStorage: ImageStorage,
 ) {
-  suspend fun listAgents(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
-    return agentRepository.getAll(pagination, showDeactivated)
+  suspend fun userListAgents(
+    pagination: PaginationSort,
+    showDeactivated: Boolean,
+    groups: List<String>,
+  ): CountedList<Agent> {
+    return agentRepository.getAll(pagination, showDeactivated, groups)
   }
 
   suspend fun listAgentsAdmin(
@@ -51,7 +56,12 @@ class AgentService(
   }
 
   suspend fun getActive(id: KUUID): Agent {
-    return agentRepository.getActive(id)
+    return agentRepository.getActive(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
+  }
+
+  suspend fun userGetFull(id: KUUID, groups: List<String>): AgentFull {
+    return agentRepository.userGet(id, groups)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
   }
 
   /**
@@ -86,7 +96,7 @@ class AgentService(
   }
 
   suspend fun delete(id: KUUID) {
-    val agent = agentRepository.getAgent(id)
+    val agent = agentRepository.getAgent(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
 
     if (agent.active) {
       throw AppError.api(ErrorReason.InvalidOperation, "Cannot delete active agent")
@@ -152,12 +162,18 @@ class AgentService(
     return agentRepository.rollbackVersion(agentId, versionId)
   }
 
+  suspend fun userGetAgent(agentId: KUUID, groups: List<String>): Agent {
+    return agentRepository.getAgent(agentId, groups)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
+  }
+
   suspend fun getAgent(agentId: KUUID): Agent {
     return agentRepository.getAgent(agentId)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
   }
 
   suspend fun uploadAgentAvatar(id: KUUID, image: Image) {
-    val agent = agentRepository.getAgent(id)
+    val agent = agentRepository.getAgent(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
 
     if (agent.avatar != null) {
       avatarStorage.delete(agent.avatar)
@@ -169,7 +185,9 @@ class AgentService(
   }
 
   suspend fun deleteAgentAvatar(id: KUUID) {
-    val agent = agentRepository.getAgent(id)
+    val agent =
+      agentRepository.getAgent(id)
+        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
 
     if (agent.avatar == null) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent avatar not found")
@@ -195,6 +213,10 @@ class AgentService(
       }
     }
     agentRepository.updateAgentTools(agentId, update)
+  }
+
+  suspend fun updateGroups(agentId: KUUID, update: AgentGroupUpdate) {
+    agentRepository.updateGroups(agentId, update)
   }
 }
 

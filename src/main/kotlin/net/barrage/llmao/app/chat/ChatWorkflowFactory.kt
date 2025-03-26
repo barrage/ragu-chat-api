@@ -42,11 +42,15 @@ class ChatWorkflowFactory(
     toolEmitter: Emitter<ToolEvent>? = null,
   ): ChatWorkflow {
     val id = KUUID.randomUUID()
-    // Throws if the agent does not exist or is inactive
-    agentService.getActive(agentId)
 
-    // TODO: Skip above check with single call
-    val agent = agentService.getFull(agentId)
+    val agent =
+      if (user.isAdmin()) {
+        // Load it regardless of active status
+        agentService.getFull(agentId)
+      } else {
+        agentService.userGetFull(agentId, user.entitlements)
+      }
+
     val toolchain = toolchainFactory.createAgentToolchain(agentId, toolEmitter)
     val settings = settings.getAllWithDefaults()
     val tokenTracker =

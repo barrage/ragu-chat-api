@@ -49,7 +49,12 @@ class ChatAgentTests : IntegrationTest() {
         )
       chat = postgres.testChat(ADMIN_USER, agent.id, null)
       chatAgent =
-        AgentFull(agent, configuration = agentConfiguration, collections = listOf())
+        AgentFull(
+            agent,
+            configuration = agentConfiguration,
+            collections = listOf(),
+            groups = listOf(),
+          )
           .toChatAgent(
             history = MessageBasedHistory(),
             providers = app.providers,

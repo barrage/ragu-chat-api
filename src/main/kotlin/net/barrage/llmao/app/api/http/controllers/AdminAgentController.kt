@@ -27,6 +27,7 @@ import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.core.model.AgentGroupUpdate
 import net.barrage.llmao.core.model.AgentUpdateTools
 import net.barrage.llmao.core.model.AgentWithConfiguration
 import net.barrage.llmao.core.model.CreateAgent
@@ -42,29 +43,6 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tryUuid
 
 /** Agent DTO for display purposes. */
-@Serializable
-data class AgentDisplay(
-  val agent: Agent,
-  val configuration: AgentConfiguration? = null,
-  val collections: List<AgentCollection>? = null,
-  val whatsapp: Boolean = false,
-)
-
-fun AgentWithConfiguration.toAgentDisplay(activeWappAgentId: KUUID?) =
-  AgentDisplay(
-    agent = agent,
-    configuration = configuration,
-    whatsapp = agent.id == activeWappAgentId,
-  )
-
-fun AgentFull.toAgentDisplay(activeWappAgentId: KUUID?) =
-  AgentDisplay(
-    agent = agent,
-    configuration = configuration,
-    collections = collections,
-    whatsapp = agent.id == activeWappAgentId,
-  )
-
 fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
   route("/admin/agents") {
     get(adminGetAllAgents()) {
@@ -103,6 +81,15 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
         val agentId = call.pathUuid("id")
         agentService.delete(agentId)
         call.respond(HttpStatusCode.NoContent)
+      }
+
+      route("/groups") {
+        put(updateAgentGroups()) {
+          val agentId = call.pathUuid("id")
+          val groups = call.receive<AgentGroupUpdate>()
+          agentService.updateGroups(agentId, groups)
+          call.respond(HttpStatusCode.NoContent)
+        }
       }
 
       route("/tools") {
@@ -198,7 +185,62 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
   }
 }
 
+// DTO
+
+@Serializable
+data class AgentDisplay(
+  val agent: Agent,
+  val configuration: AgentConfiguration? = null,
+  val collections: List<AgentCollection>? = null,
+  val groups: List<String>? = null,
+  val whatsapp: Boolean = false,
+)
+
+fun AgentWithConfiguration.toAgentDisplay(activeWappAgentId: KUUID?) =
+  AgentDisplay(
+    agent = agent,
+    configuration = configuration,
+    whatsapp = agent.id == activeWappAgentId,
+  )
+
+fun AgentFull.toAgentDisplay(activeWappAgentId: KUUID?) =
+  AgentDisplay(
+    agent = agent,
+    configuration = configuration,
+    collections = collections,
+    groups = groups,
+    whatsapp = agent.id == activeWappAgentId,
+  )
+
 // OpenAPI documentation
+
+private fun updateAgentGroups(): OpenApiRoute.() -> Unit = {
+  tags("admin/agents")
+  description = "Update an agent's groups"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+    }
+    body<AgentGroupUpdate> {
+      description = "The updated groups for the agent"
+      required = true
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Groups updated successfully" }
+    HttpStatusCode.BadRequest to
+      {
+        description = "Invalid input or agent ID"
+        body<List<AppError>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while updating groups"
+        body<List<AppError>> {}
+      }
+  }
+}
 
 private fun getAgentTools(): OpenApiRoute.() -> Unit = {
   tags("admin/agents")

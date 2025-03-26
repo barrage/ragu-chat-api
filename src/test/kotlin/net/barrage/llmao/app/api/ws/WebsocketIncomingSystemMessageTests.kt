@@ -14,6 +14,7 @@ import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.receiveJson
 import net.barrage.llmao.sendClientSystem
+import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -197,6 +198,25 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     client.adminWsSession {
       val openChat = IncomingSystemMessage.CreateNewWorkflow(KUUID.randomUUID())
       sendClientSystem(openChat)
+
+      val message = (incoming.receive() as Frame.Text).readText()
+      val error = receiveJson<AppError>(message)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
+      asserted = true
+    }
+
+    assert(asserted)
+  }
+
+  @Test
+  fun openingChatFailsUserNotAllowedToAccessAgent() = wsTest { client ->
+    val agent = postgres.testAgent(groups = listOf("admin"))
+    postgres.testAgentConfiguration(agentId = agent.id)
+    var asserted = false
+
+    client.userWsSession {
+      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
 
       val message = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(message)

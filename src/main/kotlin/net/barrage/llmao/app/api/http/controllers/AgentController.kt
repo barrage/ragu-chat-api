@@ -9,6 +9,7 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.agent.AgentService
 import net.barrage.llmao.core.model.Agent
@@ -20,13 +21,15 @@ fun Route.agentsRoutes(agentService: AgentService) {
   route("/agents") {
     get(getAllAgents()) {
       val pagination = call.query(PaginationSort::class)
-      val agents = agentService.listAgents(pagination, showDeactivated = false)
+      val user = call.user()
+      val agents = agentService.userListAgents(pagination, showDeactivated = false, groups = user.entitlements)
       call.respond(HttpStatusCode.OK, agents)
     }
 
     get("/{id}", getAgent()) {
       val agentId = call.pathUuid("id")
-      val agent = agentService.getAgent(agentId)
+      val user = call.user()
+      val agent = agentService.userGetAgent(agentId, user.entitlements)
       call.respond(HttpStatusCode.OK, agent)
     }
   }

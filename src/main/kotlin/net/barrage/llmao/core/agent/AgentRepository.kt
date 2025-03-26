@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.agent
 
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
@@ -15,6 +14,7 @@ import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentCounts
 import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.core.model.AgentGroupUpdate
 import net.barrage.llmao.core.model.AgentTool
 import net.barrage.llmao.core.model.AgentUpdateTools
 import net.barrage.llmao.core.model.AgentWithConfiguration
@@ -38,6 +38,7 @@ import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
+import net.barrage.llmao.tables.references.AGENT_PERMISSIONS
 import net.barrage.llmao.tables.references.AGENT_TOOLS
 import org.jooq.Condition
 import org.jooq.DSLContext
@@ -50,7 +51,11 @@ import org.jooq.impl.DSL.excluded
 import org.jooq.kotlin.coroutines.transactionCoroutine
 
 class AgentRepository(private val dslContext: DSLContext) {
-  suspend fun getAll(pagination: PaginationSort, showDeactivated: Boolean): CountedList<Agent> {
+  suspend fun getAll(
+    pagination: PaginationSort,
+    showDeactivated: Boolean,
+    groups: List<String>,
+  ): CountedList<Agent> {
     val order = getSortOrderAgent(pagination, admin = false)
     val (limit, offset) = pagination.limitOffset()
 
@@ -58,7 +63,13 @@ class AgentRepository(private val dslContext: DSLContext) {
       dslContext
         .selectCount()
         .from(AGENTS)
-        .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
+        .leftJoin(AGENT_PERMISSIONS)
+        .on(AGENT_PERMISSIONS.AGENT_ID.eq(AGENTS.ID))
+        .where(
+          (if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition()).and(
+            AGENT_PERMISSIONS.GROUP.isNull.or(AGENT_PERMISSIONS.GROUP.`in`(groups))
+          )
+        )
         .awaitSingle()
         .value1() ?: 0
 
@@ -76,7 +87,13 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENTS.UPDATED_AT,
         )
         .from(AGENTS)
-        .where(if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
+        .leftJoin(AGENT_PERMISSIONS)
+        .on(AGENT_PERMISSIONS.AGENT_ID.eq(AGENTS.ID))
+        .where(
+          (if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition()).and(
+            AGENT_PERMISSIONS.GROUP.isNull.or(AGENT_PERMISSIONS.GROUP.`in`(groups))
+          )
+        )
         .orderBy(order)
         .limit(limit)
         .offset(offset)
@@ -142,7 +159,21 @@ class AgentRepository(private val dslContext: DSLContext) {
     return CountedList(total, agents)
   }
 
-  suspend fun get(id: KUUID): AgentFull? {
+  /** Should be called from a chat context. */
+  suspend fun userGet(id: KUUID, groups: List<String>): AgentFull? {
+    val agentGroups =
+      dslContext
+        .select(AGENT_PERMISSIONS.GROUP)
+        .from(AGENT_PERMISSIONS)
+        .where(AGENT_PERMISSIONS.AGENT_ID.eq(id))
+        .asFlow()
+        .map { it.into(AGENT_PERMISSIONS).group }
+        .toList()
+
+    if (agentGroups.isNotEmpty() && agentGroups.none { it in groups }) {
+      return null
+    }
+
     return dslContext
       .select(
         AGENTS.ID,
@@ -172,17 +203,101 @@ class AgentRepository(private val dslContext: DSLContext) {
       .leftJoin(AGENT_CONFIGURATIONS)
       .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
       .where(AGENTS.ID.eq(id))
-      .asFlow()
-      .firstOrNull()
+      .awaitFirstOrNull()
       ?.let { record ->
         val agent = record.into(AGENTS).toAgent()
         val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
         val collections = getCollections(id)
-        AgentFull(agent, configuration, collections)
+        AgentFull(
+          agent = agent,
+          configuration = configuration,
+          collections = collections,
+          groups = agentGroups,
+        )
       }
   }
 
-  suspend fun getAgent(agentId: KUUID): Agent {
+  suspend fun get(id: KUUID): AgentFull? {
+    val agentGroups =
+      dslContext
+        .select(AGENT_PERMISSIONS.GROUP)
+        .from(AGENT_PERMISSIONS)
+        .where(AGENT_PERMISSIONS.AGENT_ID.eq(id))
+        .asFlow()
+        .map { it.into(AGENT_PERMISSIONS).group }
+        .toList()
+
+    return dslContext
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME,
+        AGENTS.DESCRIPTION,
+        AGENTS.ACTIVE,
+        AGENTS.ACTIVE_CONFIGURATION_ID,
+        AGENTS.LANGUAGE,
+        AGENTS.AVATAR,
+        AGENTS.CREATED_AT,
+        AGENTS.UPDATED_AT,
+        AGENT_CONFIGURATIONS.ID,
+        AGENT_CONFIGURATIONS.AGENT_ID,
+        AGENT_CONFIGURATIONS.VERSION,
+        AGENT_CONFIGURATIONS.CONTEXT,
+        AGENT_CONFIGURATIONS.LLM_PROVIDER,
+        AGENT_CONFIGURATIONS.MODEL,
+        AGENT_CONFIGURATIONS.TEMPERATURE,
+        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
+        AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
+        AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+        AGENT_CONFIGURATIONS.ERROR_MESSAGE,
+        AGENT_CONFIGURATIONS.CREATED_AT,
+        AGENT_CONFIGURATIONS.UPDATED_AT,
+      )
+      .from(AGENTS)
+      .leftJoin(AGENT_CONFIGURATIONS)
+      .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
+      .where(AGENTS.ID.eq(id))
+      .awaitFirstOrNull()
+      ?.let { record ->
+        val agent = record.into(AGENTS).toAgent()
+        val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
+        val collections = getCollections(id)
+        AgentFull(
+          agent = agent,
+          configuration = configuration,
+          collections = collections,
+          groups = agentGroups,
+        )
+      }
+  }
+
+  /** Should be called only from user context. */
+  suspend fun getAgent(agentId: KUUID, groups: List<String>): Agent? {
+    return dslContext
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME,
+        AGENTS.DESCRIPTION,
+        AGENTS.ACTIVE,
+        AGENTS.ACTIVE_CONFIGURATION_ID,
+        AGENTS.LANGUAGE,
+        AGENTS.AVATAR,
+        AGENTS.CREATED_AT,
+        AGENTS.UPDATED_AT,
+      )
+      .from(AGENTS)
+      .leftJoin(AGENT_PERMISSIONS)
+      .on(AGENT_PERMISSIONS.AGENT_ID.eq(AGENTS.ID))
+      .where(
+        AGENTS.ID.eq(agentId)
+          .and(AGENT_PERMISSIONS.GROUP.`in`(groups).or(AGENT_PERMISSIONS.GROUP.isNull))
+      )
+      .awaitFirstOrNull()
+      ?.into(AGENTS)
+      ?.toAgent()
+  }
+
+  /** Get an agent unconditionally. Should be called only from admin context. */
+  suspend fun getAgent(agentId: KUUID): Agent? {
     return dslContext
       .select(
         AGENTS.ID,
@@ -197,12 +312,12 @@ class AgentRepository(private val dslContext: DSLContext) {
       )
       .from(AGENTS)
       .where(AGENTS.ID.eq(agentId))
-      .awaitSingle()
+      .awaitFirstOrNull()
       ?.into(AGENTS)
-      ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$agentId'")
+      ?.toAgent()
   }
 
-  suspend fun getActive(id: KUUID): Agent {
+  suspend fun getActive(id: KUUID): Agent? {
     return dslContext
       .select(
         AGENTS.ID,
@@ -219,7 +334,7 @@ class AgentRepository(private val dslContext: DSLContext) {
       .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isTrue))
       .awaitFirstOrNull()
       ?.into(AGENTS)
-      ?.toAgent() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent with ID '$id'")
+      ?.toAgent()
   }
 
   suspend fun create(create: CreateAgent): AgentWithConfiguration {
@@ -467,7 +582,6 @@ class AgentRepository(private val dslContext: DSLContext) {
             .set(AGENT_COLLECTIONS.MAX_DISTANCE, excluded(AGENT_COLLECTIONS.MAX_DISTANCE))
             .awaitLast()
         } catch (e: DataAccessException) {
-          // LOG.error("Error adding collections", e)
           throw AppError.internal(e.message ?: "Failed to add collections")
         }
       }
@@ -631,31 +745,31 @@ class AgentRepository(private val dslContext: DSLContext) {
     }
   }
 
-  private fun getSortOrderAgent(
-    pagination: PaginationSort,
-    admin: Boolean = false,
-  ): SortField<out Any> {
-    val (sortBy, sortOrder) = pagination.sorting()
-    val sortField =
-      when (sortBy) {
-        "name" -> AGENTS.NAME
-        "description" -> AGENTS.DESCRIPTION
-        "context" -> if (admin) AGENT_CONFIGURATIONS.CONTEXT else AGENTS.NAME
-        "llmProvider" -> if (admin) AGENT_CONFIGURATIONS.LLM_PROVIDER else AGENTS.NAME
-        "createdAt" -> AGENTS.CREATED_AT
-        "updatedAt" -> AGENTS.UPDATED_AT
-        "active" -> AGENTS.ACTIVE
-        else -> AGENTS.NAME
+  suspend fun updateGroups(agentId: KUUID, groups: AgentGroupUpdate) {
+    dslContext.transactionCoroutine { tx ->
+      val context = DSL.using(tx)
+
+      groups.add?.let { add ->
+        for (group in add) {
+          context
+            .insertInto(AGENT_PERMISSIONS)
+            .set(AGENT_PERMISSIONS.AGENT_ID, agentId)
+            .set(AGENT_PERMISSIONS.GROUP, group)
+            .onConflict()
+            .doNothing()
+            .awaitSingle()
+        }
       }
 
-    val order =
-      if (sortOrder == SortOrder.DESC) {
-        sortField.desc()
-      } else {
-        sortField.asc()
+      groups.remove?.let { remove ->
+        for (group in remove) {
+          context
+            .deleteFrom(AGENT_PERMISSIONS)
+            .where(AGENT_PERMISSIONS.AGENT_ID.eq(agentId).and(AGENT_PERMISSIONS.GROUP.eq(group)))
+            .awaitSingle()
+        }
       }
-
-    return order
+    }
   }
 
   suspend fun getAgentTools(agentId: KUUID): List<AgentTool> {
@@ -684,6 +798,33 @@ class AgentRepository(private val dslContext: DSLContext) {
         .and(AGENT_TOOLS.TOOL_NAME.eq(tool))
         .awaitSingle()
     }
+  }
+
+  private fun getSortOrderAgent(
+    pagination: PaginationSort,
+    admin: Boolean = false,
+  ): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "name" -> AGENTS.NAME
+        "description" -> AGENTS.DESCRIPTION
+        "context" -> if (admin) AGENT_CONFIGURATIONS.CONTEXT else AGENTS.NAME
+        "llmProvider" -> if (admin) AGENT_CONFIGURATIONS.LLM_PROVIDER else AGENTS.NAME
+        "createdAt" -> AGENTS.CREATED_AT
+        "updatedAt" -> AGENTS.UPDATED_AT
+        "active" -> AGENTS.ACTIVE
+        else -> AGENTS.NAME
+      }
+
+    val order =
+      if (sortOrder == SortOrder.DESC) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
+
+    return order
   }
 }
 
