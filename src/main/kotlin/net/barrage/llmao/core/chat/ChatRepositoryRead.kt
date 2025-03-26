@@ -203,6 +203,15 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
 
     val messageGroups = mutableMapOf<KUUID, MessageGroupAggregate>()
 
+    val subQuery =
+      dslContext
+        .select(MESSAGE_GROUPS.ID)
+        .from(MESSAGE_GROUPS)
+        .where(MESSAGE_GROUPS.CHAT_ID.eq(chatId))
+        .orderBy(MESSAGE_GROUPS.CREATED_AT.desc())
+        .limit(limit)
+        .offset(offset)
+
     dslContext
       .select(
         MESSAGE_GROUPS.ID,
@@ -234,12 +243,10 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .leftJoin(MESSAGE_GROUP_EVALUATIONS)
       .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
       .where(
-        MESSAGE_GROUPS.CHAT_ID.eq(chatId)
+        MESSAGE_GROUPS.ID.`in`(subQuery)
           .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
       )
       .orderBy(MESSAGE_GROUPS.CREATED_AT.desc(), MESSAGES.ORDER.asc())
-      .limit(limit)
-      .offset(offset)
       .asFlow()
       .collect { record ->
         val message = record.into(MESSAGES).toMessage()
@@ -255,26 +262,6 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     return CountedList(total, messageGroups.values.toList())
   }
 
-  //  suspend fun getMessage(chatId: KUUID, messageId: KUUID): Message? {
-  //    return dslContext
-  //      .select(
-  //        MESSAGES.ID,
-  //        MESSAGES.SENDER,
-  //        MESSAGES.SENDER_TYPE,
-  //        MESSAGES.CONTENT,
-  //        MESSAGES.CHAT_ID,
-  //        MESSAGES.RESPONSE_TO,
-  //        MESSAGES.FINISH_REASON,
-  //        MESSAGES.CREATED_AT,
-  //        MESSAGES.UPDATED_AT,
-  //      )
-  //      .from(MESSAGES)
-  //      .where(MESSAGES.ID.eq(messageId).and(MESSAGES.CHAT_ID.eq(chatId)))
-  //      .awaitFirstOrNull()
-  //      ?.into(MESSAGES)
-  //      ?.toMessage()
-  //  }
-
   suspend fun evaluateMessageGroup(messageGroupId: KUUID, input: EvaluateMessage): Int {
     if (input.evaluation == null) {
       return dslContext
@@ -287,11 +274,10 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .insertInto(MESSAGE_GROUP_EVALUATIONS)
       .set(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID, messageGroupId)
       .set(MESSAGE_GROUP_EVALUATIONS.EVALUATION, input.evaluation)
-      .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback)
+      .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback?.value())
       .onConflict(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID)
       .doUpdate()
-      .set(MESSAGE_GROUP_EVALUATIONS.EVALUATION, input.evaluation)
-      .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback)
+      .let { input.applyUpdates(it as InsertOnDuplicateStep<MessageGroupEvaluationsRecord>) }
       .awaitSingle()
   }
 
