@@ -24,6 +24,7 @@ import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
@@ -190,7 +191,7 @@ class ChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldEvaluateMessageWithFeedback() = test { client ->
-    val evaluation = EvaluateMessage(true, "good job")
+    val evaluation = EvaluateMessage(true, PropertyUpdate.Value("good job"))
     val response =
       client.patch("/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header("Cookie", userAccessToken())
@@ -216,7 +217,7 @@ class ChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldRemoveEvaluateMessage() = test { client ->
-    val evaluationOne = EvaluateMessage(true, "what a marvelous response")
+    val evaluationOne = EvaluateMessage(true, PropertyUpdate.Value("what a marvelous response"))
     val responseEvaluation =
       client.patch("/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, userAccessToken())
@@ -240,7 +241,7 @@ class ChatControllerTests : IntegrationTest() {
     assertEquals(true, evaluationCheckBody.items[0].evaluation!!.evaluation)
     assertEquals("what a marvelous response", evaluationCheckBody.items[0].evaluation!!.feedback)
 
-    val evaluationRemove = EvaluateMessage(null)
+    val evaluationRemove = EvaluateMessage()
     val responseRemoveEvaluation =
       client.patch("/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, userAccessToken())

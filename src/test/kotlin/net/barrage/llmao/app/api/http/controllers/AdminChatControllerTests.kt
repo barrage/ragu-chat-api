@@ -26,6 +26,7 @@ import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -225,7 +226,7 @@ class AdminChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldEvaluateMessageFromChatWithFeedback() = test { client ->
-    val evaluation = EvaluateMessage(true, "oh yes, what a splendid response")
+    val evaluation = EvaluateMessage(true, PropertyUpdate.Value("oh yes, what a splendid response"))
     val response =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -250,7 +251,7 @@ class AdminChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldRemoveEvaluateMessageFromChat() = test { client ->
-    val evaluationUpdate = EvaluateMessage(true, "what a marvelous response")
+    val evaluationUpdate = EvaluateMessage(true, PropertyUpdate.Value("what a marvelous response"))
     val responseEvaluation =
       client.patch("/admin/chats/${chatOne.id}/messages/${messageGroupTwo.group.id}") {
         header(HttpHeaders.Cookie, adminAccessToken())

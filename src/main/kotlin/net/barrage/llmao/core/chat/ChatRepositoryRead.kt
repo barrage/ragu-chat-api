@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.core.dslSet
 import net.barrage.llmao.core.model.AgentChatsOnDate
 import net.barrage.llmao.core.model.AgentConfigurationEvaluatedMessageCounts
 import net.barrage.llmao.core.model.Chat
@@ -30,6 +31,7 @@ import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
@@ -37,6 +39,7 @@ import net.barrage.llmao.tables.references.MESSAGE_GROUPS
 import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import org.jooq.Condition
 import org.jooq.DSLContext
+import org.jooq.InsertOnDuplicateSetMoreStep
 import org.jooq.SortField
 import org.jooq.impl.DSL
 
@@ -277,7 +280,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback?.value())
       .onConflict(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID)
       .doUpdate()
-      .let { input.applyUpdates(it as InsertOnDuplicateStep<MessageGroupEvaluationsRecord>) }
+      .let { input.applyUpdates(it as InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>) }
       .awaitSingle()
   }
 
@@ -441,13 +444,6 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
 
     val where = {
       MESSAGE_GROUPS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId)
-        //            .and(
-        //              DSL.exists(
-        //                DSL.selectOne()
-        //                  .from(MESSAGE_GROUP_EVALUATIONS)
-        //                  .where(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGES.ID))
-        //              )
-        //            )
         .and(
           evaluation?.let { MESSAGE_GROUP_EVALUATIONS.EVALUATION.eq(evaluation) }
             ?: DSL.noCondition()
@@ -536,4 +532,13 @@ private fun SearchFiltersAdminChats.toConditions(): Condition {
   val titleCondition = title?.let { CHATS.TITLE.containsIgnoreCase(it) } ?: DSL.noCondition()
 
   return DSL.and(userIdCondition, agentIdCondition, titleCondition)
+}
+
+fun EvaluateMessage.applyUpdates(
+  value: InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>
+): InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord> {
+  var value = value
+  value = evaluation.dslSet(value, MESSAGE_GROUP_EVALUATIONS.EVALUATION)
+  value = feedback.dslSet(value, MESSAGE_GROUP_EVALUATIONS.FEEDBACK)
+  return value
 }

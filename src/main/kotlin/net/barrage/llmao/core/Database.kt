@@ -18,11 +18,13 @@ import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import org.jooq.DSLContext
+import org.jooq.InsertOnDuplicateSetMoreStep
 import org.jooq.Record
 import org.jooq.SQLDialect
 import org.jooq.TableField
 import org.jooq.UpdateSetMoreStep
 import org.jooq.impl.DSL
+import org.jooq.impl.DSL.excluded
 import org.jooq.impl.DefaultConfiguration
 import org.postgresql.ds.PGSimpleDataSource
 
@@ -111,6 +113,22 @@ fun <R : Record, T> PropertyUpdate<T>?.dslSet(
   }
 }
 
+fun <R : Record, T> PropertyUpdate<T>?.dslSet(
+  statement: InsertOnDuplicateSetMoreStep<R>,
+  field: TableField<R, T>,
+): InsertOnDuplicateSetMoreStep<R> {
+  return when (this) {
+    // Do nothing when property is not set
+    is PropertyUpdate.Undefined -> statement.set(field, excluded(field))
+
+    // Property is being updated to new value
+    is PropertyUpdate.Value -> statement.set(field, value)
+
+    // Property is being removed
+    null -> statement.setNull(field)
+  }
+}
+
 /**
  * Utility for including a SET statement in a DSLContext update statement.
  *
@@ -122,3 +140,9 @@ fun <R : Record, T> T?.dslSet(
   statement: UpdateSetMoreStep<R>,
   field: TableField<R, T>,
 ): UpdateSetMoreStep<R> = this?.let { statement.set(field, it) } ?: statement
+
+fun <R : Record, T> T?.dslSet(
+  statement: InsertOnDuplicateSetMoreStep<R>,
+  field: TableField<R, T>,
+): InsertOnDuplicateSetMoreStep<R> =
+  this?.let { statement.set(field, it) } ?: statement.set(field, excluded(field))

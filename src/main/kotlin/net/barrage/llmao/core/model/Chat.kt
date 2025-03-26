@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.ChatsRecord
@@ -132,14 +133,10 @@ fun MessageGroupEvaluationsRecord.toMessageGroupEvaluation() =
   )
 
 /** DTO for evaluating a message. */
-@Serializable data class EvaluateMessage(val evaluation: Boolean?, val feedback: String? = null)
-
 @Serializable
-data class AgentConfigurationEvaluatedMessages(
-  val total: Int,
-  val positive: Int,
-  val negative: Int,
-  val evaluatedMessages: CountedList<Message>,
+data class EvaluateMessage(
+  val evaluation: Boolean? = null,
+  val feedback: PropertyUpdate<String>? = PropertyUpdate.Undefined,
 )
 
 /**
