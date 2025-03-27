@@ -18,15 +18,21 @@ open class AppError(
       description: String? = null,
       original: Throwable? = null,
     ): AppError {
-      return AppError(errorType = "API", errorReason = reason, errorMessage = description)
+      return AppError(
+        errorType = "API",
+        errorReason = reason,
+        errorMessage = description,
+        original = original,
+      )
     }
 
-    fun internal(): AppError {
-      return AppError("Internal", ErrorReason.Internal)
-    }
-
-    fun internal(message: String): AppError {
-      return AppError("Internal", ErrorReason.Internal, message)
+    fun internal(message: String? = null, original: Throwable? = null): AppError {
+      return AppError(
+        errorType = "Internal",
+        errorReason = ErrorReason.Internal,
+        errorMessage = message,
+        original = original,
+      )
     }
   }
 

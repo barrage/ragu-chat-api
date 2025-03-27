@@ -115,8 +115,12 @@ enum class SettingKey {
     fun tryFromString(value: String): SettingKey {
       try {
         return valueOf(value)
-      } catch (_: Exception) {
-        throw AppError.api(ErrorReason.InvalidParameter, "Invalid setting key: $value")
+      } catch (e: Exception) {
+        throw AppError.api(
+          ErrorReason.InvalidParameter,
+          "Invalid setting key: $value",
+          original = e,
+        )
       }
     }
   }

@@ -119,14 +119,16 @@ class ChatWorkflowFactory(
     emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
   ): ChatWorkflow {
-    // TODO
+    // TODO: Pagination
     val chat =
       chatRepositoryRead.getWithMessages(id = id, userId = user.id, pagination = Pagination(1, 200))
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
-    agentService.getActive(chat.chat.agentId)
-
-    val agent = agentService.getFull(chat.chat.agentId)
+    val agent =
+      if (user.isAdmin()) agentService.getFull(chat.chat.agentId)
+      else {
+        agentService.userGetFull(chat.chat.agentId, user.entitlements)
+      }
 
     val toolchain = toolchainFactory.createAgentToolchain(chat.chat.agentId, toolEmitter)
     val settings = settings.getAllWithDefaults()
