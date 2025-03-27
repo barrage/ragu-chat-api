@@ -1,39 +1,41 @@
 package net.barrage.llmao.app.api.http
 
-import io.github.smiley4.ktorswaggerui.SwaggerUI
-import io.github.smiley4.ktorswaggerui.data.AuthKeyLocation
-import io.github.smiley4.ktorswaggerui.data.AuthType
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRequest
-import io.github.smiley4.ktorswaggerui.routing.openApiSpec
-import io.github.smiley4.ktorswaggerui.routing.swaggerUI
-import io.github.smiley4.schemakenerator.core.annotations.Format
-import io.github.smiley4.schemakenerator.core.data.AnnotationData
-import io.github.smiley4.schemakenerator.core.data.PrimitiveTypeData
-import io.github.smiley4.schemakenerator.core.data.TypeId
-import io.github.smiley4.schemakenerator.reflection.collectSubTypes
+import io.github.smiley4.ktoropenapi.OpenApi
+import io.github.smiley4.ktoropenapi.config.AuthKeyLocation
+import io.github.smiley4.ktoropenapi.config.AuthType
+import io.github.smiley4.ktoropenapi.config.RequestConfig
+import io.github.smiley4.ktoropenapi.openApi
+import io.github.smiley4.ktoropenapi.route
+import io.github.smiley4.ktorswaggerui.swaggerUI
+import io.github.smiley4.schemakenerator.reflection.ReflectionSteps.analyzeTypeUsingReflection
+import io.github.smiley4.schemakenerator.reflection.ReflectionSteps.collectSubTypes
 import io.github.smiley4.schemakenerator.reflection.data.EnumConstType
-import io.github.smiley4.schemakenerator.reflection.processReflection
-import io.github.smiley4.schemakenerator.swagger.compileReferencingRoot
-import io.github.smiley4.schemakenerator.swagger.data.SwaggerTypeHint
+import io.github.smiley4.schemakenerator.swagger.SwaggerSteps.compileReferencingRoot
+import io.github.smiley4.schemakenerator.swagger.SwaggerSteps.generateSwaggerSchema
+import io.github.smiley4.schemakenerator.swagger.SwaggerSteps.handleCoreAnnotations
+import io.github.smiley4.schemakenerator.swagger.SwaggerSteps.withTitle
 import io.github.smiley4.schemakenerator.swagger.data.TitleType
-import io.github.smiley4.schemakenerator.swagger.generateSwaggerSchema
-import io.github.smiley4.schemakenerator.swagger.handleCoreAnnotations
-import io.github.smiley4.schemakenerator.swagger.handleSwaggerAnnotations
-import io.github.smiley4.schemakenerator.swagger.withTitle
 import io.ktor.server.application.*
-import io.ktor.server.routing.*
-import java.time.OffsetDateTime
-import java.util.*
+import io.ktor.server.routing.Route
 import net.barrage.llmao.core.model.common.Role
 import net.barrage.llmao.core.types.KUUID
 
 fun Route.openApiRoutes() {
-  route("openapi.json") { openApiSpec() }
+  route("openapi.json") { openApi() }
   route("swagger-ui") { swaggerUI("/openapi.json") }
 }
 
+fun Application.openapi() {
+  install(OpenApi) {
+    server {
+      url = "http://localhost:42069"
+      description = "Local Server"
+    }
+  }
+}
+
 fun Application.configureOpenApi() {
-  install(SwaggerUI) {
+  install(OpenApi) {
     info {
       title = "Ragu API"
       version = "latest"
@@ -56,56 +58,12 @@ fun Application.configureOpenApi() {
       defaultSecuritySchemeNames = listOf("jwt")
     }
     schemas {
-      generator = {
-        it
+      generator = { type ->
+        type
           .collectSubTypes(10)
-          .processReflection {
-            enumConstType = EnumConstType.TO_STRING
-
-            customProcessor<UUID> {
-              PrimitiveTypeData(
-                id = TypeId.build(UUID::class.qualifiedName!!),
-                simpleName = UUID::class.simpleName!!,
-                qualifiedName = UUID::class.qualifiedName!!,
-                annotations =
-                  mutableListOf(
-                    AnnotationData(
-                      name = SwaggerTypeHint::class.qualifiedName!!,
-                      values = mutableMapOf("type" to "string"),
-                    ),
-                    AnnotationData(
-                      name = Format::class.qualifiedName!!,
-                      values = mutableMapOf("format" to "uuid"),
-                      annotation = Format("uuid"),
-                    ),
-                  ),
-              )
-            }
-
-            customProcessor<OffsetDateTime> {
-              PrimitiveTypeData(
-                id = TypeId.build(OffsetDateTime::class.qualifiedName!!),
-                simpleName = OffsetDateTime::class.simpleName!!,
-                qualifiedName = OffsetDateTime::class.qualifiedName!!,
-                annotations =
-                  mutableListOf(
-                    AnnotationData(
-                      name = SwaggerTypeHint::class.qualifiedName!!,
-                      values = mutableMapOf("type" to "string"),
-                      annotation = SwaggerTypeHint("string"),
-                    ),
-                    AnnotationData(
-                      name = Format::class.qualifiedName!!,
-                      values = mutableMapOf("format" to "date-time"),
-                      annotation = Format("date-time"),
-                    ),
-                  ),
-              )
-            }
-          }
+          .analyzeTypeUsingReflection { enumConstType = EnumConstType.TO_STRING }
           .generateSwaggerSchema()
           .handleCoreAnnotations()
-          .handleSwaggerAnnotations()
           .withTitle(TitleType.SIMPLE)
           .compileReferencingRoot()
       }
@@ -114,7 +72,7 @@ fun Application.configureOpenApi() {
 }
 
 /** Utility for generating OpenAPI spec for query param pagination. */
-fun OpenApiRequest.queryPaginationSort() {
+fun RequestConfig.queryPaginationSort() {
   queryParameter<Int>("page") {
     description = "Page number for pagination"
     required = false
@@ -137,7 +95,7 @@ fun OpenApiRequest.queryPaginationSort() {
   }
 }
 
-fun OpenApiRequest.queryPagination() {
+fun RequestConfig.queryPagination() {
   queryParameter<Int>("page") {
     description = "Page number for pagination"
     required = false
@@ -150,7 +108,7 @@ fun OpenApiRequest.queryPagination() {
   }
 }
 
-fun OpenApiRequest.queryListChatsFilters() {
+fun RequestConfig.queryListChatsFilters() {
   queryParameter<KUUID>("userId") {
     description = "Filter by user ID"
     required = false
@@ -165,7 +123,7 @@ fun OpenApiRequest.queryListChatsFilters() {
   }
 }
 
-fun OpenApiRequest.queryListUsersFilters() {
+fun RequestConfig.queryListUsersFilters() {
   queryParameter<String>("name") {
     description = "Filter by name"
     required = false
@@ -180,7 +138,7 @@ fun OpenApiRequest.queryListUsersFilters() {
   }
 }
 
-fun OpenApiRequest.queryListAgentsFilters() {
+fun RequestConfig.queryListAgentsFilters() {
   queryParameter<String>("name") {
     description = "Filter by name"
     required = false

@@ -1,12 +1,11 @@
 package net.barrage.llmao.app.adapters.whatsapp.api
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.post
-import io.github.smiley4.ktorswaggerui.dsl.routing.put
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.delete
+import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.post
+import io.github.smiley4.ktoropenapi.put
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -89,7 +88,7 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 }
 
 // OpenAPI documentation
-private fun adminGetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
+private fun adminGetWhatsAppAgent(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/agent")
   description = "Get the currently assigned WhatsApp agent"
   response {
@@ -106,7 +105,7 @@ private fun adminGetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminSetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
+private fun adminSetWhatsAppAgent(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/agent")
   description = "Set the currently assigned WhatsApp agent"
   request { body<WhatsAppAgentUpdate> { description = "New WhatsApp agent" } }
@@ -124,7 +123,7 @@ private fun adminSetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminUnsetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
+private fun adminUnsetWhatsAppAgent(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/agent")
   description = "Unset the currently assigned WhatsApp agent"
   response {
@@ -137,7 +136,7 @@ private fun adminUnsetWhatsAppAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminGetWhatsAppNumbersForUser(): OpenApiRoute.() -> Unit = {
+private fun adminGetWhatsAppNumbersForUser(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/numbers")
   description = "Retrieve WhatsApp numbers for user"
   request {
@@ -160,7 +159,7 @@ private fun adminGetWhatsAppNumbersForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminAddWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
+private fun adminAddWhatsAppNumberForUser(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/numbers")
   description = "Add WhatsApp number for user"
   request {
@@ -184,7 +183,7 @@ private fun adminAddWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminUpdateWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
+private fun adminUpdateWhatsAppNumberForUser(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/numbers")
   description = "Update WhatsApp number for user"
   request {
@@ -212,7 +211,7 @@ private fun adminUpdateWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminDeleteWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
+private fun adminDeleteWhatsAppNumberForUser(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/numbers")
   description = "Delete WhatsApp number for user"
   request {
@@ -235,7 +234,7 @@ private fun adminDeleteWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminGetAllWhatsAppChats(): OpenApiRoute.() -> Unit = {
+private fun adminGetAllWhatsAppChats(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/chats")
   description = "Retrieve list of all WhatsApp chats"
   request { queryPaginationSort() }
@@ -253,7 +252,7 @@ private fun adminGetAllWhatsAppChats(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminGetWhatsAppChat(): OpenApiRoute.() -> Unit = {
+private fun adminGetWhatsAppChat(): RouteConfig.() -> Unit = {
   tags("admin/whatsapp/chats")
   description = "Retrieve WhatsApp chat by ID"
   request {

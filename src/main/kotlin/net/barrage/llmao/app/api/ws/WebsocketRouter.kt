@@ -1,7 +1,7 @@
 package net.barrage.llmao.app.api.ws
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
 import io.ktor.server.application.*
@@ -10,11 +10,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
-import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.queryParam
@@ -46,7 +46,7 @@ fun Application.websocketServer(
     maxFrameSize = Long.MAX_VALUE
     masking = false
     contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
-    pingPeriod = Duration.ofSeconds(5)
+    pingPeriod = 5.seconds
   }
 
   routing {
@@ -161,7 +161,7 @@ fun Application.websocketServer(
   }
 }
 
-private fun websocketGenerateToken(): OpenApiRoute.() -> Unit = {
+private fun websocketGenerateToken(): RouteConfig.() -> Unit = {
   tags("ws")
   description = "Generate a one-time token for WebSocket connection"
   summary = "Generate WebSocket token"

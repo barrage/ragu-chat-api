@@ -1,10 +1,9 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.put
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.put
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -28,7 +27,7 @@ fun Route.adminSettingsRoutes(settingsService: Settings) {
   }
 }
 
-private fun updateSettings(): OpenApiRoute.() -> Unit = {
+private fun updateSettings(): RouteConfig.() -> Unit = {
   tags("admin/settings")
   description = "Update settings"
   request { body<SettingsUpdate> { description = "Updated settings" } }
@@ -42,7 +41,7 @@ private fun updateSettings(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun getSettings(): OpenApiRoute.() -> Unit = {
+private fun getSettings(): RouteConfig.() -> Unit = {
   tags("admin/settings")
   description = "Retrieve settings"
   response {

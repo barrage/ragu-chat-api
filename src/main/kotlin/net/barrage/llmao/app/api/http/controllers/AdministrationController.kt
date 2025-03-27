@@ -1,9 +1,8 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import net.barrage.llmao.app.api.http.queryParam
@@ -57,7 +56,7 @@ fun Route.administrationRouter(service: AdministrationService) {
   }
 }
 
-private fun providers(): OpenApiRoute.() -> Unit = {
+private fun providers(): RouteConfig.() -> Unit = {
   summary = "List all available providers"
   description = "List all available providers for the application."
   tags("providers")
@@ -84,7 +83,7 @@ private fun providers(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun providerModels(): OpenApiRoute.() -> Unit = {
+private fun providerModels(): RouteConfig.() -> Unit = {
   summary = "List all available language models for a provider"
   description = "List all available language models for a provider."
   tags("providers")
@@ -104,7 +103,7 @@ private fun providerModels(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun dashboardCounts(): OpenApiRoute.() -> Unit = {
+private fun dashboardCounts(): RouteConfig.() -> Unit = {
   summary = "Get dashboard count statistics"
   description = "Get count statistics for the application dashboard."
   tags("admin/dashboard")
@@ -122,7 +121,7 @@ private fun dashboardCounts(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun chatHistory(): OpenApiRoute.() -> Unit = {
+private fun chatHistory(): RouteConfig.() -> Unit = {
   summary = "Get chat history"
   description = "Get chat history for the application dashboard."
   tags("admin/dashboard")
@@ -141,7 +140,7 @@ private fun chatHistory(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun tokenUsageForPeriod(): OpenApiRoute.() -> Unit = {
+private fun tokenUsageForPeriod(): RouteConfig.() -> Unit = {
   summary = "Get the total token usage for a given period."
   description = "Get token usage."
   tags("admin/tokens")
@@ -163,7 +162,7 @@ private fun tokenUsageForPeriod(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun listTokenUsage(): OpenApiRoute.() -> Unit = {
+private fun listTokenUsage(): RouteConfig.() -> Unit = {
   summary = "List token usage"
   description = "List token usage for the application."
   tags("admin/tokens")

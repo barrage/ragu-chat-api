@@ -1,12 +1,11 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.patch
-import io.github.smiley4.ktorswaggerui.dsl.routing.put
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.delete
+import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.patch
+import io.github.smiley4.ktoropenapi.put
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -78,7 +77,7 @@ fun Route.adminChatsRoutes(service: ChatService) {
 }
 
 // OpenAPI documentation
-private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
+private fun adminGetAllChats(): RouteConfig.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve list of all chats"
   request {
@@ -99,7 +98,7 @@ private fun adminGetAllChats(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminGetChatWithUserAndAgent(): OpenApiRoute.() -> Unit = {
+private fun adminGetChatWithUserAndAgent(): RouteConfig.() -> Unit = {
   tags("admin/chats")
   description = "Get single chat"
   request {
@@ -127,7 +126,7 @@ private fun adminGetChatWithUserAndAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
+private fun adminGetMessages(): RouteConfig.() -> Unit = {
   tags("admin/chats")
   description = "Retrieve chat messages"
   request {
@@ -151,7 +150,7 @@ private fun adminGetMessages(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminUpdateTitle(): OpenApiRoute.() -> Unit = {
+private fun adminUpdateTitle(): RouteConfig.() -> Unit = {
   tags("admin/chats")
   description = "Update chat title"
   request {
@@ -175,7 +174,7 @@ private fun adminUpdateTitle(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminEvaluate(): OpenApiRoute.() -> Unit = {
+private fun adminEvaluate(): RouteConfig.() -> Unit = {
   tags("admin/chats")
   description = "Evaluate chat message"
   request {
@@ -203,7 +202,7 @@ private fun adminEvaluate(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminDeleteChat(): OpenApiRoute.() -> Unit = {
+private fun adminDeleteChat(): RouteConfig.() -> Unit = {
   tags("admin/chats")
   description = "Delete chat"
   request {

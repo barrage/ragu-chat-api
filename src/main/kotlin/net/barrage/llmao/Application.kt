@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
 fun Application.module() {
   val applicationStoppingJob: CompletableJob = Job()
 
-  environment.monitor.subscribe(ApplicationStopping) { applicationStoppingJob.complete() }
+  monitor.subscribe(ApplicationStopping) { applicationStoppingJob.complete() }
   val stateChangeListener = EventListener<StateChangeEvent>()
 
   val state = ApplicationState(environment.config, applicationStoppingJob, stateChangeListener)

@@ -4,20 +4,16 @@ import org.jooq.meta.jaxb.Logging
 import org.liquibase.gradle.LiquibaseTask
 import org.testcontainers.containers.PostgreSQLContainer
 
-val ktorVersion = "2.3.13"
-val kotlinVersion = "2.0.20"
+val ktorVersion = "3.1.1"
+val openApiVersion = "5.0.1"
 val logbackVersion = "1.5.8"
 val postgresVersion = "42.7.4"
-val h2Version = "2.1.214"
-val exposedVersion = "0.52.0"
 val jooqVersion = "3.19.16"
-val flywayVersion = "10.17.3"
-val junitVersion = "5.8.1"
 
 plugins {
-  kotlin("jvm") version "2.0.20"
-  id("io.ktor.plugin") version "2.3.12"
-  kotlin("plugin.serialization") version "2.0.20"
+  kotlin("jvm") version "2.1.20"
+  kotlin("plugin.serialization") version "2.1.20"
+  id("io.ktor.plugin") version "3.1.1"
   id("nu.studer.jooq") version "9.0"
   id("com.ncorti.ktfmt.gradle") version "0.20.1"
   id("com.gradleup.shadow") version "8.3.3"
@@ -30,7 +26,6 @@ version = "0.2.0"
 
 application {
   mainClass.set("io.ktor.server.netty.EngineMain")
-
   val isDevelopment: Boolean = project.ext.has("development")
   applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
@@ -58,11 +53,14 @@ dependencies {
   implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-websockets:$ktorVersion")
-  implementation("io.ktor:ktor-client-logging:$ktorVersion")
+  implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
 
+  implementation("io.ktor:ktor-client-logging:$ktorVersion")
   implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
   implementation("io.ktor:ktor-client-apache-jvm:$ktorVersion")
   implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+
+  implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
 
   implementation("ch.qos.logback:logback-classic:$logbackVersion")
   implementation("org.postgresql:postgresql:$postgresVersion")
@@ -72,38 +70,38 @@ dependencies {
   implementation("org.postgresql:r2dbc-postgresql:1.0.7.RELEASE")
   implementation("io.r2dbc:r2dbc-pool:1.0.2.RELEASE")
 
-  implementation("io.github.smiley4:ktor-swagger-ui:3.5.1")
-  implementation("io.github.smiley4:schema-kenerator-core:1.5.0")
-  implementation("io.github.smiley4:schema-kenerator-reflection:1.5.0")
-  implementation("io.github.smiley4:schema-kenerator-swagger:1.5.0")
-  implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
+  implementation("io.github.smiley4:ktor-openapi:$openApiVersion")
+  implementation("io.github.smiley4:ktor-swagger-ui:$openApiVersion")
+  implementation("io.github.smiley4:schema-kenerator-core:2.1.1")
+  implementation("io.github.smiley4:schema-kenerator-reflection:2.1.1")
+  implementation("io.github.smiley4:schema-kenerator-swagger:2.1.1")
   implementation("com.auth0:java-jwt:4.4.0")
 
   // Infobip
   implementation("com.infobip:infobip-api-java-client:4.4.0")
 
   // AI
-  implementation("com.aallam.openai:openai-client:3.8.2")
+  implementation("com.aallam.openai:openai-client:4.0.1")
   implementation("io.ktor:ktor-client-okhttp")
   implementation("com.knuddels:jtokkit:1.1.0")
 
   // Tests
   testImplementation("org.testcontainers:postgresql:1.20.2")
   testImplementation("org.testcontainers:weaviate:1.20.2")
-  // https://mvnrepository.com/artifact/org.wiremock.integrations.testcontainers/wiremock-testcontainers-module
 
-  testImplementation("org.wiremock:wiremock:3.9.2")
+  // https://mvnrepository.com/artifact/org.wiremock.integrations.testcontainers/wiremock-testcontainers-module
+  testImplementation("org.wiremock:wiremock:3.12.1")
   testImplementation("org.wiremock.extensions:wiremock-jwt-extension-standalone:0.2.0")
-  testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
-  testImplementation("io.ktor:ktor-server-tests:$ktorVersion")
+  testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
+  testImplementation(
+    "org.jetbrains.kotlin:kotlin-test:2.1.20"
+  ) // Has to be the same as the kotlin version
+
   testImplementation("org.liquibase:liquibase-core:4.29.2")
   testImplementation("org.postgresql:postgresql:$postgresVersion")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
   testImplementation("org.testcontainers:minio:1.20.4")
-
-  // Error handling
-  implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
 
   // Database communication
   liquibaseRuntime("org.liquibase:liquibase-core:4.29.2")

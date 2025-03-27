@@ -1,13 +1,12 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.post
-import io.github.smiley4.ktorswaggerui.dsl.routing.put
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.delete
+import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.post
+import io.github.smiley4.ktoropenapi.put
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -214,7 +213,7 @@ fun AgentFull.toAgentDisplay(activeWappAgentId: KUUID?) =
 
 // OpenAPI documentation
 
-private fun updateAgentGroups(): OpenApiRoute.() -> Unit = {
+private fun updateAgentGroups(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent's groups"
   request {
@@ -223,7 +222,8 @@ private fun updateAgentGroups(): OpenApiRoute.() -> Unit = {
       example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
     body<AgentGroupUpdate> {
-      description = "The updated groups for the agent"
+      description =
+        "Groups to add/remove to/from the agent. Note sending a group in both lists will cause it to be added then removed, effectively doing nothing."
       required = true
     }
   }
@@ -242,7 +242,7 @@ private fun updateAgentGroups(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun getAgentTools(): OpenApiRoute.() -> Unit = {
+private fun getAgentTools(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve list of all available agent tools"
   response {
@@ -259,7 +259,7 @@ private fun getAgentTools(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun updateAgentTools(): OpenApiRoute.() -> Unit = {
+private fun updateAgentTools(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent's tools"
   request {
@@ -287,7 +287,7 @@ private fun updateAgentTools(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
+private fun adminGetAllAgents(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve list of all agents"
   request {
@@ -308,7 +308,7 @@ private fun adminGetAllAgents(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
+private fun adminGetAgent(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Retrieve an agent by ID"
   request {
@@ -336,7 +336,7 @@ private fun adminGetAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun createAgent(): OpenApiRoute.() -> Unit = {
+private fun createAgent(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Create a new agent"
   request { body<CreateAgent> { description = "New agent object" } }
@@ -354,7 +354,7 @@ private fun createAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun updateAgent(): OpenApiRoute.() -> Unit = {
+private fun updateAgent(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent"
   request {
@@ -378,7 +378,7 @@ private fun updateAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun deleteAgent(): OpenApiRoute.() -> Unit = {
+private fun deleteAgent(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Delete an agent"
   request {
@@ -407,7 +407,7 @@ private fun deleteAgent(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
+private fun updateAgentCollections(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Update an agent's collections"
 
@@ -441,7 +441,7 @@ private fun updateAgentCollections(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun removeCollectionFromAllAgents(): OpenApiRoute.() -> Unit = {
+private fun removeCollectionFromAllAgents(): RouteConfig.() -> Unit = {
   tags("admin/agents")
   description = "Remove a collection from all agents"
   request {
@@ -469,7 +469,7 @@ private fun removeCollectionFromAllAgents(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun getAgentVersions(): OpenApiRoute.() -> Unit = {
+private fun getAgentVersions(): RouteConfig.() -> Unit = {
   summary = "Get agent versions"
   description = "Gets counted list of agent configuration versions."
   tags("admin/agents/versions")
@@ -493,7 +493,7 @@ private fun getAgentVersions(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun getAgentConfigurationWithEvaluationCounts(): OpenApiRoute.() -> Unit = {
+private fun getAgentConfigurationWithEvaluationCounts(): RouteConfig.() -> Unit = {
   summary = "Get agent version with evaluation counts"
   description = "Gets agent current version of agent configuration with evaluation counts."
   tags("admin/agents/versions")
@@ -526,7 +526,7 @@ private fun getAgentConfigurationWithEvaluationCounts(): OpenApiRoute.() -> Unit
   }
 }
 
-private fun getAgentConfigurationEvaluatedMessages(): OpenApiRoute.() -> Unit = {
+private fun getAgentConfigurationEvaluatedMessages(): RouteConfig.() -> Unit = {
   summary = "Get evaluated messages"
   description = "Gets evaluated messages for a given agent version of agent configuration."
   tags("admin/agents/versions")
@@ -565,7 +565,7 @@ private fun getAgentConfigurationEvaluatedMessages(): OpenApiRoute.() -> Unit = 
   }
 }
 
-private fun rollbackAgentVersion(): OpenApiRoute.() -> Unit = {
+private fun rollbackAgentVersion(): RouteConfig.() -> Unit = {
   summary = "Rollback agent version"
   description = "Rollbacks agent to a given version of agent configuration."
   tags("admin/agents/versions")
@@ -598,7 +598,7 @@ private fun rollbackAgentVersion(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun uploadAgentAvatar(): OpenApiRoute.() -> Unit = {
+private fun uploadAgentAvatar(): RouteConfig.() -> Unit = {
   tags("admin/agents/avatars")
   description = "Upload agent avatar"
   request {
@@ -631,7 +631,7 @@ private fun uploadAgentAvatar(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun deleteAgentAvatar(): OpenApiRoute.() -> Unit = {
+private fun deleteAgentAvatar(): RouteConfig.() -> Unit = {
   tags("admin/agents/avatars")
   description = "Delete agent avatar"
   request {

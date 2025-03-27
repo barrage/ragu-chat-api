@@ -1,11 +1,10 @@
 package net.barrage.llmao.app.api.http.controllers.specialists
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.post
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.delete
+import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.post
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -57,7 +56,7 @@ fun Route.jiraKiraAdminRoutes(jiraKiraRepository: JiraKiraRepository) {
   }
 }
 
-private fun setJiraKiraKey(): OpenApiRoute.() -> Unit = {
+private fun setJiraKiraKey(): RouteConfig.() -> Unit = {
   tags("jirakira")
   description = "Set Jira API key"
   request { body<String> { description = "Jira API key" } }
@@ -71,7 +70,7 @@ private fun setJiraKiraKey(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun removeJiraKiraKey(): OpenApiRoute.() -> Unit = {
+private fun removeJiraKiraKey(): RouteConfig.() -> Unit = {
   tags("jirakira")
   description = "Remove Jira API key"
   response {
@@ -84,7 +83,7 @@ private fun removeJiraKiraKey(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun listJiraKiraWorklogAttributes(): OpenApiRoute.() -> Unit = {
+private fun listJiraKiraWorklogAttributes(): RouteConfig.() -> Unit = {
   tags("jirakira")
   description = "List Jira worklog attributes"
   response {
@@ -101,7 +100,7 @@ private fun listJiraKiraWorklogAttributes(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun upsertJiraKiraWorklogAttribute(): OpenApiRoute.() -> Unit = {
+private fun upsertJiraKiraWorklogAttribute(): RouteConfig.() -> Unit = {
   tags("jirakira")
   description = "Upsert Jira worklog attribute"
   request { body<WorklogAttribute> { description = "Jira worklog attribute" } }
@@ -115,7 +114,7 @@ private fun upsertJiraKiraWorklogAttribute(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun removeJiraKiraWorklogAttribute(): OpenApiRoute.() -> Unit = {
+private fun removeJiraKiraWorklogAttribute(): RouteConfig.() -> Unit = {
   tags("jirakira")
   description = "Remove Jira worklog attribute"
   request {

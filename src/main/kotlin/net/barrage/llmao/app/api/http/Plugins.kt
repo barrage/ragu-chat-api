@@ -4,7 +4,7 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.contentLength
 import io.ktor.server.request.contentType
 import io.ktor.server.request.receiveChannel
-import io.ktor.util.toByteArray
+import io.ktor.utils.io.toByteArray
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.Image

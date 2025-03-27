@@ -1,9 +1,8 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
@@ -35,7 +34,7 @@ fun Route.specialistWorkflowRoutes(adapterState: AdapterState) {
 @Serializable
 data class SpecialistAgent(val name: String, val description: String, val workflowTypeId: String)
 
-private fun listSpecialists(): OpenApiRoute.() -> Unit = {
+private fun listSpecialists(): RouteConfig.() -> Unit = {
   tags("agents/specialists")
   description = "List all available specialist agents"
   response {

@@ -1,9 +1,8 @@
 package net.barrage.llmao.app.api.http.controllers
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import net.barrage.llmao.app.api.http.pathUuid
@@ -36,7 +35,7 @@ fun Route.agentsRoutes(agentService: AgentService) {
 }
 
 // OpenAPI documentation
-private fun getAllAgents(): OpenApiRoute.() -> Unit = {
+private fun getAllAgents(): RouteConfig.() -> Unit = {
   tags("agents")
   description = "Retrieve list of all agents"
   request { queryPaginationSort() }
@@ -54,7 +53,7 @@ private fun getAllAgents(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun getAgent(): OpenApiRoute.() -> Unit = {
+private fun getAgent(): RouteConfig.() -> Unit = {
   tags("agents")
   description = "Retrieve agent by ID"
   request {

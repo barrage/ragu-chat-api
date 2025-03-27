@@ -1,6 +1,6 @@
 package net.barrage.llmao.app.api.http
 
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -76,6 +76,6 @@ fun ApplicationCall.pathUuid(param: String): KUUID {
   try {
     return KUUID.fromString(value)
   } catch (e: IllegalArgumentException) {
-    throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID")
+    throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID", original = e)
   }
 }

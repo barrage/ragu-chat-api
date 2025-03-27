@@ -1,12 +1,11 @@
 package net.barrage.llmao.app.adapters.whatsapp.api
 
-import io.github.smiley4.ktorswaggerui.dsl.routes.OpenApiRoute
-import io.github.smiley4.ktorswaggerui.dsl.routing.delete
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.post
-import io.github.smiley4.ktorswaggerui.dsl.routing.put
+import io.github.smiley4.ktoropenapi.config.RouteConfig
+import io.github.smiley4.ktoropenapi.delete
+import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.post
+import io.github.smiley4.ktoropenapi.put
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -68,7 +67,7 @@ fun Route.whatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 }
 
 // OpenAPI documentation
-private fun infobipResponse(): OpenApiRoute.() -> Unit = {
+private fun infobipResponse(): RouteConfig.() -> Unit = {
   tags("3rd party hooks")
   description = "Endpoint to handle WhatsApp messages from Infobip"
   request { body<InfobipResponseDTO> { description = "The Infobip response payload" } }
@@ -79,7 +78,7 @@ private fun infobipResponse(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun getWhatsAppNumbersForUser(): OpenApiRoute.() -> Unit = {
+private fun getWhatsAppNumbersForUser(): RouteConfig.() -> Unit = {
   tags("whatsapp/numbers")
   description = "Retrieve WhatsApp numbers for user"
   response {
@@ -96,7 +95,7 @@ private fun getWhatsAppNumbersForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun createWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
+private fun createWhatsAppNumberForUser(): RouteConfig.() -> Unit = {
   tags("whatsapp/numbers")
   description = "Create WhatsApp number for user"
   request { body<UpdateNumber> { description = "New WhatsApp number" } }
@@ -114,7 +113,7 @@ private fun createWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun updateWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
+private fun updateWhatsAppNumberForUser(): RouteConfig.() -> Unit = {
   tags("whatsapp/numbers")
   description = "Update WhatsApp number for user"
   request {
@@ -138,7 +137,7 @@ private fun updateWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun deleteWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
+private fun deleteWhatsAppNumberForUser(): RouteConfig.() -> Unit = {
   tags("whatsapp/numbers")
   description = "Delete WhatsApp number for user"
   request {
@@ -157,7 +156,7 @@ private fun deleteWhatsAppNumberForUser(): OpenApiRoute.() -> Unit = {
   }
 }
 
-private fun getWhatsAppChatForUser(): OpenApiRoute.() -> Unit = {
+private fun getWhatsAppChatForUser(): RouteConfig.() -> Unit = {
   tags("whatsapp/chats")
   description = "Retrieve WhatsApp chat for user"
   request {
