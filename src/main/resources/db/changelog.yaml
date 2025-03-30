@@ -143,3 +143,21 @@ databaseChangeLog:
             path: migrations/8_token_usage/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
+  - changeSet:
+      id: 9
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 8.0
+        - sqlFile:
+            encoding: utf8
+            path: migrations/9_chat_message_attachments/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migrations/9_chat_message_attachments/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false

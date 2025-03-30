@@ -3,16 +3,18 @@ package net.barrage.llmao.app.llm.openai
 import com.aallam.openai.api.chat.ChatChoice as OpenAiChatChoice
 import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk as OpenAiChatChunk
-import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 import com.aallam.openai.api.chat.FunctionCall as OpenAiFunctionCall
-import com.aallam.openai.api.chat.FunctionTool
-import com.aallam.openai.api.chat.StreamOptions
-import com.aallam.openai.api.chat.Tool
 import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
+import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
+import com.aallam.openai.api.chat.ChatCompletionRequest
+import com.aallam.openai.api.chat.FunctionTool
+import com.aallam.openai.api.chat.ImagePart
+import com.aallam.openai.api.chat.StreamOptions
+import com.aallam.openai.api.chat.TextPart
+import com.aallam.openai.api.chat.Tool
 import com.aallam.openai.api.chat.ToolId
 import com.aallam.openai.api.chat.ToolType
-import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
 import com.aallam.openai.api.core.Parameters
 import com.aallam.openai.api.logging.LogLevel
 import com.aallam.openai.api.model.ModelId
@@ -21,7 +23,6 @@ import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -30,6 +31,9 @@ import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
+import net.barrage.llmao.core.llm.ChatMessageContentPart
+import net.barrage.llmao.core.llm.ContentMulti
+import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.FunctionCall
 import net.barrage.llmao.core.llm.LlmProvider
@@ -112,12 +116,26 @@ fun ToolDefinition.toOpenAiTool(): Tool {
 fun ChatMessage.toOpenAiChatMessage(): OpenAiChatMessage {
   return when (role) {
     "user" ->
-      OpenAiChatMessage.User(
-        content ?: throw AppError.api(ErrorReason.InvalidParameter, "User message content is null")
-      )
-    "assistant" ->
+      when (content) {
+        is ContentSingle -> OpenAiChatMessage.User((content as ContentSingle).content)
+        is ContentMulti ->
+          OpenAiChatMessage.User(
+            (content as ContentMulti).content.map {
+              when (it) {
+                is ChatMessageContentPart.Text -> TextPart(it.text)
+                is ChatMessageContentPart.Image -> ImagePart(it.imageUrl.url, it.imageUrl.detail)
+              }
+            }
+          )
+        null -> throw AppError.api(ErrorReason.InvalidParameter, "User message must have content")
+      }
+    "assistant" -> {
+
       OpenAiChatMessage.Assistant(
-        content,
+        content?.let {
+          assert(it is ContentSingle) { "Assistant message must be ContentSingle" }
+          it.text()
+        },
         toolCalls =
           toolCalls?.map {
             OpenAiToolCall.Function(
@@ -126,12 +144,20 @@ fun ChatMessage.toOpenAiChatMessage(): OpenAiChatMessage {
             )
           },
       )
-    "system" -> OpenAiChatMessage.System(content)
+    }
+    "system" -> {
+      assert(content is ContentSingle) { "System message must be ContentSingle" }
+      OpenAiChatMessage.System(content!!.text())
+    }
     "tool" -> {
+      assert(content is ContentSingle) { "Tool message content must be ContentSingle" }
       val callId =
         toolCallId
           ?: throw AppError.api(ErrorReason.InvalidParameter, "Tool message must have tool call id")
-      OpenAiChatMessage.Tool(content = content, toolCallId = ToolId(callId))
+      OpenAiChatMessage.Tool(
+        content = content!!.text(),
+        toolCallId = ToolId(callId),
+      )
     }
     else -> throw AppError.api(ErrorReason.InvalidParameter, "Invalid message role '$role'")
   }
@@ -160,7 +186,7 @@ fun OpenAiChatChunk.toNativeMessageChunk(): ChatMessageChunk {
 fun OpenAiChatMessage.toNativeChatMessage(finishReason: FinishReason? = null): ChatMessage {
   return ChatMessage(
     role = role.role,
-    content = content,
+    content = content?.let(::ContentSingle),
     finishReason = finishReason,
     toolCalls =
       toolCalls?.map { toolCall ->
@@ -171,8 +197,6 @@ fun OpenAiChatMessage.toNativeChatMessage(finishReason: FinishReason? = null): C
               name = toolCall.function.name,
               arguments = toolCall.function.arguments,
             )
-          else ->
-            throw AppError.api(ErrorReason.InvalidParameter, "Unrecognized tool call '$toolCall'")
         }
       },
   )

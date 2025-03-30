@@ -12,30 +12,30 @@ import io.minio.errors.MinioException
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.ImageType
-import net.barrage.llmao.core.storage.ImageStorage
+import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.string
 
-private const val AVATAR_PREFIX = "avatars"
-private val LOG = KtorSimpleLogger("net.barrage.llmao.app.storage.AvatarStorage")
+private val LOG = KtorSimpleLogger("net.barrage.llmao.app.storage.MinioImageStorage")
 
-class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
+class MinioImageStorage(
+  config: ApplicationConfig,
+  private val bucket: String = config.string("minio.bucket"),
+) : BlobStorage<Image> {
   private val client =
     MinioClient.builder()
       .endpoint(config.string("minio.endpoint"))
       .credentials(config.string("minio.accessKey"), config.string("minio.secretKey"))
       .build()
 
-  private val bucket = config.string("minio.bucket")
+  override fun id(): String = "minio"
 
-  override fun store(image: Image) {
-    val path = "$AVATAR_PREFIX/${image.name}"
-
+  override fun store(path: String, input: Image) {
     try {
       client.putObject(
         PutObjectArgs.builder()
           .bucket(bucket)
           .`object`(path)
-          .stream(image.data.inputStream(), image.data.size.toLong(), -1)
+          .stream(input.data.inputStream(), input.data.size.toLong(), -1)
           .build()
       )
     } catch (e: MinioException) {
@@ -44,31 +44,25 @@ class MinioImageStorage(config: ApplicationConfig) : ImageStorage {
     }
   }
 
-  override fun retrieve(name: String): Image? {
-    val nameWithPath = "$AVATAR_PREFIX/$name"
-
-    if (!exists(nameWithPath)) {
+  override fun retrieve(path: String): Image? {
+    if (!exists(path)) {
       return null
     }
 
-    val contentType = ImageType.fromImageName(name) ?: throw AppError.internal("Invalid image type")
+    val contentType = ImageType.fromImageName(path) ?: throw AppError.internal("Invalid image type")
 
     try {
       val bytes =
-        client
-          .getObject(GetObjectArgs.builder().bucket(bucket).`object`(nameWithPath).build())
-          .readBytes()
+        client.getObject(GetObjectArgs.builder().bucket(bucket).`object`(path).build()).readBytes()
 
-      return Image(name, bytes, contentType)
+      return Image(bytes, contentType)
     } catch (e: MinioException) {
       LOG.error("Failed to download file", e)
       throw AppError.internal("Failed to download file")
     }
   }
 
-  override fun delete(name: String) {
-    val path = "$AVATAR_PREFIX/$name"
-
+  override fun delete(path: String) {
     try {
       client.removeObject(RemoveObjectArgs.builder().bucket(bucket).`object`(path).build())
     } catch (e: MinioException) {

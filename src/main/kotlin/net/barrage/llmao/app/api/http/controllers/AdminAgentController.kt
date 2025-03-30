@@ -7,10 +7,13 @@ import io.github.smiley4.ktoropenapi.post
 import io.github.smiley4.ktoropenapi.put
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.request.contentLength
+import io.ktor.server.request.contentType
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
+import io.ktor.utils.io.toByteArray
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminAgentsQuery
 import net.barrage.llmao.app.api.http.pathUuid
@@ -18,8 +21,8 @@ import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryListAgentsFilters
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.queryParam
-import net.barrage.llmao.app.api.http.runWithImage
 import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.agent.AgentService
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentCollection
@@ -30,6 +33,8 @@ import net.barrage.llmao.core.model.AgentGroupUpdate
 import net.barrage.llmao.core.model.AgentUpdateTools
 import net.barrage.llmao.core.model.AgentWithConfiguration
 import net.barrage.llmao.core.model.CreateAgent
+import net.barrage.llmao.core.model.Image
+import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.model.Message
 import net.barrage.llmao.core.model.UpdateAgent
 import net.barrage.llmao.core.model.UpdateCollections
@@ -39,10 +44,13 @@ import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.string
 import net.barrage.llmao.tryUuid
 
 /** Agent DTO for display purposes. */
 fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
+  val maxImageUploadSize = this.environment.config.string("blob.image.maxFileSize").toLong()
+
   route("/admin/agents") {
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
@@ -109,10 +117,35 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
       route("/avatars") {
         post(uploadAgentAvatar()) {
           val agentId = call.pathUuid("id")
-          call.runWithImage(agentId) { image ->
-            agentService.uploadAgentAvatar(agentId, image)
-            call.respond(HttpStatusCode.Created, image.name)
+
+          val contentLength =
+            call.request.contentLength()
+              ?: throw AppError.api(
+                ErrorReason.InvalidParameter,
+                "Expected content in request body",
+              )
+
+          if (contentLength > maxImageUploadSize) {
+            throw AppError.api(
+              ErrorReason.PayloadTooLarge,
+              "Image size exceeds the maximum allowed size",
+            )
           }
+
+          val data = call.request.receiveChannel().toByteArray()
+
+          val imageType =
+            ImageType.fromContentType(call.request.contentType().toString())
+              ?: throw AppError.api(
+                ErrorReason.InvalidContentType,
+                "Expected type: image/jpeg or image/png",
+              )
+
+          val input = Image(data, imageType)
+
+          val path = agentService.uploadAgentAvatar(agentId, input)
+
+          call.respond(HttpStatusCode.Created, path)
         }
 
         delete(deleteAgentAvatar()) {

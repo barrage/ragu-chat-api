@@ -16,8 +16,8 @@ import net.barrage.llmao.app.api.http.controllers.adminChatsRoutes
 import net.barrage.llmao.app.api.http.controllers.adminSettingsRoutes
 import net.barrage.llmao.app.api.http.controllers.administrationRouter
 import net.barrage.llmao.app.api.http.controllers.agentsRoutes
+import net.barrage.llmao.app.api.http.controllers.avatarRoutes
 import net.barrage.llmao.app.api.http.controllers.chatsRoutes
-import net.barrage.llmao.app.api.http.controllers.imageRoutes
 import net.barrage.llmao.app.api.http.controllers.specialistWorkflowRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraAdminRoutes
 import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraUserRoutes
@@ -57,7 +57,8 @@ fun Application.configureRouting(state: ApplicationState) {
       chatsRoutes(state.services.chat)
     }
 
-    imageRoutes(state.providers.imageStorage)
+    avatarRoutes(state.providers.image)
+
     // WhatsApp API routes
     state.adapters.runIfEnabled<WhatsAppAdapter, Unit> { whatsAppAdapter ->
       whatsAppHookRoutes(whatsAppAdapter)

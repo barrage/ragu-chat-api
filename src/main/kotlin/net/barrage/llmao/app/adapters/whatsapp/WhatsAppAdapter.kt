@@ -1,12 +1,12 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -26,9 +26,12 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.agent.AgentRepository
+import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.model.AgentFull
@@ -38,7 +41,6 @@ import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.Settings
@@ -65,6 +67,7 @@ class WhatsAppAdapter(
   private val settings: Settings,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val encodingRegistry: EncodingRegistry,
+  private val messageProcessor: ChatMessageProcessor,
 ) {
   private var whatsAppApi: WhatsAppApi
 
@@ -192,20 +195,17 @@ class WhatsAppAdapter(
       )
     val chatAgent = getChatAgent(whatsAppNumber.userId, whatsAppNumber.username, chat, agent)
 
-    val userMessage = ChatMessage.user(result.message.text)
-
-    val buffer = mutableListOf(userMessage)
-
-    chatAgent.chatCompletion(buffer)
+    val messages = chatAgent.completion(result.message.text)
 
     // TODO: Include tools in wapp conversation histories
-    val response = buffer.last()
+    val response = messages.last()
 
-    val whatsAppMessage = createWhatsAppMessage(result.from, result.to, response.content!!)
+    val whatsAppMessage =
+      createWhatsAppMessage(result.from, result.to, (response.content as ContentSingle).content)
 
     val messageInfo = sendWhatsAppMessage(whatsAppMessage)
 
-    storeMessages(chatId = chat.id, agentConfigurationId = chatAgent.configurationId, buffer)
+    storeMessages(chatId = chat.id, agentConfigurationId = chatAgent.configurationId, messages)
 
     LOG.debug(
       "WhatsApp message sent to: {}, status: {}",
@@ -228,7 +228,9 @@ class WhatsAppAdapter(
       )
 
     val messages =
-      chatMessages.items.flatMap { it.messages.map { ChatMessage.fromModel(it) } }.toMutableList()
+      chatMessages.items
+        .flatMap { it.messages.map(messageProcessor::loadToChatMessage) }
+        .toMutableList()
 
     val settings = settings.getAllWithDefaults()
     val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)

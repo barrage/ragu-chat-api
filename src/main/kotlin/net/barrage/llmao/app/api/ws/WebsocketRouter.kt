@@ -20,8 +20,8 @@ import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.app.chat.ChatWorkflowFactory
-import net.barrage.llmao.app.workflow.IncomingMessage
-import net.barrage.llmao.app.workflow.IncomingMessageSerializer
+import net.barrage.llmao.app.workflow.IncomingSessionMessage
+import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
@@ -45,7 +45,7 @@ fun Application.websocketServer(
     // FIXME: Shrink
     maxFrameSize = Long.MAX_VALUE
     masking = false
-    contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
+    contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
     pingPeriod = 5.seconds
   }
 
@@ -109,7 +109,7 @@ fun Application.websocketServer(
 
             val message =
               try {
-                Json.decodeFromString<IncomingMessage>(frame.readText())
+                Json.decodeFromString<IncomingSessionMessage>(frame.readText())
               } catch (e: Throwable) {
                 e.printStackTrace()
                 emitter.emitError(

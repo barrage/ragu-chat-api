@@ -22,6 +22,7 @@ import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.admin.AdministrationService
 import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatService
 import net.barrage.llmao.core.initDatabase
 import net.barrage.llmao.core.settings.Settings
@@ -37,20 +38,22 @@ class ApplicationState(
   applicationStopping: Job,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val providers =
-    ProviderState(
-      llm = LlmProviderFactory(config),
-      vector = VectorDatabaseProviderFactory(config),
-      embedding = EmbeddingProviderFactory(config),
-      imageStorage = MinioImageStorage(config),
-    )
+  val providers: ProviderState
   val repository: RepositoryState
   val services: ServiceState
   val adapters: AdapterState
 
   init {
     val database = initDatabase(config, applicationStopping)
+
     repository = RepositoryState(database)
+    providers =
+      ProviderState(
+        llm = LlmProviderFactory(config),
+        vector = VectorDatabaseProviderFactory(config),
+        embedding = EmbeddingProviderFactory(config),
+        image = MinioImageStorage(config),
+      )
     services =
       ServiceState(
         chat = ChatService(repository.chatRead(ChatType.CHAT.value), repository.agent),
@@ -60,7 +63,7 @@ class ApplicationState(
             repository.agent,
             repository.chatRead(ChatType.CHAT.value),
             listener,
-            providers.imageStorage,
+            providers.image,
           ),
         admin =
           AdministrationService(
@@ -115,6 +118,7 @@ class AdapterState(
           settings = settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           encodingRegistry = Encodings.newDefaultEncodingRegistry(),
+          messageProcessor = ChatMessageProcessor(providers),
         )
     }
 

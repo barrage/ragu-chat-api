@@ -3,43 +3,21 @@ package net.barrage.llmao.app.embeddings
 import io.ktor.server.config.*
 import net.barrage.llmao.app.embeddings.openai.AzureEmbedder
 import net.barrage.llmao.app.embeddings.openai.OpenAIEmbedder
-import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.string
 
 class EmbeddingProviderFactory(config: ApplicationConfig) : ProviderFactory<Embedder>() {
-  private val providers = mutableMapOf<String, Embedder>()
-
   init {
-    config.tryGetString("ktor.features.embeddings.openai")?.toBoolean()?.let { enabled ->
-      if (enabled) {
-        providers["openai"] = initOpenAIEmbedder(config)
-      }
+    if (config.tryGetString("ktor.features.embeddings.openai").toBoolean()) {
+      providers["openai"] = initOpenAIEmbedder(config)
     }
-    config.tryGetString("ktor.features.embeddings.azure")?.toBoolean()?.let { enabled ->
-      if (enabled) {
-        providers["azure"] = initAzureEmbedder(config)
-      }
+    if (config.tryGetString("ktor.features.embeddings.azure").toBoolean()) {
+      providers["azure"] = initAzureEmbedder(config)
     }
-    config.tryGetString("ktor.features.embeddings.fembed")?.toBoolean()?.let { enabled ->
-      if (enabled) {
-        providers["fembed"] = initFastEmbedder(config)
-      }
+    if (config.tryGetString("ktor.features.embeddings.fembed").toBoolean()) {
+      providers["fembed"] = initFastEmbedder(config)
     }
-  }
-
-  override fun getProvider(providerId: String): Embedder {
-    return providers[providerId]
-      ?: throw AppError.api(
-        ErrorReason.InvalidProvider,
-        "Unsupported embedding provider '$providerId'",
-      )
-  }
-
-  override fun listProviders(): List<String> {
-    return providers.keys.toList()
   }
 
   private fun initOpenAIEmbedder(config: ApplicationConfig): OpenAIEmbedder {

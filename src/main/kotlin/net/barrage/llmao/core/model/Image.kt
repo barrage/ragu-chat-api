@@ -1,12 +1,11 @@
 package net.barrage.llmao.core.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/** An image obtained from a storage provider. */
 @Serializable
 data class Image(
-  /** The image name will usually be the entity's ID with the image type appended. */
-  val name: String,
-
   /** Image bytes. */
   val data: ByteArray,
 
@@ -15,17 +14,17 @@ data class Image(
 )
 
 enum class ImageType {
-  JPEG,
-  PNG;
+  @SerialName("jpeg") JPEG,
+  @SerialName("png") PNG;
 
-  fun extension(): String {
+  override fun toString(): String {
     return when (this) {
       JPEG -> "jpeg"
       PNG -> "png"
     }
   }
 
-  fun toContentType(): String {
+  fun contentType(): String {
     return when (this) {
       JPEG -> "image/jpeg"
       PNG -> "image/png"

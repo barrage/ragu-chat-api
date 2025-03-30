@@ -17,9 +17,7 @@ import net.barrage.llmao.core.token.TokenUsageAmount
 class OpenAIEmbedder(endpoint: String, apiKey: String) : Embedder {
   private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
 
-  override fun id(): String {
-    return "openai"
-  }
+  override fun id(): String = "openai"
 
   override suspend fun supportsModel(model: String): Boolean {
     return OpenAIEmbeddingModel.tryFromString(model) != null

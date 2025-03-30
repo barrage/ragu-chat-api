@@ -11,7 +11,6 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.chat.ChatAgent
 import net.barrage.llmao.app.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -80,9 +79,8 @@ class TokenUsageTests : IntegrationTest() {
 
   @Test
   fun registersUsageWhenCallingChatCompletion() = test {
-    val buffer = mutableListOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT))
-    workflow.chatCompletion(buffer)
-    assertEquals(COMPLETIONS_RESPONSE, buffer.last().content)
+    val response = workflow.completion(COMPLETIONS_COMPLETION_PROMPT)
+    assertEquals(COMPLETIONS_RESPONSE, response.last().content!!.text())
 
     // Use delays since storing the usage is done in a separate coroutine
     delay(200)
@@ -99,7 +97,7 @@ class TokenUsageTests : IntegrationTest() {
   @Test
   fun registersUsageWhenCallingTitleCompletion() = test {
     val response = workflow.createTitle("foo", "bar")
-    assertEquals(COMPLETIONS_TITLE_RESPONSE, response.content)
+    assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
 
     // Use delays since storing the usage is done in a separate coroutine
     delay(200)

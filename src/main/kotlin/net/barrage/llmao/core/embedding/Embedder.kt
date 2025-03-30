@@ -1,8 +1,8 @@
 package net.barrage.llmao.core.embedding
 
-interface Embedder {
-  fun id(): String
+import net.barrage.llmao.core.Identity
 
+interface Embedder : Identity {
   /** Return `true` if the embedder supports the given model. */
   suspend fun supportsModel(model: String): Boolean
 

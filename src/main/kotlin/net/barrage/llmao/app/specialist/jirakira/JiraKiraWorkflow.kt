@@ -8,7 +8,8 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Workflow
 
-class JiraKiraWorkflow(val id: KUUID, val user: User, private val jirakira: JiraKira) : Workflow {
+class JiraKiraWorkflow(val id: KUUID, val user: User, private val jirakira: JiraKira) :
+  Workflow<String> {
   private val scope = CoroutineScope(Dispatchers.Default)
 
   override fun id(): KUUID {
@@ -20,10 +21,10 @@ class JiraKiraWorkflow(val id: KUUID, val user: User, private val jirakira: Jira
     return id
   }
 
-  override fun execute(message: String) {
+  override fun execute(input: String) {
     scope.launch {
       try {
-        jirakira.execute(message)
+        jirakira.execute(input)
       } catch (e: AppError) {
         LOG.error("Error in JiraKira", e)
         jirakira.emitError(

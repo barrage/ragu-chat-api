@@ -3,15 +3,11 @@ package net.barrage.llmao.app.llm
 import io.ktor.server.config.*
 import net.barrage.llmao.app.llm.openai.AzureAI
 import net.barrage.llmao.app.llm.openai.OpenAI
-import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.string
 
 class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<LlmProvider>() {
-  private val providers = mutableMapOf<String, LlmProvider>()
-
   init {
     config.tryGetString("ktor.features.llm.openai")?.toBoolean()?.let { enabled ->
       if (enabled) {
@@ -28,15 +24,6 @@ class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<LlmProvide
         providers["ollama"] = initOllama(config)
       }
     }
-  }
-
-  override fun getProvider(providerId: String): LlmProvider {
-    return providers[providerId]
-      ?: throw AppError.api(ErrorReason.InvalidProvider, "Unsupported LLM provider '$providerId'")
-  }
-
-  override fun listProviders(): List<String> {
-    return providers.keys.toList()
   }
 
   private fun initOpenAi(config: ApplicationConfig): OpenAI {

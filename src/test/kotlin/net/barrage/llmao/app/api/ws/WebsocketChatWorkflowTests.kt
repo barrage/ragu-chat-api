@@ -28,7 +28,7 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.adminWsSession
 import net.barrage.llmao.app.chat.ChatWorkflowMessage
-import net.barrage.llmao.app.workflow.IncomingMessageSerializer
+import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.FinishReason
@@ -317,13 +317,13 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     val client1 = createClient {
       install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
+        contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
       }
     }
 
     val client2 = createClient {
       install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
+        contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
       }
     }
 
@@ -533,9 +533,9 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
       // Latest messages are the first one in the list
 
-      assertEquals("1: $prompt", messages[0].content)
+      assertEquals("0: $prompt", messages[0].content)
       assertEquals(COMPLETIONS_STREAM_RESPONSE, messages[1].content)
-      assertEquals("0: $prompt", messages[2].content)
+      assertEquals("1: $prompt", messages[2].content)
       assertEquals(COMPLETIONS_STREAM_RESPONSE, messages[3].content)
 
       asserted = true

@@ -32,9 +32,7 @@ class AzureEmbedder(endpoint: String, deployment: String, apiVersion: String, ap
     client = OpenAI(OpenAIConfig(host = host, headers = mapOf("api-key" to apiKey), token = apiKey))
   }
 
-  override fun id(): String {
-    return "azure"
-  }
+  override fun id(): String = "azure"
 
   override suspend fun supportsModel(model: String): Boolean {
     return OpenAIEmbeddingModel.tryFromString(model) != null

@@ -12,9 +12,7 @@ import net.barrage.llmao.core.embedding.Embeddings
 class FastEmbedder(private val endpoint: String) : Embedder {
   private val client: HttpClient = httpClient()
 
-  override fun id(): String {
-    return "fembed"
-  }
+  override fun id(): String = "fembed"
 
   private suspend fun getModels(): Map<String, Int> {
     val response = client.get("$endpoint/list")

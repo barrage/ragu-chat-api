@@ -1,31 +1,12 @@
 package net.barrage.llmao.app.vector
 
 import io.ktor.server.config.*
-import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.vector.VectorDatabase
 
 class VectorDatabaseProviderFactory(config: ApplicationConfig) : ProviderFactory<VectorDatabase>() {
-  private val weaviate: Weaviate
-
   init {
-    weaviate = initWeaviate(config)
-  }
-
-  override fun getProvider(providerId: String): VectorDatabase {
-    return when (providerId) {
-      weaviate.id() -> weaviate
-      else ->
-        throw AppError.api(
-          ErrorReason.InvalidProvider,
-          "Unsupported vector database provider '$providerId'",
-        )
-    }
-  }
-
-  override fun listProviders(): List<String> {
-    return listOf(weaviate.id())
+    providers["weaviate"] = initWeaviate(config)
   }
 
   private fun initWeaviate(config: ApplicationConfig): Weaviate {

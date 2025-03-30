@@ -4,15 +4,16 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.admin.AdministrationService
 import net.barrage.llmao.core.agent.AgentRepository
 import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.chat.ChatService
 import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.settings.SettingsRepository
 import net.barrage.llmao.core.specialist.SpecialistRepositoryWrite
-import net.barrage.llmao.core.storage.ImageStorage
+import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.token.TokenUsageRepositoryRead
 import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.vector.VectorDatabase
@@ -20,10 +21,17 @@ import org.jooq.DSLContext
 
 /** Encapsulates all available providers for downstream services. */
 class ProviderState(
+  /** Providers for LLM inference. */
   val llm: ProviderFactory<LlmProvider>,
+
+  /** Providers for vector databases. */
   val vector: ProviderFactory<VectorDatabase>,
+
+  /** Text embedding providers. */
   val embedding: ProviderFactory<Embedder>,
-  val imageStorage: ImageStorage,
+
+  /** Image storage provider. Only one is available per instance of app. */
+  val image: BlobStorage<Image>,
 ) {
   fun list(): ProvidersResponse {
     val llmProviders = llm.listProviders()

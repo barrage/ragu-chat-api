@@ -7,6 +7,8 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import net.barrage.llmao.app.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraMessage
+import net.barrage.llmao.core.model.IncomingImageData
+import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 
@@ -15,22 +17,25 @@ import net.barrage.llmao.core.workflow.OutgoingSystemMessage
  * allows us to deserialize messages and setup their handlers more easily.
  */
 @Serializable
-sealed class IncomingMessage {
+sealed class IncomingSessionMessage {
   @Serializable
   @SerialName("system")
-  data class System(val payload: IncomingSystemMessage) : IncomingMessage()
+  data class System(val payload: IncomingSystemMessage) : IncomingSessionMessage()
 
-  @Serializable @SerialName("chat") data class Chat(val text: String) : IncomingMessage()
+  @Serializable
+  @SerialName("chat")
+  data class Chat(val text: String, val attachments: List<IncomingMessageAttachment>? = null) :
+    IncomingSessionMessage()
 }
 
-val IncomingMessageSerializer = Json {
+val IncomingSessionMessageSerializer = Json {
   // Register all the polymorphic subclasses
   ignoreUnknownKeys = true
   classDiscriminator = "type" // Use "type" field for the discriminator
   serializersModule = SerializersModule {
-    polymorphic(IncomingMessage::class) {
-      subclass(IncomingMessage.System::class, IncomingMessage.System.serializer())
-      subclass(IncomingMessage.Chat::class, IncomingMessage.Chat.serializer())
+    polymorphic(IncomingSessionMessage::class) {
+      subclass(IncomingSessionMessage.System::class, IncomingSessionMessage.System.serializer())
+      subclass(IncomingSessionMessage.Chat::class, IncomingSessionMessage.Chat.serializer())
     }
     polymorphic(IncomingSystemMessage::class) {
       subclass(
@@ -77,6 +82,13 @@ val IncomingMessageSerializer = Json {
     }
     polymorphic(JiraKiraMessage::class) {
       subclass(JiraKiraMessage.LlmResponse::class, JiraKiraMessage.LlmResponse.serializer())
+    }
+    polymorphic(IncomingMessageAttachment::class) {
+      subclass(IncomingMessageAttachment.Image::class, IncomingMessageAttachment.Image.serializer())
+    }
+    polymorphic(IncomingImageData::class) {
+      subclass(IncomingImageData.Url::class, IncomingImageData.Url.serializer())
+      subclass(IncomingImageData.Raw::class, IncomingImageData.Raw.serializer())
     }
   }
 }

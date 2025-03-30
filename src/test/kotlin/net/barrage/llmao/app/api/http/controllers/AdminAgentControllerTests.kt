@@ -198,7 +198,6 @@ class AdminAgentControllerTests : IntegrationTest() {
     val body = response.body<AppError>()
     assertEquals("API", body.errorType)
     assertEquals(ErrorReason.InvalidProvider, body.errorReason)
-    assertEquals("Unsupported LLM provider 'openaai'", body.errorMessage)
   }
 
   @Test

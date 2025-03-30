@@ -26,6 +26,7 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.types.KUUID
 
@@ -75,6 +76,7 @@ fun Application.module() {
       settings = state.services.settings,
       tokenUsageRepositoryW = state.repository.tokenUsageW,
       encodingRegistry = Encodings.newDefaultEncodingRegistry(),
+      messageProcessor = ChatMessageProcessor(state.providers),
     ),
     listener = stateChangeListener,
     adapters = state.adapters,

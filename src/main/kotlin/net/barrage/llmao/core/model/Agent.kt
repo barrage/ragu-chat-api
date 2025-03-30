@@ -32,7 +32,7 @@ data class Agent(
   /** Language the agent is configured to use. For display purposes only. */
   val language: String? = null,
 
-  /** Agent's avatar file path. */
+  /** Agent's avatar file path including the extension. */
   val avatar: String? = null,
 
   /** Agents timestamps. */

@@ -1,10 +1,9 @@
 package net.barrage.llmao.core.llm
 
 import kotlinx.coroutines.flow.Flow
+import net.barrage.llmao.core.Identity
 
-interface LlmProvider {
-  fun id(): String
-
+interface LlmProvider : Identity {
   /** Execute chat completion on an LLM. */
   suspend fun chatCompletion(
     messages: List<ChatMessage>,

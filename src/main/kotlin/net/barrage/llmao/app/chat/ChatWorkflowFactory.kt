@@ -5,9 +5,10 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatHistory
-import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolEvent
@@ -15,7 +16,6 @@ import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
@@ -34,6 +34,7 @@ class ChatWorkflowFactory(
   private val settings: Settings,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val encodingRegistry: EncodingRegistry,
+  private val messageProcessor: ChatMessageProcessor,
 ) {
   suspend fun newChatWorkflow(
     user: User,
@@ -110,6 +111,7 @@ class ChatWorkflowFactory(
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.New,
       user = user,
+      messageProcessor = messageProcessor,
     )
   }
 
@@ -143,7 +145,8 @@ class ChatWorkflowFactory(
         originId = id,
       )
 
-    val messages = chat.messages.items.flatMap { it.messages }.map(ChatMessage::fromModel)
+    val messages =
+      chat.messages.items.flatMap { it.messages }.map(messageProcessor::loadToChatMessage)
 
     val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
     val history: ChatHistory =
@@ -191,6 +194,7 @@ class ChatWorkflowFactory(
       emitter = emitter,
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.Persisted(chat.chat.title!!),
+      messageProcessor = messageProcessor,
     )
   }
 }

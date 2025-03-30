@@ -4,7 +4,6 @@ import io.ktor.util.logging.KtorSimpleLogger
 import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -82,7 +81,7 @@ class JiraKira(
 
   suspend fun execute(message: String) {
     if (lock) {
-      throw AppError.api(ErrorReason.Websocket, "Jira Kira is already busy")
+      throw AppError.api(ErrorReason.Websocket, "Jira Kira is busy")
     }
 
     try {
@@ -159,8 +158,8 @@ class JiraKira(
     messageBuffer.add(response.message)
 
     response.message.content?.let { content ->
-      if (content.isNotBlank()) {
-        emitter.emit(JiraKiraMessage.LlmResponse(content))
+      if (content.text().isNotBlank()) {
+        emitter.emit(JiraKiraMessage.LlmResponse(content.text()))
       }
     }
 
@@ -334,7 +333,7 @@ class JiraKira(
         buffer.map { message ->
           SpecialistMessageInsert(
             senderType = message.role,
-            content = message.content,
+            content = message.content?.text(),
             toolCalls = Json.encodeToString(message.toolCalls),
             toolCallId = message.toolCallId,
             finishReason = message.finishReason,

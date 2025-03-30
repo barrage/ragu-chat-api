@@ -18,6 +18,7 @@ import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
+import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.ToolCallData
@@ -110,7 +111,7 @@ class Ollama(private val endpoint: String) : LlmProvider {
             offset += chunk.length
 
             // Add token chunk to the chunk buffer
-            chunkBuffer.add(streamChunk.toTokenChunk())
+            chunkBuffer.add(streamChunk.toNativeChunk())
           } catch (e: SerializationException) {
             // Parsing unsuccessful, reset buffer to end of valid JSON
             buffer.copyInto(buffer, startIndex = offset)
@@ -214,11 +215,12 @@ private data class ChatStreamChunk(
   val message: ChatMessage,
   val done: Boolean,
 ) {
-  fun toTokenChunk(): ChatMessageChunk {
+  fun toNativeChunk(): ChatMessageChunk {
     return ChatMessageChunk(
       id = "ID",
       created = createdAt.toEpochSecond(),
-      content = message.content,
+      // TODO: Not correct, this implementation needs some love
+      content = TODO(), //  message.content.toString(),
       stopReason =
         if (done) {
           FinishReason.Stop
@@ -241,7 +243,8 @@ private data class OllamaChatMessage(
 private fun OllamaChatMessage.toNativeChatMessage(): ChatMessage {
   return ChatMessage(
     role = role,
-    content = content,
+    // TODO: Not correct, this implementation needs some love
+    content = ContentSingle(content),
     toolCalls = toolCalls?.map { it.toToolCallData() },
   )
 }

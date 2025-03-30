@@ -1,11 +1,10 @@
 package net.barrage.llmao.core.vector
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.Identity
 import net.barrage.llmao.core.types.KUUID
 
-interface VectorDatabase {
-  fun id(): String
-
+interface VectorDatabase : Identity {
   /** Perform semantic similarity search using the given `queries`. */
   fun query(queries: List<CollectionQuery>): Map<String, List<VectorData>>
 

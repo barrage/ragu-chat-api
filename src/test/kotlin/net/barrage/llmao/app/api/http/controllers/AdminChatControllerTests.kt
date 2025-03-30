@@ -19,6 +19,7 @@ import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.ValidationError
+import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.Chat
@@ -28,7 +29,6 @@ import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
@@ -177,8 +177,8 @@ class AdminChatControllerTests : IntegrationTest() {
 
     // Message groups are sorted by createdAt DESC
 
-    val checkGroupOne = body.items[1]
-    val checkGroupTwo = body.items[0]
+    val checkGroupOne = body.items[0]
+    val checkGroupTwo = body.items[1]
 
     assertEquals(messageGroupOne.group.id, checkGroupOne.group.id)
 
@@ -220,8 +220,8 @@ class AdminChatControllerTests : IntegrationTest() {
         .body<CountedList<MessageGroupAggregate>>()
 
     assertEquals(2, messages.items.size)
-    assertEquals(true, messages.items[0].evaluation?.evaluation)
-    assertEquals(null, messages.items[0].evaluation?.feedback)
+    assertEquals(true, messages.items[1].evaluation?.evaluation)
+    assertEquals(null, messages.items[1].evaluation?.feedback)
   }
 
   @Test
@@ -243,10 +243,11 @@ class AdminChatControllerTests : IntegrationTest() {
         .body<CountedList<MessageGroupAggregate>>()
 
     assertEquals(2, messages.items.size)
-    assertEquals(true, messages.items[0].evaluation?.evaluation)
-    assertEquals("oh yes, what a splendid response", messages.items[0].evaluation?.feedback)
 
-    assertEquals(null, messages.items[1].evaluation)
+    assertEquals(null, messages.items[0].evaluation)
+
+    assertEquals(true, messages.items[1].evaluation?.evaluation)
+    assertEquals("oh yes, what a splendid response", messages.items[1].evaluation?.feedback)
   }
 
   @Test

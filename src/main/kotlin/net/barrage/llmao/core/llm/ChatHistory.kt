@@ -17,7 +17,9 @@ abstract class ChatHistory(internal open val messages: MutableList<ChatMessage>)
   fun messages(): List<ChatMessage> = messages
 }
 
-/** History management strategy based on tokens. */
+/**
+ * History management strategy based on tokens. Does not count tokens spent on message attachments.
+ */
 class TokenBasedHistory(
   internal override val messages: MutableList<ChatMessage>,
   private val tokenizer: Encoding,
@@ -25,7 +27,7 @@ class TokenBasedHistory(
 ) : ChatHistory(messages) {
   private var currentTokens: Int =
     messages.fold(0) { acc, message ->
-      var tokenCount = tokenizer.countTokensOrdinary(message.content)
+      var tokenCount = message.content?.let { tokenizer.countTokensOrdinary(it.text()) } ?: 0
       message.toolCalls?.let {
         tokenCount += it.sumOf { tokenizer.countTokensOrdinary(it.arguments) }
       }
@@ -39,7 +41,7 @@ class TokenBasedHistory(
 
     val messageTokens =
       messages.fold(0) { acc, message ->
-        var tokenCount = tokenizer.countTokensOrdinary(message.content)
+        var tokenCount = message.content?.let { tokenizer.countTokensOrdinary(it.text()) } ?: 0
         message.toolCalls?.let {
           tokenCount += it.sumOf { tokenizer.countTokensOrdinary(it.arguments) }
         }
@@ -58,7 +60,7 @@ class TokenBasedHistory(
         (currentTokens + tokens > maxTokens || messages.first().role != "user")
     ) {
       val removed = messages.removeFirst()
-      var removedTokens = tokenizer.countTokensOrdinary(removed.content)
+      var removedTokens = removed.content?.let { tokenizer.countTokensOrdinary(it.text()) } ?: 0
       removed.toolCalls?.let {
         removedTokens += it.sumOf { tokenizer.countTokensOrdinary(it.arguments) }
       }

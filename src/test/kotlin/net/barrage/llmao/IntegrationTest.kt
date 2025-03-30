@@ -8,7 +8,6 @@ import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.config.ConfigLoader
-import io.ktor.server.config.ConfigLoader.Companion.load
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.config.mergeWith
 import io.ktor.server.testing.ApplicationTestBuilder
@@ -24,7 +23,7 @@ import kotlinx.coroutines.Job
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
-import net.barrage.llmao.app.workflow.IncomingMessageSerializer
+import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KOffsetDateTime
@@ -110,7 +109,7 @@ open class IntegrationTest(
     environment { config = cfg }
     val client = createClient {
       install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(IncomingMessageSerializer)
+        contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
       }
     }
     block(client)

@@ -146,13 +146,13 @@ class ChatControllerTests : IntegrationTest() {
 
     // Message groups are sorted by createdAt DESC
 
-    assertEquals(messageGroupOne.group.id, body.items[1].group.id)
-    assertEquals(messageGroupOne.messages[0].id, body.items[1].messages[0].id)
-    assertEquals(messageGroupOne.messages[1].id, body.items[1].messages[1].id)
+    assertEquals(messageGroupOne.group.id, body.items[0].group.id)
+    assertEquals(messageGroupOne.messages[0].id, body.items[0].messages[0].id)
+    assertEquals(messageGroupOne.messages[1].id, body.items[0].messages[1].id)
 
-    assertEquals(messageGroupTwo.group.id, body.items[0].group.id)
-    assertEquals(messageGroupTwo.messages[0].id, body.items[0].messages[0].id)
-    assertEquals(messageGroupTwo.messages[1].id, body.items[0].messages[1].id)
+    assertEquals(messageGroupTwo.group.id, body.items[1].group.id)
+    assertEquals(messageGroupTwo.messages[0].id, body.items[1].messages[0].id)
+    assertEquals(messageGroupTwo.messages[1].id, body.items[1].messages[1].id)
   }
 
   @Test
@@ -185,8 +185,8 @@ class ChatControllerTests : IntegrationTest() {
         .body<CountedList<MessageGroupAggregate>>()
 
     assertEquals(2, messages.items.size)
-    assertEquals(true, messages.items[0].evaluation?.evaluation)
-    assertEquals(null, messages.items[0].evaluation?.feedback)
+    assertEquals(true, messages.items[1].evaluation?.evaluation)
+    assertEquals(null, messages.items[1].evaluation?.feedback)
   }
 
   @Test
@@ -209,10 +209,10 @@ class ChatControllerTests : IntegrationTest() {
         .body<CountedList<MessageGroupAggregate>>()
 
     assertEquals(2, messages.items.size)
-    assertEquals(true, messages.items[0].evaluation?.evaluation)
-    assertEquals("good job", messages.items[0].evaluation?.feedback)
+    assertEquals(true, messages.items[1].evaluation?.evaluation)
+    assertEquals("good job", messages.items[1].evaluation?.feedback)
 
-    assertEquals(null, messages.items[1].evaluation)
+    assertEquals(null, messages.items[0].evaluation)
   }
 
   @Test

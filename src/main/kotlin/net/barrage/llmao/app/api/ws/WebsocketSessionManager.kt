@@ -4,16 +4,20 @@ import io.ktor.server.websocket.WebSocketServerSession
 import io.ktor.util.logging.KtorSimpleLogger
 import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.app.AdapterState
+import net.barrage.llmao.app.chat.ChatWorkflow
 import net.barrage.llmao.app.chat.ChatWorkflowFactory
+import net.barrage.llmao.app.chat.ChatWorkflowInput
 import net.barrage.llmao.app.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflow
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
-import net.barrage.llmao.app.workflow.IncomingMessage
+import net.barrage.llmao.app.workflow.IncomingSessionMessage
 import net.barrage.llmao.app.workflow.WorkflowType
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.llm.ToolEvent
+import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
@@ -32,7 +36,7 @@ class WebsocketSessionManager(
   listener: EventListener<StateChangeEvent>,
 ) {
   /** Maps user ID + token pairs to their sessions. */
-  private val workflows: MutableMap<WebsocketSession, Workflow> = ConcurrentHashMap()
+  private val workflows: MutableMap<WebsocketSession, Workflow<*>> = ConcurrentHashMap()
 
   /**
    * Maps user ID + token pairs directly to their output emitters. Used to broadcast system events
@@ -62,12 +66,12 @@ class WebsocketSessionManager(
 
   suspend fun handleMessage(
     session: WebsocketSession,
-    message: IncomingMessage,
+    message: IncomingSessionMessage,
     ws: WebSocketServerSession,
   ) {
     when (message) {
-      is IncomingMessage.Chat -> handleChatMessage(session, message.text)
-      is IncomingMessage.System -> handleSystemMessage(session, message.payload, ws)
+      is IncomingSessionMessage.Chat -> handleChatMessage(session, message.text, message.attachments)
+      is IncomingSessionMessage.System -> handleSystemMessage(session, message.payload, ws)
     }
   }
 
@@ -86,13 +90,25 @@ class WebsocketSessionManager(
     }
   }
 
-  private fun handleChatMessage(session: WebsocketSession, message: String) {
+  private fun handleChatMessage(
+    session: WebsocketSession,
+    message: String,
+    attachments: List<IncomingMessageAttachment>?,
+  ) {
     val workflow =
       workflows[session] ?: throw AppError.api(ErrorReason.Websocket, "Workflow not opened")
 
     LOG.debug("{} - sending input to workflow '{}'", session.user.id, workflow.id())
 
-    workflow.execute(message)
+    when (workflow) {
+      is ChatWorkflow -> {
+        workflow.execute(ChatWorkflowInput(message, attachments))
+      }
+      is JiraKiraWorkflow -> {
+        workflow.execute(message)
+      }
+      else -> throw AppError.api(ErrorReason.Websocket, "Workflow does not support message type")
+    }
   }
 
   private suspend fun handleSystemMessage(
@@ -106,7 +122,7 @@ class WebsocketSessionManager(
           when (message.workflowType) {
             null,
             WorkflowType.CHAT.name -> {
-              LOG.debug("{} - opening chat workflow", session)
+              LOG.debug("{} - opening chat workflow", session.user.id)
               val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
               val toolEmitter: Emitter<ToolEvent> = WebsocketEmitter.new(ws)
               val workflow =
@@ -129,7 +145,7 @@ class WebsocketSessionManager(
                 adapters.adapterForFeature<JiraKiraWorkflowFactory>()
                   ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
 
-              LOG.debug("{} - opening JiraKira workflow", session)
+              LOG.debug("{} - opening JiraKira workflow", session.user.id)
 
               val workflow =
                 jkFactory.newJiraKiraWorkflow(

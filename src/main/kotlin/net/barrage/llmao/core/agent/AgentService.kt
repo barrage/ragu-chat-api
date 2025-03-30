@@ -28,7 +28,8 @@ import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.storage.ImageStorage
+import net.barrage.llmao.core.storage.AVATARS_PATH
+import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.types.KUUID
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.agent")
@@ -38,7 +39,9 @@ class AgentService(
   private val agentRepository: AgentRepository,
   private val chatRepositoryRead: ChatRepositoryRead,
   private val stateChangeListener: EventListener<StateChangeEvent>,
-  private val avatarStorage: ImageStorage,
+
+  /** The image storage provider for avatars. */
+  private val avatarStorage: BlobStorage<Image>,
 ) {
   suspend fun userListAgents(
     pagination: PaginationSort,
@@ -53,10 +56,6 @@ class AgentService(
     filters: SearchFiltersAdminAgents,
   ): CountedList<AgentWithConfiguration> {
     return agentRepository.getAllAdmin(pagination, filters)
-  }
-
-  suspend fun getActive(id: KUUID): Agent {
-    return agentRepository.getActive(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
   }
 
   suspend fun userGetFull(id: KUUID, groups: List<String>): AgentFull {
@@ -172,16 +171,26 @@ class AgentService(
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
   }
 
-  suspend fun uploadAgentAvatar(id: KUUID, image: Image) {
-    val agent = agentRepository.getAgent(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
+  /**
+   * Store the agent avatar in the image storage and repository.
+   *
+   * Returns the path to the image, whose semantics are defined by the underlying storage.
+   */
+  suspend fun uploadAgentAvatar(agentId: KUUID, image: Image): String {
+    val agent =
+      agentRepository.getAgent(agentId) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
 
     if (agent.avatar != null) {
       avatarStorage.delete(agent.avatar)
     }
 
-    avatarStorage.store(image)
+    val path = "${agent.id}.${image.type}"
 
-    agentRepository.updateAvatar(id, image.name)
+    avatarStorage.store("$AVATARS_PATH/$path", image)
+
+    agentRepository.updateAvatar(agentId, path)
+
+    return path
   }
 
   suspend fun deleteAgentAvatar(id: KUUID) {
@@ -193,9 +202,9 @@ class AgentService(
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent avatar not found")
     }
 
-    avatarStorage.delete(agent.avatar)
-
     agentRepository.removeAvatar(id)
+
+    avatarStorage.delete("$AVATARS_PATH/${agent.avatar}")
   }
 
   fun listAvailableAgentTools(): List<ToolDefinition> {

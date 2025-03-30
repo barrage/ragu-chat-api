@@ -10,7 +10,6 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.chat.ChatAgent
 import net.barrage.llmao.app.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -81,15 +80,15 @@ class ChatAgentTests : IntegrationTest() {
   fun successfullyGeneratesChatTitle() = test {
     // Title responses are always the same regardless of the prompt
     val response = chatAgent.createTitle("Test prompt - title", "Test response - title")
-    assertEquals(COMPLETIONS_TITLE_RESPONSE, response.content)
+    assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
   }
 
   @Test
   fun successfullyCompletesChat() = test {
     // To trigger direct responses, the following prompt has to be somewhere the message
-    val buffer = mutableListOf(ChatMessage.user(COMPLETIONS_COMPLETION_PROMPT))
-    chatAgent.chatCompletion(buffer)
-    assertEquals(COMPLETIONS_RESPONSE, buffer.last().content)
+
+    val response = chatAgent.completion(COMPLETIONS_COMPLETION_PROMPT)
+    assertEquals(COMPLETIONS_RESPONSE, response.last().content!!.text())
   }
 
   @Test

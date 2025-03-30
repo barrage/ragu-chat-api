@@ -1,16 +1,19 @@
 package net.barrage.llmao.app.chat
 
-import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ContentSingle
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.llm.collectToolCalls
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.AgentInstructions
+import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.settings.ApplicationSettings
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.token.TokenUsageTracker
@@ -85,6 +88,7 @@ class ChatAgent(
    * only reason about which messages to add based on whether or not they are successfully stored.
    */
   internal val history: ChatHistory,
+  private val attachmentProcessor: ChatMessageProcessor,
 ) {
 
   /** Available tools. */
@@ -93,32 +97,57 @@ class ChatAgent(
   /**
    * Execute chat completion without streaming.
    *
-   * @param messageBuffer The message buffer for tracking messages. Has to contain the user message
-   *   initially.
+   * @return A list of messages that occurred during inference. If no tools are called, this will
+   *   contain the user and assistant message pair. If the agent calls tools, all calls and results
+   *   will be captured in between.
    */
-  suspend fun chatCompletion(messageBuffer: MutableList<ChatMessage>, attempt: Int = 0) {
-    if (attempt == 0) {
-      assert(messageBuffer.size == 1 && messageBuffer.first().role == "user")
-    }
+  suspend fun completion(
+    text: String,
+    attachments: List<IncomingMessageAttachment>? = null,
+  ): List<ChatMessage> {
+    val enrichedText = executeRetrievalAugmentation(text)
 
+    // Content for LLM
+    val content =
+      attachments?.let { attachmentProcessor.toContentMulti(enrichedText, it) }
+        ?: ContentSingle(enrichedText)
+
+    val messageBuffer = mutableListOf<ChatMessage>()
+
+    completion(ChatMessage.user(content), messageBuffer)
+
+    // Original content for storage, without any enrichment
+    val originalUserMessage =
+      attachments?.let { attachmentProcessor.toContentMulti(text, it) } ?: ContentSingle(text)
+
+    return listOf(ChatMessage.user(originalUserMessage)) + messageBuffer
+  }
+
+  /**
+   * Inner implementation that runs recursively until no tool calls are returned from the LLM or the
+   * maximum attempts are reached.
+   *
+   * Populates [messageBuffer] with all the messages that occurred during inference.
+   *
+   * @param userMessage The user message. Passed solely as an immutable reference.
+   * @param messageBuffer The message buffer for tracking messages. As this gets called, this will
+   *   get populated with all the messages that occurred during inference, including the final
+   *   assistant message.
+   */
+  private suspend fun completion(
+    userMessage: ChatMessage,
+    messageBuffer: MutableList<ChatMessage>,
+    attempt: Int = 0,
+  ) {
     LOG.debug("{} - starting completion (attempt: {})", agentId, attempt + 1)
-
-    if (messageBuffer.size == 1 && messageBuffer.first().role != "user") {
-      throw AppError.internal("Message buffer does not start with user message")
-    }
-
-    val userMessage =
-      messageBuffer.lastOrNull { it.role == "user" }
-        ?: throw AppError.internal("No user message in input")
-
-    // Safe to !! because user messages are never created with null content
-    userMessage.content = executeRetrievalAugmentation(userMessage.content!!)
 
     val llmInput = mutableListOf(ChatMessage.system(context))
 
     for (message in history) {
       llmInput.add(message.copy())
     }
+
+    llmInput.add(userMessage)
 
     for (message in messageBuffer) {
       llmInput.add(message.copy())
@@ -145,25 +174,25 @@ class ChatAgent(
 
     messageBuffer.add(message)
 
-    if (message.toolCalls == null) {
-      return
+    if (message.toolCalls != null) {
+      LOG.debug(
+        "{} - (completion) calling tools: {}",
+        agentId,
+        message.toolCalls.joinToString(", ") { it.name },
+      )
+
+      for (toolCall in message.toolCalls) {
+        val result = toolchain!!.processToolCall(toolCall)
+        messageBuffer.add(ChatMessage.toolResult(result.content, toolCall.id))
+      }
+
+      completion(userMessage, messageBuffer, attempt + 1)
+    } else if (message.content == null) {
+      LOG.warn("Assistant message has no content and no tools have been called.")
     }
-
-    LOG.debug(
-      "{} - (completion) calling tools: {}",
-      agentId,
-      message.toolCalls.joinToString(", ") { it.name },
-    )
-
-    for (toolCall in message.toolCalls) {
-      val result = toolchain!!.processToolCall(toolCall)
-      messageBuffer.add(ChatMessage.toolResult(result.content, toolCall.id))
-    }
-
-    chatCompletion(messageBuffer, attempt + 1)
   }
 
-  suspend fun createTitle(prompt: String, response: String): ChatMessage {
+  suspend fun createTitle(prompt: String, response: String): String {
     val llm = providers.llm.getProvider(llmProvider)
     val titleInstruction = instructions.titleInstruction()
     val userMessage = "USER: $prompt\nASSISTANT: $response"
@@ -171,17 +200,6 @@ class ChatAgent(
 
     val completion =
       llm.chatCompletion(messages, completionParameters.copy(maxTokens = titleMaxTokens))
-
-    // Safe to !! because we are not sending tools to the LLM
-    var title = completion.choices.first().message.content!!.trim()
-
-    while (title.startsWith("\"") && title.endsWith("\"") && title.length > 1) {
-      title = title.substring(1, title.length - 1)
-    }
-
-    LOG.trace("Title generated: {}", title)
-
-    completion.choices.first().message.content = title
 
     completion.tokenUsage?.let { tokenUsage ->
       tokenTracker.store(
@@ -192,7 +210,18 @@ class ChatAgent(
       )
     }
 
-    return completion.choices.first().message
+    // Safe to !! because we are not sending tools to the LLM
+    val titleContent = completion.choices.first().message.content!!
+
+    var title = (titleContent as ContentSingle).content
+
+    while (title.startsWith("\"") && title.endsWith("\"") && title.length > 1) {
+      title = title.substring(1, title.length - 1)
+    }
+
+    LOG.trace("Title generated: {}", title)
+
+    return title
   }
 
   /**
@@ -335,43 +364,53 @@ class ChatAgentStreaming(
   /** Output handle. Only chat related events are sent via this reference. */
   private val emitter: Emitter<ChatWorkflowMessage>,
 ) {
+
   /**
    * Recursively calls the chat completion stream until no tool calls are returned.
    *
    * If the agent contains no tools, the response content will be streamed on the first call and
-   * this function will be called only once.
+   * this function will be called only once. Note that each call to the LLM is done in streaming
+   * mode.
    *
    * If the agent contains tools and decides to use them, it will usually stream only the tool calls
    * as the initial response. The tools must then be called and their results sent back to the LLM.
-   * This process is repeated until the LLM outputs a final text response.
+   * This process is repeated until the LLM outputs a final text response or the maximum number of
+   * tool attempts is reached.
    *
    * The final output of the LLM will be captured in `out`.
    *
-   * @param messageBuffer A buffer that keeps track of new messages that are not yet persisted. Has
-   *   to contain the user message.
-   * @param out A buffer to capture the final response of the LLM.
-   * @param attempt Current attempt. Used to prevent infinite loops.
+   * @param userMessage Immutable reference to the original user message.
+   * @param messageBuffer A buffer that keeps track of new messages that are not yet persisted. Gets
+   *   populated with all the messages that occurred during inference including the final assistant
+   *   response.
+   * @param out A buffer to capture the final response of the LLM. If the stream gets cancelled and
+   *   this is not empty, it means a manual cancel occurred.
    */
   suspend fun stream(
-    /**
-     * Messages not yet persisted nor added to the history. This buffer is handled internally by
-     * this function and will contain a list of all the messages in the streaming interaction,
-     * including the user message.
-     */
+    userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
-
-    /**
-     * Captures the final response of the LLM. Needs to be passed in since streams can get cancelled
-     * and we need to persist unfinished responses.
-     */
     out: StringBuilder,
+  ) = streamInner(userMessage, messageBuffer, out, 0)
 
-    /** Current execution attempt, used to prevent infinite loops. */
+  /**
+   * See [stream].
+   *
+   * @param attempt Current attempt. Used to prevent infinite loops.
+   */
+  private suspend fun streamInner(
+    userMessage: ChatMessage,
+    messageBuffer: MutableList<ChatMessage>,
+    out: StringBuilder,
     attempt: Int = 0,
   ) {
-    if (attempt == 0) {
-      assert(messageBuffer.size == 1 && messageBuffer.first().role == "user")
-    }
+    // Perform RAG only on the first attempt and swap the initial user message with an enriched one.
+    // We need to copy the original since we do not store the enriched message, only the original.
+    val userMessage =
+      if (attempt == 0) {
+        assert(messageBuffer.isEmpty())
+        val enrichedText = chatAgent.executeRetrievalAugmentation(userMessage.content!!.text())
+        userMessage.copy(content = userMessage.content!!.copyWithText(enrichedText))
+      } else userMessage
 
     LOG.debug("{} - starting stream (attempt: {})", chatAgent.agentId, attempt + 1)
 
@@ -380,22 +419,17 @@ class ChatAgentStreaming(
     // I seriously don't understand why this is needed but it is
     // the only way I've found to not alter the original messages
     // this can't be good I just don't get it
-    val llmInput = mutableListOf<ChatMessage>()
+    val llmInput = mutableListOf<ChatMessage>(ChatMessage.system(chatAgent.context))
+
     for (message in chatAgent.history) {
       llmInput.add(message.copy())
     }
+
+    llmInput.add(userMessage)
+
     for (message in messageBuffer) {
       llmInput.add(message.copy())
     }
-
-    val userMessage =
-      llmInput.lastOrNull { it.role == "user" }
-        ?: throw AppError.internal("No user message in input")
-
-    // Safe to !! because user messages are never created with null content
-    userMessage.content = chatAgent.executeRetrievalAugmentation(userMessage.content!!)
-
-    llmInput.add(0, ChatMessage.system(chatAgent.context))
 
     val llmStream =
       llm.completionStream(
@@ -407,6 +441,10 @@ class ChatAgentStreaming(
 
     val toolCalls: MutableMap<Int, ToolCallData> = mutableMapOf()
 
+    // The finish reason will get adjusted when the last chunk found.
+    // It is guaranteed that the LLM stream will return the finish reason.
+    var finishReason: FinishReason? = null
+
     llmStream.collect { chunk ->
       // Chunks with some content indicate this is a text chunk
       // and should be emitted.
@@ -414,6 +452,8 @@ class ChatAgentStreaming(
         emitter.emit(ChatWorkflowMessage.StreamChunk(chunk.content))
         out.append(chunk.content)
       }
+
+      chunk.stopReason?.let { reason -> finishReason = reason }
 
       chunk.tokenUsage?.let { tokenUsage ->
         chatAgent.tokenTracker.store(
@@ -427,7 +467,8 @@ class ChatAgentStreaming(
       collectToolCalls(toolCalls, chunk)
     }
 
-    // If the coroutine gets cancelled here, we are certain `out` will be cleared.
+    // If the coroutine gets cancelled here, we are certain `out` will be cleared and the
+    // last message is the assistant's.
 
     // I may have seen some messages that have both tool calls and content
     // but I cannot confirm nor deny this
@@ -437,6 +478,9 @@ class ChatAgentStreaming(
       ChatMessage.assistant(
         content = if (out.isEmpty()) null else out.toString(),
         toolCalls = if (toolCalls.isEmpty()) null else toolCalls.values.toList(),
+        // If the stream gets cancelled during collecting, the method is already cancelled
+        // and we never reach this point, so safe to !!
+        finishReason = finishReason!!,
       )
     )
     out.clear()
@@ -464,7 +508,12 @@ class ChatAgentStreaming(
       }
     }
 
-    stream(messageBuffer = messageBuffer, out = out, attempt = attempt + 1)
+    streamInner(
+      userMessage = userMessage,
+      messageBuffer = messageBuffer,
+      out = out,
+      attempt = attempt + 1,
+    )
   }
 
   internal fun addToHistory(messages: List<ChatMessage>) {
@@ -535,6 +584,7 @@ fun AgentFull.toChatAgent(
     tokenTracker = tokenTracker,
     history = history,
     availableGroups = allowedGroups.toSet(),
+    attachmentProcessor = ChatMessageProcessor(providers),
   )
 
 fun ChatAgent.toStreaming(emitter: Emitter<ChatWorkflowMessage>) = ChatAgentStreaming(this, emitter)

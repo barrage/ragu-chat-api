@@ -27,6 +27,7 @@ import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.model.toAgent
 import net.barrage.llmao.core.model.toChat
 import net.barrage.llmao.core.model.toMessage
+import net.barrage.llmao.core.model.toMessageAttachment
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
 import net.barrage.llmao.core.types.KOffsetDateTime
@@ -35,6 +36,7 @@ import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.MESSAGE_ATTACHMENTS
 import net.barrage.llmao.tables.references.MESSAGE_GROUPS
 import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import org.jooq.Condition
@@ -206,6 +208,8 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
 
     val messageGroups = mutableMapOf<KUUID, MessageGroupAggregate>()
 
+    // This query acts like a window, selecting only the latest
+    // message groups
     val subQuery =
       dslContext
         .select(MESSAGE_GROUPS.ID)
@@ -217,11 +221,19 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
 
     dslContext
       .select(
+        // Group
         MESSAGE_GROUPS.ID,
         MESSAGE_GROUPS.CHAT_ID,
         MESSAGE_GROUPS.AGENT_CONFIGURATION_ID,
         MESSAGE_GROUPS.CREATED_AT,
         MESSAGE_GROUPS.UPDATED_AT,
+        // Evaluation
+        MESSAGE_GROUP_EVALUATIONS.ID,
+        MESSAGE_GROUP_EVALUATIONS.EVALUATION,
+        MESSAGE_GROUP_EVALUATIONS.FEEDBACK,
+        MESSAGE_GROUP_EVALUATIONS.CREATED_AT,
+        MESSAGE_GROUP_EVALUATIONS.UPDATED_AT,
+        // Message
         MESSAGES.ID,
         MESSAGES.ORDER,
         MESSAGES.MESSAGE_GROUP_ID,
@@ -232,32 +244,43 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         MESSAGES.FINISH_REASON,
         MESSAGES.CREATED_AT,
         MESSAGES.UPDATED_AT,
-        MESSAGE_GROUP_EVALUATIONS.ID,
-        MESSAGE_GROUP_EVALUATIONS.EVALUATION,
-        MESSAGE_GROUP_EVALUATIONS.FEEDBACK,
-        MESSAGE_GROUP_EVALUATIONS.CREATED_AT,
-        MESSAGE_GROUP_EVALUATIONS.UPDATED_AT,
       )
       .from(MESSAGE_GROUPS)
       .leftJoin(CHATS)
       .on(MESSAGE_GROUPS.CHAT_ID.eq(CHATS.ID))
-      .leftJoin(MESSAGES)
-      .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
       .leftJoin(MESSAGE_GROUP_EVALUATIONS)
       .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
+      .leftJoin(MESSAGES)
+      .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
       .where(
         MESSAGE_GROUPS.ID.`in`(subQuery)
           .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
       )
-      .orderBy(MESSAGE_GROUPS.CREATED_AT.desc(), MESSAGES.ORDER.asc())
+      .orderBy(MESSAGE_GROUPS.CREATED_AT.asc(), MESSAGES.ORDER.asc())
       .asFlow()
       .collect { record ->
-        val message = record.into(MESSAGES).toMessage()
+        val messageId = record.get(MESSAGES.ID)!!
+
+        val attachments =
+          dslContext
+            .selectFrom(MESSAGE_ATTACHMENTS)
+            .where(MESSAGE_ATTACHMENTS.MESSAGE_ID.eq(messageId))
+            .asFlow()
+            .map { it.into(MESSAGE_ATTACHMENTS).toMessageAttachment() }
+            .toList()
+
+        val message =
+          record.into(MESSAGES).toMessage(if (attachments.isEmpty()) null else attachments)
         val group = record.into(MESSAGE_GROUPS).toMessageGroup()
-        val evaluation = record.into(MESSAGE_GROUP_EVALUATIONS)
-        val eval = if (evaluation.id == null) null else evaluation.toMessageGroupEvaluation()
+        val evaluation =
+          record.into(MESSAGE_GROUP_EVALUATIONS).let { eval ->
+            eval.id?.let { eval.toMessageGroupEvaluation() }
+          }
+
         messageGroups
-          .computeIfAbsent(group.id) { _ -> MessageGroupAggregate(group, mutableListOf(), eval) }
+          .computeIfAbsent(group.id) { _ ->
+            MessageGroupAggregate(group, mutableListOf(), evaluation)
+          }
           .messages
           .add(message)
       }

@@ -2,6 +2,7 @@ package net.barrage.llmao.core
 
 import com.knuddels.jtokkit.Encodings
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.TokenBasedHistory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -31,11 +32,19 @@ class HistoryTests {
     val history =
       TokenBasedHistory(messages = mutableListOf(), tokenizer = tokenizer, maxTokens = 30)
 
-    val input = mutableListOf(ChatMessage.user(MESSAGE_1), ChatMessage.assistant(RESPONSE_1))
+    val input =
+      mutableListOf(
+        ChatMessage.user(MESSAGE_1),
+        ChatMessage.assistant(RESPONSE_1, finishReason = FinishReason.Stop),
+      )
     history.add(input)
     assertEquals(input, history.messages())
 
-    val input2 = mutableListOf(ChatMessage.user(MESSAGE_2), ChatMessage.assistant(RESPONSE_2))
+    val input2 =
+      mutableListOf(
+        ChatMessage.user(MESSAGE_2),
+        ChatMessage.assistant(RESPONSE_2, finishReason = FinishReason.Stop),
+      )
     history.add(input2)
     assertEquals(input2, history.messages())
 
@@ -59,12 +68,16 @@ class HistoryTests {
       mutableListOf(
         ChatMessage.user(MESSAGE_1),
         ChatMessage.toolResult(TEN_TOKENS, null),
-        ChatMessage.assistant(RESPONSE_1),
+        ChatMessage.assistant(RESPONSE_1, finishReason = FinishReason.Stop),
       )
     history.add(input)
     assertEquals(input, history.messages())
 
-    val input2 = mutableListOf(ChatMessage.user(MESSAGE_2), ChatMessage.assistant(RESPONSE_2))
+    val input2 =
+      mutableListOf(
+        ChatMessage.user(MESSAGE_2),
+        ChatMessage.assistant(RESPONSE_2, finishReason = FinishReason.Stop),
+      )
     history.add(input2)
     assertEquals(input2, history.messages())
   }

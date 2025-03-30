@@ -251,32 +251,35 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
 
     assertEquals(2, body.messages.items.size)
 
-    assertEquals(messageGroupOne.messages[0].id, body.messages.items[1].messages[0].id)
-    assertEquals(messageGroupOne.messages[0].content, body.messages.items[1].messages[0].content)
+    val checkGroupOne = body.messages.items[0]
+    val checkGroupTwo = body.messages.items[1]
+
+    assertEquals(messageGroupOne.messages[0].id, checkGroupOne.messages[0].id)
+    assertEquals(messageGroupOne.messages[0].content, checkGroupOne.messages[0].content)
     assertEquals(
       messageGroupOne.messages[0].senderType,
-      body.messages.items[1].messages[0].senderType,
+      checkGroupOne.messages[0].senderType,
     )
 
-    assertEquals(messageGroupOne.messages[1].id, body.messages.items[1].messages[1].id)
-    assertEquals(messageGroupOne.messages[1].content, body.messages.items[1].messages[1].content)
+    assertEquals(messageGroupOne.messages[1].id, checkGroupOne.messages[1].id)
+    assertEquals(messageGroupOne.messages[1].content, checkGroupOne.messages[1].content)
     assertEquals(
       messageGroupOne.messages[1].senderType,
-      body.messages.items[1].messages[1].senderType,
+      checkGroupOne.messages[1].senderType,
     )
 
-    assertEquals(messageGroupTwo.messages[0].id, body.messages.items[0].messages[0].id)
-    assertEquals(messageGroupTwo.messages[0].content, body.messages.items[0].messages[0].content)
+    assertEquals(messageGroupTwo.messages[0].id, checkGroupTwo.messages[0].id)
+    assertEquals(messageGroupTwo.messages[0].content, checkGroupTwo.messages[0].content)
     assertEquals(
       messageGroupTwo.messages[0].senderType,
-      body.messages.items[0].messages[0].senderType,
+      checkGroupTwo.messages[0].senderType,
     )
 
-    assertEquals(messageGroupTwo.messages[1].id, body.messages.items[0].messages[1].id)
-    assertEquals(messageGroupTwo.messages[1].content, body.messages.items[0].messages[1].content)
+    assertEquals(messageGroupTwo.messages[1].id,checkGroupTwo.messages[1].id)
+    assertEquals(messageGroupTwo.messages[1].content, checkGroupTwo.messages[1].content)
     assertEquals(
       messageGroupTwo.messages[1].senderType,
-      body.messages.items[0].messages[1].senderType,
+      checkGroupTwo.messages[1].senderType,
     )
   }
 }
