@@ -27,7 +27,7 @@ import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.adminWsSession
-import net.barrage.llmao.app.chat.ChatWorkflowMessage
+import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason

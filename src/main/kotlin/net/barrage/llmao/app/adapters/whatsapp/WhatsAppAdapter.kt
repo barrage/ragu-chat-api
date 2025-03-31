@@ -20,8 +20,8 @@ import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
 import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
 import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
-import net.barrage.llmao.app.chat.ChatAgent
-import net.barrage.llmao.app.chat.toChatAgent
+import net.barrage.llmao.core.chat.ChatAgent
+import net.barrage.llmao.core.chat.toChatAgent
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
@@ -29,11 +29,11 @@ import net.barrage.llmao.core.agent.AgentRepository
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.ChatHistory
+import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
-import net.barrage.llmao.core.llm.MessageBasedHistory
-import net.barrage.llmao.core.llm.TokenBasedHistory
+import net.barrage.llmao.core.chat.MessageBasedHistory
+import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages

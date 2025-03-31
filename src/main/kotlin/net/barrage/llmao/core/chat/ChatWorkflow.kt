@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.chat
+package net.barrage.llmao.core.chat
 
 import io.ktor.util.logging.*
 import java.time.Instant
@@ -8,8 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
@@ -19,7 +17,7 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
+private val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
 
 /** Implementation of a workflow with a single agent. */
 class ChatWorkflow(
@@ -59,8 +57,13 @@ class ChatWorkflow(
         val streamStart = Instant.now()
         var finishReason = FinishReason.Stop
 
+        val attachments =
+          if (input.attachments != null && input.attachments.isEmpty()) {
+            null
+          } else input.attachments
+
         val content =
-          input.attachments?.let { messageProcessor.toContentMulti(input.text, it) }
+          attachments?.let { messageProcessor.toContentMulti(input.text, it) }
             ?: ContentSingle(input.text)
 
         val userMessage = ChatMessage.user(content)

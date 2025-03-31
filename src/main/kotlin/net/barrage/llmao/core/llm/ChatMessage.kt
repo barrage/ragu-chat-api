@@ -7,6 +7,9 @@ import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.token.TokenUsageAmount
 import net.barrage.llmao.core.types.KUUID
 
+/**
+ * Native chat message chunk used to handle potentially differing chunks from downstream LLM providers.
+ */
 @Serializable
 data class ChatMessageChunk(
   val id: String? = null,

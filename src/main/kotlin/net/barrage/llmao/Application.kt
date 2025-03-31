@@ -21,7 +21,7 @@ import net.barrage.llmao.app.api.http.configureRouting
 import net.barrage.llmao.app.api.http.noAuth
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.app.chat.ChatType
-import net.barrage.llmao.app.chat.ChatWorkflowFactory
+import net.barrage.llmao.core.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener

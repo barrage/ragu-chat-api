@@ -19,7 +19,7 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.user
-import net.barrage.llmao.app.chat.ChatWorkflowFactory
+import net.barrage.llmao.core.chat.ChatWorkflowFactory
 import net.barrage.llmao.app.workflow.IncomingSessionMessage
 import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.AppError

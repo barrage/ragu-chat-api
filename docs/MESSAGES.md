@@ -1,5 +1,19 @@
 # Kappi Session Messages
 
+Table of contents:
+
+- [System](#system)
+    - [Incoming](#incoming)
+    - [Outgoing](#outgoing)
+        - [System Events](#system-events)
+- [Workflow](#workflow)
+    - [Chat](#chat)
+        - [Incoming](#incoming-1)
+        - [Outgoing](#outgoing-1)
+    - [JiraKira](#jirakira)
+- [Tools](#tools)
+- [Error](#error)
+
 ## System
 
 Generic messages used to control sessions and broadcast system related events.
@@ -13,7 +27,7 @@ Start a new workflow with the given configuration. The configuration must be pro
 The server will respond with a `system.workflow.open` message, depending on the type of workflow opened.
 
 `agentId` is optional and is only necessary when instantiating `CHAT` workflows.
-`workflowType` is optional and defaults to `CHAT` if not provided.
+`workflowType` is optional and defaults to `CHAT` if not provided. If given and not `CHAT`, has to be a specialist ID.
 
 ```json
 {
@@ -120,10 +134,43 @@ Chat workflows do not have a clear indication of an end.
 
 Send a message to the chat workflow. The workflow must be open for this message to be accepted.
 
+- `text` - The text contents of the message. This is the only required field.
+- `attachments` - Optional binary attachments to send with the message. If empty, no attachments will be processed.
+    - `type` - The type of attachment. See below section for more information.
+    - `data` - Depends on `type`. See below section for more information.
+
 ```json
 {
   "type": "chat",
-  "text": "message_text"
+  "text": "message_text",
+  "attachments": [
+    {
+      "type": "ATTACHMENT_TYPE",
+      "data": "T"
+    }
+  ]
+}
+```
+
+##### Attachments
+
+The following are data structures associated with attachment types:
+
+###### Image URL
+
+```json
+{
+  "type": "url",
+  "url": "image_url"
+}
+```
+
+###### Image raw
+
+```json
+{
+  "type": "raw",
+  "data": "base64_encoded_image"
 }
 ```
 
@@ -168,6 +215,12 @@ Sent when a chat workflow has generated a title for the chat.
 ### JiraKira
 
 Jira Kira conversations are not streaming.
+
+#### Incoming
+
+Jira Kira incoming messages are the same as [Chat](#chat), without the attachments.
+
+#### Outgoing
 
 - `jirakira.response`
 
@@ -250,6 +303,7 @@ It contains the type of error, the reason it occurred, and an optional descripti
 {
   "errorType": "API | Internal",
   "errorReason": "reason",
-  "errorDescription": "description"
+  "errorDescription": "description",
+  "displayMessage": "Optional error display message (instruction) of the agent."
 }
 ```

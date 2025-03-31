@@ -8,10 +8,10 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.app.chat.ChatAgent
-import net.barrage.llmao.app.chat.toChatAgent
+import net.barrage.llmao.core.chat.ChatAgent
+import net.barrage.llmao.core.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.MessageBasedHistory
+import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentFull

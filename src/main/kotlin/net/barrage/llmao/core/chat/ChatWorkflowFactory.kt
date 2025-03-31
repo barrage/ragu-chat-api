@@ -1,16 +1,11 @@
-package net.barrage.llmao.app.chat
+package net.barrage.llmao.core.chat
 
 import com.knuddels.jtokkit.api.EncodingRegistry
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.agent.AgentService
-import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.ChatHistory
-import net.barrage.llmao.core.llm.MessageBasedHistory
-import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.model.User

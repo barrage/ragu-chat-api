@@ -4,10 +4,6 @@ import io.ktor.server.websocket.WebSocketServerSession
 import io.ktor.util.logging.KtorSimpleLogger
 import java.util.concurrent.ConcurrentHashMap
 import net.barrage.llmao.app.AdapterState
-import net.barrage.llmao.app.chat.ChatWorkflow
-import net.barrage.llmao.app.chat.ChatWorkflowFactory
-import net.barrage.llmao.app.chat.ChatWorkflowInput
-import net.barrage.llmao.app.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflow
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.app.workflow.IncomingSessionMessage
@@ -16,6 +12,10 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.chat.ChatWorkflow
+import net.barrage.llmao.core.chat.ChatWorkflowFactory
+import net.barrage.llmao.core.chat.ChatWorkflowInput
+import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User

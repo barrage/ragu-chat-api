@@ -1,9 +1,8 @@
-package net.barrage.llmao.app.chat
+package net.barrage.llmao.core.chat
 
+import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
@@ -22,6 +21,8 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.core.workflow.Emitter
+
+private val LOG = KtorSimpleLogger("net.barrage.llmao.core.chat.ChatAgent")
 
 private const val MAX_TOOL_ATTEMPTS: Int = 5
 
