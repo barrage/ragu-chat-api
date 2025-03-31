@@ -136,7 +136,7 @@ fun MessageGroupEvaluationsRecord.toMessageGroupEvaluation() =
 @Serializable
 data class EvaluateMessage(
   val evaluation: Boolean? = null,
-  val feedback: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  val feedback: PropertyUpdate<String> = PropertyUpdate.Undefined,
 )
 
 /**

@@ -26,6 +26,7 @@ import net.barrage.llmao.core.model.UpdateAgentConfiguration
 import net.barrage.llmao.core.model.UpdateAgentInstructions
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.model.toAgent
@@ -42,9 +43,9 @@ import net.barrage.llmao.tables.references.AGENT_PERMISSIONS
 import net.barrage.llmao.tables.references.AGENT_TOOLS
 import org.jooq.Condition
 import org.jooq.DSLContext
+import org.jooq.InsertSetMoreStep
 import org.jooq.SortField
 import org.jooq.UpdateSetMoreStep
-import org.jooq.UpdateSetStep
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
@@ -423,28 +424,7 @@ class AgentRepository(private val dslContext: DSLContext) {
             .insertInto(AGENT_CONFIGURATIONS)
             .set(AGENT_CONFIGURATIONS.AGENT_ID, id)
             .set(AGENT_CONFIGURATIONS.VERSION, count + 1)
-            .set(AGENT_CONFIGURATIONS.CONTEXT, update.configuration.context)
-            .set(AGENT_CONFIGURATIONS.LLM_PROVIDER, update.configuration.llmProvider)
-            .set(AGENT_CONFIGURATIONS.MODEL, update.configuration.model)
-            .set(AGENT_CONFIGURATIONS.TEMPERATURE, update.configuration.temperature)
-            .set(
-              AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
-              update.configuration.maxCompletionTokens.value(),
-            )
-            .set(
-              AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
-              update.configuration.presencePenalty.value(),
-            )
-            .set(
-              AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-              update.configuration.instructions?.titleInstruction?.value()
-                ?: currentConfiguration.agentInstructions.titleInstruction,
-            )
-            .set(
-              AGENT_CONFIGURATIONS.ERROR_MESSAGE,
-              update.configuration.instructions?.errorMessage?.value()
-                ?: currentConfiguration.agentInstructions.errorMessage,
-            )
+            .apply { update.configuration.insertSet(this, currentConfiguration) }
             .returning()
             .awaitSingle()
             .into(AGENT_CONFIGURATIONS)
@@ -456,7 +436,8 @@ class AgentRepository(private val dslContext: DSLContext) {
       val agent =
         context
           .update(AGENTS)
-          .let { update.applyUpdates(it) }
+          .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
+          .apply { update.applyUpdates(this) }
           .where(AGENTS.ID.eq(id))
           .returning()
           .awaitSingle()
@@ -471,18 +452,25 @@ class AgentRepository(private val dslContext: DSLContext) {
     current: AgentConfiguration,
     update: UpdateAgentConfiguration,
   ): Boolean {
-    return update.context != null && update.context != current.context ||
-      update.llmProvider != null && update.llmProvider != current.llmProvider ||
-      update.model != null && update.model != current.model ||
-      update.temperature != null && update.temperature != current.temperature ||
-      update.maxCompletionTokens.value() != null &&
-        update.maxCompletionTokens.value() != current.maxCompletionTokens ||
-      update.presencePenalty.value() != null &&
-        update.presencePenalty.value() != current.presencePenalty ||
-      update.instructions != null &&
-        (update.instructions.titleInstruction?.value() !=
-          current.agentInstructions.titleInstruction ||
-          update.instructions.errorMessage?.value() != current.agentInstructions.errorMessage)
+    val requiredChanged =
+      (update.context != null && update.context != current.context ||
+        update.llmProvider != null && update.llmProvider != current.llmProvider ||
+        update.model != null && update.model != current.model ||
+        update.temperature != null && update.temperature != current.temperature)
+
+    val optionalChanged =
+      (update.maxCompletionTokens !is PropertyUpdate.Undefined &&
+        update.maxCompletionTokens.value() != current.maxCompletionTokens) ||
+        (update.presencePenalty !is PropertyUpdate.Undefined &&
+          update.presencePenalty.value() != current.presencePenalty) ||
+        (update.instructions != null &&
+          (update.instructions.titleInstruction !is PropertyUpdate.Undefined &&
+            update.instructions.titleInstruction.value() !=
+              current.agentInstructions.titleInstruction) &&
+          (update.instructions.errorMessage !is PropertyUpdate.Undefined &&
+            update.instructions.errorMessage.value() != current.agentInstructions.errorMessage))
+
+    return requiredChanged || optionalChanged
   }
 
   suspend fun delete(id: KUUID): Int {
@@ -836,35 +824,67 @@ private fun SearchFiltersAdminAgents.generateConditions(): Condition {
 }
 
 private fun UpdateAgent.applyUpdates(
-  value: UpdateSetStep<AgentsRecord>
+  statement: UpdateSetMoreStep<AgentsRecord>
 ): UpdateSetMoreStep<AgentsRecord> {
-  var value = value as UpdateSetMoreStep<AgentsRecord>
-  value = name.dslSet(value, AGENTS.NAME)
-  value = description.dslSet(value, AGENTS.DESCRIPTION)
-  value = active.dslSet(value, AGENTS.ACTIVE)
-  value = language.dslSet(value, AGENTS.LANGUAGE)
-  return value
+  var statement = statement
+  statement = name.dslSet(statement, AGENTS.NAME)
+  statement = description.dslSet(statement, AGENTS.DESCRIPTION)
+  statement = active.dslSet(statement, AGENTS.ACTIVE)
+  statement = language.dslSet(statement, AGENTS.LANGUAGE)
+  return statement
 }
 
-private fun UpdateAgentConfiguration.dslSet(
-  value: UpdateSetStep<AgentConfigurationsRecord>
-): UpdateSetMoreStep<AgentConfigurationsRecord> {
-  var value = value as UpdateSetMoreStep<AgentConfigurationsRecord>
-  value = context.dslSet(value, AGENT_CONFIGURATIONS.CONTEXT)
-  value = llmProvider.dslSet(value, AGENT_CONFIGURATIONS.LLM_PROVIDER)
-  value = model.dslSet(value, AGENT_CONFIGURATIONS.MODEL)
-  value = temperature.dslSet(value, AGENT_CONFIGURATIONS.TEMPERATURE)
-  value = maxCompletionTokens.dslSet(value, AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS)
-  value = presencePenalty.dslSet(value, AGENT_CONFIGURATIONS.PRESENCE_PENALTY)
-  value = instructions?.applyUpdates(value) ?: value
-  return value
+private fun UpdateAgentConfiguration.insertSet(
+  statement: InsertSetMoreStep<AgentConfigurationsRecord>,
+  currentConfiguration: AgentConfiguration,
+): InsertSetMoreStep<AgentConfigurationsRecord> {
+  var statement = statement
+  statement = context.dslSet(statement, AGENT_CONFIGURATIONS.CONTEXT, currentConfiguration.context)
+  statement =
+    llmProvider.dslSet(
+      statement,
+      AGENT_CONFIGURATIONS.LLM_PROVIDER,
+      currentConfiguration.llmProvider,
+    )
+  statement = model.dslSet(statement, AGENT_CONFIGURATIONS.MODEL, currentConfiguration.model)
+  statement =
+    temperature.dslSet(
+      statement,
+      AGENT_CONFIGURATIONS.TEMPERATURE,
+      currentConfiguration.temperature,
+    )
+  statement =
+    maxCompletionTokens.dslSet(
+      statement,
+      AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
+      defaultIfUndefined = currentConfiguration.maxCompletionTokens,
+    )
+  statement =
+    presencePenalty.dslSet(
+      statement,
+      AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
+      defaultIfUndefined = currentConfiguration.presencePenalty,
+    )
+  statement = instructions?.insertSet(statement, currentConfiguration) ?: statement
+  return statement
 }
 
-private fun UpdateAgentInstructions.applyUpdates(
-  value: UpdateSetStep<AgentConfigurationsRecord>
-): UpdateSetMoreStep<AgentConfigurationsRecord> {
-  var value = value as UpdateSetMoreStep<AgentConfigurationsRecord>
-  value = titleInstruction.dslSet(value, AGENT_CONFIGURATIONS.TITLE_INSTRUCTION)
-  value = errorMessage.dslSet(value, AGENT_CONFIGURATIONS.ERROR_MESSAGE)
+private fun UpdateAgentInstructions.insertSet(
+  value: InsertSetMoreStep<AgentConfigurationsRecord>,
+  currentConfiguration: AgentConfiguration,
+): InsertSetMoreStep<AgentConfigurationsRecord> {
+  var value = value
+  value =
+    titleInstruction.dslSet(
+      value,
+      AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+      defaultIfUndefined = currentConfiguration.agentInstructions.titleInstruction,
+    )
+  value =
+    errorMessage.dslSet(
+      value,
+      AGENT_CONFIGURATIONS.ERROR_MESSAGE,
+      defaultIfUndefined = currentConfiguration.agentInstructions.errorMessage,
+    )
   return value
 }

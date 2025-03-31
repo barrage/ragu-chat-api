@@ -45,8 +45,8 @@ data class AgentInstructions(
 data class UpdateAgentInstructions(
   @NotBlank
   @EncodeDefault(EncodeDefault.Mode.NEVER)
-  val titleInstruction: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  val titleInstruction: PropertyUpdate<String> = PropertyUpdate.Undefined,
   @NotBlank
   @EncodeDefault(EncodeDefault.Mode.NEVER)
-  val errorMessage: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  val errorMessage: PropertyUpdate<String> = PropertyUpdate.Undefined,
 )

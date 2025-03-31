@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
 
 class AdminAgentControllerTests : IntegrationTest() {
   private lateinit var agentOne: Agent
@@ -240,12 +241,51 @@ class AdminAgentControllerTests : IntegrationTest() {
       }
 
     assertEquals(200, response.status.value)
-    val body = response.body<AgentWithConfiguration>()
+
+    val responseCheck =
+      client.get("/admin/agents/${agent.id}") { header(HttpHeaders.Cookie, adminAccessToken()) }
+
+    val body = responseCheck.body<AgentWithConfiguration>()
     assertEquals("TestAgentOneUpdated", body.agent.name)
     assertEquals(0.5, body.configuration.temperature)
     assertEquals(2, body.configuration.version)
     assertEquals(100, body.configuration.maxCompletionTokens)
     assertEquals(0.5, body.configuration.presencePenalty)
+
+    // Leave out presence penalty, to assert it is left unchanged
+    // Set maxCompletionTokens to null, to assert it is changed to null
+    val propertiesUpdateTest =
+      """
+      {
+        "name": "TestAgentOneUpdated",
+        "description": null,
+        "active": true,
+        "configuration": {
+          "context": "context",
+          "llmProvider": "azure",
+          "model": "gpt-4",
+          "temperature": 0.5,
+          "maxCompletionTokens": null
+        }
+      }
+    """
+        .trimIndent()
+
+    client.put("/admin/agents/${agent.id}") {
+      header(HttpHeaders.Cookie, adminAccessToken())
+      contentType(ContentType.Application.Json)
+      setBody(propertiesUpdateTest)
+    }
+
+    val responseLeaveProperties =
+      client.get("/admin/agents/${agent.id}") { header(HttpHeaders.Cookie, adminAccessToken()) }
+
+    val propertiesCheck = responseLeaveProperties.body<AgentWithConfiguration>()
+
+    assertNull(propertiesCheck.agent.description)
+    assertEquals("english", propertiesCheck.agent.language)
+    assertNull(propertiesCheck.configuration.maxCompletionTokens)
+    assertEquals(0.5, propertiesCheck.configuration.presencePenalty)
 
     postgres.deleteTestAgent(agent.id)
   }

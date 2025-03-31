@@ -19,6 +19,7 @@ import liquibase.resource.ClassLoaderResourceAccessor
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep
+import org.jooq.InsertSetMoreStep
 import org.jooq.Record
 import org.jooq.SQLDialect
 import org.jooq.TableField
@@ -97,7 +98,7 @@ private fun runLiquibaseMigration(config: ApplicationConfig) {
  *
  * Semantics are defined in [PropertyUpdate].
  */
-fun <R : Record, T> PropertyUpdate<T>?.dslSet(
+fun <R : Record, T> PropertyUpdate<T>.dslSet(
   statement: UpdateSetMoreStep<R>,
   field: TableField<R, T>,
 ): UpdateSetMoreStep<R> {
@@ -109,11 +110,11 @@ fun <R : Record, T> PropertyUpdate<T>?.dslSet(
     is PropertyUpdate.Value -> statement.set(field, value)
 
     // Property is being removed
-    null -> statement.setNull(field)
+    is PropertyUpdate.Null -> statement.setNull(field)
   }
 }
 
-fun <R : Record, T> PropertyUpdate<T>?.dslSet(
+fun <R : Record, T> PropertyUpdate<T>.dslSet(
   statement: InsertOnDuplicateSetMoreStep<R>,
   field: TableField<R, T>,
 ): InsertOnDuplicateSetMoreStep<R> {
@@ -125,24 +126,62 @@ fun <R : Record, T> PropertyUpdate<T>?.dslSet(
     is PropertyUpdate.Value -> statement.set(field, value)
 
     // Property is being removed
-    null -> statement.setNull(field)
+    is PropertyUpdate.Null -> statement.setNull(field)
+  }
+}
+
+fun <R : Record, T> PropertyUpdate<T>.dslSet(
+  statement: InsertSetMoreStep<R>,
+  field: TableField<R, T>,
+  defaultIfUndefined: T? = null,
+): InsertSetMoreStep<R> {
+  return when (this) {
+    // Do nothing when property is not set
+    is PropertyUpdate.Undefined -> defaultIfUndefined?.let { statement.set(field, it) } ?: statement
+
+    // Property is being updated to new value
+    is PropertyUpdate.Value -> statement.set(field, value)
+
+    // Property is being removed
+    is PropertyUpdate.Null -> statement.setNull(field)
   }
 }
 
 /**
  * Utility for including a SET statement in a DSLContext update statement.
  *
- * Intended for required fields.
+ * Implementation for *required* properties.
  *
- * If the value is `null`, the statement is not modified.
+ * If the value is null, leaves the statement as is.
  */
 fun <R : Record, T> T?.dslSet(
   statement: UpdateSetMoreStep<R>,
   field: TableField<R, T>,
-): UpdateSetMoreStep<R> = this?.let { statement.set(field, it) } ?: statement
+  defaultIfNull: T? = null,
+): UpdateSetMoreStep<R> =
+  this?.let { statement.set(field, it) }
+    ?: defaultIfNull?.let { statement.set(field, it) }
+    ?: statement
+
+/**
+ * Implementation for *required* properties.
+ *
+ * If the value is null, leaves the statement as is.
+ */
+fun <R : Record, T> T?.dslSet(
+  statement: InsertSetMoreStep<R>,
+  field: TableField<R, T>,
+  defaultIfNull: T? = null,
+): InsertSetMoreStep<R> =
+  this?.let { statement.set(field, it) }
+    ?: defaultIfNull?.let { statement.set(field, it) }
+    ?: statement
 
 fun <R : Record, T> T?.dslSet(
   statement: InsertOnDuplicateSetMoreStep<R>,
   field: TableField<R, T>,
+  defaultIfNull: T? = null,
 ): InsertOnDuplicateSetMoreStep<R> =
-  this?.let { statement.set(field, it) } ?: statement.set(field, excluded(field))
+  this?.let { statement.set(field, it) }
+    ?: defaultIfNull?.let { statement.set(field, it) }
+    ?: statement.set(field, excluded(field))

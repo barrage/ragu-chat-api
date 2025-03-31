@@ -83,11 +83,11 @@ data class UpdateAgent(
   @NotBlank val name: String? = null,
   @NotBlank
   @EncodeDefault(EncodeDefault.Mode.NEVER)
-  val description: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  val description: PropertyUpdate<String> = PropertyUpdate.Undefined,
   val active: Boolean? = null,
   @NotBlank
   @EncodeDefault(EncodeDefault.Mode.NEVER)
-  val language: PropertyUpdate<String>? = PropertyUpdate.Undefined,
+  val language: PropertyUpdate<String> = PropertyUpdate.Undefined,
   val configuration: UpdateAgentConfiguration? = null,
 ) : Validation
 
