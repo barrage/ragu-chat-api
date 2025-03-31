@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.adapters.whatsapp.api
+package net.barrage.llmao.app.adapters.whatsapp
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.delete
@@ -9,10 +9,9 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
-import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
-import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResponse
+import net.barrage.llmao.app.adapters.whatsapp.model.UpdateNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
@@ -21,7 +20,7 @@ import net.barrage.llmao.core.types.KUUID
 
 fun Route.whatsAppHookRoutes(whatsAppAdapter: WhatsAppAdapter) {
   post("/whatsapp/webhook", infobipResponse()) {
-    val input = call.receive<InfobipResponseDTO>()
+    val input = call.receive<InfobipResponse>()
     whatsAppAdapter.handleIncomingMessage(input)
     call.respond(HttpStatusCode.OK)
   }
@@ -70,7 +69,7 @@ fun Route.whatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 private fun infobipResponse(): RouteConfig.() -> Unit = {
   tags("3rd party hooks")
   description = "Endpoint to handle WhatsApp messages from Infobip"
-  request { body<InfobipResponseDTO> { description = "The Infobip response payload" } }
+  request { body<InfobipResponse> { description = "The Infobip response payload" } }
   response {
     HttpStatusCode.OK to { description = "Successfully processed the message" }
     HttpStatusCode.BadRequest to { description = "Invalid request payload" }

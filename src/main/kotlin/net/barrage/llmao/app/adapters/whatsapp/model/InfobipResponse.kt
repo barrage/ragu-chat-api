@@ -1,10 +1,10 @@
-package net.barrage.llmao.app.adapters.whatsapp.dto
+package net.barrage.llmao.app.adapters.whatsapp.model
 
 import kotlinx.serialization.Serializable
 
 /** Request received on the Infobip webhook. */
 @Serializable
-data class InfobipResponseDTO(
+data class InfobipResponse(
   /** Holds the messages. Usually only one message will be contained in this. */
   val results: List<InfobipResult>,
   /** How many messages are in this request. */

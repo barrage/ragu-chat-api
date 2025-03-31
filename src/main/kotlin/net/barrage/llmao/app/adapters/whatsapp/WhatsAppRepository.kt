@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.adapters.whatsapp.repositories
+package net.barrage.llmao.app.adapters.whatsapp
 
 import io.ktor.util.logging.*
 import kotlinx.coroutines.flow.map
@@ -6,9 +6,9 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
-import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.UpdateNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.toWhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KUUID
@@ -17,7 +17,7 @@ import org.jooq.DSLContext
 import org.jooq.exception.DataAccessException
 
 internal val LOG =
-  KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository")
+  KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp.WhatsAppRepository")
 
 class WhatsAppRepository(private val dslContext: DSLContext) {
   suspend fun getNumberById(id: KUUID): WhatsAppNumber {

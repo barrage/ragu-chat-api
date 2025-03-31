@@ -2,7 +2,7 @@ package net.barrage.llmao.app.api.http
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*
-import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.UpdateNumber
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.core.model.CreateAgent
 import net.barrage.llmao.core.model.UpdateAgent

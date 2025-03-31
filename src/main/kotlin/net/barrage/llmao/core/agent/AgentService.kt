@@ -32,8 +32,6 @@ import net.barrage.llmao.core.storage.AVATARS_PATH
 import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.types.KUUID
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.agent")
-
 class AgentService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
@@ -43,6 +41,8 @@ class AgentService(
   /** The image storage provider for avatars. */
   private val avatarStorage: BlobStorage<Image>,
 ) {
+  private val log = KtorSimpleLogger("net.barrage.llmao.core.agent.AgentService")
+
   suspend fun userListAgents(
     pagination: PaginationSort,
     showDeactivated: Boolean,
@@ -112,7 +112,29 @@ class AgentService(
     agentId: KUUID,
     update: UpdateCollections,
   ): UpdateCollectionsResult {
-    val (additions, failures) = processAdditions(providers, update)
+    val additions = mutableListOf<CollectionInsert>()
+    val failures = mutableListOf<UpdateCollectionsFailure>()
+
+    update.add?.forEach { collectionAdd ->
+      val vectorDb = providers.vector.getProvider(collectionAdd.provider)
+
+      // Ensure the collections being added exist
+      val collection = vectorDb.getCollectionInfo(collectionAdd.name)
+
+      if (collection != null) {
+        additions.add(
+          CollectionInsert(
+            amount = collectionAdd.amount,
+            instruction = collectionAdd.instruction,
+            maxDistance = collectionAdd.maxDistance,
+            info = collection,
+          )
+        )
+      } else {
+        log.warn("Collection '${collectionAdd.name}' does not exist")
+        failures.add(UpdateCollectionsFailure(collectionAdd.name, "Collection does not exist"))
+      }
+    }
 
     agentRepository.updateCollections(agentId, additions, update.remove)
 
@@ -227,35 +249,4 @@ class AgentService(
   suspend fun updateGroups(agentId: KUUID, update: AgentGroupUpdate) {
     agentRepository.updateGroups(agentId, update)
   }
-}
-
-fun processAdditions(
-  providers: ProviderState,
-  update: UpdateCollections,
-): Pair<List<CollectionInsert>, List<UpdateCollectionsFailure>> {
-  val additions = mutableListOf<CollectionInsert>()
-  val failures = mutableListOf<UpdateCollectionsFailure>()
-
-  update.add?.forEach { collectionAdd ->
-    val vectorDb = providers.vector.getProvider(collectionAdd.provider)
-
-    // Ensure the collections being added exist
-    val collection = vectorDb.getCollectionInfo(collectionAdd.name)
-
-    if (collection != null) {
-      additions.add(
-        CollectionInsert(
-          amount = collectionAdd.amount,
-          instruction = collectionAdd.instruction,
-          maxDistance = collectionAdd.maxDistance,
-          info = collection,
-        )
-      )
-    } else {
-      LOG.warn("Collection '${collectionAdd.name}' does not exist")
-      failures.add(UpdateCollectionsFailure(collectionAdd.name, "Collection does not exist"))
-    }
-  }
-
-  return Pair(additions, failures)
 }

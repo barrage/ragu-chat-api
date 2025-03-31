@@ -6,7 +6,7 @@ import kotlin.reflect.KClass
 import kotlinx.coroutines.Job
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppSenderConfig
-import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
+import net.barrage.llmao.app.adapters.whatsapp.WhatsAppRepository
 import net.barrage.llmao.app.chat.ChatType
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory

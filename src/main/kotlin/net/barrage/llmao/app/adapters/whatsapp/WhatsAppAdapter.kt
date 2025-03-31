@@ -15,25 +15,24 @@ import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
 import com.knuddels.jtokkit.api.EncodingRegistry
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
-import net.barrage.llmao.app.adapters.whatsapp.models.UpdateNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
-import net.barrage.llmao.app.adapters.whatsapp.repositories.WhatsAppRepository
-import net.barrage.llmao.core.chat.ChatAgent
-import net.barrage.llmao.core.chat.toChatAgent
+import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResponse
+import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResult
+import net.barrage.llmao.app.adapters.whatsapp.model.UpdateNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.agent.AgentRepository
+import net.barrage.llmao.core.chat.ChatAgent
+import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatRepositoryWrite
-import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.chat.ChatHistory
-import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
+import net.barrage.llmao.core.chat.toChatAgent
+import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages
@@ -49,8 +48,6 @@ import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tryUuid
-
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
 
 private const val WHATSAPP_CHAT_TOKEN_ORIGIN = "workflow.whatsapp"
 private const val MAX_HISTORY_MESSAGES = 50
@@ -70,6 +67,7 @@ class WhatsAppAdapter(
   private val messageProcessor: ChatMessageProcessor,
 ) {
   private var whatsAppApi: WhatsAppApi
+  private val log = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
 
   init {
     val apiClient =
@@ -162,7 +160,7 @@ class WhatsAppAdapter(
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp chat not found")
   }
 
-  suspend fun handleIncomingMessage(input: InfobipResponseDTO) {
+  suspend fun handleIncomingMessage(input: InfobipResponse) {
     val agentId =
       settings.get(SettingKey.WHATSAPP_AGENT_ID)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not configured")
@@ -207,7 +205,7 @@ class WhatsAppAdapter(
 
     storeMessages(chatId = chat.id, agentConfigurationId = chatAgent.configurationId, messages)
 
-    LOG.debug(
+    log.debug(
       "WhatsApp message sent to: {}, status: {}",
       result.from,
       messageInfo.status.description,
@@ -317,16 +315,16 @@ class WhatsAppAdapter(
     try {
       val messageInfo = whatsAppApi.sendWhatsAppTemplateMessage(bulkMessage).execute()
 
-      LOG.debug(
+      log.debug(
         "WhatsApp welcome message sent to: {}, status: {}",
         to,
         messageInfo.messages[0].status.description,
       )
     } catch (e: ApiException) {
-      LOG.error("Failed to send WhatsApp welcome message to: $to", e)
-      LOG.error("Response body: ${e.rawResponseBody()}")
+      log.error("Failed to send WhatsApp welcome message to: $to", e)
+      log.error("Response body: ${e.rawResponseBody()}")
     } catch (e: Exception) {
-      LOG.error("Unexpected error when sending WhatsApp welcome message to: $to", e)
+      log.error("Unexpected error when sending WhatsApp welcome message to: $to", e)
     }
   }
 

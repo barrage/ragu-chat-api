@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.adapters.whatsapp.models
+package net.barrage.llmao.app.adapters.whatsapp.model
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.Number

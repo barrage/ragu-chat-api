@@ -23,8 +23,8 @@ import kotlinx.coroutines.reactive.awaitSingle
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
-import net.barrage.llmao.app.adapters.whatsapp.models.toWhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.toWhatsAppNumber
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentCollection

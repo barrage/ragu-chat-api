@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.adapters.whatsapp.dto
+package net.barrage.llmao.app.adapters.whatsapp.model
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.types.KUUID

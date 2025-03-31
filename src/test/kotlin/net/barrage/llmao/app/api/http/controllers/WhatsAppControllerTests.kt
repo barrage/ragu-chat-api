@@ -12,13 +12,13 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
-import net.barrage.llmao.app.adapters.whatsapp.dto.Contact
-import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipMessageType
-import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResponseDTO
-import net.barrage.llmao.app.adapters.whatsapp.dto.InfobipResult
-import net.barrage.llmao.app.adapters.whatsapp.dto.Message
-import net.barrage.llmao.app.adapters.whatsapp.dto.Price
-import net.barrage.llmao.app.adapters.whatsapp.models.WhatsAppNumber
+import net.barrage.llmao.app.adapters.whatsapp.model.Contact
+import net.barrage.llmao.app.adapters.whatsapp.model.InfobipMessageType
+import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResponse
+import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResult
+import net.barrage.llmao.app.adapters.whatsapp.model.Message
+import net.barrage.llmao.app.adapters.whatsapp.model.Price
+import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.Chat
@@ -101,7 +101,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
     @Test
     fun webhookIncomingMessage() = test {
       val infobipResponse =
-        InfobipResponseDTO(
+        InfobipResponse(
           results =
             listOf(
               InfobipResult(

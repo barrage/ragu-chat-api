@@ -13,6 +13,8 @@ import kotlinx.serialization.Serializable
  * @param V The type of the series data, i.e. what we are mapping to dates. See [TimeSeriesData].
  * @param L The type of the legend, i.e. what we are mapping to identifiers. This is useful for
  *   display purposes.
+ * @param series The time series data whose keys are the entity identifiers.
+ * @param legend The legend data whose keys are the entity identifiers.
  */
 @Serializable
 class TimeSeries<V, L>(val series: Map<String, TimeSeriesData<V>>, val legend: Map<String, L>) {
