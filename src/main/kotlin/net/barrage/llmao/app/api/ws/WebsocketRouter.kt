@@ -3,7 +3,6 @@ package net.barrage.llmao.app.api.ws
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
@@ -19,13 +18,12 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.user
-import net.barrage.llmao.core.chat.ChatWorkflowFactory
 import net.barrage.llmao.app.workflow.IncomingSessionMessage
-import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 
@@ -45,7 +43,6 @@ fun Application.websocketServer(
     // FIXME: Shrink
     maxFrameSize = Long.MAX_VALUE
     masking = false
-    contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
     pingPeriod = 5.seconds
   }
 

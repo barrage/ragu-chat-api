@@ -152,7 +152,7 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(400, response.status.value)
     val body = response.body<AppError>()
     assertEquals("API", body.errorType)
-    assertEquals(ErrorReason.InvalidContentType, body.errorReason)
+    assertEquals(ErrorReason.InvalidParameter, body.errorReason)
   }
 
   @Test

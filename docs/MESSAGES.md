@@ -158,6 +158,8 @@ The following are data structures associated with attachment types:
 
 ###### Image URL
 
+When attaching public URLs, only the image URL is required.
+
 ```json
 {
   "type": "url",
@@ -167,10 +169,12 @@ The following are data structures associated with attachment types:
 
 ###### Image raw
 
+When attaching raw image data, the data should be a base64 data URI.
+
 ```json
 {
   "type": "raw",
-  "data": "base64_encoded_image"
+  "data": "data:image/<IMAGE_TYPE>;base64,<BASE_64_ENCODED_IMAGE_DATA>"
 }
 ```
 

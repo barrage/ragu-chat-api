@@ -20,13 +20,16 @@ import net.barrage.llmao.core.chat.ChatService
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage
+import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
+import net.barrage.llmao.core.storage.ATTACHMENTS_PATH
+import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.types.KUUID
 
-fun Route.chatsRoutes(service: ChatService) {
+fun Route.chatsRoutes(service: ChatService, imageStorage: BlobStorage<Image>) {
   route("/chats") {
     get(getAllChats()) {
       val user = call.user()
@@ -47,7 +50,7 @@ fun Route.chatsRoutes(service: ChatService) {
         val user = call.user()
         val chatId = call.pathUuid("chatId")
         val input: UpdateChatTitleDTO = call.receive()
-        val chat = service.updateTitle(chatId, user.id, input.title)
+        val chat = service.userUpdateTitle(chatId, user.id, input.title)
         call.respond(HttpStatusCode.OK, chat)
       }
 
@@ -75,6 +78,35 @@ fun Route.chatsRoutes(service: ChatService) {
           service.evaluateMessage(chatId, messageGroupId, user.id, input)
           call.respond(HttpStatusCode.NoContent)
         }
+      }
+      get("/attachments/images/{path}") {
+        val user = call.user()
+
+        val chatId = call.pathUuid("chatId")
+
+        // Throws if not found
+        if (user.isAdmin()) service.getChat(chatId) else service.userGetChat(chatId, user.id)
+
+        val imagePath = call.parameters["path"]!!
+
+        val image = imageStorage.retrieve("${ATTACHMENTS_PATH}/$imagePath")
+
+        if (image == null) {
+          call.respond(HttpStatusCode.NotFound)
+          return@get
+        }
+
+        call.response.header(
+          HttpHeaders.ContentDisposition,
+          ContentDisposition.Inline.withParameter(ContentDisposition.Parameters.FileName, imagePath)
+            .toString(),
+        )
+
+        call.respondBytes(
+          image.data,
+          ContentType.parse(image.type.contentType()),
+          HttpStatusCode.OK,
+        )
       }
     }
   }

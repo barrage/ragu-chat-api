@@ -1,11 +1,15 @@
 package net.barrage.llmao.core.chat
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.types.KUUID
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonClassDiscriminator("type")
 sealed class ChatWorkflowMessage {
   /** Sent when a chat's title is generated. */
   @Serializable

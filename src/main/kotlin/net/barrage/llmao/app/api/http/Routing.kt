@@ -54,7 +54,7 @@ fun Application.configureRouting(state: ApplicationState) {
       }
 
       agentsRoutes(state.services.agent)
-      chatsRoutes(state.services.chat)
+      chatsRoutes(state.services.chat, state.providers.image)
     }
 
     avatarRoutes(state.providers.image)

@@ -1,11 +1,11 @@
 package net.barrage.llmao
 
+// import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.config.ConfigLoader
 import io.ktor.server.config.MapApplicationConfig
@@ -23,7 +23,6 @@ import kotlinx.coroutines.Job
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
-import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KOffsetDateTime
@@ -107,12 +106,7 @@ open class IntegrationTest(
   /** Main execution function for websocket tests that exposes a websocket client. */
   fun wsTest(block: suspend ApplicationTestBuilder.(client: HttpClient) -> Unit) = testApplication {
     environment { config = cfg }
-    val client = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
-      }
-    }
-    block(client)
+    block(createClient { install(WebSockets) {} })
   }
 
   @BeforeAll

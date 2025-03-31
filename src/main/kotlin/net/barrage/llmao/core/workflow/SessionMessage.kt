@@ -1,11 +1,15 @@
 package net.barrage.llmao.core.workflow
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.types.KUUID
 
 /** System messages used to control sessions. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonClassDiscriminator("type")
 sealed class IncomingSystemMessage {
   @Serializable
   @SerialName("workflow.new")
@@ -24,7 +28,9 @@ sealed class IncomingSystemMessage {
 }
 
 /** Outgoing session messages. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonClassDiscriminator("type")
 sealed class OutgoingSystemMessage {
   /** Sent when a workflow is opened manually by the client. */
   @SerialName("system.workflow.open")

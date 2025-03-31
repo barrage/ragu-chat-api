@@ -5,7 +5,6 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.agent.AgentRepository
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithAgent
-import net.barrage.llmao.core.model.ChatWithMessages
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
@@ -59,9 +58,17 @@ class ChatService(
     return ChatWithAgent(chat, agent)
   }
 
-  suspend fun getChat(chatId: KUUID, pagination: Pagination): ChatWithMessages {
-    return chatRepositoryRead.getWithMessages(chatId, pagination)
+  suspend fun getChat(chatId: KUUID): Chat {
+    return chatRepositoryRead.get(chatId)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat with ID '$chatId'")
+  }
+
+  suspend fun userGetChat(chatId: KUUID, userId: String): Chat {
+    return chatRepositoryRead.get(chatId, userId)
+      ?: throw AppError.api(
+        ErrorReason.EntityDoesNotExist,
+        "Chat with ID '$chatId' for user '$userId'",
+      )
   }
 
   suspend fun updateTitle(chatId: KUUID, title: String): Chat {
@@ -69,8 +76,8 @@ class ChatService(
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 
-  suspend fun updateTitle(chatId: KUUID, userId: String, title: String): Chat {
-    return chatRepositoryRead.updateTitle(chatId, userId, title)
+  suspend fun userUpdateTitle(chatId: KUUID, userId: String, title: String): Chat {
+    return chatRepositoryRead.userUpdateTitle(chatId, userId, title)
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
   }
 

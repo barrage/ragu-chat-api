@@ -134,12 +134,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
 
           val data = call.request.receiveChannel().toByteArray()
 
-          val imageType =
-            ImageType.fromContentType(call.request.contentType().toString())
-              ?: throw AppError.api(
-                ErrorReason.InvalidContentType,
-                "Expected type: image/jpeg or image/png",
-              )
+          val imageType = ImageType.fromContentType(call.request.contentType().toString())
 
           val input = Image(data, imageType)
 

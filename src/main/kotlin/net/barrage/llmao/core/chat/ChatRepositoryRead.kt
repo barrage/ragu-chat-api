@@ -319,7 +319,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       ?.toChat()
   }
 
-  suspend fun updateTitle(id: KUUID, userId: String, title: String): Chat? {
+  suspend fun userUpdateTitle(id: KUUID, userId: String, title: String): Chat? {
     return dslContext
       .update(CHATS)
       .set(CHATS.TITLE, title)

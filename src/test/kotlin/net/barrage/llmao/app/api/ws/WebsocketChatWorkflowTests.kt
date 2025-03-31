@@ -1,5 +1,6 @@
 package net.barrage.llmao.app.api.ws
 
+// import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.header
@@ -8,7 +9,6 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
@@ -27,10 +27,9 @@ import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.adminWsSession
-import net.barrage.llmao.core.chat.ChatWorkflowMessage
-import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.UpdateAgent
@@ -200,7 +199,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     client.adminWsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
-      val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
+      val error = assertThrows<AppError> { app.services.chat.getChat(chatId) }
       assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
 
       var buffer = ""
@@ -224,8 +223,8 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-      val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(2, chat.messages.items[0].messages.size)
+      val messages = app.services.chat.getMessages(chatId, null, Pagination(1, 50))
+      assertEquals(2, messages.items[0].messages.size)
     }
 
     deleteVectors()
@@ -243,13 +242,11 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     client.adminWsSession {
       val chatOne = openNewChat(validAgent.agent.id)
-      val errorOne =
-        assertThrows<AppError> { app.services.chat.getChat(chatOne, Pagination(1, 50)) }
+      val errorOne = assertThrows<AppError> { app.services.chat.getChat(chatOne) }
       assertEquals(ErrorReason.EntityDoesNotExist, errorOne.errorReason)
 
       val chatTwo = openNewChat(validAgent.agent.id)
-      val errorTwo =
-        assertThrows<AppError> { app.services.chat.getChat(chatTwo, Pagination(1, 50)) }
+      val errorTwo = assertThrows<AppError> { app.services.chat.getChat(chatTwo) }
       assertEquals(ErrorReason.EntityDoesNotExist, errorTwo.errorReason)
 
       asserted = true
@@ -271,7 +268,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     client.adminWsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
-      val error = assertThrows<AppError> { app.services.chat.getChat(chatId, Pagination(1, 50)) }
+      val error = assertThrows<AppError> { app.services.chat.getChat(chatId) }
       assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
 
       val msg = "{ \"type\": \"chat\", \"text\": \"Will this trigger a stream response?\" }"
@@ -299,8 +296,8 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         } catch (_: SerializationException) {}
       }
 
-      val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
-      assertEquals(2, chat.messages.items[0].messages.size)
+      val messages = app.services.chat.getMessages(chatId, null, Pagination(1, 50))
+      assertEquals(2, messages.items[0].messages.size)
     }
 
     deleteVectors()
@@ -315,17 +312,8 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     insertVectors(COMPLETIONS_STREAM_PROMPT)
 
-    val client1 = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
-      }
-    }
-
-    val client2 = createClient {
-      install(WebSockets) {
-        contentConverter = KotlinxWebsocketSerializationConverter(IncomingSessionMessageSerializer)
-      }
-    }
+    val client1 = createClient { install(WebSockets) {} }
+    val client2 = createClient { install(WebSockets) {} }
 
     val validAgent = createValidAgent()
 
@@ -524,12 +512,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-      val chat = app.services.chat.getChat(chatId, Pagination(1, 50))
+      val groups = app.services.chat.getMessages(chatId, null, Pagination(1, 50))
 
       // These are the two message groups
-      assertEquals(2, chat.messages.items.size)
+      assertEquals(2, groups.items[0].messages.size)
 
-      val messages = chat.messages.items.flatMap { it.messages }
+      val messages = groups.items.flatMap { it.messages }
 
       // Latest messages are the first one in the list
 

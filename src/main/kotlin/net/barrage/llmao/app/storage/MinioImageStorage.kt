@@ -15,8 +15,6 @@ import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.string
 
-private val LOG = KtorSimpleLogger("net.barrage.llmao.app.storage.MinioImageStorage")
-
 class MinioImageStorage(
   config: ApplicationConfig,
   private val bucket: String = config.string("minio.bucket"),
@@ -26,6 +24,8 @@ class MinioImageStorage(
       .endpoint(config.string("minio.endpoint"))
       .credentials(config.string("minio.accessKey"), config.string("minio.secretKey"))
       .build()
+
+  private val log = KtorSimpleLogger("net.barrage.llmao.app.storage.MinioImageStorage")
 
   override fun id(): String = "minio"
 
@@ -39,7 +39,7 @@ class MinioImageStorage(
           .build()
       )
     } catch (e: MinioException) {
-      LOG.error("Failed to upload file", e)
+      log.error("Failed to upload file", e)
       throw AppError.internal("Failed to upload file")
     }
   }
@@ -49,7 +49,7 @@ class MinioImageStorage(
       return null
     }
 
-    val contentType = ImageType.fromImageName(path) ?: throw AppError.internal("Invalid image type")
+    val contentType = ImageType.fromImageName(path)
 
     try {
       val bytes =
@@ -57,7 +57,7 @@ class MinioImageStorage(
 
       return Image(bytes, contentType)
     } catch (e: MinioException) {
-      LOG.error("Failed to download file", e)
+      log.error("Failed to download file", e)
       throw AppError.internal("Failed to download file")
     }
   }
@@ -66,7 +66,7 @@ class MinioImageStorage(
     try {
       client.removeObject(RemoveObjectArgs.builder().bucket(bucket).`object`(path).build())
     } catch (e: MinioException) {
-      LOG.error("Failed to delete file", e)
+      log.error("Failed to delete file", e)
       throw AppError.internal("Failed to delete file")
     }
   }
@@ -82,11 +82,11 @@ class MinioImageStorage(
       if (e.message.equals("Object does not exist", ignoreCase = true)) {
         return false
       } else {
-        LOG.error("Failed to check object", e)
+        log.error("Failed to check object", e)
         throw AppError.internal("Failed to check object")
       }
     } catch (e: MinioException) {
-      LOG.error("Failed to check object", e)
+      log.error("Failed to check object", e)
       throw AppError.internal("Failed to check object")
     }
   }

@@ -109,7 +109,6 @@ fun AppError.code(): HttpStatusCode {
     ErrorReason.InvalidParameter -> HttpStatusCode.BadRequest
     ErrorReason.InvalidOperation -> HttpStatusCode.BadRequest
     ErrorReason.PayloadTooLarge -> HttpStatusCode.PayloadTooLarge
-    ErrorReason.InvalidContentType -> HttpStatusCode.BadRequest
     else -> HttpStatusCode.InternalServerError
   }
 }

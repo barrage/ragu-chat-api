@@ -54,7 +54,6 @@ enum class ErrorReason(val reason: String) {
   VectorDatabase("Vector database error"),
   InvalidOperation("Invalid operation"),
   PayloadTooLarge("Payload too large"),
-  InvalidContentType("Invalid content type"),
 
   // Websocket errors
   Websocket("Unprocessable message"),

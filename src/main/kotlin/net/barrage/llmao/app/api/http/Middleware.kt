@@ -125,6 +125,8 @@ private object DummyJWTAuth {
 }
 
 fun Application.noAuth() {
+  AuthConfiguration.entitlementsClaim = "entitlements"
+
   install(Authentication) {
     jwt("admin") {
       verifier(JWT.require(Algorithm.HMAC256(DummyJWTAuth.key)).build())

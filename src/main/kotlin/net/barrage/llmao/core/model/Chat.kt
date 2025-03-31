@@ -1,7 +1,9 @@
 package net.barrage.llmao.core.model
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.model.common.CountedList
@@ -191,19 +193,21 @@ enum class MessageAttachmentType {
 }
 
 /** Incoming attachments in messages before they are processed. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonClassDiscriminator("type")
 sealed class IncomingMessageAttachment {
   @Serializable
   @SerialName("image")
   data class Image(val data: IncomingImageData) : IncomingMessageAttachment()
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@JsonClassDiscriminator("type")
 sealed class IncomingImageData {
   /** Raw binary data. */
-  @Serializable
-  @SerialName("raw")
-  data class Raw(val data: String, val imgType: ImageType) : IncomingImageData()
+  @Serializable @SerialName("raw") data class Raw(val data: String) : IncomingImageData()
 
   /** URL to obtain the image. */
   @Serializable @SerialName("url") data class Url(val url: String) : IncomingImageData()
