@@ -21,7 +21,8 @@ fun Route.agentsRoutes(agentService: AgentService) {
     get(getAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val user = call.user()
-      val agents = agentService.userListAgents(pagination, showDeactivated = false, groups = user.entitlements)
+      val agents =
+        agentService.userListAgents(pagination, showDeactivated = false, groups = user.entitlements)
       call.respond(HttpStatusCode.OK, agents)
     }
 

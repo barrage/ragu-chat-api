@@ -6,11 +6,22 @@
  */
 package net.barrage.llmao.core.settings
 
+import io.ktor.util.logging.KtorSimpleLogger
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.encoding.encodeStructure
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.jsonObject
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 
-internal val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.settings.Settings")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.settings.Settings")
 
 /** The main API for managing application settings. */
 class Settings(private val repository: SettingsRepository) {
@@ -43,6 +54,7 @@ class Settings(private val repository: SettingsRepository) {
   }
 }
 
+@Serializable
 enum class SettingKey {
   /**
    * Maximum number of tokens to keep in chat histories. Used to prevent context windows from
@@ -164,7 +176,7 @@ enum class DefaultSetting(val setting: ApplicationSetting) {
 }
 
 /** DTO for updating multiple settings at once. */
-@Serializable
+@Serializable(with = SettingsUpdateSerializer::class)
 data class SettingsUpdate(
   val updates: List<SettingUpdate>? = null,
   val removals: List<SettingKey>? = null,
@@ -180,6 +192,61 @@ data class SettingsUpdate(
         }
       }
     }
+  }
+}
+
+object SettingsUpdateSerializer : KSerializer<SettingsUpdate> {
+  @Serializable data class SettingUpdateTemp(val key: String, val value: String)
+
+  override val descriptor: SerialDescriptor =
+    buildClassSerialDescriptor("SettingsUpdate") {
+      element("updates", ListSerializer(SettingUpdate.serializer()).descriptor, isOptional = true)
+      element("removals", ListSerializer(SettingKey.serializer()).descriptor, isOptional = true)
+    }
+
+  override fun serialize(encoder: Encoder, value: SettingsUpdate) {
+    encoder.encodeStructure(descriptor) {
+      value.updates?.let {
+        encodeSerializableElement(descriptor, 0, ListSerializer(SettingUpdate.serializer()), it)
+      }
+      value.removals?.let {
+        encodeSerializableElement(descriptor, 1, ListSerializer(SettingKey.serializer()), it)
+      }
+    }
+  }
+
+  override fun deserialize(decoder: Decoder): SettingsUpdate {
+    var updates = mutableListOf<SettingUpdate>()
+    var removals = mutableListOf<SettingKey>()
+
+    val jsonDecoder = decoder as? JsonDecoder ?: error("Only JSON is supported")
+
+    val element = jsonDecoder.decodeJsonElement().jsonObject
+
+    element["updates"]?.let {
+      val u =
+        jsonDecoder.json.decodeFromJsonElement(ListSerializer(SettingUpdateTemp.serializer()), it)
+      for (update in u) {
+        try {
+          updates.add(SettingUpdate(SettingKey.tryFromString(update.key), update.value))
+        } catch (e: AppError) {
+          LOG.error("Failed to parse setting key", e)
+        }
+      }
+    }
+
+    element["removals"]?.let {
+      val r = jsonDecoder.json.decodeFromJsonElement(ListSerializer(String.serializer()), it)
+      for (key in r) {
+        try {
+          removals.add(SettingKey.tryFromString(key))
+        } catch (e: AppError) {
+          LOG.warn("Skipping invalid key: {}", e.message)
+        }
+      }
+    }
+
+    return SettingsUpdate(updates, removals)
   }
 }
 

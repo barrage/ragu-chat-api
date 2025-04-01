@@ -3,18 +3,18 @@ package net.barrage.llmao.app.llm.openai
 import com.aallam.openai.api.chat.ChatChoice as OpenAiChatChoice
 import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk as OpenAiChatChunk
+import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 import com.aallam.openai.api.chat.FunctionCall as OpenAiFunctionCall
-import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
-import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
-import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.FunctionTool
 import com.aallam.openai.api.chat.ImagePart
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.chat.TextPart
 import com.aallam.openai.api.chat.Tool
+import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
 import com.aallam.openai.api.chat.ToolId
 import com.aallam.openai.api.chat.ToolType
+import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
 import com.aallam.openai.api.core.Parameters
 import com.aallam.openai.api.logging.LogLevel
 import com.aallam.openai.api.model.ModelId
@@ -154,10 +154,7 @@ fun ChatMessage.toOpenAiChatMessage(): OpenAiChatMessage {
       val callId =
         toolCallId
           ?: throw AppError.api(ErrorReason.InvalidParameter, "Tool message must have tool call id")
-      OpenAiChatMessage.Tool(
-        content = content!!.text(),
-        toolCallId = ToolId(callId),
-      )
+      OpenAiChatMessage.Tool(content = content!!.text(), toolCallId = ToolId(callId))
     }
     else -> throw AppError.api(ErrorReason.InvalidParameter, "Invalid message role '$role'")
   }

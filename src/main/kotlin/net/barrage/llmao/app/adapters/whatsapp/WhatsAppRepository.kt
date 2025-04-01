@@ -16,8 +16,7 @@ import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
 import org.jooq.DSLContext
 import org.jooq.exception.DataAccessException
 
-internal val LOG =
-  KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp.WhatsAppRepository")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp.WhatsAppRepository")
 
 class WhatsAppRepository(private val dslContext: DSLContext) {
   suspend fun getNumberById(id: KUUID): WhatsAppNumber {

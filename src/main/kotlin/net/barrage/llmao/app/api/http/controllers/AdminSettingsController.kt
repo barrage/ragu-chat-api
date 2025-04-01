@@ -17,7 +17,7 @@ fun Route.adminSettingsRoutes(settingsService: Settings) {
     put(updateSettings()) {
       val parameters: SettingsUpdate = call.receive()
       settingsService.update(parameters)
-      call.respond(HttpStatusCode.OK)
+      call.respond(HttpStatusCode.NoContent)
     }
 
     get(getSettings()) {
@@ -32,7 +32,7 @@ private fun updateSettings(): RouteConfig.() -> Unit = {
   description = "Update settings"
   request { body<SettingsUpdate> { description = "Updated settings" } }
   response {
-    HttpStatusCode.OK to { description = "Settings updated successfully" }
+    HttpStatusCode.NoContent to { description = "Settings updated successfully" }
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while updating settings"

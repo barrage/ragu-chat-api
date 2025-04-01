@@ -31,14 +31,14 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
         setBody(update)
       }
 
-    assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.NoContent, response.status)
 
     val responseCheck =
       client.get("/admin/settings?setting=chatMaxHistoryTokens") {
         header(HttpHeaders.Cookie, adminAccessToken())
       }
 
-    assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, responseCheck.status)
 
     val body = responseCheck.body<ApplicationSettings>()
 
@@ -46,8 +46,8 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun doesNotAllowChangingNonExistingSetting() = test { client ->
-    val update = """{"settings": "updates": [{"setting": "nonExistingSetting", "value": "15"}]}"""
+  fun gracefullyHandlesUpdateOfNonExistingSetting() = test { client ->
+    val update = """{"updates": [{"key": "nonExistingSetting", "value": "15"}]}"""
     val response =
       client.put("/admin/settings") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -55,12 +55,12 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
         setBody(update)
       }
 
-    assertEquals(HttpStatusCode.BadRequest, response.status)
+    assertEquals(HttpStatusCode.NoContent, response.status)
   }
 
   @Test
-  fun doesNotAllowRemovingNonExistingSetting() = test { client ->
-    val update = """{"settings": "removals": ["nonExistingSetting"]}"""
+  fun gracefullyHandlesRemovalOfNonExistingSetting() = test { client ->
+    val update = """{"removals": ["nonExistingSetting"]}"""
     val response =
       client.put("/admin/settings") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -68,7 +68,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
         setBody(update)
       }
 
-    assertEquals(HttpStatusCode.BadRequest, response.status)
+    assertEquals(HttpStatusCode.NoContent, response.status)
   }
 
   @Test
@@ -92,12 +92,12 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
         setBody(update)
       }
 
-    assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.NoContent, response.status)
 
     val responseCheck =
       client.get("/admin/settings") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
-    assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.OK, responseCheck.status)
 
     val body = responseCheck.body<ApplicationSettings>()
 
@@ -134,7 +134,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
     assertEquals("00000000-0000-0000-0000-000000000000", updateCheck[SettingKey.WHATSAPP_AGENT_ID])
     assertEquals(15, updateCheck[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt())
 
-    assertEquals(HttpStatusCode.OK, response.status)
+    assertEquals(HttpStatusCode.NoContent, response.status)
 
     val remove =
       SettingsUpdate(
@@ -148,7 +148,7 @@ class AdminSettingsServiceControllerTests : IntegrationTest() {
         setBody(remove)
       }
 
-    assertEquals(HttpStatusCode.OK, responseRemove.status)
+    assertEquals(HttpStatusCode.NoContent, responseRemove.status)
 
     val responseCheck =
       client.get("/admin/settings") { header(HttpHeaders.Cookie, adminAccessToken()) }

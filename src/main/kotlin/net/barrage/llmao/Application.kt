@@ -21,12 +21,12 @@ import net.barrage.llmao.app.api.http.configureRouting
 import net.barrage.llmao.app.api.http.noAuth
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.app.chat.ChatType
-import net.barrage.llmao.core.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.types.KUUID
 

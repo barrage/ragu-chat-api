@@ -70,7 +70,8 @@ class WebsocketSessionManager(
     ws: WebSocketServerSession,
   ) {
     when (message) {
-      is IncomingSessionMessage.Chat -> handleChatMessage(session, message.text, message.attachments)
+      is IncomingSessionMessage.Chat ->
+        handleChatMessage(session, message.text, message.attachments)
       is IncomingSessionMessage.System -> handleSystemMessage(session, message.payload, ws)
     }
   }
