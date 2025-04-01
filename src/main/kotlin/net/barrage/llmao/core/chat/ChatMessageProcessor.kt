@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.chat
 
-import io.ktor.util.decodeBase64Bytes
 import io.ktor.util.encodeBase64
 import java.security.MessageDigest
 import kotlinx.serialization.json.Json
@@ -13,7 +12,6 @@ import net.barrage.llmao.core.llm.ChatMessageImage
 import net.barrage.llmao.core.llm.ContentMulti
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.model.Image
-import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.model.IncomingImageData
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.Message
@@ -32,7 +30,12 @@ private val LOG =
  *   that images are loaded only on inference, and a caching mechanism should be implemented to
  *   reduce the memory footprint of chats.
  */
-class ChatMessageProcessor(private val providers: ProviderState) {
+class ChatMessageProcessor(
+  private val providers: ProviderState,
+
+  /** Maximum image size supported. We default to 20MB. */
+  private val maxImageSizeMB: Int = 20,
+) {
   /**
    * Converts the incoming prompt and attachments into a [ContentMulti]. This is done to preserve
    * the original as it is needed for [storeMessageAttachments] later, since we prompt first and
@@ -53,9 +56,16 @@ class ChatMessageProcessor(private val providers: ProviderState) {
                 )
               is IncomingImageData.Raw -> {
                 // Throws if the image type is not supported
-                ImageType.fromContentType(
-                  attachment.data.data.substringBefore(";").substringAfter("data:")
-                )
+                // or the URI is malformed.
+                val image = Image.fromBase64Uri(attachment.data.data)
+
+                if (image.data.size > maxImageSizeMB * 1024 * 1024) {
+                  throw AppError.api(
+                    ErrorReason.PayloadTooLarge,
+                    "Image size exceeds the maximum allowed size",
+                  )
+                }
+
                 acc.add(
                   ChatMessageContentPart.Image(
                     imageUrl = ChatMessageImage(url = attachment.data.data, detail = "high")
@@ -98,38 +108,17 @@ class ChatMessageProcessor(private val providers: ProviderState) {
               )
             }
             is IncomingImageData.Raw -> {
-              val (type, data) =
-                with(attachment.data.data) {
-                  val split = split(";")
+              val image = Image.fromBase64Uri(attachment.data.data)
 
-                  if (split.size != 2) {
-                    throw AppError.api(ErrorReason.InvalidParameter, "Invalid image URI")
-                  }
+              val hash = MessageDigest.getInstance("SHA-256").digest(image.data).toHexString()
 
-                  val (type, data) = split
-
-                  if (!data.startsWith("base64,")) {
-                    throw AppError.api(
-                      ErrorReason.InvalidParameter,
-                      "Only base64 images are supported",
-                    )
-                  }
-
-                  Pair(
-                    ImageType.fromContentType(type.substringAfter("data:")),
-                    data.substringAfter("base64,").decodeBase64Bytes(),
-                  )
-                }
-
-              val hash = MessageDigest.getInstance("SHA-256").digest(data).toHexString()
-
-              val path = "$hash.$type"
+              val path = "$hash.${image.type}"
 
               val attachmentPath = "$ATTACHMENTS_PATH/$path"
 
               if (!providers.image.exists(attachmentPath)) {
                 LOG.info("Storing image at $attachmentPath")
-                providers.image.store(attachmentPath, Image(data = data, type = type))
+                providers.image.store(attachmentPath, image)
               }
 
               processedAttachments.add(

@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.model
 
+import io.ktor.util.decodeBase64Bytes
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.AppError
@@ -13,7 +14,28 @@ data class Image(
 
   /** Image type for convenience */
   val type: ImageType,
-)
+) {
+  companion object {
+    fun fromBase64Uri(uri: String): Image {
+      val split = uri.split(";")
+
+      if (split.size != 2) {
+        throw AppError.api(ErrorReason.InvalidParameter, "Invalid image URI")
+      }
+
+      val (type, data) = split
+
+      if (!data.startsWith("base64,")) {
+        throw AppError.api(ErrorReason.InvalidParameter, "Only base64 images are supported")
+      }
+
+      return Image(
+        data = data.substringAfter("base64,").decodeBase64Bytes(),
+        type = ImageType.fromContentType(type.substringAfter("data:")),
+      )
+    }
+  }
+}
 
 enum class ImageType {
   @SerialName("jpeg") JPEG,
