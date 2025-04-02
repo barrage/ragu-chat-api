@@ -60,7 +60,7 @@ class WebsocketSessionManager(
 
   /** Removes the session and its corresponding chat associated with the user and token pair. */
   fun removeWorkflow(session: WebsocketSession) {
-    LOG.info("Removing session {}", session)
+    LOG.info("{} - removing session", session.user.id)
     workflows.remove(session)
   }
 

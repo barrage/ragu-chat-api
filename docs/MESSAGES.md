@@ -154,9 +154,13 @@ Send a message to the chat workflow. The workflow must be open for this message 
 
 ##### Attachments
 
+The following `ATTACHMENT_TYPE`s are supported:
+
+- `image` - An image attachment.
+
 The following are data structures associated with attachment types:
 
-###### Image URL
+###### Image URL (`ATTACHMENT_TYPE == image`)
 
 When attaching public URLs, only the image URL is required.
 
@@ -167,7 +171,7 @@ When attaching public URLs, only the image URL is required.
 }
 ```
 
-###### Image raw
+###### Image raw (`ATTACHMENT_TYPE == image`)
 
 When attaching raw image data, the data should be a base64 data URI.
 
