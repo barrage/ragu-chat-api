@@ -144,8 +144,8 @@ class ChatWorkflow(
             streamAgent.addToHistory(messages = listOf(userMessage) + messageBuffer)
 
             scope.launch {
-              val messageGroupId =
-                processResponse(
+              val processedMessageGroup =
+                processMessageGroup(
                   userMessage = userMessage,
                   attachments = input.attachments,
                   messages = messageBuffer,
@@ -155,7 +155,8 @@ class ChatWorkflow(
                 ChatWorkflowMessage.StreamComplete(
                   chatId = id,
                   reason = finishReason,
-                  messageId = messageGroupId,
+                  messageId = processedMessageGroup.messageGroupId,
+                  attachmentPaths = processedMessageGroup.attachmentPaths,
                 )
               )
             }
@@ -181,18 +182,13 @@ class ChatWorkflow(
     stream!!.cancel()
   }
 
-  /** Persists messages depending on chat state. Returns the assistant message ID. */
-  private suspend fun processResponse(
-    /** Original unmodified user message, possibly with attachments. */
+  /** Persists messages depending on chat state. */
+  private suspend fun processMessageGroup(
+    /** Original unmodified user message. */
     userMessage: ChatMessage,
     attachments: List<IncomingMessageAttachment>?,
     messages: List<ChatMessage>,
-  ): KUUID? {
-    if (messages.isEmpty()) {
-      LOG.warn("{} - no messages to process!", id)
-      return null
-    }
-
+  ): ProcessedMessageGroup {
     val originalPrompt = userMessage.content!!.text()
     val attachmentsInsert = attachments?.let { messageProcessor.storeMessageAttachments(it) }
     val userMessageInsert = userMessage.toInsert(attachmentsInsert)
@@ -226,15 +222,17 @@ class ChatWorkflow(
         emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title))
         state = ChatWorkflowState.Persisted(title)
 
-        groupId
+        ProcessedMessageGroup(groupId, attachmentsInsert?.map { it.url })
       }
       is ChatWorkflowState.Persisted -> {
         LOG.debug("{} - persisting message pair", id)
-        repository.insertMessages(
-          chatId = id,
-          agentConfigurationId = streamAgent.chatAgent.configurationId,
-          messages = messagesInsert,
-        )
+        val groupId =
+          repository.insertMessages(
+            chatId = id,
+            agentConfigurationId = streamAgent.chatAgent.configurationId,
+            messages = messagesInsert,
+          )
+        ProcessedMessageGroup(groupId, attachmentsInsert?.map { it.url })
       }
     }
   }
@@ -273,4 +271,9 @@ sealed class ChatWorkflowState {
 data class ChatWorkflowInput(
   val text: String,
   val attachments: List<IncomingMessageAttachment>? = null,
+)
+
+private data class ProcessedMessageGroup(
+  val messageGroupId: KUUID,
+  val attachmentPaths: List<String>? = null,
 )

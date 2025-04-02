@@ -31,9 +31,14 @@ sealed class ChatWorkflowMessage {
     val reason: FinishReason,
 
     /**
-     * Optional message ID, present only when the finish reason is STOP. Failed message IDs are not
-     * sent.
+     * The message group ID of the interaction. Present only when the stream finishes successfully.
      */
     val messageId: KUUID? = null,
+
+    /**
+     * Contains a list of processed attachment paths, in the order they were sent by the client, if
+     * any.
+     */
+    val attachmentPaths: List<String>? = null,
   ) : ChatWorkflowMessage()
 }

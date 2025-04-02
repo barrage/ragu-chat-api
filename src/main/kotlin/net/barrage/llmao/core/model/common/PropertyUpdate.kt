@@ -3,7 +3,6 @@ package net.barrage.llmao.core.model.common
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
@@ -84,7 +83,7 @@ class PropertyUpdateSerializer<T>(private val classSerializer: KSerializer<T>) :
     return if (element is JsonNull) {
       PropertyUpdate.Null
     } else {
-      val value = Json.decodeFromJsonElement(classSerializer, element)
+      val value = decoder.json.decodeFromJsonElement(classSerializer, element)
       PropertyUpdate.Value(value)
     }
   }
