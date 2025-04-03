@@ -5,6 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.llm.FinishReason
+import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.types.KUUID
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -39,6 +40,6 @@ sealed class ChatWorkflowMessage {
      * Contains a list of processed attachment paths, in the order they were sent by the client, if
      * any.
      */
-    val attachmentPaths: List<String>? = null,
+    val attachmentPaths: List<MessageAttachment>? = null,
   ) : ChatWorkflowMessage()
 }

@@ -12,6 +12,7 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.IncomingMessageAttachment
+import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
@@ -156,7 +157,7 @@ class ChatWorkflow(
                   chatId = id,
                   reason = finishReason,
                   messageId = processedMessageGroup.messageGroupId,
-                  attachmentPaths = processedMessageGroup.attachmentPaths,
+                  attachmentPaths = processedMessageGroup.attachments,
                 )
               )
             }
@@ -222,7 +223,7 @@ class ChatWorkflow(
         emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title))
         state = ChatWorkflowState.Persisted(title)
 
-        ProcessedMessageGroup(groupId, attachmentsInsert?.map { it.url })
+        ProcessedMessageGroup(groupId, attachmentsInsert)
       }
       is ChatWorkflowState.Persisted -> {
         LOG.debug("{} - persisting message pair", id)
@@ -232,7 +233,7 @@ class ChatWorkflow(
             agentConfigurationId = streamAgent.chatAgent.configurationId,
             messages = messagesInsert,
           )
-        ProcessedMessageGroup(groupId, attachmentsInsert?.map { it.url })
+        ProcessedMessageGroup(groupId, attachmentsInsert)
       }
     }
   }
@@ -275,5 +276,5 @@ data class ChatWorkflowInput(
 
 private data class ProcessedMessageGroup(
   val messageGroupId: KUUID,
-  val attachmentPaths: List<String>? = null,
+  val attachments: List<MessageAttachment>? = null,
 )
