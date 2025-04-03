@@ -16,7 +16,7 @@ class ToolchainFactory(
   suspend fun createAgentToolchain(
     agentId: KUUID,
     emitter: Emitter<ToolEvent>? = null,
-  ): Toolchain? {
+  ): Toolchain<ServiceState>? {
     val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
 
     if (agentTools.isEmpty()) {
@@ -27,7 +27,7 @@ class ToolchainFactory(
       LOG.warn("Building toolchain without an emitter; Realtime tool call events will not be sent.")
     }
 
-    val toolchain = ToolchainBuilder()
+    val toolchain = ToolchainBuilder<ServiceState>()
 
     for (tool in agentTools) {
       val definition = ToolRegistry.getToolDefinition(tool)

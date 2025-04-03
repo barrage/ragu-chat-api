@@ -1,12 +1,12 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -22,6 +22,7 @@ import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.agent.AgentRepository
 import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.chat.ChatHistory
@@ -217,7 +218,7 @@ class WhatsAppAdapter(
     username: String?,
     chat: Chat,
     agent: AgentFull,
-  ): ChatAgent {
+  ): ChatAgent<ServiceState> {
     val chatMessages =
       chatRepositoryRead.getMessages(
         chatId = chat.id,

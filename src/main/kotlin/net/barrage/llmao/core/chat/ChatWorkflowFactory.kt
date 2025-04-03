@@ -86,7 +86,7 @@ class ChatWorkflowFactory(
       )
 
     val chatAgent =
-      agent.toChatAgent(
+      agent.toStreamingAgent(
         userId = user.id,
         allowedGroups = user.entitlements,
         history = history,
@@ -95,13 +95,12 @@ class ChatWorkflowFactory(
         settings = settings,
         tokenTracker = tokenTracker,
         completionParameters = completionParameters,
+        emitter = emitter,
       )
-
-    val streamAgent = chatAgent.toStreaming(emitter)
 
     return ChatWorkflow(
       id = id,
-      streamAgent = streamAgent,
+      agent = chatAgent,
       emitter = emitter,
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.New,
@@ -169,7 +168,7 @@ class ChatWorkflowFactory(
       )
 
     val chatAgent =
-      agent.toChatAgent(
+      agent.toStreamingAgent(
         userId = user.id,
         allowedGroups = user.entitlements,
         history = history,
@@ -178,14 +177,13 @@ class ChatWorkflowFactory(
         settings = settings,
         tokenTracker = tokenTracker,
         completionParameters = completionParameters,
+        emitter = emitter,
       )
-
-    val streamAgent = chatAgent.toStreaming(emitter)
 
     return ChatWorkflow(
       id = chat.chat.id,
       user = user,
-      streamAgent = streamAgent,
+      agent = chatAgent,
       emitter = emitter,
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.Persisted(chat.chat.title!!),

@@ -33,12 +33,15 @@ private const val MAX_TOOL_ATTEMPTS: Int = 5
  * Token usage is always tracked in this instance when possible, the only exception being the stream
  * whose tokens must be counted outside since we only get the usage when it's complete.
  */
-class ChatAgent(
-  /** Has to be kept here because collections can be from different providers. */
-  internal val providers: ProviderState,
-
+open class ChatAgent<S>(
   /** ID of the user who created the chat. Used to link to the user's account on the auth server. */
   val userId: String,
+
+  /** Agent ID. */
+  val agentId: KUUID,
+
+  /** The agent configuration ID. */
+  val configurationId: KUUID,
 
   /**
    * Used to check collection permissions. If the `groups` properties in collections is present,
@@ -47,9 +50,6 @@ class ChatAgent(
    * If this set contains a group from the groups property, the agent can access that collection.
    */
   val availableGroups: Set<String>,
-
-  /** Agent ID. */
-  val agentId: KUUID,
 
   /** Agent name. */
   val name: String,
@@ -70,26 +70,28 @@ class ChatAgent(
   val instructions: AgentInstructions,
 
   /** LLM tools. */
-  internal val toolchain: Toolchain?,
+  protected val toolchain: Toolchain<S>?,
 
-  /** The agent configuration ID. */
-  val configurationId: KUUID,
+  /** Has to be kept here because collections can be from different providers. */
+  protected val providers: ProviderState,
 
   /** Loaded either directly from the agent model or from the global settings. */
-  internal val completionParameters: ChatCompletionParameters,
+  protected val completionParameters: ChatCompletionParameters,
 
   /** Obtained from the global settings. */
-  private val titleMaxTokens: Int,
+  protected val titleMaxTokens: Int,
 
   /** Used to track token usage. */
-  internal val tokenTracker: TokenUsageTracker,
+  protected val tokenTracker: TokenUsageTracker,
 
   /**
    * The chat history. Has to be managed from outside since messages need to be stored, and we can
    * only reason about which messages to add based on whether or not they are successfully stored.
    */
-  internal val history: ChatHistory,
-  private val attachmentProcessor: ChatMessageProcessor,
+  protected val history: ChatHistory,
+
+  /** Used to convert attachments. */
+  protected val attachmentProcessor: ChatMessageProcessor,
 ) {
 
   /** Available tools. */
@@ -359,12 +361,46 @@ class ChatAgent(
 }
 
 /** Chat agent implementation that can hook up to an emitter and emit message chunks. */
-class ChatAgentStreaming(
-  val chatAgent: ChatAgent,
-
+class ChatAgentStreaming<S>(
+  providers: ProviderState,
+  userId: String,
+  availableGroups: Set<String>,
+  agentId: KUUID,
+  name: String,
+  model: String,
+  llmProvider: String,
+  context: String,
+  collections: List<ChatAgentCollection>,
+  instructions: AgentInstructions,
+  toolchain: Toolchain<S>?,
+  configurationId: KUUID,
+  completionParameters: ChatCompletionParameters,
+  titleMaxTokens: Int,
+  tokenTracker: TokenUsageTracker,
+  history: ChatHistory,
+  attachmentProcessor: ChatMessageProcessor,
   /** Output handle. Only chat related events are sent via this reference. */
   private val emitter: Emitter<ChatWorkflowMessage>,
-) {
+) :
+  ChatAgent<S>(
+    providers = providers,
+    userId = userId,
+    availableGroups = availableGroups,
+    agentId = agentId,
+    name = name,
+    model = model,
+    llmProvider = llmProvider,
+    context = context,
+    collections = collections,
+    instructions = instructions,
+    toolchain = toolchain,
+    configurationId = configurationId,
+    completionParameters = completionParameters,
+    titleMaxTokens = titleMaxTokens,
+    tokenTracker = tokenTracker,
+    history = history,
+    attachmentProcessor = attachmentProcessor,
+  ) {
 
   /**
    * Recursively calls the chat completion stream until no tool calls are returned.
@@ -409,20 +445,20 @@ class ChatAgentStreaming(
     val userMessage =
       if (attempt == 0) {
         assert(messageBuffer.isEmpty())
-        val enrichedText = chatAgent.executeRetrievalAugmentation(userMessage.content!!.text())
+        val enrichedText = executeRetrievalAugmentation(userMessage.content!!.text())
         userMessage.copy(content = userMessage.content!!.copyWithText(enrichedText))
       } else userMessage
 
-    LOG.debug("{} - starting stream (attempt: {})", chatAgent.agentId, attempt + 1)
+    LOG.debug("{} - starting stream (attempt: {})", agentId, attempt + 1)
 
-    val llm = chatAgent.providers.llm.getProvider(chatAgent.llmProvider)
+    val llm = providers.llm.getProvider(llmProvider)
 
     // I seriously don't understand why this is needed but it is
     // the only way I've found to not alter the original messages
     // this can't be good I just don't get it
-    val llmInput = mutableListOf<ChatMessage>(ChatMessage.system(chatAgent.context))
+    val llmInput = mutableListOf<ChatMessage>(ChatMessage.system(context))
 
-    for (message in chatAgent.history) {
+    for (message in history) {
       llmInput.add(message.copy())
     }
 
@@ -435,9 +471,7 @@ class ChatAgentStreaming(
     val llmStream =
       llm.completionStream(
         llmInput,
-        chatAgent.completionParameters.copy(
-          tools = if (attempt < MAX_TOOL_ATTEMPTS) chatAgent.tools else null
-        ),
+        completionParameters.copy(tools = if (attempt < MAX_TOOL_ATTEMPTS) tools else null),
       )
 
     val toolCalls: MutableMap<Int, ToolCallData> = mutableMapOf()
@@ -457,11 +491,11 @@ class ChatAgentStreaming(
       chunk.stopReason?.let { reason -> finishReason = reason }
 
       chunk.tokenUsage?.let { tokenUsage ->
-        chatAgent.tokenTracker.store(
+        tokenTracker.store(
           amount = tokenUsage,
           usageType = TokenUsageType.COMPLETION,
-          model = chatAgent.model,
-          provider = chatAgent.llmProvider,
+          model = model,
+          provider = llmProvider,
         )
       }
 
@@ -495,14 +529,14 @@ class ChatAgentStreaming(
 
     LOG.debug(
       "{} - (stream) calling tools: {}",
-      chatAgent.agentId,
+      agentId,
       toolCalls.values.joinToString(", ") { it.name },
     )
 
     for (toolCall in toolCalls.values) {
       // Safe to !! because toolchain is not null if toolCalls is not empty
       try {
-        val result = chatAgent.toolchain!!.processToolCall(toolCall)
+        val result = toolchain!!.processToolCall(toolCall)
         messageBuffer.add(ChatMessage.toolResult(result.content, toolCall.id))
       } catch (e: Throwable) {
         messageBuffer.add(ChatMessage.toolResult("error: ${e.message}", toolCall.id))
@@ -518,7 +552,7 @@ class ChatAgentStreaming(
   }
 
   internal fun addToHistory(messages: List<ChatMessage>) {
-    chatAgent.history.add(messages)
+    history.add(messages)
   }
 }
 
@@ -546,12 +580,12 @@ data class ChatAgentCollection(
   val vectorProvider: String,
 )
 
-fun AgentFull.toChatAgent(
+fun <S> AgentFull.toChatAgent(
   userId: String,
   allowedGroups: List<String>,
   history: ChatHistory,
   providers: ProviderState,
-  toolchain: Toolchain?,
+  toolchain: Toolchain<S>?,
   completionParameters: ChatCompletionParameters,
   /** Used for default values if the agent configuration does not specify them. */
   settings: ApplicationSettings,
@@ -588,4 +622,46 @@ fun AgentFull.toChatAgent(
     attachmentProcessor = ChatMessageProcessor(providers),
   )
 
-fun ChatAgent.toStreaming(emitter: Emitter<ChatWorkflowMessage>) = ChatAgentStreaming(this, emitter)
+fun <S> AgentFull.toStreamingAgent(
+  userId: String,
+  allowedGroups: List<String>,
+  history: ChatHistory,
+  providers: ProviderState,
+  toolchain: Toolchain<S>?,
+  completionParameters: ChatCompletionParameters,
+  /** Used for default values if the agent configuration does not specify them. */
+  settings: ApplicationSettings,
+  tokenTracker: TokenUsageTracker,
+  emitter: Emitter<ChatWorkflowMessage>,
+) =
+  ChatAgentStreaming(
+    userId = userId,
+    agentId = agent.id,
+    name = agent.name,
+    model = configuration.model,
+    llmProvider = configuration.llmProvider,
+    context = configuration.context,
+    collections =
+      collections.map {
+        ChatAgentCollection(
+          name = it.collection,
+          amount = it.amount,
+          instruction = it.instruction,
+          maxDistance = it.maxDistance,
+          embeddingProvider = it.embeddingProvider,
+          embeddingModel = it.embeddingModel,
+          vectorProvider = it.vectorProvider,
+        )
+      },
+    instructions = configuration.agentInstructions,
+    completionParameters = completionParameters,
+    configurationId = configuration.id,
+    providers = providers,
+    toolchain = toolchain,
+    titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+    tokenTracker = tokenTracker,
+    history = history,
+    availableGroups = allowedGroups.toSet(),
+    attachmentProcessor = ChatMessageProcessor(providers),
+    emitter = emitter,
+  )

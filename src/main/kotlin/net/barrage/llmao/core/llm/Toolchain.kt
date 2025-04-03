@@ -2,7 +2,6 @@ package net.barrage.llmao.core.llm
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.workflow.Emitter
 
 /**
@@ -13,11 +12,11 @@ import net.barrage.llmao.core.workflow.Emitter
  * Toolchains emit tool call events, 2 for each tool; one for the tool call and one for the tool
  * result.
  */
-class Toolchain(
+class Toolchain<S>(
   private val emitter: Emitter<ToolEvent>? = null,
-  private val services: ServiceState,
+  private val state: S,
   private val agentTools: List<ToolDefinition>,
-  private val handlers: Map<String, CallableTool>,
+  private val handlers: Map<String, CallableTool<S>>,
 ) {
 
   suspend fun processToolCall(data: ToolCallData): ToolCallResult {
@@ -31,7 +30,7 @@ class Toolchain(
 
     val handler = handlers[data.name]
     val result =
-      handler?.invoke(services, data.arguments)
+      handler?.invoke(state, data.arguments)
         ?: throw IllegalStateException("No handler for tool call '${data.name}'")
 
     val toolResult = ToolCallResult(data.id, result)
@@ -46,17 +45,17 @@ class Toolchain(
   }
 }
 
-class ToolchainBuilder {
+class ToolchainBuilder<S> {
   private val agentTools = mutableListOf<ToolDefinition>()
-  private val handlers = mutableMapOf<String, CallableTool>()
+  private val handlers = mutableMapOf<String, CallableTool<S>>()
 
-  fun addTool(definition: ToolDefinition, handler: CallableTool) {
+  fun addTool(definition: ToolDefinition, handler: CallableTool<S>) {
     agentTools.add(definition)
     handlers[definition.function.name] = handler
   }
 
-  fun build(services: ServiceState, emitter: Emitter<ToolEvent>? = null) =
-    Toolchain(emitter = emitter, services = services, agentTools = agentTools, handlers = handlers)
+  fun build(state: S, emitter: Emitter<ToolEvent>? = null) =
+    Toolchain(emitter = emitter, state = state, agentTools = agentTools, handlers = handlers)
 
   fun listToolNames(): List<String> {
     return agentTools.map(ToolDefinition::function).map(ToolFunctionDefinition::name)

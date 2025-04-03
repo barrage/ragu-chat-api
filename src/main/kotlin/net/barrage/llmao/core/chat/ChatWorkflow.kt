@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
@@ -32,7 +33,7 @@ class ChatWorkflow(
   private val emitter: Emitter<ChatWorkflowMessage>,
 
   /** Encapsulates the agent and its LLM functionality. */
-  private val streamAgent: ChatAgentStreaming,
+  private val agent: ChatAgentStreaming<ServiceState>,
 
   /** Responsible for persisting chat data. */
   private val repository: ChatRepositoryWrite,
@@ -49,7 +50,7 @@ class ChatWorkflow(
   }
 
   override fun entityId(): KUUID {
-    return streamAgent.chatAgent.agentId
+    return agent.agentId
   }
 
   override fun execute(input: ChatWorkflowInput) {
@@ -72,10 +73,10 @@ class ChatWorkflow(
         val responseBuffer = StringBuilder()
 
         try {
-          streamAgent.stream(userMessage, messageBuffer, responseBuffer)
+          agent.stream(userMessage, messageBuffer, responseBuffer)
           LOG.debug(
             "{} - stream complete, took {}ms",
-            streamAgent.chatAgent.agentId,
+            agent.agentId,
             Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
           )
         } catch (_: CancellationException) {
@@ -83,7 +84,7 @@ class ChatWorkflow(
           // CancellationException is thrown with a specific message indicating the reason.
           LOG.debug(
             "{} - stream cancelled, took {}ms",
-            streamAgent.chatAgent.agentId,
+            agent.agentId,
             Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
           )
           finishReason = FinishReason.ManualStop
@@ -142,7 +143,7 @@ class ChatWorkflow(
 
             finishReason = assistantMessage.finishReason!!
 
-            streamAgent.addToHistory(messages = listOf(userMessage) + messageBuffer)
+            agent.addToHistory(messages = listOf(userMessage) + messageBuffer)
 
             scope.launch {
               val processedMessageGroup =
@@ -167,7 +168,7 @@ class ChatWorkflow(
 
           LOG.debug(
             "{} - stream complete emitted ({}ms), finish reason: {}",
-            streamAgent.chatAgent.agentId,
+            agent.agentId,
             Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
             finishReason.value,
           )
@@ -209,13 +210,12 @@ class ChatWorkflow(
             chatId = id,
             userId = user.id,
             username = user.username,
-            agentId = streamAgent.chatAgent.agentId,
-            agentConfigurationId = streamAgent.chatAgent.configurationId,
+            agentId = agent.agentId,
+            agentConfigurationId = agent.configurationId,
             messages = messagesInsert,
           )
 
-        val title =
-          streamAgent.chatAgent.createTitle(originalPrompt, assistantMessage.content!!.text())
+        val title = agent.createTitle(originalPrompt, assistantMessage.content!!.text())
 
         LOG.debug("{} - generated title ({})", id, title)
 
@@ -230,7 +230,7 @@ class ChatWorkflow(
         val groupId =
           repository.insertMessages(
             chatId = id,
-            agentConfigurationId = streamAgent.chatAgent.configurationId,
+            agentConfigurationId = agent.configurationId,
             messages = messagesInsert,
           )
         ProcessedMessageGroup(groupId, attachmentsInsert)
@@ -246,13 +246,11 @@ class ChatWorkflow(
   private suspend fun handleError(e: Throwable) {
     when (e) {
       is AppError -> {
-        emitter.emitError(e.withDisplayMessage(streamAgent.chatAgent.instructions.errorMessage()))
+        emitter.emitError(e.withDisplayMessage(agent.instructions.errorMessage()))
       }
       else -> {
         LOG.error("Error in chat", e)
-        emitter.emitError(
-          AppError.internal().withDisplayMessage(streamAgent.chatAgent.instructions.errorMessage())
-        )
+        emitter.emitError(AppError.internal().withDisplayMessage(agent.instructions.errorMessage()))
       }
     }
   }

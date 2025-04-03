@@ -8,10 +8,11 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.chat.ChatAgent
+import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentFull
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class TokenUsageTests : IntegrationTest() {
-  private lateinit var workflow: ChatAgent
+  private lateinit var workflow: ChatAgent<ServiceState>
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
   private lateinit var chat: Chat

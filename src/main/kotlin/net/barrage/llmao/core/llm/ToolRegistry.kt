@@ -6,7 +6,7 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.types.KUUID
 
-typealias CallableTool = suspend (services: ServiceState, jsonArguments: String) -> String
+typealias CallableTool<S> = suspend (state: S, jsonArguments: String) -> String
 
 const val GET_BIRTHDAY = "get_agent_birthday"
 
@@ -23,7 +23,7 @@ object ToolRegistry {
     }
   }
 
-  fun getToolFunction(name: String): CallableTool? {
+  fun getToolFunction(name: String): CallableTool<ServiceState>? {
     return when (name) {
       GET_BIRTHDAY -> { services, arguments ->
           val toolData = Json.decodeFromString<GetAgentBirthdayArguments>(arguments)
