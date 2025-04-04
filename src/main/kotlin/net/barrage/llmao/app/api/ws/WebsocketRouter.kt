@@ -14,16 +14,13 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.user
-import net.barrage.llmao.app.workflow.IncomingSessionMessage
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.chat.ChatWorkflowFactory
+import net.barrage.llmao.core.chat.WorkflowFactory
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 
@@ -31,7 +28,7 @@ private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")
 
 fun Application.websocketServer(
-  factory: ChatWorkflowFactory,
+  factory: WorkflowFactory,
   adapters: AdapterState,
   listener: EventListener<StateChangeEvent>,
 ) {
@@ -103,20 +100,8 @@ fun Application.websocketServer(
               LOG.warn("Unsupported frame received, {}", frame)
               continue
             }
-
-            val message =
-              try {
-                Json.decodeFromString<IncomingSessionMessage>(frame.readText())
-              } catch (e: Throwable) {
-                e.printStackTrace()
-                emitter.emitError(
-                  AppError.api(ErrorReason.InvalidParameter, "Message format malformed")
-                )
-                continue
-              }
-
             try {
-              server.handleMessage(session, message, this)
+              server.handleMessage(session, frame.readText(), this)
             } catch (error: AppError) {
               emitter.emitError(error)
             }

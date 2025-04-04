@@ -7,8 +7,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.chat.ChatWorkflowInput
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
@@ -27,9 +27,7 @@ suspend fun HttpClient.userWsSession(block: suspend ClientWebSocketSession.() ->
 }
 
 suspend fun ClientWebSocketSession.sendClientSystem(message: IncomingSystemMessage) {
-  val jsonMessage = Json.encodeToString(message)
-  val msg = "{ \"type\": \"system\", \"payload\": $jsonMessage }"
-  send(Frame.Text(msg))
+  send(Frame.Text(Json.encodeToString(message)))
 }
 
 /** Send the `chat_open_new` system message and wait for the chat_open response. */
@@ -50,8 +48,7 @@ suspend fun ClientWebSocketSession.sendMessage(
   text: String,
   block: suspend (ReceiveChannel<Frame>) -> Unit,
 ) {
-  val message = "{ \"type\": \"chat\", \"text\": \"$text\" }"
-  send(Frame.Text(message))
+  send(Frame.Text(json.encodeToString(ChatWorkflowInput(text))))
   block(incoming)
 }
 

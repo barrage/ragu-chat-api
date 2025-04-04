@@ -1,6 +1,5 @@
 package net.barrage.llmao
 
-import com.knuddels.jtokkit.Encodings
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopping
@@ -20,14 +19,10 @@ import net.barrage.llmao.app.api.http.configureRequestValidation
 import net.barrage.llmao.app.api.http.configureRouting
 import net.barrage.llmao.app.api.http.noAuth
 import net.barrage.llmao.app.api.ws.websocketServer
-import net.barrage.llmao.app.chat.ChatType
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ChatWorkflowFactory
-import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.types.KUUID
 
 fun main(args: Array<String>) {
@@ -41,7 +36,6 @@ fun Application.module() {
   val stateChangeListener = EventListener<StateChangeEvent>()
 
   val state = ApplicationState(environment.config, applicationStoppingJob, stateChangeListener)
-  val toolchainFactory = ToolchainFactory(state.services, state.repository.agent)
 
   install(ContentNegotiation) {
     json(
@@ -67,17 +61,7 @@ fun Application.module() {
 
   configureOpenApi()
   websocketServer(
-    ChatWorkflowFactory(
-      providerState = state.providers,
-      agentService = state.services.agent,
-      chatRepositoryWrite = state.repository.chatWrite(ChatType.CHAT.value),
-      chatRepositoryRead = state.repository.chatRead(ChatType.CHAT.value),
-      toolchainFactory = toolchainFactory,
-      settings = state.services.settings,
-      tokenUsageRepositoryW = state.repository.tokenUsageW,
-      encodingRegistry = Encodings.newDefaultEncodingRegistry(),
-      messageProcessor = ChatMessageProcessor(state.providers),
-    ),
+    factory = state.workflowFactory,
     listener = stateChangeListener,
     adapters = state.adapters,
   )

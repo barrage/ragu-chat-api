@@ -144,7 +144,7 @@ sealed class ChatMessageContent {
     }
   }
 
-  /** Create a copy of this message with its text content replaced with [text]. */
+  /** Create a copy of this content with its text replaced with [text]. */
   fun copyWithText(text: String): ChatMessageContent {
     return when (this) {
       is ContentSingle -> ContentSingle(text)

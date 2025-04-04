@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
-import net.barrage.llmao.core.dslSet
 import net.barrage.llmao.core.model.AgentChatsOnDate
 import net.barrage.llmao.core.model.AgentConfigurationEvaluatedMessageCounts
 import net.barrage.llmao.core.model.Chat
@@ -30,6 +29,7 @@ import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageAttachment
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
+import net.barrage.llmao.core.set
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
@@ -300,7 +300,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .insertInto(MESSAGE_GROUP_EVALUATIONS)
       .set(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID, messageGroupId)
       .set(MESSAGE_GROUP_EVALUATIONS.EVALUATION, input.evaluation)
-      .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback?.value())
+      .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback.value())
       .onConflict(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID)
       .doUpdate()
       .let { input.applyUpdates(it as InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>) }
@@ -561,7 +561,7 @@ fun EvaluateMessage.applyUpdates(
   value: InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>
 ): InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord> {
   var value = value
-  value = evaluation.dslSet(value, MESSAGE_GROUP_EVALUATIONS.EVALUATION)
-  value = feedback.dslSet(value, MESSAGE_GROUP_EVALUATIONS.FEEDBACK)
+  value = value.set(evaluation, MESSAGE_GROUP_EVALUATIONS.EVALUATION)
+  value = value.set(feedback, MESSAGE_GROUP_EVALUATIONS.FEEDBACK)
   return value
 }

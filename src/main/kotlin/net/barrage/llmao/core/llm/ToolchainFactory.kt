@@ -5,7 +5,7 @@ import net.barrage.llmao.core.agent.AgentRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 
-internal val LOG =
+private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.llm.ToolchainFactory")
 
 class ToolchainFactory(

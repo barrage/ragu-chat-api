@@ -7,19 +7,19 @@ import net.barrage.llmao.core.types.KUUID
  *
  * The simplest implementation of a workflow is a chat (see ChatWorkflow).
  */
-interface Workflow<Input> {
+interface Workflow {
   /** Get the workflow's ID (primary key). */
   fun id(): KUUID
 
   /** Get the workflow's agent ID. */
-  fun entityId(): KUUID
+  fun entityId(): String
 
   /**
    * The main entry point to the workflow.
    *
    * @param input The input data for this workflow.
    */
-  fun execute(input: Input)
+  fun execute(input: String)
 
   /** Cancel the current stream. */
   fun cancelStream()

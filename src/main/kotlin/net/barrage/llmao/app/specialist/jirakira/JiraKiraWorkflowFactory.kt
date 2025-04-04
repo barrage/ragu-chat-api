@@ -64,12 +64,11 @@ class JiraKiraWorkflowFactory(
           tokenTracker =
             TokenUsageTracker(
               repository = tokenUsageRepositoryW,
-              userId = user.id,
-              username = user.username,
-              agentId = null,
-              agentConfigurationId = null,
-              origin = JIRAKIRA_TOKEN_ORIGIN,
+              user = user,
+              // TODO: FIX
+              originType = JIRAKIRA_TOKEN_ORIGIN,
               originId = workflowId,
+              agentId = null,
             ),
           model = jiraKiraModel,
           emitter = emitter,

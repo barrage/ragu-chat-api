@@ -98,52 +98,52 @@ private fun runLiquibaseMigration(config: ApplicationConfig) {
  *
  * Semantics are defined in [PropertyUpdate].
  */
-fun <R : Record, T> PropertyUpdate<T>.dslSet(
-  statement: UpdateSetMoreStep<R>,
+fun <R : Record, T> UpdateSetMoreStep<R>.set(
+  update: PropertyUpdate<T>,
   field: TableField<R, T>,
 ): UpdateSetMoreStep<R> {
-  return when (this) {
+  return when (update) {
     // Do nothing when property is not set
-    is PropertyUpdate.Undefined -> statement
+    is PropertyUpdate.Undefined -> this
 
     // Property is being updated to new value
-    is PropertyUpdate.Value -> statement.set(field, value)
+    is PropertyUpdate.Value -> set(field, update.value)
 
     // Property is being removed
-    is PropertyUpdate.Null -> statement.setNull(field)
+    is PropertyUpdate.Null -> setNull(field)
   }
 }
 
-fun <R : Record, T> PropertyUpdate<T>.dslSet(
-  statement: InsertOnDuplicateSetMoreStep<R>,
+fun <R : Record, T> InsertOnDuplicateSetMoreStep<R>.set(
+  update: PropertyUpdate<T>,
   field: TableField<R, T>,
 ): InsertOnDuplicateSetMoreStep<R> {
-  return when (this) {
+  return when (update) {
     // Do nothing when property is not set
-    is PropertyUpdate.Undefined -> statement.set(field, excluded(field))
+    is PropertyUpdate.Undefined -> set(field, excluded(field))
 
     // Property is being updated to new value
-    is PropertyUpdate.Value -> statement.set(field, value)
+    is PropertyUpdate.Value -> set(field, update.value)
 
     // Property is being removed
-    is PropertyUpdate.Null -> statement.setNull(field)
+    is PropertyUpdate.Null -> setNull(field)
   }
 }
 
-fun <R : Record, T> PropertyUpdate<T>.dslSet(
-  statement: InsertSetMoreStep<R>,
+fun <R : Record, T> InsertSetMoreStep<R>.set(
+  value: PropertyUpdate<T>,
   field: TableField<R, T>,
   defaultIfUndefined: T? = null,
 ): InsertSetMoreStep<R> {
-  return when (this) {
+  return when (value) {
     // Do nothing when property is not set
-    is PropertyUpdate.Undefined -> defaultIfUndefined?.let { statement.set(field, it) } ?: statement
+    is PropertyUpdate.Undefined -> defaultIfUndefined?.let { set(field, it) } ?: this
 
     // Property is being updated to new value
-    is PropertyUpdate.Value -> statement.set(field, value)
+    is PropertyUpdate.Value -> set(field, value.value)
 
     // Property is being removed
-    is PropertyUpdate.Null -> statement.setNull(field)
+    is PropertyUpdate.Null -> setNull(field)
   }
 }
 
@@ -154,34 +154,37 @@ fun <R : Record, T> PropertyUpdate<T>.dslSet(
  *
  * If the value is null, leaves the statement as is.
  */
-fun <R : Record, T> T?.dslSet(
-  statement: UpdateSetMoreStep<R>,
+fun <R : Record, T> UpdateSetMoreStep<R>.set(
+  update: T?,
   field: TableField<R, T>,
   defaultIfNull: T? = null,
 ): UpdateSetMoreStep<R> =
-  this?.let { statement.set(field, it) }
-    ?: defaultIfNull?.let { statement.set(field, it) }
-    ?: statement
+  update?.let { set(field, it) } ?: defaultIfNull?.let { set(field, it) } ?: this
 
 /**
  * Implementation for *required* properties.
  *
- * If the value is null, leaves the statement as is.
+ * If the value is null, tries to set the default value. If the default value is null, leaves the
+ * statement as is.
  */
-fun <R : Record, T> T?.dslSet(
-  statement: InsertSetMoreStep<R>,
+fun <R : Record, T> InsertSetMoreStep<R>.set(
+  value: T?,
   field: TableField<R, T>,
   defaultIfNull: T? = null,
 ): InsertSetMoreStep<R> =
-  this?.let { statement.set(field, it) }
-    ?: defaultIfNull?.let { statement.set(field, it) }
-    ?: statement
+  value?.let { set(field, it) } ?: defaultIfNull?.let { set(field, it) } ?: this
 
-fun <R : Record, T> T?.dslSet(
-  statement: InsertOnDuplicateSetMoreStep<R>,
+/**
+ * Implementation for *required* properties.
+ *
+ * If the value is null, tries to set the default value. If the default value is null, leaves the
+ * value as is.
+ */
+fun <R : Record, T> InsertOnDuplicateSetMoreStep<R>.set(
+  value: T?,
   field: TableField<R, T>,
   defaultIfNull: T? = null,
 ): InsertOnDuplicateSetMoreStep<R> =
-  this?.let { statement.set(field, it) }
-    ?: defaultIfNull?.let { statement.set(field, it) }
-    ?: statement.set(field, excluded(field))
+  value?.let { set(field, it) }
+    ?: defaultIfNull?.let { set(field, it) }
+    ?: set(field, excluded(field))

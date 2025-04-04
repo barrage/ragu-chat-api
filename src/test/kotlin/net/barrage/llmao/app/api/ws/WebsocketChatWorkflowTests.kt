@@ -271,7 +271,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       val error = assertThrows<AppError> { app.services.chat.getChat(chatId) }
       assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
 
-      val msg = "{ \"type\": \"chat\", \"text\": \"Will this trigger a stream response?\" }"
+      val msg = "{ \"text\": \"Will this trigger a stream response?\" }"
 
       send(Frame.Text(msg))
 

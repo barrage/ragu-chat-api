@@ -22,7 +22,6 @@ import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.agent.AgentRepository
 import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.chat.ChatHistory
@@ -30,13 +29,14 @@ import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatRepositoryWrite
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
-import net.barrage.llmao.core.chat.toChatAgent
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
+import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages
+import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
@@ -66,6 +66,7 @@ class WhatsAppAdapter(
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val encodingRegistry: EncodingRegistry,
   private val messageProcessor: ChatMessageProcessor,
+  private val contextEnrichmentFactory: ContextEnrichmentFactory,
 ) {
   private var whatsAppApi: WhatsAppApi
   private val log = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
@@ -218,7 +219,7 @@ class WhatsAppAdapter(
     username: String?,
     chat: Chat,
     agent: AgentFull,
-  ): ChatAgent<ServiceState> {
+  ): ChatAgent {
     val chatMessages =
       chatRepositoryRead.getMessages(
         chatId = chat.id,
@@ -256,27 +257,36 @@ class WhatsAppAdapter(
             ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
       )
 
+    val user = User(id = userId, entitlements = listOf("user"), username = username, email = null)
     val tokenTracker =
       TokenUsageTracker(
-        userId = userId,
-        username = username,
+        user = user,
         agentId = agent.agent.id,
-        agentConfigurationId = agent.configuration.id,
-        origin = WHATSAPP_CHAT_TOKEN_ORIGIN,
+        originType = WHATSAPP_CHAT_TOKEN_ORIGIN,
         originId = chat.id,
         repository = tokenUsageRepositoryW,
       )
 
-    return agent.toChatAgent(
-      userId = userId,
-      history = history,
-      providers = providers,
-      settings = settings,
+    return ChatAgent(
+      agentId = agent.agent.id,
+      configurationId = agent.configuration.id,
+      name = agent.agent.name,
+      instructions = agent.configuration.agentInstructions,
+      titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+      user = user,
+      model = agent.configuration.model,
+      llm = providers.llm.getProvider(agent.configuration.llmProvider),
+      context = agent.configuration.context,
+      completionParameters = completionParameters,
       toolchain = null,
       tokenTracker = tokenTracker,
-      completionParameters = completionParameters,
-      // TODO: Replace with authorization config in future.
-      allowedGroups = listOf("user"),
+      history = history,
+      attachmentProcessor = messageProcessor,
+      emitter = null,
+      contextEnrichment =
+        contextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
+          listOf(it)
+        },
     )
   }
 

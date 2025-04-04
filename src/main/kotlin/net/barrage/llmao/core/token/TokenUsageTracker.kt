@@ -3,6 +3,7 @@ package net.barrage.llmao.core.token
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 
 internal val LOG =
@@ -10,12 +11,11 @@ internal val LOG =
 
 /** Used for tracking token usage when embedding and performing inference. */
 class TokenUsageTracker(
-  private val userId: String?,
-  private val username: String?,
+  private val user: User,
+  // TODO: turn to string
   private val agentId: KUUID?,
-  private val agentConfigurationId: KUUID?,
-  private val origin: String,
-  private val originId: KUUID?,
+  private val originType: String,
+  private val originId: KUUID,
   private val repository: TokenUsageRepositoryWrite,
 ) {
   private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
@@ -24,11 +24,10 @@ class TokenUsageTracker(
     try {
       scope.launch {
         repository.insert(
-          userId = userId,
-          username = username,
+          userId = user.id,
+          username = user.username,
           agentId = agentId,
-          agentConfigurationId = agentConfigurationId,
-          origin = origin,
+          origin = originType,
           originId = originId,
           amountPrompt = amount.prompt,
           amountCompletion = amount.completion,

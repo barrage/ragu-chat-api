@@ -12,6 +12,7 @@ import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.openNewChat
 import net.barrage.llmao.receiveJson
 import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.userWsSession
@@ -85,6 +86,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
+      openNewChat(agent.id)
       send("asdf")
       val response = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(response)

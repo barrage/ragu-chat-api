@@ -7,23 +7,18 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.chat.ChatAgent
-import net.barrage.llmao.core.chat.MessageBasedHistory
-import net.barrage.llmao.core.chat.toChatAgent
-import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.DEFAULT_TITLE_INSTRUCTION
-import net.barrage.llmao.core.token.TokenUsageTracker
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class ChatAgentTests : IntegrationTest() {
-  private lateinit var chatAgent: ChatAgent<ServiceState>
+  private lateinit var chatAgent: ChatAgent
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
   private lateinit var chat: Chat
@@ -39,41 +34,15 @@ class ChatAgentTests : IntegrationTest() {
           model = "gpt-4o",
           titleInstruction = COMPLETIONS_TITLE_PROMPT,
         )
-      val chatCompletionParameters =
-        ChatCompletionParameters(
-          model = "gpt-4o",
-          temperature = agentConfiguration.temperature,
-          presencePenalty = agentConfiguration.presencePenalty ?: 0.0,
-          maxTokens = agentConfiguration.maxCompletionTokens,
-          tools = null,
-        )
       chat = postgres.testChat(ADMIN_USER, agent.id, null)
-      chatAgent =
+      val agent =
         AgentFull(
-            agent,
-            configuration = agentConfiguration,
-            collections = listOf(),
-            groups = listOf(),
-          )
-          .toChatAgent(
-            history = MessageBasedHistory(),
-            providers = app.providers,
-            settings = app.services.settings.getAllWithDefaults(),
-            tokenTracker =
-              TokenUsageTracker(
-                userId = ADMIN_USER.id,
-                agentId = agent.id,
-                agentConfigurationId = agentConfiguration.id,
-                origin = "test",
-                originId = chat.id,
-                repository = app.repository.tokenUsageW,
-                username = ADMIN_USER.username,
-              ),
-            toolchain = null,
-            completionParameters = chatCompletionParameters,
-            allowedGroups = ADMIN_USER.entitlements,
-            userId = ADMIN_USER.id,
-          )
+          agent,
+          configuration = agentConfiguration,
+          collections = listOf(),
+          groups = listOf(),
+        )
+      chatAgent = app.workflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
     }
   }
 

@@ -3,27 +3,23 @@ package net.barrage.llmao.app.api.ws
 import io.ktor.server.websocket.WebSocketServerSession
 import io.ktor.util.logging.KtorSimpleLogger
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.AdapterState
-import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflow
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
-import net.barrage.llmao.app.workflow.IncomingSessionMessage
 import net.barrage.llmao.app.workflow.WorkflowType
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.chat.ChatWorkflow
-import net.barrage.llmao.core.chat.ChatWorkflowFactory
-import net.barrage.llmao.core.chat.ChatWorkflowInput
 import net.barrage.llmao.core.chat.ChatWorkflowMessage
+import net.barrage.llmao.core.chat.WorkflowFactory
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.core.workflow.Workflow
 
 private val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketSessionManager")
 
@@ -31,12 +27,13 @@ private val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketSessio
  * The session manage creates sessions and is responsible for broadcasting system events to clients.
  */
 class WebsocketSessionManager(
-  private val factory: ChatWorkflowFactory,
+  private val factory: WorkflowFactory,
   private val adapters: AdapterState,
   listener: EventListener<StateChangeEvent>,
 ) {
   /** Maps user ID + token pairs to their sessions. */
-  private val workflows: MutableMap<WebsocketSession, Workflow<*>> = ConcurrentHashMap()
+  private val workflows: MutableMap<WebsocketSession, net.barrage.llmao.core.workflow.Workflow> =
+    ConcurrentHashMap()
 
   /**
    * Maps user ID + token pairs directly to their output emitters. Used to broadcast system events
@@ -66,13 +63,28 @@ class WebsocketSessionManager(
 
   suspend fun handleMessage(
     session: WebsocketSession,
-    message: IncomingSessionMessage,
+    message: String,
     ws: WebSocketServerSession,
   ) {
-    when (message) {
-      is IncomingSessionMessage.Chat ->
-        handleChatMessage(session, message.text, message.attachments)
-      is IncomingSessionMessage.System -> handleSystemMessage(session, message.payload, ws)
+    try {
+      val message = Json.decodeFromString<IncomingSystemMessage>(message)
+      handleSystemMessage(session, message, ws)
+    } catch (e: SerializationException) {
+      LOG.debug("Forwarding message to workflow ({})", e.message)
+      try {
+        handleChatMessage(session, message)
+      } catch (e: SerializationException) {
+        throw AppError.api(ErrorReason.InvalidParameter, "Message format malformed", original = e)
+      } catch (e: Throwable) {
+        throw if (e is AppError) {
+          e
+        } else AppError.internal("Error in workflow", original = e)
+      }
+    } catch (e: Throwable) {
+      if (e is AppError) {
+        throw e
+      }
+      throw AppError.internal("Error in workflow", original = e)
     }
   }
 
@@ -82,7 +94,7 @@ class WebsocketSessionManager(
       is StateChangeEvent.AgentDeactivated -> {
         LOG.info("Handling agent deactivated event ({})", event.agentId)
 
-        workflows.values.retainAll { chat -> chat.entityId() != event.agentId }
+        workflows.values.retainAll { chat -> chat.entityId() != event.agentId.toString() }
 
         for (channel in systemSessions.values) {
           channel.emit(OutgoingSystemMessage.AgentDeactivated(event.agentId))
@@ -91,25 +103,13 @@ class WebsocketSessionManager(
     }
   }
 
-  private fun handleChatMessage(
-    session: WebsocketSession,
-    message: String,
-    attachments: List<IncomingMessageAttachment>?,
-  ) {
+  private fun handleChatMessage(session: WebsocketSession, input: String) {
     val workflow =
       workflows[session] ?: throw AppError.api(ErrorReason.Websocket, "Workflow not opened")
 
     LOG.debug("{} - sending input to workflow '{}'", session.user.id, workflow.id())
 
-    when (workflow) {
-      is ChatWorkflow -> {
-        workflow.execute(ChatWorkflowInput(message, attachments))
-      }
-      is JiraKiraWorkflow -> {
-        workflow.execute(message)
-      }
-      else -> throw AppError.api(ErrorReason.Websocket, "Workflow does not support message type")
-    }
+    workflow.execute(input)
   }
 
   private suspend fun handleSystemMessage(
@@ -185,7 +185,7 @@ class WebsocketSessionManager(
 
         val emitter: Emitter<ChatWorkflowMessage> = WebsocketEmitter.new(ws)
         val existingWorkflow =
-          factory.fromExistingChatWorkflow(
+          factory.existingChatWorkflow(
             id = message.workflowId,
             user = session.user,
             emitter = emitter,

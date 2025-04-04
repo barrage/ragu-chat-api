@@ -24,7 +24,10 @@ import net.barrage.llmao.core.admin.AdministrationService
 import net.barrage.llmao.core.agent.AgentService
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatService
+import net.barrage.llmao.core.chat.WorkflowFactory
 import net.barrage.llmao.core.initDatabase
+import net.barrage.llmao.core.llm.ContextEnrichmentFactory
+import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
 import net.barrage.llmao.string
@@ -42,6 +45,7 @@ class ApplicationState(
   val repository: RepositoryState
   val services: ServiceState
   val adapters: AdapterState
+  val workflowFactory: WorkflowFactory
 
   init {
     val database = initDatabase(config, applicationStopping)
@@ -82,6 +86,20 @@ class ApplicationState(
         settings = services.settings,
         repository = repository,
       )
+
+    workflowFactory =
+      WorkflowFactory(
+        providerState = providers,
+        agentService = services.agent,
+        chatRepositoryWrite = repository.chatWrite(ChatType.CHAT.value),
+        chatRepositoryRead = repository.chatRead(ChatType.CHAT.value),
+        toolchainFactory = ToolchainFactory(services, repository.agent),
+        settings = services.settings,
+        tokenUsageRepositoryW = repository.tokenUsageW,
+        encodingRegistry = Encodings.newDefaultEncodingRegistry(),
+        messageProcessor = ChatMessageProcessor(providers),
+        contextEnrichmentFactory = ContextEnrichmentFactory(providers),
+      )
   }
 }
 
@@ -119,6 +137,7 @@ class AdapterState(
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           encodingRegistry = Encodings.newDefaultEncodingRegistry(),
           messageProcessor = ChatMessageProcessor(providers),
+          contextEnrichmentFactory = ContextEnrichmentFactory(providers),
         )
     }
 

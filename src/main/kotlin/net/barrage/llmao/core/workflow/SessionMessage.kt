@@ -6,6 +6,17 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.types.KUUID
 
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonClassDiscriminator("type")
+sealed class SessionMessage {
+  @Serializable
+  @SerialName("system")
+  data class Incoming(val payload: IncomingSystemMessage) : SessionMessage()
+
+  data class Outgoing(val payload: OutgoingSystemMessage) : SessionMessage()
+}
+
 /** System messages used to control sessions. */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable

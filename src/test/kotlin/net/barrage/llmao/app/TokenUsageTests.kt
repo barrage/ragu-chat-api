@@ -8,23 +8,18 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.chat.ChatAgent
-import net.barrage.llmao.core.chat.MessageBasedHistory
-import net.barrage.llmao.core.chat.toChatAgent
-import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
-import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class TokenUsageTests : IntegrationTest() {
-  private lateinit var workflow: ChatAgent<ServiceState>
+  private lateinit var workflow: ChatAgent
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
   private lateinit var chat: Chat
@@ -40,41 +35,16 @@ class TokenUsageTests : IntegrationTest() {
           model = "gpt-4o",
           titleInstruction = COMPLETIONS_TITLE_PROMPT,
         )
-      val completionParameters =
-        ChatCompletionParameters(
-          model = "gpt-4o",
-          temperature = agentConfiguration.temperature,
-          presencePenalty = agentConfiguration.presencePenalty ?: 0.0,
-          maxTokens = agentConfiguration.maxCompletionTokens,
-          tools = null,
-        )
       chat = postgres.testChat(ADMIN_USER, agent.id, null)
-      workflow =
+      val agent =
         AgentFull(
-            agent,
-            configuration = agentConfiguration,
-            collections = listOf(),
-            groups = listOf(),
-          )
-          .toChatAgent(
-            history = MessageBasedHistory(),
-            providers = app.providers,
-            settings = app.services.settings.getAllWithDefaults(),
-            tokenTracker =
-              TokenUsageTracker(
-                userId = ADMIN_USER.id,
-                username = ADMIN_USER.username,
-                agentId = agent.id,
-                agentConfigurationId = agentConfiguration.id,
-                origin = "test",
-                originId = chat.id,
-                repository = app.repository.tokenUsageW,
-              ),
-            toolchain = null,
-            completionParameters = completionParameters,
-            allowedGroups = ADMIN_USER.entitlements,
-            userId = ADMIN_USER.id,
-          )
+          agent,
+          configuration = agentConfiguration,
+          collections = listOf(),
+          groups = listOf(),
+        )
+
+      workflow = app.workflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
     }
   }
 
@@ -89,7 +59,7 @@ class TokenUsageTests : IntegrationTest() {
       app.services.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION
       }!!
-    assertEquals("test", usage.origin.type)
+    assertEquals("workflow.chat", usage.origin.type)
     assertEquals(chat.id, usage.origin.id)
     assertEquals(ADMIN_USER.id, usage.userId)
     assertEquals(agent.id, usage.agentId)
@@ -106,7 +76,7 @@ class TokenUsageTests : IntegrationTest() {
       app.services.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION_TITLE
       }!!
-    assertEquals("test", usage.origin.type)
+    assertEquals("workflow.chat", usage.origin.type)
     assertEquals(chat.id, usage.origin.id)
     assertEquals(ADMIN_USER.id, usage.userId)
     assertEquals(agent.id, usage.agentId)

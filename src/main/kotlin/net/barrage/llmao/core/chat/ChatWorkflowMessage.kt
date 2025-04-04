@@ -17,11 +17,12 @@ sealed class ChatWorkflowMessage {
   @SerialName("chat.title")
   data class ChatTitleUpdated(val chatId: KUUID, val title: String) : ChatWorkflowMessage()
 
+  /** Sent for each chunk the LLM outputs in streaming mode. */
   @Serializable
   @SerialName("chat.stream_chunk")
   data class StreamChunk(val chunk: String) : ChatWorkflowMessage()
 
-  /** Sent when a chats gets a complete response from an LLM. */
+  /** Sent when a chats gets a complete response from an LLM stream. */
   @Serializable
   @SerialName("chat.stream_complete")
   data class StreamComplete(
@@ -42,4 +43,9 @@ sealed class ChatWorkflowMessage {
      */
     val attachmentPaths: List<MessageAttachment>? = null,
   ) : ChatWorkflowMessage()
+
+  /** Contains the complete LLM response. */
+  @Serializable
+  @SerialName("chat.response")
+  data class Response(val content: String) : ChatWorkflowMessage()
 }

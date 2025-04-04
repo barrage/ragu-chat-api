@@ -7,8 +7,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
@@ -18,6 +19,7 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.tryUuid
 
 private val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
 
@@ -33,7 +35,7 @@ class ChatWorkflow(
   private val emitter: Emitter<ChatWorkflowMessage>,
 
   /** Encapsulates the agent and its LLM functionality. */
-  private val agent: ChatAgentStreaming<ServiceState>,
+  private val agent: ChatAgent,
 
   /** Responsible for persisting chat data. */
   private val repository: ChatRepositoryWrite,
@@ -41,7 +43,7 @@ class ChatWorkflow(
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
   private val messageProcessor: ChatMessageProcessor,
-) : Workflow<ChatWorkflowInput> {
+) : Workflow {
   private var stream: Job? = null
   private val scope = CoroutineScope(Dispatchers.Default)
 
@@ -49,11 +51,13 @@ class ChatWorkflow(
     return id
   }
 
-  override fun entityId(): KUUID {
-    return agent.agentId
+  override fun entityId(): String {
+    return agent.id()
   }
 
-  override fun execute(input: ChatWorkflowInput) {
+  override fun execute(input: String) {
+    val input = Json.decodeFromString<ChatWorkflowInput>(input)
+
     stream =
       scope.launch {
         val streamStart = Instant.now()
@@ -76,7 +80,7 @@ class ChatWorkflow(
           agent.stream(userMessage, messageBuffer, responseBuffer)
           LOG.debug(
             "{} - stream complete, took {}ms",
-            agent.agentId,
+            agent.id(),
             Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
           )
         } catch (_: CancellationException) {
@@ -84,7 +88,7 @@ class ChatWorkflow(
           // CancellationException is thrown with a specific message indicating the reason.
           LOG.debug(
             "{} - stream cancelled, took {}ms",
-            agent.agentId,
+            agent.id(),
             Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
           )
           finishReason = FinishReason.ManualStop
@@ -168,7 +172,7 @@ class ChatWorkflow(
 
           LOG.debug(
             "{} - stream complete emitted ({}ms), finish reason: {}",
-            agent.agentId,
+            agent.id(),
             Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
             finishReason.value,
           )
@@ -210,7 +214,7 @@ class ChatWorkflow(
             chatId = id,
             userId = user.id,
             username = user.username,
-            agentId = agent.agentId,
+            agentId = tryUuid(agent.id()),
             agentConfigurationId = agent.configurationId,
             messages = messagesInsert,
           )
@@ -267,6 +271,7 @@ sealed class ChatWorkflowState {
   data class Persisted(val title: String) : ChatWorkflowState()
 }
 
+@Serializable
 data class ChatWorkflowInput(
   val text: String,
   val attachments: List<IncomingMessageAttachment>? = null,

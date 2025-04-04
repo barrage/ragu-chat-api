@@ -4,6 +4,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.workflow.Emitter
 
+private val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.llm.Toolchain")
+
 /**
  * Container for all available tools an agent can use. Holds all tool definitions and their handlers
  * obtained from the [ToolRegistry]. Holds an event listener to broadcast tool events, as well as

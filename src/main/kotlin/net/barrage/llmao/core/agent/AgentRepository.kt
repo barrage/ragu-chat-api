@@ -8,7 +8,6 @@ import kotlinx.coroutines.reactive.awaitLast
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.dslSet
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -33,6 +32,7 @@ import net.barrage.llmao.core.model.toAgent
 import net.barrage.llmao.core.model.toAgentCollection
 import net.barrage.llmao.core.model.toAgentConfiguration
 import net.barrage.llmao.core.model.toAgentTool
+import net.barrage.llmao.core.set
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
@@ -203,7 +203,7 @@ class AgentRepository(private val dslContext: DSLContext) {
       .from(AGENTS)
       .leftJoin(AGENT_CONFIGURATIONS)
       .on(AGENTS.ACTIVE_CONFIGURATION_ID.eq(AGENT_CONFIGURATIONS.ID))
-      .where(AGENTS.ID.eq(id))
+      .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.eq(true)))
       .awaitFirstOrNull()
       ?.let { record ->
         val agent = record.into(AGENTS).toAgent()
@@ -827,10 +827,10 @@ private fun UpdateAgent.applyUpdates(
   statement: UpdateSetMoreStep<AgentsRecord>
 ): UpdateSetMoreStep<AgentsRecord> {
   var statement = statement
-  statement = name.dslSet(statement, AGENTS.NAME)
-  statement = description.dslSet(statement, AGENTS.DESCRIPTION)
-  statement = active.dslSet(statement, AGENTS.ACTIVE)
-  statement = language.dslSet(statement, AGENTS.LANGUAGE)
+  statement = statement.set(name, AGENTS.NAME)
+  statement = statement.set(description, AGENTS.DESCRIPTION)
+  statement = statement.set(active, AGENTS.ACTIVE)
+  statement = statement.set(language, AGENTS.LANGUAGE)
   return statement
 }
 
@@ -839,29 +839,21 @@ private fun UpdateAgentConfiguration.insertSet(
   currentConfiguration: AgentConfiguration,
 ): InsertSetMoreStep<AgentConfigurationsRecord> {
   var statement = statement
-  statement = context.dslSet(statement, AGENT_CONFIGURATIONS.CONTEXT, currentConfiguration.context)
+  statement = statement.set(context, AGENT_CONFIGURATIONS.CONTEXT, currentConfiguration.context)
   statement =
-    llmProvider.dslSet(
-      statement,
-      AGENT_CONFIGURATIONS.LLM_PROVIDER,
-      currentConfiguration.llmProvider,
-    )
-  statement = model.dslSet(statement, AGENT_CONFIGURATIONS.MODEL, currentConfiguration.model)
+    statement.set(llmProvider, AGENT_CONFIGURATIONS.LLM_PROVIDER, currentConfiguration.llmProvider)
+  statement = statement.set(model, AGENT_CONFIGURATIONS.MODEL, currentConfiguration.model)
   statement =
-    temperature.dslSet(
-      statement,
-      AGENT_CONFIGURATIONS.TEMPERATURE,
-      currentConfiguration.temperature,
-    )
+    statement.set(temperature, AGENT_CONFIGURATIONS.TEMPERATURE, currentConfiguration.temperature)
   statement =
-    maxCompletionTokens.dslSet(
-      statement,
+    statement.set(
+      maxCompletionTokens,
       AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
       defaultIfUndefined = currentConfiguration.maxCompletionTokens,
     )
   statement =
-    presencePenalty.dslSet(
-      statement,
+    statement.set(
+      presencePenalty,
       AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
       defaultIfUndefined = currentConfiguration.presencePenalty,
     )
@@ -870,21 +862,21 @@ private fun UpdateAgentConfiguration.insertSet(
 }
 
 private fun UpdateAgentInstructions.insertSet(
-  value: InsertSetMoreStep<AgentConfigurationsRecord>,
+  statement: InsertSetMoreStep<AgentConfigurationsRecord>,
   currentConfiguration: AgentConfiguration,
 ): InsertSetMoreStep<AgentConfigurationsRecord> {
-  var value = value
-  value =
-    titleInstruction.dslSet(
-      value,
+  var statement = statement
+  statement =
+    statement.set(
+      titleInstruction,
       AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
       defaultIfUndefined = currentConfiguration.agentInstructions.titleInstruction,
     )
-  value =
-    errorMessage.dslSet(
-      value,
+  statement =
+    statement.set(
+      errorMessage,
       AGENT_CONFIGURATIONS.ERROR_MESSAGE,
       defaultIfUndefined = currentConfiguration.agentInstructions.errorMessage,
     )
-  return value
+  return statement
 }
