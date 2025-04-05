@@ -23,7 +23,7 @@ import net.barrage.llmao.core.workflow.Emitter
 private const val CHAT_TOKEN_ORIGIN = "workflow.chat"
 
 class WorkflowFactory(
-  private val providerState: ProviderState,
+  private val providers: ProviderState,
   private val agentService: AgentService,
   private val chatRepositoryWrite: ChatRepositoryWrite,
   private val chatRepositoryRead: ChatRepositoryRead,
@@ -34,21 +34,12 @@ class WorkflowFactory(
   private val messageProcessor: ChatMessageProcessor,
   private val contextEnrichmentFactory: ContextEnrichmentFactory,
 ) {
-  suspend fun newWorkflow(
-    user: User,
-    agentId: KUUID,
-    emitter: Emitter<ChatWorkflowMessage>,
-    toolEmitter: Emitter<ToolEvent>? = null,
-  ): ChatWorkflow {
-    return newChatWorkflow(user, agentId, emitter, toolEmitter)
-  }
-
   suspend fun newChatWorkflow(
     user: User,
     agentId: KUUID,
     emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
-  ): ChatWorkflow {
+  ): ConversationWorkflow {
     val id = KUUID.randomUUID()
     val agent =
       if (user.isAdmin()) {
@@ -76,7 +67,7 @@ class WorkflowFactory(
     id: KUUID,
     emitter: Emitter<ChatWorkflowMessage>,
     toolEmitter: Emitter<ToolEvent>? = null,
-  ): ChatWorkflow {
+  ): ConversationWorkflow {
     // TODO: Pagination
     val chat =
       chatRepositoryRead.getWithMessages(id = id, userId = user.id, pagination = Pagination(1, 200))
@@ -143,7 +134,7 @@ class WorkflowFactory(
       titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
       user = user,
       model = agent.configuration.model,
-      llm = providerState.llm.getProvider(agent.configuration.llmProvider),
+      llmProvider = providers.llm.getProvider(agent.configuration.llmProvider),
       context = agent.configuration.context,
       completionParameters =
         ChatCompletionParameters(

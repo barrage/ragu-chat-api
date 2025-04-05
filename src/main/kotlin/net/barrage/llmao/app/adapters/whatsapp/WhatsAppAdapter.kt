@@ -1,12 +1,12 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -275,7 +275,7 @@ class WhatsAppAdapter(
       titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
       user = user,
       model = agent.configuration.model,
-      llm = providers.llm.getProvider(agent.configuration.llmProvider),
+      llmProvider = providers.llm.getProvider(agent.configuration.llmProvider),
       context = agent.configuration.context,
       completionParameters = completionParameters,
       toolchain = null,

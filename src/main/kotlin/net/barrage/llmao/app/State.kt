@@ -1,6 +1,7 @@
 package net.barrage.llmao.app
 
 import com.knuddels.jtokkit.Encodings
+import com.knuddels.jtokkit.api.EncodingRegistry
 import io.ktor.server.config.ApplicationConfig
 import kotlin.reflect.KClass
 import kotlinx.coroutines.Job
@@ -49,6 +50,7 @@ class ApplicationState(
 
   init {
     val database = initDatabase(config, applicationStopping)
+    val encodingRegistry = Encodings.newDefaultEncodingRegistry()
 
     repository = RepositoryState(database)
     providers =
@@ -85,18 +87,19 @@ class ApplicationState(
         providers = providers,
         settings = services.settings,
         repository = repository,
+        encodingRegistry = encodingRegistry,
       )
 
     workflowFactory =
       WorkflowFactory(
-        providerState = providers,
+        providers = providers,
         agentService = services.agent,
         chatRepositoryWrite = repository.chatWrite(ChatType.CHAT.value),
         chatRepositoryRead = repository.chatRead(ChatType.CHAT.value),
         toolchainFactory = ToolchainFactory(services, repository.agent),
         settings = services.settings,
         tokenUsageRepositoryW = repository.tokenUsageW,
-        encodingRegistry = Encodings.newDefaultEncodingRegistry(),
+        encodingRegistry = encodingRegistry,
         messageProcessor = ChatMessageProcessor(providers),
         contextEnrichmentFactory = ContextEnrichmentFactory(providers),
       )
@@ -113,6 +116,7 @@ class AdapterState(
   providers: ProviderState,
   settings: Settings,
   repository: RepositoryState,
+  encodingRegistry: EncodingRegistry,
 ) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 
@@ -135,7 +139,7 @@ class AdapterState(
           whatsAppRepository = WhatsAppRepository(database),
           settings = settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
-          encodingRegistry = Encodings.newDefaultEncodingRegistry(),
+          encodingRegistry = encodingRegistry,
           messageProcessor = ChatMessageProcessor(providers),
           contextEnrichmentFactory = ContextEnrichmentFactory(providers),
         )
@@ -152,6 +156,8 @@ class AdapterState(
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           jiraKiraRepository = jiraKiraKeyStore,
           specialistRepositoryWrite = repository.specialistWrite(SpecialistType.JIRAKIRA.value),
+          messageProcessor = ChatMessageProcessor(providers),
+          encodingRegistry = encodingRegistry,
         )
       adapters[JiraKiraWorkflowFactory::class] = jiraKiraWorkflowFactory
     }

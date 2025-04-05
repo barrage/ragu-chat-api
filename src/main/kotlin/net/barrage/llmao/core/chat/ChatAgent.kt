@@ -4,6 +4,7 @@ import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.LlmProvider
@@ -26,7 +27,6 @@ private val LOG = KtorSimpleLogger("net.barrage.llmao.core.chat.ChatAgent")
  * whose tokens must be counted outside since we only get the usage when it's complete.
  */
 class ChatAgent(
-
   /** Agent ID. */
   val agentId: KUUID,
 
@@ -40,41 +40,49 @@ class ChatAgent(
   val instructions: AgentInstructions,
 
   /** Obtained from the global settings. */
-  val titleMaxTokens: Int,
+  private val titleMaxTokens: Int,
+  private val context: String,
+  private val emitter: Emitter<ChatWorkflowMessage>? = null,
   user: User,
   model: String,
-  llm: LlmProvider,
-  context: String,
+  llmProvider: LlmProvider,
   completionParameters: ChatCompletionParameters,
   toolchain: Toolchain<ServiceState>?,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
   attachmentProcessor: ChatMessageProcessor,
-  emitter: Emitter<ChatWorkflowMessage>? = null,
   contextEnrichment: List<ContextEnrichment>? = null,
 ) :
-  WorkflowAgent<ServiceState, ChatWorkflowMessage>(
+  WorkflowAgent<ServiceState>(
     user = user,
     model = model,
-    llm = llm,
-    context = context,
+    llmProvider = llmProvider,
     completionParameters = completionParameters,
     toolchain = toolchain,
     tokenTracker = tokenTracker,
     history = history,
-    attachmentProcessor = attachmentProcessor,
-    emitter = emitter,
+    messageProcessor = attachmentProcessor,
     contextEnrichment = contextEnrichment,
   ) {
-  override suspend fun onContentChunk(content: String) {
-    emitter?.emit(ChatWorkflowMessage.StreamChunk(content))
+  override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
+    if (!chunk.content.isNullOrEmpty()) {
+      emitter?.emit(ChatWorkflowMessage.StreamChunk(chunk.content))
+    }
   }
 
-  override suspend fun onContent(content: String) {
-    emitter?.emit(ChatWorkflowMessage.Response(content))
+  override suspend fun onMessage(message: ChatMessage) {
+    message.content?.let { emitter?.emit(ChatWorkflowMessage.Response(it.text())) }
+  }
+
+  override fun errorMessage(): String {
+    return instructions.errorMessage()
   }
 
   override fun id(): String = agentId.toString()
+
+  override fun context(): String {
+    return context
+  }
 
   /**
    * Prompt the LLM using this agent's title instruction as the system message, or the default one
@@ -89,14 +97,17 @@ class ChatAgent(
     val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
 
     val completion =
-      llm.chatCompletion(messages, completionParameters.copy(maxTokens = titleMaxTokens))
+      this@ChatAgent.llmProvider.chatCompletion(
+        messages,
+        completionParameters.copy(maxTokens = titleMaxTokens),
+      )
 
     completion.tokenUsage?.let { tokenUsage ->
       tokenTracker.store(
         amount = tokenUsage,
         usageType = TokenUsageType.COMPLETION_TITLE,
         model = model,
-        provider = llm.id(),
+        provider = this@ChatAgent.llmProvider.id(),
       )
     }
 

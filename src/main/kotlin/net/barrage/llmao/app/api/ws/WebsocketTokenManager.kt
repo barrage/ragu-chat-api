@@ -3,6 +3,9 @@ package net.barrage.llmao.app.api.ws
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 
+private val LOG =
+  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketTokenManager")
+
 /** Handles the registration and removal of WS tokens. */
 class WebsocketTokenManager {
   /** Maps one time tokens to user IDs. */
@@ -24,6 +27,8 @@ class WebsocketTokenManager {
     tokens[token] = user
     pendingTokens[user] = token
 
+    LOG.debug("{} - token registered '{}'", user.id, token)
+
     return token
   }
 
@@ -32,6 +37,7 @@ class WebsocketTokenManager {
    * authenticated.
    */
   fun removeToken(token: KUUID): User? {
+    LOG.debug("removing token '{}'", token)
     val userId = tokens.remove(token) ?: return null
     pendingTokens.remove(userId)
     return userId

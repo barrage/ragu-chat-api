@@ -8,8 +8,8 @@ import net.barrage.llmao.core.token.TokenUsageAmount
 import net.barrage.llmao.core.types.KUUID
 
 /**
- * Native chat message chunk used to handle potentially differing chunks from downstream LLM
- * providers.
+ * Native chat message chunk (when streaming) used to handle potentially differing chunks from
+ * downstream LLM providers.
  */
 @Serializable
 data class ChatMessageChunk(

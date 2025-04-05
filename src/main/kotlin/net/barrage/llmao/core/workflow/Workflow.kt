@@ -12,7 +12,7 @@ interface Workflow {
   fun id(): KUUID
 
   /** Get the workflow's agent ID. */
-  fun entityId(): String
+  fun agentId(): String
 
   /**
    * The main entry point to the workflow.

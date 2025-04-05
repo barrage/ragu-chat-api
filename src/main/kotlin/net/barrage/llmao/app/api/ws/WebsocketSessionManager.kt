@@ -94,7 +94,7 @@ class WebsocketSessionManager(
       is StateChangeEvent.AgentDeactivated -> {
         LOG.info("Handling agent deactivated event ({})", event.agentId)
 
-        workflows.values.retainAll { chat -> chat.entityId() != event.agentId.toString() }
+        workflows.values.retainAll { chat -> chat.agentId() != event.agentId.toString() }
 
         for (channel in systemSessions.values) {
           channel.emit(OutgoingSystemMessage.AgentDeactivated(event.agentId))
@@ -152,6 +152,7 @@ class WebsocketSessionManager(
                 jkFactory.newJiraKiraWorkflow(
                   user = session.user,
                   emitter = WebsocketEmitter.new(ws),
+                  chatEmitter = WebsocketEmitter.new(ws),
                   toolEmitter = WebsocketEmitter.new(ws),
                 )
 

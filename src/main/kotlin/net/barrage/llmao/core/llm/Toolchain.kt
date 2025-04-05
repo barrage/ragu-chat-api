@@ -15,13 +15,16 @@ private val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.
  * result.
  */
 class Toolchain<S>(
-  private val emitter: Emitter<ToolEvent>? = null,
   private val state: S,
+  private val emitter: Emitter<ToolEvent>? = null,
   private val agentTools: List<ToolDefinition>,
   private val handlers: Map<String, CallableTool<S>>,
 ) {
 
-  suspend fun processToolCall(data: ToolCallData): ToolCallResult {
+  suspend fun processToolCall(
+    data: ToolCallData,
+    onError: suspend (String?, Throwable) -> ToolCallResult,
+  ): ToolCallResult {
     LOG.debug("Tool call '{}' - start", data.name)
 
     emitter?.emit(ToolEvent.ToolCall(data))
@@ -32,13 +35,17 @@ class Toolchain<S>(
 
     val handler = handlers[data.name]
     val result =
-      handler?.invoke(state, data.arguments)
-        ?: throw IllegalStateException("No handler for tool call '${data.name}'")
+      try {
+        handler?.invoke(state, data.arguments)
+          ?: throw IllegalStateException("No handler for tool call '${data.name}'")
+      } catch (e: Throwable) {
+        val result = onError(data.id, e)
+        emitter?.emit(ToolEvent.ToolResult(result))
+        return result
+      }
 
     val toolResult = ToolCallResult(data.id, result)
-
     emitter?.emit(ToolEvent.ToolResult(toolResult))
-
     return toolResult
   }
 
@@ -51,9 +58,10 @@ class ToolchainBuilder<S> {
   private val agentTools = mutableListOf<ToolDefinition>()
   private val handlers = mutableMapOf<String, CallableTool<S>>()
 
-  fun addTool(definition: ToolDefinition, handler: CallableTool<S>) {
+  fun addTool(definition: ToolDefinition, handler: CallableTool<S>): ToolchainBuilder<S> {
     agentTools.add(definition)
     handlers[definition.function.name] = handler
+    return this
   }
 
   fun build(state: S, emitter: Emitter<ToolEvent>? = null) =
