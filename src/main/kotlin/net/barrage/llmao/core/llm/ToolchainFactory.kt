@@ -1,7 +1,8 @@
 package net.barrage.llmao.core.llm
 
-import net.barrage.llmao.core.ServiceState
+import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.repository.AgentRepository
+import net.barrage.llmao.core.token.LOG
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 
@@ -9,14 +10,14 @@ private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.llm.ToolchainFactory")
 
 class ToolchainFactory(
-  private val services: ServiceState,
-  private val agentRepository: AgentRepository,
+    private val services: Api,
+    private val agentRepository: AgentRepository,
 ) {
 
   suspend fun createAgentToolchain(
     agentId: KUUID,
     emitter: Emitter? = null,
-  ): Toolchain<ServiceState>? {
+  ): Toolchain<Api>? {
     val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
 
     if (agentTools.isEmpty()) {
@@ -27,7 +28,7 @@ class ToolchainFactory(
       LOG.warn("Building toolchain without an emitter; Realtime tool call events will not be sent.")
     }
 
-    val toolchain = ToolchainBuilder<ServiceState>()
+    val toolchain = ToolchainBuilder<Api>()
 
     for (tool in agentTools) {
       val definition = ToolRegistry.getToolDefinition(tool)

@@ -106,10 +106,14 @@ class SessionManager(
     when (message) {
       is IncomingSystemMessage.CreateNewWorkflow -> {
         val workflowType = message.workflowType
-
-        LOG.debug("{} - opening workflow ({})", session.user.id, workflowType)
-
         val agentId = message.agentId
+
+        LOG.debug(
+          "{} - opening workflow (type: {}, agent: {})",
+          session.user.id,
+          workflowType,
+          agentId,
+        )
 
         val workflow =
           factory.new(

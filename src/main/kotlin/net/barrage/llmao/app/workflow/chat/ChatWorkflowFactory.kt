@@ -1,11 +1,13 @@
 package net.barrage.llmao.app.workflow.chat
 
 import com.knuddels.jtokkit.api.EncodingRegistry
+import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.RepositoryState
-import net.barrage.llmao.core.ServiceState
+import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.api.admin.SettingKey
 import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.MessageBasedHistory
@@ -18,8 +20,6 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
-import net.barrage.llmao.core.settings.SettingKey
-import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
@@ -32,10 +32,10 @@ private const val CHAT_WORKFLOW_ID = "CHAT"
 
 class ChatWorkflowFactory(
   private val providers: ProviderState,
-  private val services: ServiceState,
+  private val services: Api,
   private val repository: RepositoryState,
   private val toolchainFactory: ToolchainFactory,
-  private val settings: Settings,
+  private val settings: AdminSettingsService,
   private val encodingRegistry: EncodingRegistry,
   private val messageProcessor: ChatMessageProcessor,
   private val contextEnrichmentFactory: ContextEnrichmentFactory,
@@ -54,9 +54,9 @@ class ChatWorkflowFactory(
     val agent =
       if (user.isAdmin()) {
         // Load it regardless of active status
-        services.agent.getFull(agentId)
+        services.admin.agent.getFull(agentId)
       } else {
-        services.agent.userGetFull(agentId, user.entitlements)
+        services.user.agent.getFull(agentId, user.entitlements)
       }
 
     val chatAgent = createChatAgent(id, user, agent, emitter)
@@ -79,9 +79,9 @@ class ChatWorkflowFactory(
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     val agent =
-      if (user.isAdmin()) services.agent.getFull(chat.chat.agentId)
+      if (user.isAdmin()) services.admin.agent.getFull(chat.chat.agentId)
       else {
-        services.agent.userGetFull(chat.chat.agentId, user.entitlements)
+        services.user.agent.getFull(chat.chat.agentId, user.entitlements)
       }
 
     val chatAgent = createChatAgent(id, user, agent, emitter)

@@ -37,10 +37,10 @@ fun Application.configureRouting(state: ApplicationState) {
 
     // Admin API routes
     authenticate("admin") {
-      adminAgentsRoutes(state.services.agent, state.services.settings)
-      adminChatsRoutes(state.services.chat)
-      administrationRouter(state.services.admin)
-      adminSettingsRoutes(state.services.settings)
+      adminAgentsRoutes(state.services.admin.agent, state.services.admin.settings)
+      adminChatsRoutes(state.services.admin.chat)
+      administrationRouter(state.services.admin.admin)
+      adminSettingsRoutes(state.services.admin.settings)
       state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
         jiraKiraAdminRoutes(it.jiraKiraRepository)
       }
@@ -53,8 +53,8 @@ fun Application.configureRouting(state: ApplicationState) {
         jiraKiraUserRoutes(it.jiraKiraRepository)
       }
 
-      agentsRoutes(state.services.agent)
-      chatsRoutes(state.services.chat, state.providers.image)
+      agentsRoutes(state.services.user.agent)
+      chatsRoutes(state.services.user.chat, state.providers.image)
     }
 
     avatarRoutes(state.providers.image)

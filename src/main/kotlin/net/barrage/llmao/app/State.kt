@@ -15,20 +15,24 @@ import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraRepository
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
+import net.barrage.llmao.core.AdminApi
+import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.PublicApi
 import net.barrage.llmao.core.RepositoryState
-import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.api.AdministrationService
-import net.barrage.llmao.core.api.AgentService
-import net.barrage.llmao.core.api.ChatService
+import net.barrage.llmao.core.api.admin.AdminAgentService
+import net.barrage.llmao.core.api.admin.AdminChatService
+import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.api.admin.AdminStatService
+import net.barrage.llmao.core.api.pub.PublicAgentService
+import net.barrage.llmao.core.api.pub.PublicChatService
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.initDatabase
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 import net.barrage.llmao.string
 import org.jooq.DSLContext
@@ -47,7 +51,7 @@ class ApplicationState(
 ) {
   val providers: ProviderState
   val repository: RepositoryState
-  val services: ServiceState
+  val services: Api
   val adapters: AdapterState
   val chatWorkflowFactory: ChatWorkflowFactory
   val workflowManager: WorkflowFactoryManager
@@ -66,31 +70,39 @@ class ApplicationState(
         image = MinioImageStorage(config),
       )
     services =
-      ServiceState(
-        chat = ChatService(repository.chatRead(API_CHAT_TYPE), repository.agent),
-        agent =
-          AgentService(
-            providers,
-            repository.agent,
-            repository.chatRead(API_CHAT_TYPE),
-            listener,
-            providers.image,
-          ),
+      Api(
         admin =
-          AdministrationService(
-            providers,
-            repository.agent,
-            repository.chatRead("CHAT"),
-            repository.tokenUsageR,
+          AdminApi(
+            chat = AdminChatService(repository.chatRead(API_CHAT_TYPE), repository.agent),
+            agent =
+              AdminAgentService(
+                providers,
+                repository.agent,
+                repository.chatRead(API_CHAT_TYPE),
+                listener,
+                providers.image,
+              ),
+            admin =
+              AdminStatService(
+                providers,
+                repository.agent,
+                repository.chatRead("CHAT"),
+                repository.tokenUsageR,
+              ),
+            settings = AdminSettingsService(repository.settings),
           ),
-        settings = Settings(repository.settings),
+        user =
+          PublicApi(
+            chat = PublicChatService(repository.chatRead(API_CHAT_TYPE), repository.agent),
+            agent = PublicAgentService(repository.agent),
+          ),
       )
     adapters =
       AdapterState(
         config = config,
         database = database,
+        api = services,
         providers = providers,
-        settings = services.settings,
         repository = repository,
         encodingRegistry = encodingRegistry,
         workflowManager = workflowManager,
@@ -102,7 +114,7 @@ class ApplicationState(
         services = services,
         repository = repository,
         toolchainFactory = ToolchainFactory(services, repository.agent),
-        settings = services.settings,
+        settings = services.admin.settings,
         encodingRegistry = encodingRegistry,
         messageProcessor = ChatMessageProcessor(providers),
         contextEnrichmentFactory = ContextEnrichmentFactory(providers),
@@ -120,7 +132,7 @@ class AdapterState(
   config: ApplicationConfig,
   database: DSLContext,
   providers: ProviderState,
-  settings: Settings,
+  api: Api,
   repository: RepositoryState,
   encodingRegistry: EncodingRegistry,
   workflowManager: WorkflowFactoryManager,
@@ -144,7 +156,7 @@ class AdapterState(
           chatRepositoryRead = repository.chatRead(WHATSAPP_CHAT_TYPE),
           chatRepositoryWrite = repository.chatWrite(WHATSAPP_CHAT_TYPE),
           whatsAppRepository = WhatsAppRepository(database),
-          settings = settings,
+          settings = api.admin.settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           encodingRegistry = encodingRegistry,
           messageProcessor = ChatMessageProcessor(providers),
@@ -159,7 +171,7 @@ class AdapterState(
         JiraKiraWorkflowFactory(
           endpoint = endpoint,
           providers = providers,
-          settings = settings,
+          settings = api.admin.settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
           jiraKiraRepository = jiraKiraRepository,
           specialistRepositoryWrite = repository.specialistWrite(JIRA_KIRA_SPECIALIST_CHAT_TYPE),

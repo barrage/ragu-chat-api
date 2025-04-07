@@ -16,7 +16,7 @@ import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.api.ChatService
+import net.barrage.llmao.core.api.pub.PublicChatService
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage
@@ -29,7 +29,7 @@ import net.barrage.llmao.core.storage.ATTACHMENTS_PATH
 import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.types.KUUID
 
-fun Route.chatsRoutes(service: ChatService, imageStorage: BlobStorage<Image>) {
+fun Route.chatsRoutes(service: PublicChatService, imageStorage: BlobStorage<Image>) {
   route("/chats") {
     get(getAllChats()) {
       val user = call.user()
@@ -79,13 +79,14 @@ fun Route.chatsRoutes(service: ChatService, imageStorage: BlobStorage<Image>) {
           call.respond(HttpStatusCode.NoContent)
         }
       }
+
       get("/attachments/images/{path}") {
         val user = call.user()
 
         val chatId = call.pathUuid("chatId")
 
         // Throws if not found
-        if (user.isAdmin()) service.getChat(chatId) else service.userGetChat(chatId, user.id)
+        service.getChat(chatId, user.id)
 
         val imagePath = call.parameters["path"]!!
 

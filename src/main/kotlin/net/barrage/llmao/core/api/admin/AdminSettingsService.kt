@@ -4,7 +4,7 @@
  * This file contains all the configuration keys and default values used throughout the application.
  * These settings can be overridden through the application's configuration settings.
  */
-package net.barrage.llmao.core.settings
+package net.barrage.llmao.core.api.admin
 
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.KSerializer
@@ -20,11 +20,13 @@ import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.jsonObject
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.model.ApplicationSetting
+import net.barrage.llmao.core.repository.SettingsRepository
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.settings.Settings")
 
 /** The main API for managing application settings. */
-class Settings(private val repository: SettingsRepository) {
+class AdminSettingsService(private val repository: SettingsRepository) {
   /** Return all application settings, populating the list with any missing values with defaults. */
   suspend fun getAllWithDefaults(): ApplicationSettings {
     val settings = repository.listAll().toMutableList()
@@ -230,7 +232,7 @@ object SettingsUpdateSerializer : KSerializer<SettingsUpdate> {
         try {
           updates.add(SettingUpdate(SettingKey.tryFromString(update.key), update.value))
         } catch (e: AppError) {
-          LOG.error("Failed to parse setting key", e)
+          LOG.warn("Skipping invalid key in `updates`: {}", e.message)
         }
       }
     }
@@ -241,7 +243,7 @@ object SettingsUpdateSerializer : KSerializer<SettingsUpdate> {
         try {
           removals.add(SettingKey.tryFromString(key))
         } catch (e: AppError) {
-          LOG.warn("Skipping invalid key: {}", e.message)
+          LOG.warn("Skipping invalid key in `removals`: {}", e.message)
         }
       }
     }

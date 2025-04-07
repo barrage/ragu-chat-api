@@ -1,20 +1,22 @@
 package net.barrage.llmao.core
 
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.api.AdministrationService
-import net.barrage.llmao.core.api.AgentService
-import net.barrage.llmao.core.api.ChatService
+import net.barrage.llmao.core.api.admin.AdminAgentService
+import net.barrage.llmao.core.api.admin.AdminChatService
+import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.api.admin.AdminStatService
+import net.barrage.llmao.core.api.pub.PublicAgentService
+import net.barrage.llmao.core.api.pub.PublicChatService
 import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
+import net.barrage.llmao.core.repository.SettingsRepository
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.settings.Settings
-import net.barrage.llmao.core.settings.SettingsRepository
 import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.vector.VectorDatabase
 import org.jooq.DSLContext
@@ -80,13 +82,16 @@ class ProviderState(
   }
 }
 
-/** Encapsulates all service instances. */
-class ServiceState(
-  val chat: ChatService,
-  val agent: AgentService,
-  val admin: AdministrationService,
-  val settings: Settings,
+class Api(val admin: AdminApi, val user: PublicApi)
+
+class AdminApi(
+  val chat: AdminChatService,
+  val agent: AdminAgentService,
+  val admin: AdminStatService,
+  val settings: AdminSettingsService,
 )
+
+class PublicApi(val chat: PublicChatService, val agent: PublicAgentService)
 
 /** Encapsulates all repository instances. */
 class RepositoryState(private val database: DSLContext) {

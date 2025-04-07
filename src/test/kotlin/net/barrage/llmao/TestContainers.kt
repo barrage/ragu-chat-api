@@ -39,8 +39,8 @@ import net.barrage.llmao.core.model.toChat
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
-import net.barrage.llmao.core.settings.SettingKey
-import net.barrage.llmao.core.settings.SettingsUpdate
+import net.barrage.llmao.core.api.admin.SettingKey
+import net.barrage.llmao.core.api.admin.SettingsUpdate
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS

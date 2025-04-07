@@ -5,6 +5,7 @@ import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.chat.ChatMessageProcessor
@@ -72,7 +73,11 @@ class JiraKira(
     throw AppError.internal("Jira Kira does not support streaming")
   }
 
-  override suspend fun onMessage(message: ChatMessage) {}
+  override suspend fun onMessage(message: ChatMessage) {
+    message.content?.let {
+      emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage::class)
+    }
+  }
 
   override suspend fun onToolError(toolCallId: String?, e: Throwable): ToolCallResult {
     if (e is JiraError) {

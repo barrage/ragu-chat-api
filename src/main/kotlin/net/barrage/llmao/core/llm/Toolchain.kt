@@ -2,6 +2,7 @@ package net.barrage.llmao.core.llm
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.token.LOG
 import net.barrage.llmao.core.workflow.Emitter
 
 private val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.llm.Toolchain")

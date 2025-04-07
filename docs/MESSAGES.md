@@ -26,8 +26,8 @@ These messages indicate events outside workflows and are mainly used to control 
 Start a new workflow with the given configuration. The configuration must be provided depending on the type of workflow.
 The server will respond with a `system.workflow.open` message, depending on the type of workflow opened.
 
+`workflowType` is required. If given and not `CHAT`, the agentId has to be a specialist ID.
 `agentId` is optional and is only necessary when instantiating `CHAT` workflows.
-`workflowType` is optional and defaults to `CHAT` if not provided. If given and not `CHAT`, has to be a specialist ID.
 
 ```json
 {

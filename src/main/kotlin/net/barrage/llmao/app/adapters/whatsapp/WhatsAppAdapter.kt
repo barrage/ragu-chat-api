@@ -42,10 +42,10 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.settings.SettingKey
-import net.barrage.llmao.core.settings.SettingUpdate
-import net.barrage.llmao.core.settings.Settings
-import net.barrage.llmao.core.settings.SettingsUpdate
+import net.barrage.llmao.core.api.admin.SettingKey
+import net.barrage.llmao.core.api.admin.SettingUpdate
+import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.api.admin.SettingsUpdate
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tryUuid
@@ -62,7 +62,7 @@ class WhatsAppAdapter(
   private val whatsAppRepository: WhatsAppRepository,
   private val chatRepositoryRead: ChatRepositoryRead,
   private val chatRepositoryWrite: ChatRepositoryWrite,
-  private val settings: Settings,
+  private val settings: AdminSettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val encodingRegistry: EncodingRegistry,
   private val messageProcessor: ChatMessageProcessor,

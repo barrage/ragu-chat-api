@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.api
+package net.barrage.llmao.core.api.admin
 
 import java.time.ZoneOffset
 import net.barrage.llmao.core.AppError
@@ -16,7 +16,7 @@ import net.barrage.llmao.core.token.TokenUsage
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 
-class AdministrationService(
+class AdminStatService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
   private val chatRepositoryRead: ChatRepositoryRead,

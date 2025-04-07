@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.token
 
+import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -8,7 +9,7 @@ import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.types.KUUID
 
 internal val LOG =
-  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.tokens.TokenUsageTracker")
+  KtorSimpleLogger("net.barrage.llmao.core.tokens.TokenUsageTracker")
 
 /** Used for tracking token usage when embedding and performing inference. */
 class TokenUsageTracker(

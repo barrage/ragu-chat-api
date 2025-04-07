@@ -15,8 +15,8 @@ import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.settings.SettingKey
-import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.api.admin.SettingKey
+import net.barrage.llmao.core.api.admin.AdminSettingsService
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
@@ -30,7 +30,7 @@ class JiraKiraWorkflowFactory(
   /** Jira endpoint. */
   private val endpoint: String,
   private val providers: ProviderState,
-  private val settings: Settings,
+  private val settings: AdminSettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   val jiraKiraRepository: JiraKiraRepository,
   private val specialistRepositoryWrite: SpecialistRepositoryWrite,

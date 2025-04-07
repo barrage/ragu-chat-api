@@ -23,7 +23,7 @@ import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.api.AgentService
+import net.barrage.llmao.core.api.admin.AdminAgentService
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -41,14 +41,13 @@ import net.barrage.llmao.core.model.UpdateCollections
 import net.barrage.llmao.core.model.UpdateCollectionsResult
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.settings.SettingKey
-import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.api.admin.SettingKey
+import net.barrage.llmao.core.api.admin.AdminSettingsService
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.string
 import net.barrage.llmao.tryUuid
 
-/** Agent DTO for display purposes. */
-fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
+fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: AdminSettingsService) {
   val maxImageUploadSize = this.environment.config.string("blob.image.maxFileSize").toLong()
 
   route("/admin/agents") {
@@ -57,9 +56,7 @@ fun Route.adminAgentsRoutes(agentService: AgentService, settings: Settings) {
       val filters = call.query(SearchFiltersAdminAgentsQuery::class).toSearchFiltersAdminAgents()
       val activeWappAgentId = settings.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
       val agents =
-        agentService.listAgentsAdmin(pagination, filters).map {
-          it.toAgentDisplay(activeWappAgentId)
-        }
+        agentService.listAgents(pagination, filters).map { it.toAgentDisplay(activeWappAgentId) }
       call.respond(HttpStatusCode.OK, agents)
     }
 

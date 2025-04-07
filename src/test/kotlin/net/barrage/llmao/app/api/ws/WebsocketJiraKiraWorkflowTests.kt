@@ -11,9 +11,9 @@ import net.barrage.llmao.adminWsSession
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraEvent
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.settings.SettingKey
-import net.barrage.llmao.core.settings.SettingUpdate
-import net.barrage.llmao.core.settings.SettingsUpdate
+import net.barrage.llmao.core.api.admin.SettingKey
+import net.barrage.llmao.core.api.admin.SettingUpdate
+import net.barrage.llmao.core.api.admin.SettingsUpdate
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage

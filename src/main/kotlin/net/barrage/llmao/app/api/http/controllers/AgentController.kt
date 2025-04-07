@@ -10,26 +10,26 @@ import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.api.AgentService
+import net.barrage.llmao.core.api.pub.PublicAgentService
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
 
-fun Route.agentsRoutes(agentService: AgentService) {
+fun Route.agentsRoutes(service: PublicAgentService) {
   route("/agents") {
     get(getAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val user = call.user()
       val agents =
-        agentService.userListAgents(pagination, showDeactivated = false, groups = user.entitlements)
+        service.listAgents(pagination, showDeactivated = false, groups = user.entitlements)
       call.respond(HttpStatusCode.OK, agents)
     }
 
     get("/{id}", getAgent()) {
       val agentId = call.pathUuid("id")
       val user = call.user()
-      val agent = agentService.userGetAgent(agentId, user.entitlements)
+      val agent = service.getAgent(agentId, user.entitlements)
       call.respond(HttpStatusCode.OK, agent)
     }
   }

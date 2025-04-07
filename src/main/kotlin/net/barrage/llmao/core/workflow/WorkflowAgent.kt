@@ -93,7 +93,7 @@ abstract class WorkflowAgent<S>(
    *
    * Executes only on [completion].
    */
-  abstract suspend fun onMessage(content: ChatMessage)
+  abstract suspend fun onMessage(message: ChatMessage)
 
   /** What to do when a tool call fails. */
   open suspend fun onToolError(toolCallId: String?, e: Throwable): ToolCallResult {

@@ -3,7 +3,7 @@ package net.barrage.llmao.core.llm
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.ServiceState
+import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.types.KUUID
 
 typealias CallableTool<S> = suspend (state: S, jsonArguments: String) -> String
@@ -27,12 +27,12 @@ object ToolRegistry {
     }
   }
 
-  fun getToolFunction(name: String): CallableTool<ServiceState>? {
+  fun getToolFunction(name: String): CallableTool<Api>? {
     return when (name) {
       GET_BIRTHDAY -> { services, arguments ->
           val toolData = Json.decodeFromString<GetAgentBirthdayArguments>(arguments)
           val agentId = toolData.agentId
-          val birthday = services.agent.getAgent(agentId).createdAt
+          val birthday = services.admin.agent.getAgent(agentId).createdAt
           "The birthday for agent $agentId is $birthday"
         }
       else -> null

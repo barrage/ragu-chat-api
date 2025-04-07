@@ -17,7 +17,7 @@ import net.barrage.llmao.app.api.http.queryListChatsFilters
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.api.ChatService
+import net.barrage.llmao.core.api.admin.AdminChatService
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage
@@ -27,7 +27,7 @@ import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
 
-fun Route.adminChatsRoutes(service: ChatService) {
+fun Route.adminChatsRoutes(service: AdminChatService) {
   route("/admin/chats") {
     get(adminGetAllChats()) {
       val pagination = call.query(PaginationSort::class)
@@ -39,7 +39,7 @@ fun Route.adminChatsRoutes(service: ChatService) {
     route("/{chatId}") {
       get(adminGetChatWithUserAndAgent()) {
         val chatId = call.pathUuid("chatId")
-        val chat = service.getChatWithUserAndAgent(chatId)
+        val chat = service.getChatWithAgent(chatId)
         call.respond(HttpStatusCode.OK, chat)
       }
 

@@ -56,7 +56,7 @@ class TokenUsageTests : IntegrationTest() {
     // Use delays since storing the usage is done in a separate coroutine
     delay(200)
     val usage =
-      app.services.admin.listTokenUsage(agentId = agent.id).items.find {
+      app.services.admin.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION
       }!!
     assertEquals("workflow.chat", usage.origin.type)
@@ -73,7 +73,7 @@ class TokenUsageTests : IntegrationTest() {
     // Use delays since storing the usage is done in a separate coroutine
     delay(200)
     val usage =
-      app.services.admin.listTokenUsage(agentId = agent.id).items.find {
+      app.services.admin.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION_TITLE
       }!!
     assertEquals("workflow.chat", usage.origin.type)

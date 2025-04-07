@@ -8,14 +8,14 @@ import io.ktor.server.routing.Route
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ProvidersResponse
-import net.barrage.llmao.core.api.AdministrationService
+import net.barrage.llmao.core.api.admin.AdminStatService
 import net.barrage.llmao.core.model.AgentChatTimeSeries
 import net.barrage.llmao.core.model.DashboardCounts
 import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 
-fun Route.administrationRouter(service: AdministrationService) {
+fun Route.administrationRouter(service: AdminStatService) {
   get("/admin/providers", providers()) {
     val providers = service.listProviders()
     call.respond(HttpStatusCode.OK, providers)

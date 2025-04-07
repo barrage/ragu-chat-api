@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.api
+package net.barrage.llmao.core.api.admin
 
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.AppError
@@ -33,7 +33,7 @@ import net.barrage.llmao.core.storage.AVATARS_PATH
 import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.types.KUUID
 
-class AgentService(
+class AdminAgentService(
   private val providers: ProviderState,
   private val agentRepository: AgentRepository,
   private val chatRepositoryRead: ChatRepositoryRead,
@@ -42,36 +42,19 @@ class AgentService(
   /** The image storage provider for avatars. */
   private val avatarStorage: BlobStorage<Image>,
 ) {
-  private val log = KtorSimpleLogger("net.barrage.llmao.core.api.AgentService")
+  private val log = KtorSimpleLogger("net.barrage.llmao.core.api.admin.AgentService")
 
-  suspend fun userListAgents(
-    pagination: PaginationSort,
-    showDeactivated: Boolean,
-    groups: List<String>,
-  ): CountedList<Agent> {
-    return agentRepository.getAll(pagination, showDeactivated, groups)
-  }
-
-  suspend fun listAgentsAdmin(
+  suspend fun listAgents(
     pagination: PaginationSort,
     filters: SearchFiltersAdminAgents,
-  ): CountedList<AgentWithConfiguration> {
-    return agentRepository.getAllAdmin(pagination, filters)
-  }
-
-  suspend fun userGetFull(id: KUUID, groups: List<String>): AgentFull {
-    return agentRepository.userGet(id, groups)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
-  }
+  ): CountedList<AgentWithConfiguration> = agentRepository.getAllAdmin(pagination, filters)
 
   /**
    * Get an agent with full configuration, with its instructions populated with placeholders for
    * display purposes.
    */
-  suspend fun getFull(id: KUUID): AgentFull {
-    return agentRepository.get(id)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
-  }
+  suspend fun getFull(id: KUUID): AgentFull =
+    agentRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
 
   suspend fun create(create: CreateAgent): AgentWithConfiguration {
     providers.validateSupportedConfigurationParams(
@@ -182,11 +165,6 @@ class AgentService(
     agentRepository.getAgentConfiguration(agentId, versionId)
 
     return agentRepository.rollbackVersion(agentId, versionId)
-  }
-
-  suspend fun userGetAgent(agentId: KUUID, groups: List<String>): Agent {
-    return agentRepository.getAgent(agentId, groups)
-      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
   }
 
   suspend fun getAgent(agentId: KUUID): Agent {

@@ -2,7 +2,7 @@ package net.barrage.llmao.core.chat
 
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.core.ServiceState
+import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
@@ -47,13 +47,13 @@ class ChatAgent(
   model: String,
   llmProvider: LlmProvider,
   completionParameters: ChatCompletionParameters,
-  toolchain: Toolchain<ServiceState>?,
+  toolchain: Toolchain<Api>?,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
   attachmentProcessor: ChatMessageProcessor,
   contextEnrichment: List<ContextEnrichment>? = null,
 ) :
-  WorkflowAgent<ServiceState>(
+  WorkflowAgent<Api>(
     user = user,
     model = model,
     llmProvider = llmProvider,
