@@ -24,7 +24,7 @@ class Toolchain<S>(
 
   suspend fun processToolCall(
     data: ToolCallData,
-    onError: suspend (String?, Throwable) -> ToolCallResult,
+    onError: suspend (ToolCallData, Throwable) -> ToolCallResult,
   ): ToolCallResult {
     LOG.debug("Tool call '{}' - start", data.name)
 
@@ -40,7 +40,7 @@ class Toolchain<S>(
         handler?.invoke(state, data.arguments)
           ?: throw IllegalStateException("No handler for tool call '${data.name}'")
       } catch (e: Throwable) {
-        val result = onError(data.id, e)
+        val result = onError(data, e)
         emitter?.emit(ToolEvent.ToolResult(result), ToolEvent::class)
         return result
       }

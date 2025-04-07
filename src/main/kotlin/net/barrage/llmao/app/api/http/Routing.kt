@@ -6,6 +6,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import net.barrage.llmao.app.Adapters
 import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.adminWhatsAppRoutes
@@ -41,17 +42,13 @@ fun Application.configureRouting(state: ApplicationState) {
       adminChatsRoutes(state.services.admin.chat)
       administrationRouter(state.services.admin.admin)
       adminSettingsRoutes(state.services.admin.settings)
-      state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
-        jiraKiraAdminRoutes(it.jiraKiraRepository)
-      }
+      Adapters.runIfEnabled<JiraKiraWorkflowFactory> { jiraKiraAdminRoutes(it.jiraKiraRepository) }
     }
 
     // User API routes
     authenticate("user") {
-      specialistWorkflowRoutes(state.adapters)
-      state.adapters.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
-        jiraKiraUserRoutes(it.jiraKiraRepository)
-      }
+      specialistWorkflowRoutes()
+      Adapters.runIfEnabled<JiraKiraWorkflowFactory> { jiraKiraUserRoutes(it.jiraKiraRepository) }
 
       agentsRoutes(state.services.user.agent)
       chatsRoutes(state.services.user.chat, state.providers.image)
@@ -60,7 +57,7 @@ fun Application.configureRouting(state: ApplicationState) {
     avatarRoutes(state.providers.image)
 
     // WhatsApp API routes
-    state.adapters.runIfEnabled<WhatsAppAdapter, Unit> { whatsAppAdapter ->
+    Adapters.runIfEnabled<WhatsAppAdapter> { whatsAppAdapter ->
       whatsAppHookRoutes(whatsAppAdapter)
       authenticate("admin") { adminWhatsAppRoutes(whatsAppAdapter) }
       authenticate("user") { whatsAppRoutes(whatsAppAdapter) }

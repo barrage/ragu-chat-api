@@ -8,11 +8,11 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.chat.ChatHistory
-import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolCallResult
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.User
@@ -22,26 +22,10 @@ import net.barrage.llmao.core.workflow.WorkflowAgent
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.jirakira.JiraKira")
 
-data class JiraKiraState(
-  val emitter: Emitter,
-  val jiraUser: JiraUser,
-  val api: JiraApi,
-
-  /**
-   * The key of the time slot attribute to use when creating worklog entries. The key for this
-   * attribute is set in Jira and must be configured into the app via the application settings.
-   *
-   * If not present, the time slot will not be present on created worklogs. The value for this key
-   * is obtained per issue.
-   */
-  val timeSlotAttributeKey: String?,
-)
-
 class JiraKira(
   private val jiraUser: JiraUser,
   private val emitter: Emitter,
   toolchain: Toolchain<JiraKiraState>,
-  messageProcessor: ChatMessageProcessor,
   user: User,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
@@ -55,7 +39,6 @@ class JiraKira(
     tokenTracker = tokenTracker,
     contextEnrichment = null,
     history = history,
-    messageProcessor = messageProcessor,
     toolchain = toolchain,
     completionParameters =
       ChatCompletionParameters(
@@ -79,13 +62,13 @@ class JiraKira(
     }
   }
 
-  override suspend fun onToolError(toolCallId: String?, e: Throwable): ToolCallResult {
+  override suspend fun onToolError(toolCallData: ToolCallData, e: Throwable): ToolCallResult {
     if (e is JiraError) {
       LOG.error("Jira API error:", e)
-      return ToolCallResult(id = toolCallId, content = "error: ${e.message}")
+      return ToolCallResult(id = toolCallData.id, content = "error: ${e.message}")
     } else {
       LOG.error("Error in tool call", e)
-      return ToolCallResult(id = toolCallId, content = "error: ${e.message}")
+      return ToolCallResult(id = toolCallData.id, content = "error: ${e.message}")
     }
   }
 
@@ -99,6 +82,21 @@ class JiraKira(
       .trimMargin()
   }
 }
+
+class JiraKiraState(
+  val emitter: Emitter,
+  val jiraUser: JiraUser,
+  val api: JiraApi,
+
+  /**
+   * The key of the time slot attribute to use when creating worklog entries. The key for this
+   * attribute is set in Jira and must be configured into the app via the application settings.
+   *
+   * If not present, the time slot will not be present on created worklogs. The value for this key
+   * is obtained per issue.
+   */
+  val timeSlotAttributeKey: String?,
+)
 
 suspend fun createWorklogEntry(state: JiraKiraState, input: String): String {
   LOG.debug("{} - creating worklog entry; input: {}", state.jiraUser.name, input)

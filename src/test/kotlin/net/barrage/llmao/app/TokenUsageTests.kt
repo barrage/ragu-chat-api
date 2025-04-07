@@ -8,6 +8,7 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -44,7 +45,7 @@ class TokenUsageTests : IntegrationTest() {
           groups = listOf(),
         )
 
-      workflow = app.chatWorkflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
+      workflow = ChatWorkflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
     }
   }
 
@@ -59,7 +60,7 @@ class TokenUsageTests : IntegrationTest() {
       app.services.admin.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION
       }!!
-    assertEquals("workflow.chat", usage.origin.type)
+    assertEquals(CHAT_WORKFLOW_ID, usage.origin.type)
     assertEquals(chat.id, usage.origin.id)
     assertEquals(ADMIN_USER.id, usage.userId)
     assertEquals(agent.id, usage.agentId)
@@ -76,7 +77,7 @@ class TokenUsageTests : IntegrationTest() {
       app.services.admin.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION_TITLE
       }!!
-    assertEquals("workflow.chat", usage.origin.type)
+    assertEquals(CHAT_WORKFLOW_ID, usage.origin.type)
     assertEquals(chat.id, usage.origin.id)
     assertEquals(ADMIN_USER.id, usage.userId)
     assertEquals(agent.id, usage.agentId)

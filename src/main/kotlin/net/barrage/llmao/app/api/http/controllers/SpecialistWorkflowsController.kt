@@ -6,17 +6,17 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.app.AdapterState
+import net.barrage.llmao.app.Adapters
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.AppError
 
 private const val JIRA_KIRA_NAME = "Gojira"
 
-fun Route.specialistWorkflowRoutes(adapterState: AdapterState) {
+fun Route.specialistWorkflowRoutes() {
   get("/workflows", listSpecialists()) {
     val specialists = mutableListOf<SpecialistAgent>()
 
-    adapterState.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
+    Adapters.runIfEnabled<JiraKiraWorkflowFactory> {
       specialists.add(
         SpecialistAgent(name = JIRA_KIRA_NAME, description = "Be a Jira hero.", workflowTypeId = "")
       )

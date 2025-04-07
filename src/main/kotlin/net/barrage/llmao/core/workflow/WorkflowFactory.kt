@@ -1,28 +1,31 @@
 package net.barrage.llmao.core.workflow
 
+import io.ktor.server.config.ApplicationConfig
+import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 
 /** Implement on classes that produce workflows. */
-interface WorkflowFactory : WorkflowFactoryType {
+interface WorkflowFactory {
+  /**
+   * Used by workflow factories, and in turn the [WorkflowFactoryManager], to identify workflow
+   * types.
+   */
+  fun id(): String
+
+  suspend fun init(config: ApplicationConfig, state: ApplicationState)
+
   suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow
 
   suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow
 }
 
-/**
- * Used by workflow factories, and in turn the [WorkflowFactoryManager], to identify workflow types.
- */
-interface WorkflowFactoryType {
-  fun type(): String
-}
-
 /** Top level indirection for creating workflows. */
-class WorkflowFactoryManager(
+object WorkflowFactoryManager {
   private val factories: MutableMap<String, WorkflowFactory> = mutableMapOf()
-) {
+
   suspend fun new(workflowType: String, user: User, agentId: String?, emitter: Emitter): Workflow {
     if (!factories.containsKey(workflowType)) {
       throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
@@ -43,6 +46,6 @@ class WorkflowFactoryManager(
   }
 
   fun register(factory: WorkflowFactory) {
-    factories[factory.type()] = factory
+    factories[factory.id()] = factory
   }
 }

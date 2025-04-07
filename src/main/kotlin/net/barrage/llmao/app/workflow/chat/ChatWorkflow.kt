@@ -17,27 +17,19 @@ class ChatWorkflow(
   id: KUUID,
   user: User,
   emitter: Emitter,
-  messageProcessor: ChatMessageProcessor,
   override val agent: ChatAgent,
   private val repository: ChatRepositoryWrite,
 
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
-) :
-  ChatWorkflowBase(
-    id = id,
-    user = user,
-    emitter = emitter,
-    agent = agent,
-    messageProcessor = messageProcessor,
-  ) {
+) : ChatWorkflowBase(id = id, user = user, emitter = emitter, agent = agent) {
   override suspend fun onInteractionComplete(
     userMessage: ChatMessage,
     attachments: List<IncomingMessageAttachment>?,
     messages: List<ChatMessage>,
   ): ProcessedMessageGroup {
     val originalPrompt = userMessage.content!!.text()
-    val attachmentsInsert = attachments?.let { messageProcessor.storeMessageAttachments(it) }
+    val attachmentsInsert = attachments?.let { ChatMessageProcessor.storeMessageAttachments(it) }
     val userMessageInsert = userMessage.toInsert(attachmentsInsert)
 
     val messagesInsert = listOf(userMessageInsert) + messages.map { it.toInsert() }

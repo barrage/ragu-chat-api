@@ -1,19 +1,18 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
 import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
-import com.knuddels.jtokkit.api.EncodingRegistry
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResponse
 import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResult
@@ -22,6 +21,10 @@ import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.api.admin.SettingKey
+import net.barrage.llmao.core.api.admin.SettingUpdate
+import net.barrage.llmao.core.api.admin.SettingsUpdate
 import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.chat.ChatMessageProcessor
@@ -42,10 +45,7 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.api.admin.SettingKey
-import net.barrage.llmao.core.api.admin.SettingUpdate
-import net.barrage.llmao.core.api.admin.AdminSettingsService
-import net.barrage.llmao.core.api.admin.SettingsUpdate
+import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tryUuid
@@ -64,9 +64,6 @@ class WhatsAppAdapter(
   private val chatRepositoryWrite: ChatRepositoryWrite,
   private val settings: AdminSettingsService,
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
-  private val encodingRegistry: EncodingRegistry,
-  private val messageProcessor: ChatMessageProcessor,
-  private val contextEnrichmentFactory: ContextEnrichmentFactory,
 ) {
   private var whatsAppApi: WhatsAppApi
   private val log = KtorSimpleLogger("net.barrage.llmao.app.adapters.whatsapp")
@@ -229,21 +226,19 @@ class WhatsAppAdapter(
 
     val messages =
       chatMessages.items
-        .flatMap { it.messages.map(messageProcessor::loadToChatMessage) }
+        .flatMap { it.messages.map(ChatMessageProcessor::loadToChatMessage) }
         .toMutableList()
 
     val settings = settings.getAllWithDefaults()
-    val tokenizer = encodingRegistry.getEncodingForModel(agent.configuration.model)
+    val tokenizer = Encoder.tokenizer(agent.configuration.model)
     val history: ChatHistory =
-      if (tokenizer.isEmpty) {
-        MessageBasedHistory(messages = messages, maxMessages = MAX_HISTORY_MESSAGES)
-      } else {
+      tokenizer?.let {
         TokenBasedHistory(
           messages = messages,
-          tokenizer = tokenizer.get(),
+          tokenizer = it,
           maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
         )
-      }
+      } ?: MessageBasedHistory(messages = messages, maxMessages = MAX_HISTORY_MESSAGES)
 
     val completionParameters =
       ChatCompletionParameters(
@@ -281,10 +276,9 @@ class WhatsAppAdapter(
       toolchain = null,
       tokenTracker = tokenTracker,
       history = history,
-      attachmentProcessor = messageProcessor,
       emitter = null,
       contextEnrichment =
-        contextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
+        ContextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
           listOf(it)
         },
     )

@@ -30,12 +30,16 @@ private val LOG =
  *   that images are loaded only on inference, and a caching mechanism should be implemented to
  *   reduce the memory footprint of chats.
  */
-class ChatMessageProcessor(
-  private val providers: ProviderState,
+object ChatMessageProcessor {
+  private lateinit var providers: ProviderState
 
   /** Maximum image size supported. We default to 20MB. */
-  private val maxImageSizeMB: Int = 20,
-) {
+  private var maxImageSizeMB: Int = 20
+
+  fun init(providers: ProviderState) {
+    this.providers = providers
+  }
+
   /**
    * Converts the incoming prompt and attachments into a [ContentMulti]. This is done to preserve
    * the original as it is needed for [storeMessageAttachments] later, since we prompt first and

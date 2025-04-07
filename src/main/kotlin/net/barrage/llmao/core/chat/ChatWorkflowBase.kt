@@ -44,7 +44,6 @@ abstract class ChatWorkflowBase(
 
   /** Output handle. Only chat related events are sent via this reference. */
   protected val emitter: Emitter,
-  protected val messageProcessor: ChatMessageProcessor,
   protected val streamingEnabled: Boolean = true,
 ) : Workflow {
   /**
@@ -103,7 +102,7 @@ abstract class ChatWorkflowBase(
       } else input.attachments
 
     val content =
-      attachments?.let { messageProcessor.toContentMulti(input.text, it) }
+      attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
         ?: ContentSingle(input.text)
 
     val userMessage = ChatMessage.user(content)
@@ -200,7 +199,7 @@ abstract class ChatWorkflowBase(
       } else input.attachments
 
     val content =
-      attachments?.let { messageProcessor.toContentMulti(input.text, it) }
+      attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
         ?: ContentSingle(input.text)
 
     val userMessage = ChatMessage.user(content)

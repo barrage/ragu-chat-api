@@ -49,10 +49,7 @@ class AdminAgentService(
     filters: SearchFiltersAdminAgents,
   ): CountedList<AgentWithConfiguration> = agentRepository.getAllAdmin(pagination, filters)
 
-  /**
-   * Get an agent with full configuration, with its instructions populated with placeholders for
-   * display purposes.
-   */
+  /** Get an agent with full configuration. */
   suspend fun getFull(id: KUUID): AgentFull =
     agentRepository.get(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
 

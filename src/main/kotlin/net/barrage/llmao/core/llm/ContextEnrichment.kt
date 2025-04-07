@@ -27,7 +27,13 @@ interface ContextEnrichment {
   suspend fun enrich(input: String): String
 }
 
-class ContextEnrichmentFactory(private val providers: ProviderState) {
+object ContextEnrichmentFactory {
+  private lateinit var providers: ProviderState
+
+  fun init(providers: ProviderState) {
+    this.providers = providers
+  }
+
   fun collectionEnrichment(
     tokenTracker: TokenUsageTracker,
     user: User,

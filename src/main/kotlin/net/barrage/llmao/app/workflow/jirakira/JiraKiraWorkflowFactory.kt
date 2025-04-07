@@ -1,11 +1,14 @@
 package net.barrage.llmao.app.workflow.jirakira
 
-import com.knuddels.jtokkit.api.EncodingRegistry
+import io.ktor.server.config.ApplicationConfig
+import net.barrage.llmao.app.ApplicationState
+import net.barrage.llmao.app.JIRAKIRA_WORKFLOW_ID
 import net.barrage.llmao.app.api.http.httpClient
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.api.admin.SettingKey
 import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
@@ -15,29 +18,33 @@ import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.api.admin.SettingKey
-import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
+import net.barrage.llmao.string
 
-private const val JIRAKIRA_TOKEN_ORIGIN = "workflow.jirakira"
-private const val JIRA_KIRA_WORKFLOW_ID = "JIRAKIRA"
-
-class JiraKiraWorkflowFactory(
+object JiraKiraWorkflowFactory : WorkflowFactory {
   /** Jira endpoint. */
-  private val endpoint: String,
-  private val providers: ProviderState,
-  private val settings: AdminSettingsService,
-  private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
-  val jiraKiraRepository: JiraKiraRepository,
-  private val specialistRepositoryWrite: SpecialistRepositoryWrite,
-  private val messageProcessor: ChatMessageProcessor,
-  private val encodingRegistry: EncodingRegistry,
-) : WorkflowFactory {
-  override fun type(): String = JIRA_KIRA_WORKFLOW_ID
+  private lateinit var endpoint: String
+  private lateinit var providers: ProviderState
+  private lateinit var settings: AdminSettingsService
+  private lateinit var tokenUsageRepositoryW: TokenUsageRepositoryWrite
+  lateinit var jiraKiraRepository: JiraKiraRepository
+  private lateinit var specialistRepositoryWrite: SpecialistRepositoryWrite
+
+  override fun id(): String = JIRAKIRA_WORKFLOW_ID
+
+  override suspend fun init(config: ApplicationConfig, state: ApplicationState) {
+    endpoint = config.string("jirakira.endpoint")
+    providers = state.providers
+    settings = state.services.admin.settings
+    tokenUsageRepositoryW = state.repository.tokenUsageW
+    jiraKiraRepository = JiraKiraRepository(state.database)
+    specialistRepositoryWrite = state.repository.specialistWrite(JIRAKIRA_WORKFLOW_ID)
+  }
 
   override suspend fun new(user: User, agentId: String?, emitter: Emitter): ChatWorkflowBase {
     val workflowId = KUUID.randomUUID()
@@ -89,14 +96,13 @@ class JiraKiraWorkflowFactory(
 
     val toolchain = builder.build(state = state, emitter = emitter)
 
-    val tokenizer =
-      encodingRegistry.getEncodingForModel(jiraKiraModel).let { if (it.isEmpty) null else it.get() }
+    val tokenizer = Encoder.tokenizer(jiraKiraModel)
 
     val tokenTracker =
       TokenUsageTracker(
         repository = tokenUsageRepositoryW,
         user = user,
-        originType = JIRAKIRA_TOKEN_ORIGIN,
+        originType = JIRAKIRA_WORKFLOW_ID,
         originId = workflowId,
         agentId = null,
       )
@@ -121,10 +127,8 @@ class JiraKiraWorkflowFactory(
               )
             } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
           jiraUser = jiraUser,
-          messageProcessor = messageProcessor,
         ),
       emitter = emitter,
-      messageProcessor = messageProcessor,
       repository = specialistRepositoryWrite,
     )
   }

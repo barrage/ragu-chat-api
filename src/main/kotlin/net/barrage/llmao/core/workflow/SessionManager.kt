@@ -16,10 +16,7 @@ private val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.SessionManag
 /**
  * The session manage creates sessions and is responsible for broadcasting system events to clients.
  */
-class SessionManager(
-  private val factory: WorkflowFactoryManager,
-  listener: EventListener<StateChangeEvent>,
-) {
+class SessionManager(listener: EventListener<StateChangeEvent>) {
   /** Maps user ID + token pairs to their sessions. */
   private val workflows: MutableMap<Session, Workflow> = ConcurrentHashMap()
 
@@ -116,7 +113,7 @@ class SessionManager(
         )
 
         val workflow =
-          factory.new(
+          WorkflowFactoryManager.new(
             workflowType = workflowType,
             user = session.user,
             agentId = agentId,
@@ -153,7 +150,7 @@ class SessionManager(
         workflow?.cancelStream()
 
         val existingWorkflow =
-          factory.existing(
+          WorkflowFactoryManager.existing(
             workflowType = message.workflowType,
             workflowId = message.workflowId,
             user = session.user,

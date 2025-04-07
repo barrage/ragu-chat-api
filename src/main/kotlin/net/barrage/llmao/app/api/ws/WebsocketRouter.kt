@@ -23,16 +23,12 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Session
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.SessionTokenManager
-import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 
 private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")
 
-fun Application.websocketServer(
-  factory: WorkflowFactoryManager,
-  listener: EventListener<StateChangeEvent>,
-) {
-  val server = SessionManager(factory = factory, listener = listener)
+fun Application.websocketServer(listener: EventListener<StateChangeEvent>) {
+  val server = SessionManager(listener = listener)
 
   val tokenManager = SessionTokenManager()
 

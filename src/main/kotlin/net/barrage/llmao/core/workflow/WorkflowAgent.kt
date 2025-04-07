@@ -57,9 +57,6 @@ abstract class WorkflowAgent<S>(
   /** Prevents the LLM from infinitely calling tools. */
   protected val maxToolAttempts: Int = DEFAULT_MAX_TOOL_ATTEMPTS,
 
-  /** Used to convert attachments on input messages. */
-  protected val messageProcessor: ChatMessageProcessor,
-
   /**
    * Used to enrich the agent's context. The semantics of what this means is up to the
    * implementation.
@@ -96,9 +93,9 @@ abstract class WorkflowAgent<S>(
   abstract suspend fun onMessage(message: ChatMessage)
 
   /** What to do when a tool call fails. */
-  open suspend fun onToolError(toolCallId: String?, e: Throwable): ToolCallResult {
-    log.error("Error in tool call", e)
-    return ToolCallResult(id = toolCallId, content = "error: ${e.message}")
+  open suspend fun onToolError(toolCallData: ToolCallData, e: Throwable): ToolCallResult {
+    log.error("Error in tool call; data: {}", toolCallData, e)
+    return ToolCallResult(id = toolCallData.id, content = "error: ${e.message}")
   }
 
   open fun errorMessage(): String = "An error occurred. Please try again later."
@@ -269,7 +266,7 @@ abstract class WorkflowAgent<S>(
     }
 
     val content =
-      attachments?.let { messageProcessor.toContentMulti(text, it) } ?: ContentSingle(text)
+      attachments?.let { ChatMessageProcessor.toContentMulti(text, it) } ?: ContentSingle(text)
 
     val messageBuffer = mutableListOf<ChatMessage>()
 
@@ -277,7 +274,7 @@ abstract class WorkflowAgent<S>(
 
     // Original content for storage, without any enrichment
     val originalUserMessage =
-      attachments?.let { messageProcessor.toContentMulti(text, it) } ?: ContentSingle(text)
+      attachments?.let { ChatMessageProcessor.toContentMulti(text, it) } ?: ContentSingle(text)
 
     return listOf(ChatMessage.user(originalUserMessage)) + messageBuffer
   }

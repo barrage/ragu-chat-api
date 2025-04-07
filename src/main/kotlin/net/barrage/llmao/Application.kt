@@ -58,7 +58,7 @@ fun Application.module() {
   }
 
   configureOpenApi()
-  websocketServer(factory = state.workflowManager, listener = stateChangeListener)
+  websocketServer(listener = stateChangeListener)
   configureRouting(state)
   configureRequestValidation()
   configureErrorHandling()

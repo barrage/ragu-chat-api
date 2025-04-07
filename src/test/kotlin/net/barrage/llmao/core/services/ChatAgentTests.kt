@@ -7,6 +7,7 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -42,7 +43,7 @@ class ChatAgentTests : IntegrationTest() {
           collections = listOf(),
           groups = listOf(),
         )
-      chatAgent = app.chatWorkflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
+      chatAgent = ChatWorkflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
     }
   }
 

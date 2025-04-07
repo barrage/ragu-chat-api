@@ -50,7 +50,6 @@ class ChatAgent(
   toolchain: Toolchain<Api>?,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
-  attachmentProcessor: ChatMessageProcessor,
   contextEnrichment: List<ContextEnrichment>? = null,
 ) :
   WorkflowAgent<Api>(
@@ -61,7 +60,6 @@ class ChatAgent(
     toolchain = toolchain,
     tokenTracker = tokenTracker,
     history = history,
-    messageProcessor = attachmentProcessor,
     contextEnrichment = contextEnrichment,
   ) {
   override suspend fun onStreamChunk(chunk: ChatMessageChunk) {

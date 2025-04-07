@@ -1,6 +1,8 @@
 package net.barrage.llmao.app.workflow.chat
 
-import com.knuddels.jtokkit.api.EncodingRegistry
+import io.ktor.server.config.ApplicationConfig
+import net.barrage.llmao.app.ApplicationState
+import net.barrage.llmao.app.CHAT_WORKFLOW_ID
 import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -14,12 +16,16 @@ import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
-import net.barrage.llmao.core.llm.ToolchainFactory
+import net.barrage.llmao.core.llm.ToolRegistry
+import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
+import net.barrage.llmao.core.token.Encoder
+import net.barrage.llmao.core.token.LOG
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
@@ -27,23 +33,24 @@ import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
 import net.barrage.llmao.tryUuid
 
-private const val CHAT_TOKEN_ORIGIN = "workflow.chat"
-private const val CHAT_WORKFLOW_ID = "CHAT"
+object ChatWorkflowFactory : WorkflowFactory {
+  private lateinit var providers: ProviderState
+  private lateinit var services: Api
+  private lateinit var repository: RepositoryState
+  private lateinit var settings: AdminSettingsService
+  private lateinit var chatRepositoryWrite: ChatRepositoryWrite
+  private lateinit var chatRepositoryRead: ChatRepositoryRead
 
-class ChatWorkflowFactory(
-  private val providers: ProviderState,
-  private val services: Api,
-  private val repository: RepositoryState,
-  private val toolchainFactory: ToolchainFactory,
-  private val settings: AdminSettingsService,
-  private val encodingRegistry: EncodingRegistry,
-  private val messageProcessor: ChatMessageProcessor,
-  private val contextEnrichmentFactory: ContextEnrichmentFactory,
-) : WorkflowFactory {
-  private val chatRepositoryWrite: ChatRepositoryWrite = repository.chatWrite(CHAT_TOKEN_ORIGIN)
-  private val chatRepositoryRead: ChatRepositoryRead = repository.chatRead(CHAT_TOKEN_ORIGIN)
+  override fun id(): String = CHAT_WORKFLOW_ID
 
-  override fun type(): String = CHAT_WORKFLOW_ID
+  override suspend fun init(config: ApplicationConfig, state: ApplicationState) {
+    providers = state.providers
+    services = state.services
+    repository = state.repository
+    settings = services.admin.settings
+    chatRepositoryWrite = repository.chatWrite(CHAT_WORKFLOW_ID)
+    chatRepositoryRead = repository.chatRead(CHAT_WORKFLOW_ID)
+  }
 
   override suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow {
     if (agentId == null) {
@@ -68,7 +75,6 @@ class ChatWorkflowFactory(
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.New,
       user = user,
-      messageProcessor = messageProcessor,
     )
   }
 
@@ -87,7 +93,7 @@ class ChatWorkflowFactory(
     val chatAgent = createChatAgent(id, user, agent, emitter)
 
     chatAgent.addToHistory(
-      chat.messages.items.flatMap { it.messages }.map(messageProcessor::loadToChatMessage)
+      chat.messages.items.flatMap { it.messages }.map(ChatMessageProcessor::loadToChatMessage)
     )
 
     return ChatWorkflow(
@@ -97,7 +103,6 @@ class ChatWorkflowFactory(
       emitter = emitter,
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.Persisted(chat.chat.title!!),
-      messageProcessor = messageProcessor,
     )
   }
 
@@ -107,10 +112,8 @@ class ChatWorkflowFactory(
     agent: AgentFull,
     emitter: Emitter? = null,
   ): ChatAgent {
-    val tokenizer =
-      encodingRegistry.getEncodingForModel(agent.configuration.model).let {
-        if (it.isEmpty) null else it.get()
-      }
+
+    val tokenizer = Encoder.tokenizer(agent.configuration.model)
 
     val settings = settings.getAllWithDefaults()
 
@@ -119,12 +122,12 @@ class ChatWorkflowFactory(
         repository = repository.tokenUsageW,
         user = user,
         agentId = agent.agent.id,
-        originType = CHAT_TOKEN_ORIGIN,
+        originType = CHAT_WORKFLOW_ID,
         originId = workflowId,
       )
 
     val contextEnrichment =
-      contextEnrichmentFactory.collectionEnrichment(
+      ContextEnrichmentFactory.collectionEnrichment(
         user = user,
         tokenTracker = tokenTracker,
         collections = agent.collections,
@@ -153,7 +156,7 @@ class ChatWorkflowFactory(
           // Tools is a dynamic property that will get set during inference, if the agent has them
           tools = null,
         ),
-      toolchain = toolchainFactory.createAgentToolchain(agent.agent.id, emitter),
+      toolchain = loadAgentTools(agent.agent.id, emitter),
       tokenTracker = tokenTracker,
       history =
         tokenizer?.let {
@@ -163,9 +166,46 @@ class ChatWorkflowFactory(
             maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
           )
         } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
-      attachmentProcessor = messageProcessor,
       emitter = emitter,
       contextEnrichment = contextEnrichment?.let { listOf(it) },
     )
+  }
+
+  private suspend fun loadAgentTools(agentId: KUUID, emitter: Emitter? = null): Toolchain<Api>? {
+    val agentTools = repository.agent.getAgentTools(agentId).map { it.toolName }
+
+    if (agentTools.isEmpty()) {
+      return null
+    }
+
+    if (emitter == null) {
+      LOG.warn("Building toolchain without an emitter; Realtime tool call events will not be sent.")
+    }
+
+    val toolchain = ToolchainBuilder<Api>()
+
+    for (tool in agentTools) {
+      val definition = ToolRegistry.getToolDefinition(tool)
+      if (definition == null) {
+        LOG.warn("Attempted to load tool '$tool' but it does not exist in the tool registry")
+        continue
+      }
+
+      val handler = ToolRegistry.getToolFunction(tool)
+      if (handler == null) {
+        LOG.warn("Attempted to load tool '$tool' but it does not have a handler")
+        continue
+      }
+
+      toolchain.addTool(definition, handler)
+    }
+
+    LOG.info(
+      "Loading toolchain for '{}', available tools: {}",
+      agentId,
+      toolchain.listToolNames().joinToString(", "),
+    )
+
+    return toolchain.build(services, emitter)
   }
 }

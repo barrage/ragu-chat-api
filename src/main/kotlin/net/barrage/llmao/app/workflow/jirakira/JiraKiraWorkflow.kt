@@ -14,7 +14,6 @@ class JiraKiraWorkflow(
   id: KUUID,
   user: User,
   emitter: Emitter,
-  messageProcessor: ChatMessageProcessor,
   override val agent: JiraKira,
   private val repository: SpecialistRepositoryWrite,
 ) :
@@ -23,7 +22,6 @@ class JiraKiraWorkflow(
     user = user,
     agent = agent,
     emitter = emitter,
-    messageProcessor = messageProcessor,
     streamingEnabled = false,
   ) {
   private var state: JiraKiraWorkflowState = JiraKiraWorkflowState.New
@@ -33,7 +31,7 @@ class JiraKiraWorkflow(
     attachments: List<IncomingMessageAttachment>?,
     messages: List<ChatMessage>,
   ): ProcessedMessageGroup {
-    val attachmentsInsert = attachments?.let { messageProcessor.storeMessageAttachments(it) }
+    val attachmentsInsert = attachments?.let { ChatMessageProcessor.storeMessageAttachments(it) }
     val userMessageInsert = userMessage.toInsert(attachmentsInsert)
 
     val messagesInsert = listOf(userMessageInsert) + messages.map { it.toInsert() }
