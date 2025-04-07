@@ -9,6 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.ChatMessage
@@ -31,7 +32,7 @@ import net.barrage.llmao.core.workflow.WorkflowAgent
  *
  * Structured workflows should implement [Workflow] directly.
  */
-abstract class ConversationWorkflow(
+abstract class ChatWorkflowBase(
   /** Chat ID. */
   val id: KUUID,
 

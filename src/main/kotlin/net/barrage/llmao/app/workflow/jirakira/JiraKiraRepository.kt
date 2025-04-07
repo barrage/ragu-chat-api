@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList

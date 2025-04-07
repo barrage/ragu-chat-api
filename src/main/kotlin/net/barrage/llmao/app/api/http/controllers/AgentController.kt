@@ -10,7 +10,7 @@ import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.api.AgentService
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort

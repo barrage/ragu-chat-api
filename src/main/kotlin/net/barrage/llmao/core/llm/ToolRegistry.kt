@@ -10,7 +10,11 @@ typealias CallableTool<S> = suspend (state: S, jsonArguments: String) -> String
 
 const val GET_BIRTHDAY = "get_agent_birthday"
 
-/** A registry for ALL tool definitions. Must be 1:1 with the tool implementations. */
+/**
+ * A registry for predefined tools that can be used by user-created agents.
+ *
+ * The registry contains the tool schemas and their implementations.
+ */
 object ToolRegistry {
   fun listToolDefinitions(): List<ToolDefinition> {
     return listOf(getAgentBirthdayDefinition())

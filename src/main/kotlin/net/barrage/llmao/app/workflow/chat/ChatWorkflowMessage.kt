@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.chat
+package net.barrage.llmao.app.workflow.chat
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName

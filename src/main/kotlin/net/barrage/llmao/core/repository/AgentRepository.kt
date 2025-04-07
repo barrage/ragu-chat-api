@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.agent
+package net.barrage.llmao.core.repository
 
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList

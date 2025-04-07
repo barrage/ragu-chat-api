@@ -8,8 +8,8 @@ import net.barrage.llmao.ADMIN_USER
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminWsSession
-import net.barrage.llmao.app.specialist.jirakira.JiraKiraEvent
-import net.barrage.llmao.core.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraEvent
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate

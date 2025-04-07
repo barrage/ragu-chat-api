@@ -31,12 +31,9 @@ The server will respond with a `system.workflow.open` message, depending on the 
 
 ```json
 {
-  "type": "system",
-  "payload": {
-    "type": "workflow.new",
-    "agentId": "agent_uuid",
-    "workflowType": "CHAT | JIRAKIRA"
-  }
+  "type": "workflow.new",
+  "agentId": "agent_uuid",
+  "workflowType": "CHAT | JIRAKIRA"
 }
 ```
 
@@ -47,11 +44,9 @@ Open an existing workflow. The workflow ID must be provided in the payload. The 
 
 ```json
 {
-  "type": "system",
-  "payload": {
-    "type": "workflow.existing",
-    "workflowId": "workflow_uuid"
-  }
+  "type": "workflow.existing",
+  "workflowType": "CHAT | JIRAKIRA",
+  "workflowId": "workflow_uuid"
 }
 ```
 
@@ -61,10 +56,7 @@ Close the current workflow. The server will respond with a `system.workflow.clos
 
 ```json
 {
-  "type": "system",
-  "payload": {
-    "type": "workflow.close"
-  }
+  "type": "workflow.close"
 }
 ```
 
@@ -74,10 +66,7 @@ Cancel the current workflow stream. The message handling and response will be wo
 
 ```json
 {
-  "type": "system",
-  "payload": {
-    "type": "workflow.cancel_stream"
-  }
+  "type": "workflow.cancel_stream"
 }
 ```
 
@@ -132,7 +121,7 @@ Chat workflows do not have a clear indication of an end.
 
 - `chat`
 
-Send a message to the chat workflow. The workflow must be open for this message to be accepted.
+Send a message to a chat workflow. The workflow must be open for this message to be accepted.
 
 - `text` - The text contents of the message. This is the only required field.
 - `attachments` - Optional binary attachments to send with the message. If empty, no attachments will be processed.
@@ -141,7 +130,6 @@ Send a message to the chat workflow. The workflow must be open for this message 
 
 ```json
 {
-  "type": "chat",
   "text": "message_text",
   "attachments": [
     {
@@ -287,8 +275,7 @@ Sent whenever an agent calls a tool.
 - `tool.result`
 
 Sent whenever an agent receives a tool result.
-The content field will usually be in the format of `tool_name: success`. Errors in tools are not sent back to the
-client.
+The content field will usually contain the output of the tool.
 
 ```json
 {

@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 import com.nimbusds.jose.util.StandardCharset
 import io.ktor.client.HttpClient

@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.chat
+package net.barrage.llmao.app.workflow.chat
 
 import com.knuddels.jtokkit.api.EncodingRegistry
 import net.barrage.llmao.core.AppError
@@ -6,6 +6,10 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.RepositoryState
 import net.barrage.llmao.core.ServiceState
+import net.barrage.llmao.core.chat.ChatAgent
+import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.chat.MessageBasedHistory
+import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.ToolchainFactory
@@ -13,53 +17,18 @@ import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.repository.ChatRepositoryRead
+import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.core.workflow.WorkflowFactory
 import net.barrage.llmao.tryUuid
 
 private const val CHAT_TOKEN_ORIGIN = "workflow.chat"
 private const val CHAT_WORKFLOW_ID = "CHAT"
-
-interface WorkflowFactoryType {
-  fun type(): String
-}
-
-class WorkflowFactoryManager(
-  private val factories: MutableMap<String, WorkflowFactory> = mutableMapOf()
-) {
-  suspend fun new(workflowType: String, user: User, agentId: String?, emitter: Emitter): Workflow {
-    if (!factories.containsKey(workflowType)) {
-      throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
-    }
-    return factories[workflowType]!!.new(user, agentId, emitter)
-  }
-
-  suspend fun existing(
-    workflowType: String,
-    user: User,
-    workflowId: KUUID,
-    emitter: Emitter,
-  ): Workflow {
-    if (!factories.containsKey(workflowType)) {
-      throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
-    }
-    return factories[workflowType]!!.existing(user, workflowId, emitter)
-  }
-
-  fun register(factory: WorkflowFactory) {
-    factories[factory.type()] = factory
-  }
-}
-
-interface WorkflowFactory : WorkflowFactoryType {
-  suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow
-
-  suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow
-}
 
 class ChatWorkflowFactory(
   private val providers: ProviderState,

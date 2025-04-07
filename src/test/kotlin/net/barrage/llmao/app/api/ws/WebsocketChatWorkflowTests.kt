@@ -27,9 +27,9 @@ import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.adminWsSession
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.UpdateAgent

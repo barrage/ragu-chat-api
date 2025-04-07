@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.tables.records.JiraWorklogAttributesRecord

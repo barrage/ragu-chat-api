@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolFunctionDefinition

@@ -8,7 +8,6 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.chat.WorkflowFactoryManager
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 

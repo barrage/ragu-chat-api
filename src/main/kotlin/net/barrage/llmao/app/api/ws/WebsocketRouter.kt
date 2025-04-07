@@ -19,11 +19,11 @@ import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.chat.WorkflowFactoryManager
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Session
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.SessionTokenManager
+import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 
 private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")

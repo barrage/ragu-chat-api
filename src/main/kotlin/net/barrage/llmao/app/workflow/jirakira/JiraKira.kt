@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 import io.ktor.util.logging.KtorSimpleLogger
 import java.time.OffsetDateTime

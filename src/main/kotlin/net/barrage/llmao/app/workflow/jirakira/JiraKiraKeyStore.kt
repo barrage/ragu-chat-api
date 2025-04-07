@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 interface JiraKiraKeyStore {
   suspend fun setUserApiKey(userId: String, apiKey: String)

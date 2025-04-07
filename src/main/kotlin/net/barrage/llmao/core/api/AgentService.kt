@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.agent
+package net.barrage.llmao.core.api
 
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.AppError
@@ -27,6 +27,7 @@ import net.barrage.llmao.core.model.UpdateCollectionsResult
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.SearchFiltersAdminAgents
+import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.storage.AVATARS_PATH
 import net.barrage.llmao.core.storage.BlobStorage
@@ -41,7 +42,7 @@ class AgentService(
   /** The image storage provider for avatars. */
   private val avatarStorage: BlobStorage<Image>,
 ) {
-  private val log = KtorSimpleLogger("net.barrage.llmao.core.agent.AgentService")
+  private val log = KtorSimpleLogger("net.barrage.llmao.core.api.AgentService")
 
   suspend fun userListAgents(
     pagination: PaginationSort,

@@ -16,7 +16,7 @@ import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.chat.ChatService
+import net.barrage.llmao.core.api.ChatService
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage

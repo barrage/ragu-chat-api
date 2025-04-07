@@ -1,7 +1,7 @@
 package net.barrage.llmao.core.llm
 
 import net.barrage.llmao.core.ServiceState
-import net.barrage.llmao.core.agent.AgentRepository
+import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 

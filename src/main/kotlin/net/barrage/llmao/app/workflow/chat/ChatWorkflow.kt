@@ -1,12 +1,18 @@
-package net.barrage.llmao.core.chat
+package net.barrage.llmao.app.workflow.chat
 
+import net.barrage.llmao.core.chat.ChatAgent
+import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.chat.ChatWorkflowBase
+import net.barrage.llmao.core.chat.ProcessedMessageGroup
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.tryUuid
 
+/** Implementation of a [ChatWorkflowBase] for user-created agents. */
 class ChatWorkflow(
   id: KUUID,
   user: User,
@@ -18,7 +24,7 @@ class ChatWorkflow(
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
 ) :
-  ConversationWorkflow(
+  ChatWorkflowBase(
     id = id,
     user = user,
     emitter = emitter,

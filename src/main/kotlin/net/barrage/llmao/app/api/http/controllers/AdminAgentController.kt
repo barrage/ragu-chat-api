@@ -23,7 +23,7 @@ import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.api.AgentService
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration

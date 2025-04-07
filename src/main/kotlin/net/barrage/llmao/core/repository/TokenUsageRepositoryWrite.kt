@@ -1,6 +1,7 @@
-package net.barrage.llmao.core.token
+package net.barrage.llmao.core.repository
 
 import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.TOKEN_USAGE
 import org.jooq.DSLContext

@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.embedding
 
 import net.barrage.llmao.core.Identity
+import net.barrage.llmao.core.token.TokenUsageAmount
 
 interface Embedder : Identity {
   /** Return `true` if the embedder supports the given model. */
@@ -12,3 +13,5 @@ interface Embedder : Identity {
   /** Return the size of the vector for the given model. */
   suspend fun vectorSize(model: String): Int
 }
+
+data class Embeddings(val embeddings: List<Double>, val usage: TokenUsageAmount? = null)

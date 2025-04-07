@@ -8,7 +8,7 @@ import io.ktor.server.routing.Route
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ProvidersResponse
-import net.barrage.llmao.core.admin.AdministrationService
+import net.barrage.llmao.core.api.AdministrationService
 import net.barrage.llmao.core.model.AgentChatTimeSeries
 import net.barrage.llmao.core.model.DashboardCounts
 import net.barrage.llmao.core.model.common.Period

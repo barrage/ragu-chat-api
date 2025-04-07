@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 import com.knuddels.jtokkit.api.EncodingRegistry
 import net.barrage.llmao.app.api.http.httpClient
@@ -6,22 +6,22 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ConversationWorkflow
+import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
-import net.barrage.llmao.core.chat.WorkflowFactory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
+import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.Settings
-import net.barrage.llmao.core.specialist.SpecialistRepositoryWrite
-import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.core.workflow.WorkflowFactory
 
 private const val JIRAKIRA_TOKEN_ORIGIN = "workflow.jirakira"
 private const val JIRA_KIRA_WORKFLOW_ID = "JIRAKIRA"
@@ -39,7 +39,7 @@ class JiraKiraWorkflowFactory(
 ) : WorkflowFactory {
   override fun type(): String = JIRA_KIRA_WORKFLOW_ID
 
-  override suspend fun new(user: User, agentId: String?, emitter: Emitter): ConversationWorkflow {
+  override suspend fun new(user: User, agentId: String?, emitter: Emitter): ChatWorkflowBase {
     val workflowId = KUUID.randomUUID()
 
     val userJiraApiKey =

@@ -1,12 +1,12 @@
-package net.barrage.llmao.app.specialist.jirakira
+package net.barrage.llmao.app.workflow.jirakira
 
 import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ConversationWorkflow
+import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.ProcessedMessageGroup
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.specialist.SpecialistRepositoryWrite
+import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 
@@ -18,7 +18,7 @@ class JiraKiraWorkflow(
   override val agent: JiraKira,
   private val repository: SpecialistRepositoryWrite,
 ) :
-  ConversationWorkflow(
+  ChatWorkflowBase(
     id = id,
     user = user,
     agent = agent,

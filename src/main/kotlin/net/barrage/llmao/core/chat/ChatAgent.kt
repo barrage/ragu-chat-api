@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.chat
 
 import io.ktor.util.logging.KtorSimpleLogger
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
@@ -20,8 +21,7 @@ import net.barrage.llmao.core.workflow.WorkflowAgent
 private val LOG = KtorSimpleLogger("net.barrage.llmao.core.chat.ChatAgent")
 
 /**
- * Handles LLM interactions for direct prompts without streaming and comes with utilities for
- * generating titles.
+ * Implementation of [WorkflowAgent] for custom chat agents.
  *
  * Token usage is always tracked in this instance when possible, the only exception being the stream
  * whose tokens must be counted outside since we only get the usage when it's complete.
@@ -82,9 +82,7 @@ class ChatAgent(
 
   override fun id(): String = agentId.toString()
 
-  override fun context(): String {
-    return context
-  }
+  override fun context(): String = context
 
   /**
    * Prompt the LLM using this agent's title instruction as the system message, or the default one
@@ -99,17 +97,14 @@ class ChatAgent(
     val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
 
     val completion =
-      this@ChatAgent.llmProvider.chatCompletion(
-        messages,
-        completionParameters.copy(maxTokens = titleMaxTokens),
-      )
+      llmProvider.chatCompletion(messages, completionParameters.copy(maxTokens = titleMaxTokens))
 
     completion.tokenUsage?.let { tokenUsage ->
       tokenTracker.store(
         amount = tokenUsage,
         usageType = TokenUsageType.COMPLETION_TITLE,
         model = model,
-        provider = this@ChatAgent.llmProvider.id(),
+        provider = llmProvider.id(),
       )
     }
 

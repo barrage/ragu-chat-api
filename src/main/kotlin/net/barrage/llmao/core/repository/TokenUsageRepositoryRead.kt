@@ -1,10 +1,12 @@
-package net.barrage.llmao.core.token
+package net.barrage.llmao.core.repository
 
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.token.TokenUsage
+import net.barrage.llmao.core.token.toTokenUsage
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.TOKEN_USAGE
