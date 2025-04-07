@@ -22,7 +22,6 @@ import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.chat.WorkflowFactory
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 
 private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")
@@ -32,7 +31,7 @@ fun Application.websocketServer(
   adapters: AdapterState,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val server = WebsocketSessionManager(factory = factory, listener = listener, adapters = adapters)
+  val server = SessionManager(factory = factory, listener = listener, adapters = adapters)
 
   val tokenManager = WebsocketTokenManager()
 
@@ -87,9 +86,9 @@ fun Application.websocketServer(
         return@webSocket
       }
 
-      val session = WebsocketSession(user, token)
+      val session = Session(user, token)
 
-      val emitter = WebsocketEmitter.new<OutgoingSystemMessage>(this)
+      val emitter = WebsocketEmitter(this)
       server.registerSystemEmitter(session, emitter)
 
       LOG.debug("Websocket connection opened for '{}' with token '{}'", user.username, token)
@@ -101,15 +100,15 @@ fun Application.websocketServer(
               continue
             }
             try {
-              server.handleMessage(session, frame.readText(), this)
+              server.handleMessage(session, frame.readText(), emitter)
             } catch (error: AppError) {
-              emitter.emitError(error)
+              emitter.emit(error, AppError::class)
             }
           }
         }
         .onFailure { e ->
           if (e is AppError) {
-            emitter.emitError(e)
+            emitter.emit(e, AppError::class)
           }
           LOG.error("Websocket exception occurred {}", e.message)
           val formatter =

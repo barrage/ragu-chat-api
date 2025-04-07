@@ -42,7 +42,7 @@ abstract class ConversationWorkflow(
   protected open val agent: WorkflowAgent<*>,
 
   /** Output handle. Only chat related events are sent via this reference. */
-  protected val emitter: Emitter<ChatWorkflowMessage>,
+  protected val emitter: Emitter,
   protected val messageProcessor: ChatMessageProcessor,
   protected val streamingEnabled: Boolean = true,
 ) : Workflow {
@@ -57,6 +57,14 @@ abstract class ConversationWorkflow(
 
   protected open val log = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
 
+  /**
+   * Callback that runs when an interaction with an LLM is complete.
+   *
+   * Takes as input the original user message, the attachments that were sent with it, and all the
+   * messages that occurred between the prompt and the LLM response.
+   *
+   * Has to return the processed message group and all the attachments that were processed.
+   */
   abstract suspend fun onInteractionComplete(
     /** Original unmodified user message. */
     userMessage: ChatMessage,
@@ -161,11 +169,15 @@ abstract class ConversationWorkflow(
               reason = finishReason,
               messageId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
-            )
+            ),
+            ChatWorkflowMessage::class,
           )
         }
       } else {
-        emitter.emit(ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason))
+        emitter.emit(
+          ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason),
+          ChatWorkflowMessage::class,
+        )
       }
 
       log.debug(
@@ -280,11 +292,15 @@ abstract class ConversationWorkflow(
               reason = finishReason,
               messageId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
-            )
+            ),
+            ChatWorkflowMessage::class,
           )
         }
       } else {
-        emitter.emit(ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason))
+        emitter.emit(
+          ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason),
+          ChatWorkflowMessage::class,
+        )
       }
 
       log.debug(
@@ -313,11 +329,11 @@ abstract class ConversationWorkflow(
     when (e) {
       is AppError -> {
         log.error("{} - error in stream", id, e)
-        emitter.emitError(e.withDisplayMessage(agent.errorMessage()))
+        emitter.emit(e.withDisplayMessage(agent.errorMessage()), AppError::class)
       }
       else -> {
         log.error("{} - unexpected error in stream", id, e)
-        emitter.emitError(AppError.internal().withDisplayMessage(agent.errorMessage()))
+        emitter.emit(AppError.internal().withDisplayMessage(agent.errorMessage()), AppError::class)
       }
     }
   }

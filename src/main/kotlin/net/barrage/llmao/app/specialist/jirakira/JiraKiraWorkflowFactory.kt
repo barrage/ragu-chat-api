@@ -6,12 +6,10 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.chat.ConversationWorkflow
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.User
@@ -38,9 +36,7 @@ class JiraKiraWorkflowFactory(
 ) {
   suspend fun newJiraKiraWorkflow(
     user: User,
-    chatEmitter: Emitter<ChatWorkflowMessage>,
-    emitter: Emitter<JiraKiraMessage>,
-    toolEmitter: Emitter<ToolEvent>? = null,
+    emitter: Emitter,
   ): ConversationWorkflow {
     val workflowId = KUUID.randomUUID()
 
@@ -89,7 +85,7 @@ class JiraKiraWorkflowFactory(
       builder.addTool(definition = tool, handler = fn)
     }
 
-    val toolchain = builder.build(state = state, emitter = toolEmitter)
+    val toolchain = builder.build(state = state, emitter = emitter)
 
     val tokenizer =
       encodingRegistry.getEncodingForModel(jiraKiraModel).let { if (it.isEmpty) null else it.get() }
@@ -125,7 +121,7 @@ class JiraKiraWorkflowFactory(
           jiraUser = jiraUser,
           messageProcessor = messageProcessor,
         ),
-      emitter = chatEmitter,
+      emitter = emitter,
       messageProcessor = messageProcessor,
       repository = specialistRepositoryWrite,
     )

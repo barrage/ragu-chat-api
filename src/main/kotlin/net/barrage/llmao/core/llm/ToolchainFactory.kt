@@ -15,7 +15,7 @@ class ToolchainFactory(
 
   suspend fun createAgentToolchain(
     agentId: KUUID,
-    emitter: Emitter<ToolEvent>? = null,
+    emitter: Emitter? = null,
   ): Toolchain<ServiceState>? {
     val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
 

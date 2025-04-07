@@ -7,7 +7,6 @@ import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.agent.AgentService
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
-import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.ToolchainFactory
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.User
@@ -34,12 +33,7 @@ class WorkflowFactory(
   private val messageProcessor: ChatMessageProcessor,
   private val contextEnrichmentFactory: ContextEnrichmentFactory,
 ) {
-  suspend fun newChatWorkflow(
-    user: User,
-    agentId: KUUID,
-    emitter: Emitter<ChatWorkflowMessage>,
-    toolEmitter: Emitter<ToolEvent>? = null,
-  ): ConversationWorkflow {
+  suspend fun newChatWorkflow(user: User, agentId: KUUID, emitter: Emitter): ConversationWorkflow {
     val id = KUUID.randomUUID()
     val agent =
       if (user.isAdmin()) {
@@ -49,7 +43,7 @@ class WorkflowFactory(
         agentService.userGetFull(agentId, user.entitlements)
       }
 
-    val chatAgent = createChatAgent(id, user, agent, emitter, toolEmitter)
+    val chatAgent = createChatAgent(id, user, agent, emitter)
 
     return ChatWorkflow(
       id = id,
@@ -62,12 +56,7 @@ class WorkflowFactory(
     )
   }
 
-  suspend fun existingChatWorkflow(
-    user: User,
-    id: KUUID,
-    emitter: Emitter<ChatWorkflowMessage>,
-    toolEmitter: Emitter<ToolEvent>? = null,
-  ): ConversationWorkflow {
+  suspend fun existingChatWorkflow(user: User, id: KUUID, emitter: Emitter): ConversationWorkflow {
     // TODO: Pagination
     val chat =
       chatRepositoryRead.getWithMessages(id = id, userId = user.id, pagination = Pagination(1, 200))
@@ -79,7 +68,7 @@ class WorkflowFactory(
         agentService.userGetFull(chat.chat.agentId, user.entitlements)
       }
 
-    val chatAgent = createChatAgent(id, user, agent, emitter, toolEmitter)
+    val chatAgent = createChatAgent(id, user, agent, emitter)
 
     chatAgent.addToHistory(
       chat.messages.items.flatMap { it.messages }.map(messageProcessor::loadToChatMessage)
@@ -100,8 +89,7 @@ class WorkflowFactory(
     workflowId: KUUID,
     user: User,
     agent: AgentFull,
-    emitter: Emitter<ChatWorkflowMessage>? = null,
-    toolEmitter: Emitter<ToolEvent>? = null,
+    emitter: Emitter? = null,
   ): ChatAgent {
     val tokenizer =
       encodingRegistry.getEncodingForModel(agent.configuration.model).let {
@@ -149,7 +137,7 @@ class WorkflowFactory(
           // Tools is a dynamic property that will get set during inference, if the agent has them
           tools = null,
         ),
-      toolchain = toolchainFactory.createAgentToolchain(agent.agent.id, toolEmitter),
+      toolchain = toolchainFactory.createAgentToolchain(agent.agent.id, emitter),
       tokenTracker = tokenTracker,
       history =
         tokenizer?.let {

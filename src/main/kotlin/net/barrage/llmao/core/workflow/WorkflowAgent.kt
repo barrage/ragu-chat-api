@@ -1,7 +1,6 @@
 package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatCompletionParameters
@@ -126,7 +125,6 @@ abstract class WorkflowAgent<S>(
    *   this is not empty, it means a manual cancel occurred. If this is empty at the end of the
    *   stream it means the stream fully completed and the assistant message is the last message in
    *   the buffer.
-   * @throws AppError If the emitter is null.
    */
   suspend fun stream(
     userMessage: ChatMessage,
@@ -179,8 +177,6 @@ abstract class WorkflowAgent<S>(
     llmStream.collect { chunk ->
       onStreamChunk(chunk)
 
-      // Chunks with some content indicate this is a text chunk
-      // and should be emitted.
       if (!chunk.content.isNullOrEmpty()) {
         out.append(chunk.content)
       }

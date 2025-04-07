@@ -42,7 +42,7 @@ class ChatAgent(
   /** Obtained from the global settings. */
   private val titleMaxTokens: Int,
   private val context: String,
-  private val emitter: Emitter<ChatWorkflowMessage>? = null,
+  private val emitter: Emitter? = null,
   user: User,
   model: String,
   llmProvider: LlmProvider,
@@ -66,12 +66,14 @@ class ChatAgent(
   ) {
   override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
     if (!chunk.content.isNullOrEmpty()) {
-      emitter?.emit(ChatWorkflowMessage.StreamChunk(chunk.content))
+      emitter?.emit(ChatWorkflowMessage.StreamChunk(chunk.content), ChatWorkflowMessage::class)
     }
   }
 
   override suspend fun onMessage(message: ChatMessage) {
-    message.content?.let { emitter?.emit(ChatWorkflowMessage.Response(it.text())) }
+    message.content?.let {
+      emitter?.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage::class)
+    }
   }
 
   override fun errorMessage(): String {

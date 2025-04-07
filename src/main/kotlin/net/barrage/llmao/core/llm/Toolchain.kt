@@ -16,7 +16,7 @@ private val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.
  */
 class Toolchain<S>(
   private val state: S,
-  private val emitter: Emitter<ToolEvent>? = null,
+  private val emitter: Emitter? = null,
   private val agentTools: List<ToolDefinition>,
   private val handlers: Map<String, CallableTool<S>>,
 ) {
@@ -27,7 +27,7 @@ class Toolchain<S>(
   ): ToolCallResult {
     LOG.debug("Tool call '{}' - start", data.name)
 
-    emitter?.emit(ToolEvent.ToolCall(data))
+    emitter?.emit(ToolEvent.ToolCall(data), ToolEvent::class)
 
     if (data.id == null) {
       LOG.debug("Tool call '{}' - ID is null, result will not be correlated with call", data.name)
@@ -40,12 +40,13 @@ class Toolchain<S>(
           ?: throw IllegalStateException("No handler for tool call '${data.name}'")
       } catch (e: Throwable) {
         val result = onError(data.id, e)
-        emitter?.emit(ToolEvent.ToolResult(result))
+        emitter?.emit(ToolEvent.ToolResult(result), ToolEvent::class)
         return result
       }
 
     val toolResult = ToolCallResult(data.id, result)
-    emitter?.emit(ToolEvent.ToolResult(toolResult))
+    emitter?.emit(ToolEvent.ToolResult(toolResult), ToolEvent::class)
+
     return toolResult
   }
 
@@ -64,7 +65,7 @@ class ToolchainBuilder<S> {
     return this
   }
 
-  fun build(state: S, emitter: Emitter<ToolEvent>? = null) =
+  fun build(state: S, emitter: Emitter? = null) =
     Toolchain(emitter = emitter, state = state, agentTools = agentTools, handlers = handlers)
 
   fun listToolNames(): List<String> {

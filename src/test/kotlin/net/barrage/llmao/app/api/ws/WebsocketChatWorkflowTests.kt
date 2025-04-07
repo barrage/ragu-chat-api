@@ -404,6 +404,16 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
+            val message = json.decodeFromString<OutgoingSystemMessage.AgentDeactivated>(response)
+            // Asserts the right agent was deactivated
+            assert(message.agentId == agent.agent.id)
+            asserted = true
+            continue
+          } catch (e: SerializationException) {
+            e.printStackTrace()
+          }
+
+          try {
             val event = json.decodeFromString<ChatWorkflowMessage>(response)
 
             if (event is ChatWorkflowMessage.StreamChunk) {
@@ -413,14 +423,11 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
             if (event is ChatWorkflowMessage.StreamComplete) {
               break
             }
-          } catch (_: SerializationException) {}
 
-          try {
-            val message = json.decodeFromString<OutgoingSystemMessage.AgentDeactivated>(response)
-            // Asserts the right agent was deactivated
-            assert(message.agentId == agent.agent.id)
-            asserted = true
-          } catch (_: SerializationException) {}
+            continue
+          } catch (e: SerializationException) {
+            e.printStackTrace()
+          }
         }
       }
 

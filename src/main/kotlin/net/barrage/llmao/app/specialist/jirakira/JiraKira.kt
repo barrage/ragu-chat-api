@@ -22,7 +22,7 @@ import net.barrage.llmao.core.workflow.WorkflowAgent
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.jirakira.JiraKira")
 
 data class JiraKiraState(
-  val emitter: Emitter<JiraKiraMessage>,
+  val emitter: Emitter,
   val jiraUser: JiraUser,
   val api: JiraApi,
 
@@ -38,7 +38,7 @@ data class JiraKiraState(
 
 class JiraKira(
   private val jiraUser: JiraUser,
-  private val emitter: Emitter<JiraKiraMessage>,
+  private val emitter: Emitter,
   toolchain: Toolchain<JiraKiraState>,
   messageProcessor: ChatMessageProcessor,
   user: User,
@@ -73,7 +73,9 @@ class JiraKira(
   }
 
   override suspend fun onMessage(message: ChatMessage) {
-    message.content?.let { emitter.emit(JiraKiraMessage.LlmResponse(it.text())) }
+    message.content?.let {
+      emitter.emit(JiraKiraMessage.LlmResponse(it.text()), JiraKiraMessage::class)
+    }
   }
 
   override suspend fun onToolError(toolCallId: String?, e: Throwable): ToolCallResult {
@@ -85,33 +87,6 @@ class JiraKira(
       return ToolCallResult(id = toolCallId, content = "error: ${e.message}")
     }
   }
-
-  //  suspend fun execute(message: String) {
-  //  }
-
-  //  private suspend fun trackWorkflow() {
-  //    specialistRepositoryWrite.insertWorkflow(
-  //      workflowId = workflowId,
-  //      userId = user.id,
-  //      username = user.username,
-  //    )
-  //  }
-
-  //  private suspend fun storePendingBuffer(buffer: MutableList<ChatMessage>) {
-  //    specialistRepositoryWrite.insertMessages(
-  //      workflowId = workflowId,
-  //      messages =
-  //        buffer.map { message ->
-  //          SpecialistMessageInsert(
-  //            senderType = message.role,
-  //            content = message.content?.text(),
-  //            toolCalls = Json.encodeToString(message.toolCalls),
-  //            toolCallId = message.toolCallId,
-  //            finishReason = message.finishReason,
-  //          )
-  //        },
-  //    )
-  //  }
 
   override fun context(): String {
     return """
@@ -146,7 +121,7 @@ suspend fun createWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraMessage.WorklogCreated(worklog))
+  state.emitter.emit(JiraKiraMessage.WorklogCreated(worklog), JiraKiraMessage::class)
 
   return "Success. Worklog entry ID: ${worklog.tempoWorklogId}."
 }
@@ -189,7 +164,7 @@ suspend fun updateWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraMessage.WorklogUpdated(worklog))
+  state.emitter.emit(JiraKiraMessage.WorklogUpdated(worklog), JiraKiraMessage::class)
 
   return "success"
 }

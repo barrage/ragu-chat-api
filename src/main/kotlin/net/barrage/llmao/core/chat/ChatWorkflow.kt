@@ -10,7 +10,7 @@ import net.barrage.llmao.tryUuid
 class ChatWorkflow(
   id: KUUID,
   user: User,
-  emitter: Emitter<ChatWorkflowMessage>,
+  emitter: Emitter,
   messageProcessor: ChatMessageProcessor,
   override val agent: ChatAgent,
   private val repository: ChatRepositoryWrite,
@@ -59,7 +59,7 @@ class ChatWorkflow(
         log.debug("{} - generated title ({})", id, title)
 
         repository.updateTitle(id, user.id, title)
-        emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title))
+        emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title), ChatWorkflowMessage::class)
         state = ChatWorkflowState.Persisted(title)
 
         ProcessedMessageGroup(groupId, attachmentsInsert)

@@ -2,21 +2,26 @@ package net.barrage.llmao.app.api.ws
 
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlin.reflect.KClass
+import kotlin.reflect.full.createType
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.AppError
+import kotlinx.serialization.serializer
+import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.workflow.Emitter
 
-private val LOG =
-  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketEmitter")
+val json = Json {
+  ignoreUnknownKeys = true
+  encodeDefaults = true
+}
 
 /** Represents a 2 way communication channel between the server and a client. */
-class WebsocketEmitter<T>(ws: WebSocketServerSession, private val serialize: (T) -> String) :
-  Emitter<T> {
+class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
   /** Used to emit messages to the collector, which in turn forwards them to the client. */
-  private val flow: MutableSharedFlow<String> = MutableSharedFlow()
+  val flow: MutableSharedFlow<String> = MutableSharedFlow()
+
+  val log = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketEmitter")
 
   /**
    * Start the job that collects messages from the flow and forwards anything emitted to the client.
@@ -26,21 +31,11 @@ class WebsocketEmitter<T>(ws: WebSocketServerSession, private val serialize: (T)
     ws.launch { flow.collect { ws.send(it) } }
   }
 
-  /** Emit an application error. */
-  override suspend fun emitError(error: AppError) {
-    LOG.error("Emitting error", error)
-    flow.emit(Json.encodeToString(error))
-  }
-
   /** Emit a system message to the client. */
-  override suspend fun emit(message: T) {
-    LOG.trace("Emitting server message: {}", message)
-    flow.emit(serialize(message))
-  }
-
-  companion object {
-    inline fun <reified T> new(ws: WebSocketServerSession): WebsocketEmitter<T> {
-      return WebsocketEmitter(ws) { message: T -> Json.encodeToString(message) }
+  override suspend fun <T : Any> emit(message: T, clazz: KClass<T>) {
+    if (message !is ChatWorkflowMessage.StreamChunk) {
+      log.debug("Emitting message: {}", message)
     }
+    flow.emit(json.encodeToString(serializer(clazz.createType()), message))
   }
 }

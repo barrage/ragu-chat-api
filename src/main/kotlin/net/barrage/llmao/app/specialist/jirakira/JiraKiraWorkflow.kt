@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.specialist.jirakira
 
 import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.chat.ConversationWorkflow
 import net.barrage.llmao.core.chat.ProcessedMessageGroup
 import net.barrage.llmao.core.llm.ChatMessage
@@ -14,7 +13,7 @@ import net.barrage.llmao.core.workflow.Emitter
 class JiraKiraWorkflow(
   id: KUUID,
   user: User,
-  emitter: Emitter<ChatWorkflowMessage>,
+  emitter: Emitter,
   messageProcessor: ChatMessageProcessor,
   override val agent: JiraKira,
   private val repository: SpecialistRepositoryWrite,

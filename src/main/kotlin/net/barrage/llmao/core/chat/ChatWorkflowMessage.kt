@@ -8,9 +8,9 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.types.KUUID
 
-@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("type")
+@OptIn(ExperimentalSerializationApi::class)
 sealed class ChatWorkflowMessage {
   /** Sent when a chat's title is generated. */
   @Serializable
