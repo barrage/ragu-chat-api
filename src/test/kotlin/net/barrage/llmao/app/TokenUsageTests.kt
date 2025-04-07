@@ -44,7 +44,7 @@ class TokenUsageTests : IntegrationTest() {
           groups = listOf(),
         )
 
-      workflow = app.workflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
+      workflow = app.chatWorkflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
     }
   }
 

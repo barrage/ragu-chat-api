@@ -8,16 +8,12 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("type")
-sealed class JiraKiraMessage {
-  @Serializable
-  @SerialName("jirakira.response")
-  data class LlmResponse(val content: String) : JiraKiraMessage()
-
+sealed class JiraKiraEvent {
   @Serializable
   @SerialName("jirakira.worklog_created")
-  data class WorklogCreated(val worklog: TempoWorklogEntry) : JiraKiraMessage()
+  data class WorklogCreated(val worklog: TempoWorklogEntry) : JiraKiraEvent()
 
   @Serializable
   @SerialName("jirakira.worklog_updated")
-  data class WorklogUpdated(val worklog: TempoWorklogEntry) : JiraKiraMessage()
+  data class WorklogUpdated(val worklog: TempoWorklogEntry) : JiraKiraEvent()
 }

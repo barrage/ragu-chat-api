@@ -72,11 +72,7 @@ class JiraKira(
     throw AppError.internal("Jira Kira does not support streaming")
   }
 
-  override suspend fun onMessage(message: ChatMessage) {
-    message.content?.let {
-      emitter.emit(JiraKiraMessage.LlmResponse(it.text()), JiraKiraMessage::class)
-    }
-  }
+  override suspend fun onMessage(message: ChatMessage) {}
 
   override suspend fun onToolError(toolCallId: String?, e: Throwable): ToolCallResult {
     if (e is JiraError) {
@@ -121,7 +117,7 @@ suspend fun createWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraMessage.WorklogCreated(worklog), JiraKiraMessage::class)
+  state.emitter.emit(JiraKiraEvent.WorklogCreated(worklog), JiraKiraEvent::class)
 
   return "Success. Worklog entry ID: ${worklog.tempoWorklogId}."
 }
@@ -164,7 +160,7 @@ suspend fun updateWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraMessage.WorklogUpdated(worklog), JiraKiraMessage::class)
+  state.emitter.emit(JiraKiraEvent.WorklogUpdated(worklog), JiraKiraEvent::class)
 
   return "success"
 }

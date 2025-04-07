@@ -8,7 +8,6 @@ import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
-import net.barrage.llmao.app.workflow.WorkflowType
 import net.barrage.llmao.core.AppError
 
 private const val JIRA_KIRA_NAME = "Gojira"
@@ -19,11 +18,7 @@ fun Route.specialistWorkflowRoutes(adapterState: AdapterState) {
 
     adapterState.runIfEnabled<JiraKiraWorkflowFactory, Unit> {
       specialists.add(
-        SpecialistAgent(
-          name = JIRA_KIRA_NAME,
-          description = "Be a Jira hero.",
-          workflowTypeId = WorkflowType.JIRAKIRA.name,
-        )
+        SpecialistAgent(name = JIRA_KIRA_NAME, description = "Be a Jira hero.", workflowTypeId = "")
       )
 
       call.respond(specialists)

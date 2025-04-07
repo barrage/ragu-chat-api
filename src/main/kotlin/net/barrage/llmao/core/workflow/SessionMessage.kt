@@ -6,30 +6,20 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.types.KUUID
 
-@OptIn(ExperimentalSerializationApi::class)
-@Serializable
-@JsonClassDiscriminator("type")
-sealed class SessionMessage {
-  @Serializable
-  @SerialName("system")
-  data class Incoming(val payload: IncomingSystemMessage) : SessionMessage()
-
-  data class Outgoing(val payload: OutgoingSystemMessage) : SessionMessage()
-}
-
 /** System messages used to control sessions. */
-@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("type")
+@OptIn(ExperimentalSerializationApi::class)
 sealed class IncomingSystemMessage {
   @Serializable
   @SerialName("workflow.new")
-  data class CreateNewWorkflow(val agentId: KUUID? = null, val workflowType: String? = null) :
+  data class CreateNewWorkflow(val agentId: String? = null, val workflowType: String) :
     IncomingSystemMessage()
 
   @Serializable
   @SerialName("workflow.existing")
-  data class LoadExistingWorkflow(val workflowId: KUUID) : IncomingSystemMessage()
+  data class LoadExistingWorkflow(val workflowType: String, val workflowId: KUUID) :
+    IncomingSystemMessage()
 
   @Serializable @SerialName("workflow.close") data object CloseWorkflow : IncomingSystemMessage()
 
@@ -39,9 +29,9 @@ sealed class IncomingSystemMessage {
 }
 
 /** Outgoing session messages. */
-@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("type")
+@OptIn(ExperimentalSerializationApi::class)
 sealed class OutgoingSystemMessage {
   /** Sent when a workflow is opened manually by the client. */
   @SerialName("system.workflow.open")

@@ -55,7 +55,7 @@ fun ApplicationCall.user(): User {
   )
 }
 
-fun Application.authMiddleware(
+fun Application.installJwtAuth(
   issuer: String,
   jwksEndpoint: String,
   leeway: Long,

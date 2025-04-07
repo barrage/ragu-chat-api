@@ -11,12 +11,12 @@ import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.api.http.authMiddleware
 import net.barrage.llmao.app.api.http.configureCors
 import net.barrage.llmao.app.api.http.configureErrorHandling
 import net.barrage.llmao.app.api.http.configureOpenApi
 import net.barrage.llmao.app.api.http.configureRequestValidation
 import net.barrage.llmao.app.api.http.configureRouting
+import net.barrage.llmao.app.api.http.installJwtAuth
 import net.barrage.llmao.app.api.http.noAuth
 import net.barrage.llmao.app.api.ws.websocketServer
 import net.barrage.llmao.core.AppError
@@ -25,9 +25,7 @@ import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.types.KUUID
 
-fun main(args: Array<String>) {
-  EngineMain.main(args)
-}
+fun main(args: Array<String>) = EngineMain.main(args)
 
 fun Application.module() {
   val applicationStoppingJob: CompletableJob = Job()
@@ -48,7 +46,7 @@ fun Application.module() {
   }
 
   if (environment.config.string("jwt.enabled").toBoolean()) {
-    authMiddleware(
+    installJwtAuth(
       issuer = environment.config.string("jwt.issuer"),
       jwksEndpoint = environment.config.string("jwt.jwksEndpoint"),
       leeway = environment.config.long("jwt.leeway"),
@@ -60,11 +58,7 @@ fun Application.module() {
   }
 
   configureOpenApi()
-  websocketServer(
-    factory = state.workflowFactory,
-    listener = stateChangeListener,
-    adapters = state.adapters,
-  )
+  websocketServer(factory = state.workflowManager, listener = stateChangeListener)
   configureRouting(state)
   configureRequestValidation()
   configureErrorHandling()

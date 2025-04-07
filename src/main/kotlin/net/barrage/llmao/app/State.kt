@@ -8,10 +8,8 @@ import kotlinx.coroutines.Job
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppRepository
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppSenderConfig
-import net.barrage.llmao.app.chat.ChatType
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
 import net.barrage.llmao.app.llm.LlmProviderFactory
-import net.barrage.llmao.app.specialist.SpecialistType
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraRepository
 import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
@@ -25,7 +23,8 @@ import net.barrage.llmao.core.admin.AdministrationService
 import net.barrage.llmao.core.agent.AgentService
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatService
-import net.barrage.llmao.core.chat.WorkflowFactory
+import net.barrage.llmao.core.chat.ChatWorkflowFactory
+import net.barrage.llmao.core.chat.WorkflowFactoryManager
 import net.barrage.llmao.core.initDatabase
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.ToolchainFactory
@@ -37,6 +36,10 @@ import org.jooq.DSLContext
 const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
 const val JIRAKIRA_FEATURE_FLAG = "ktor.features.specialists.jirakira"
 
+const val JIRA_KIRA_SPECIALIST_CHAT_TYPE = "JIRAKIRA"
+const val API_CHAT_TYPE = "CHAT"
+const val WHATSAPP_CHAT_TYPE = "WHATSAPP"
+
 class ApplicationState(
   config: ApplicationConfig,
   applicationStopping: Job,
@@ -46,11 +49,13 @@ class ApplicationState(
   val repository: RepositoryState
   val services: ServiceState
   val adapters: AdapterState
-  val workflowFactory: WorkflowFactory
+  val chatWorkflowFactory: ChatWorkflowFactory
+  val workflowManager: WorkflowFactoryManager
 
   init {
     val database = initDatabase(config, applicationStopping)
     val encodingRegistry = Encodings.newDefaultEncodingRegistry()
+    workflowManager = WorkflowFactoryManager()
 
     repository = RepositoryState(database)
     providers =
@@ -62,12 +67,12 @@ class ApplicationState(
       )
     services =
       ServiceState(
-        chat = ChatService(repository.chatRead(ChatType.CHAT.value), repository.agent),
+        chat = ChatService(repository.chatRead(API_CHAT_TYPE), repository.agent),
         agent =
           AgentService(
             providers,
             repository.agent,
-            repository.chatRead(ChatType.CHAT.value),
+            repository.chatRead(API_CHAT_TYPE),
             listener,
             providers.image,
           ),
@@ -75,7 +80,7 @@ class ApplicationState(
           AdministrationService(
             providers,
             repository.agent,
-            repository.chatRead(ChatType.CHAT.value),
+            repository.chatRead("CHAT"),
             repository.tokenUsageR,
           ),
         settings = Settings(repository.settings),
@@ -88,21 +93,22 @@ class ApplicationState(
         settings = services.settings,
         repository = repository,
         encodingRegistry = encodingRegistry,
+        workflowManager = workflowManager,
       )
 
-    workflowFactory =
-      WorkflowFactory(
+    chatWorkflowFactory =
+      ChatWorkflowFactory(
         providers = providers,
-        agentService = services.agent,
-        chatRepositoryWrite = repository.chatWrite(ChatType.CHAT.value),
-        chatRepositoryRead = repository.chatRead(ChatType.CHAT.value),
+        services = services,
+        repository = repository,
         toolchainFactory = ToolchainFactory(services, repository.agent),
         settings = services.settings,
-        tokenUsageRepositoryW = repository.tokenUsageW,
         encodingRegistry = encodingRegistry,
         messageProcessor = ChatMessageProcessor(providers),
         contextEnrichmentFactory = ContextEnrichmentFactory(providers),
       )
+
+    workflowManager.register(chatWorkflowFactory)
   }
 }
 
@@ -117,6 +123,7 @@ class AdapterState(
   settings: Settings,
   repository: RepositoryState,
   encodingRegistry: EncodingRegistry,
+  workflowManager: WorkflowFactoryManager,
 ) {
   val adapters = mutableMapOf<KClass<*>, Any>()
 
@@ -134,8 +141,8 @@ class AdapterState(
             ),
           providers = providers,
           agentRepository = repository.agent,
-          chatRepositoryRead = repository.chatRead(ChatType.WHATSAPP.value),
-          chatRepositoryWrite = repository.chatWrite(ChatType.WHATSAPP.value),
+          chatRepositoryRead = repository.chatRead(WHATSAPP_CHAT_TYPE),
+          chatRepositoryWrite = repository.chatWrite(WHATSAPP_CHAT_TYPE),
           whatsAppRepository = WhatsAppRepository(database),
           settings = settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
@@ -147,19 +154,20 @@ class AdapterState(
 
     if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
       val endpoint = config.string("jirakira.endpoint")
-      val jiraKiraKeyStore = JiraKiraRepository(database)
+      val jiraKiraRepository = JiraKiraRepository(database)
       val jiraKiraWorkflowFactory =
         JiraKiraWorkflowFactory(
           endpoint = endpoint,
           providers = providers,
           settings = settings,
           tokenUsageRepositoryW = TokenUsageRepositoryWrite(database),
-          jiraKiraRepository = jiraKiraKeyStore,
-          specialistRepositoryWrite = repository.specialistWrite(SpecialistType.JIRAKIRA.value),
+          jiraKiraRepository = jiraKiraRepository,
+          specialistRepositoryWrite = repository.specialistWrite(JIRA_KIRA_SPECIALIST_CHAT_TYPE),
           messageProcessor = ChatMessageProcessor(providers),
           encodingRegistry = encodingRegistry,
         )
       adapters[JiraKiraWorkflowFactory::class] = jiraKiraWorkflowFactory
+      workflowManager.register(jiraKiraWorkflowFactory)
     }
   }
 

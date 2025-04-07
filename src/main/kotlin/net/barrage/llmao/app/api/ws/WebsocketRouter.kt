@@ -14,26 +14,27 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.time.Duration.Companion.seconds
-import net.barrage.llmao.app.AdapterState
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.chat.WorkflowFactory
+import net.barrage.llmao.core.chat.WorkflowFactoryManager
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.Session
+import net.barrage.llmao.core.workflow.SessionManager
+import net.barrage.llmao.core.workflow.SessionTokenManager
 
 private val LOG =
   io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")
 
 fun Application.websocketServer(
-  factory: WorkflowFactory,
-  adapters: AdapterState,
+  factory: WorkflowFactoryManager,
   listener: EventListener<StateChangeEvent>,
 ) {
-  val server = SessionManager(factory = factory, listener = listener, adapters = adapters)
+  val server = SessionManager(factory = factory, listener = listener)
 
-  val tokenManager = WebsocketTokenManager()
+  val tokenManager = SessionTokenManager()
 
   install(WebSockets) {
     // FIXME: Shrink

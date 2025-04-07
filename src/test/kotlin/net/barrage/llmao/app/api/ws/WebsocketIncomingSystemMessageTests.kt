@@ -103,7 +103,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
-      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
+      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id.toString(), "CHAT"))
       val response = (incoming.receive() as Frame.Text).readText()
       val message = receiveJson<OutgoingSystemMessage.WorkflowOpen>(response)
       assertNotNull(message.id)
@@ -118,7 +118,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
-      val openChat = IncomingSystemMessage.CreateNewWorkflow(agent.id)
+      val openChat = IncomingSystemMessage.CreateNewWorkflow(agent.id.toString(), "CHAT")
 
       sendClientSystem(openChat)
       val first = (incoming.receive() as Frame.Text).readText()
@@ -142,13 +142,15 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
-      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
+      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id.toString(), "CHAT"))
 
       val first = (incoming.receive() as Frame.Text).readText()
       val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
       assertNotNull(firstMessage.id)
 
-      sendClientSystem(IncomingSystemMessage.LoadExistingWorkflow(firstMessage.id))
+      sendClientSystem(
+        IncomingSystemMessage.LoadExistingWorkflow(workflowType = "CHAT", firstMessage.id)
+      )
 
       val second = (incoming.receive() as Frame.Text).readText()
       val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
@@ -166,7 +168,8 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
-      val openChat = IncomingSystemMessage.LoadExistingWorkflow(KUUID.randomUUID())
+      val openChat =
+        IncomingSystemMessage.LoadExistingWorkflow(workflowType = "CHAT", KUUID.randomUUID())
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()
@@ -198,7 +201,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
-      val openChat = IncomingSystemMessage.CreateNewWorkflow(KUUID.randomUUID())
+      val openChat = IncomingSystemMessage.CreateNewWorkflow(KUUID.randomUUID().toString(), "CHAT")
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()
@@ -218,7 +221,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.userWsSession {
-      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id))
+      sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agent.id.toString(), "CHAT"))
 
       val message = (incoming.receive() as Frame.Text).readText()
       val error = receiveJson<AppError>(message)

@@ -1,13 +1,14 @@
-package net.barrage.llmao.app.api.ws
+package net.barrage.llmao.core.workflow
 
+import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
 
 private val LOG =
-  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketTokenManager")
+  KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketTokenManager")
 
 /** Handles the registration and removal of WS tokens. */
-class WebsocketTokenManager {
+class SessionTokenManager {
   /** Maps one time tokens to user IDs. */
   private val tokens: MutableMap<KUUID, User> = mutableMapOf()
 

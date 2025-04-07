@@ -42,7 +42,7 @@ class ChatAgentTests : IntegrationTest() {
           collections = listOf(),
           groups = listOf(),
         )
-      chatAgent = app.workflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
+      chatAgent = app.chatWorkflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
     }
   }
 

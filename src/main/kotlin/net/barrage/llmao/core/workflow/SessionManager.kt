@@ -1,32 +1,24 @@
-package net.barrage.llmao.app.api.ws
+package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.KtorSimpleLogger
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.AdapterState
-import net.barrage.llmao.app.specialist.jirakira.JiraKiraWorkflowFactory
-import net.barrage.llmao.app.workflow.WorkflowType
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.chat.WorkflowFactory
+import net.barrage.llmao.core.chat.WorkflowFactoryManager
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.Emitter
-import net.barrage.llmao.core.workflow.IncomingSystemMessage
-import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.core.workflow.Workflow
 
-private val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketSessionManager")
+private val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.SessionManager")
 
 /**
  * The session manage creates sessions and is responsible for broadcasting system events to clients.
  */
 class SessionManager(
-  private val factory: WorkflowFactory,
-  private val adapters: AdapterState,
+  private val factory: WorkflowFactoryManager,
   listener: EventListener<StateChangeEvent>,
 ) {
   /** Maps user ID + token pairs to their sessions. */
@@ -114,53 +106,31 @@ class SessionManager(
   ) {
     when (message) {
       is IncomingSystemMessage.CreateNewWorkflow -> {
-        val id =
-          when (message.workflowType) {
-            null,
-            WorkflowType.CHAT.name -> {
-              LOG.debug("{} - opening chat workflow", session.user.id)
-              val workflow =
-                factory.newChatWorkflow(
-                  user = session.user,
-                  agentId =
-                    message.agentId
-                      ?: throw AppError.api(ErrorReason.InvalidParameter, "Missing agentId"),
-                  emitter = emitter,
-                )
-              workflows[session] = workflow
+        val workflowType = message.workflowType
 
-              systemSessions[session]?.emit(
-                OutgoingSystemMessage.WorkflowOpen(workflow.id),
-                OutgoingSystemMessage::class,
-              )
+        LOG.debug("{} - opening workflow ({})", session.user.id, workflowType)
 
-              workflow.id
-            }
-            WorkflowType.JIRAKIRA.name -> {
-              val jkFactory =
-                adapters.adapterForFeature<JiraKiraWorkflowFactory>()
-                  ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+        val agentId = message.agentId
 
-              LOG.debug("{} - opening JiraKira workflow", session.user.id)
+        val workflow =
+          factory.new(
+            workflowType = workflowType,
+            user = session.user,
+            agentId = agentId,
+            emitter = emitter,
+          )
 
-              val workflow = jkFactory.newJiraKiraWorkflow(user = session.user, emitter = emitter)
+        workflows[session] = workflow
 
-              workflows[session] = workflow
-
-              systemSessions[session]?.emit(
-                OutgoingSystemMessage.WorkflowOpen(workflow.id),
-                OutgoingSystemMessage::class,
-              )
-
-              workflow.id
-            }
-            else -> throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
-          }
+        systemSessions[session]?.emit(
+          OutgoingSystemMessage.WorkflowOpen(workflow.id()),
+          OutgoingSystemMessage::class,
+        )
 
         LOG.debug(
           "{} - started workflow ({}) total workflows in manager: {}",
           session.user.id,
-          id,
+          workflow.id(),
           workflows.size,
         )
       }
@@ -180,8 +150,9 @@ class SessionManager(
         workflow?.cancelStream()
 
         val existingWorkflow =
-          factory.existingChatWorkflow(
-            id = message.workflowId,
+          factory.existing(
+            workflowType = message.workflowType,
+            workflowId = message.workflowId,
             user = session.user,
             emitter = emitter,
           )
@@ -192,7 +163,7 @@ class SessionManager(
           OutgoingSystemMessage::class,
         )
 
-        LOG.debug("{} - opened workflow {}", session.user.id, existingWorkflow.id)
+        LOG.debug("{} - opened workflow {}", session.user.id, existingWorkflow.id())
       }
       is IncomingSystemMessage.CloseWorkflow -> {
         workflows.remove(session)?.let {

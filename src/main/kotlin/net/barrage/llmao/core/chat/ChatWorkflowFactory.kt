@@ -4,7 +4,8 @@ import com.knuddels.jtokkit.api.EncodingRegistry
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.agent.AgentService
+import net.barrage.llmao.core.RepositoryState
+import net.barrage.llmao.core.ServiceState
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.ToolchainFactory
@@ -14,33 +15,79 @@ import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.Settings
-import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.tryUuid
 
 private const val CHAT_TOKEN_ORIGIN = "workflow.chat"
+private const val CHAT_WORKFLOW_ID = "CHAT"
 
-class WorkflowFactory(
+interface WorkflowFactoryType {
+  fun type(): String
+}
+
+class WorkflowFactoryManager(
+  private val factories: MutableMap<String, WorkflowFactory> = mutableMapOf()
+) {
+  suspend fun new(workflowType: String, user: User, agentId: String?, emitter: Emitter): Workflow {
+    if (!factories.containsKey(workflowType)) {
+      throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+    }
+    return factories[workflowType]!!.new(user, agentId, emitter)
+  }
+
+  suspend fun existing(
+    workflowType: String,
+    user: User,
+    workflowId: KUUID,
+    emitter: Emitter,
+  ): Workflow {
+    if (!factories.containsKey(workflowType)) {
+      throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+    }
+    return factories[workflowType]!!.existing(user, workflowId, emitter)
+  }
+
+  fun register(factory: WorkflowFactory) {
+    factories[factory.type()] = factory
+  }
+}
+
+interface WorkflowFactory : WorkflowFactoryType {
+  suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow
+
+  suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow
+}
+
+class ChatWorkflowFactory(
   private val providers: ProviderState,
-  private val agentService: AgentService,
-  private val chatRepositoryWrite: ChatRepositoryWrite,
-  private val chatRepositoryRead: ChatRepositoryRead,
+  private val services: ServiceState,
+  private val repository: RepositoryState,
   private val toolchainFactory: ToolchainFactory,
   private val settings: Settings,
-  private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
   private val encodingRegistry: EncodingRegistry,
   private val messageProcessor: ChatMessageProcessor,
   private val contextEnrichmentFactory: ContextEnrichmentFactory,
-) {
-  suspend fun newChatWorkflow(user: User, agentId: KUUID, emitter: Emitter): ConversationWorkflow {
+) : WorkflowFactory {
+  private val chatRepositoryWrite: ChatRepositoryWrite = repository.chatWrite(CHAT_TOKEN_ORIGIN)
+  private val chatRepositoryRead: ChatRepositoryRead = repository.chatRead(CHAT_TOKEN_ORIGIN)
+
+  override fun type(): String = CHAT_WORKFLOW_ID
+
+  override suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow {
+    if (agentId == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "Missing agentId")
+    }
     val id = KUUID.randomUUID()
+    val agentId = tryUuid(agentId)
     val agent =
       if (user.isAdmin()) {
         // Load it regardless of active status
-        agentService.getFull(agentId)
+        services.agent.getFull(agentId)
       } else {
-        agentService.userGetFull(agentId, user.entitlements)
+        services.agent.userGetFull(agentId, user.entitlements)
       }
 
     val chatAgent = createChatAgent(id, user, agent, emitter)
@@ -56,16 +103,16 @@ class WorkflowFactory(
     )
   }
 
-  suspend fun existingChatWorkflow(user: User, id: KUUID, emitter: Emitter): ConversationWorkflow {
+  override suspend fun existing(user: User, id: KUUID, emitter: Emitter): Workflow {
     // TODO: Pagination
     val chat =
       chatRepositoryRead.getWithMessages(id = id, userId = user.id, pagination = Pagination(1, 200))
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     val agent =
-      if (user.isAdmin()) agentService.getFull(chat.chat.agentId)
+      if (user.isAdmin()) services.agent.getFull(chat.chat.agentId)
       else {
-        agentService.userGetFull(chat.chat.agentId, user.entitlements)
+        services.agent.userGetFull(chat.chat.agentId, user.entitlements)
       }
 
     val chatAgent = createChatAgent(id, user, agent, emitter)
@@ -100,7 +147,7 @@ class WorkflowFactory(
 
     val tokenTracker =
       TokenUsageTracker(
-        repository = tokenUsageRepositoryW,
+        repository = repository.tokenUsageW,
         user = user,
         agentId = agent.agent.id,
         originType = CHAT_TOKEN_ORIGIN,

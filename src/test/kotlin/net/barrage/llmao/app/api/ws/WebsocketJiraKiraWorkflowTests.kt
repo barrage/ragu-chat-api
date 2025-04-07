@@ -8,7 +8,8 @@ import net.barrage.llmao.ADMIN_USER
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminWsSession
-import net.barrage.llmao.app.specialist.jirakira.JiraKiraMessage
+import net.barrage.llmao.app.specialist.jirakira.JiraKiraEvent
+import net.barrage.llmao.core.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.settings.SettingKey
 import net.barrage.llmao.core.settings.SettingUpdate
@@ -50,7 +51,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           val response = (frame as Frame.Text).readText()
 
           try {
-            val message = json.decodeFromString<JiraKiraMessage.LlmResponse>(response)
+            val message = json.decodeFromString<ChatWorkflowMessage.Response>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             asserted = true
             break
@@ -80,14 +81,14 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<JiraKiraMessage.WorklogCreated>(response)
+            val message = json.decodeFromString<JiraKiraEvent.WorklogCreated>(response)
             // Has to match the response from wiremock at rest_api_2_issue_response.json
             assertEquals("RAGU-420", message.worklog.issue?.key)
             assertions += 1
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<JiraKiraMessage.LlmResponse>(response)
+            val message = json.decodeFromString<ChatWorkflowMessage.Response>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             assertions += 1
             break

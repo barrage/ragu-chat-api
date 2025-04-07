@@ -164,6 +164,11 @@ abstract class ConversationWorkflow(
             )
 
           emitter.emit(
+            ChatWorkflowMessage.Response(assistantMessage.content!!.text()),
+            ChatWorkflowMessage::class,
+          )
+
+          emitter.emit(
             ChatWorkflowMessage.StreamComplete(
               chatId = id,
               reason = finishReason,

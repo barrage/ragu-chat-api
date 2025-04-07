@@ -9,6 +9,7 @@ import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ConversationWorkflow
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
+import net.barrage.llmao.core.chat.WorkflowFactory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolchainBuilder
@@ -20,8 +21,10 @@ import net.barrage.llmao.core.token.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.core.workflow.Workflow
 
 private const val JIRAKIRA_TOKEN_ORIGIN = "workflow.jirakira"
+private const val JIRA_KIRA_WORKFLOW_ID = "JIRAKIRA"
 
 class JiraKiraWorkflowFactory(
   /** Jira endpoint. */
@@ -33,11 +36,10 @@ class JiraKiraWorkflowFactory(
   private val specialistRepositoryWrite: SpecialistRepositoryWrite,
   private val messageProcessor: ChatMessageProcessor,
   private val encodingRegistry: EncodingRegistry,
-) {
-  suspend fun newJiraKiraWorkflow(
-    user: User,
-    emitter: Emitter,
-  ): ConversationWorkflow {
+) : WorkflowFactory {
+  override fun type(): String = JIRA_KIRA_WORKFLOW_ID
+
+  override suspend fun new(user: User, agentId: String?, emitter: Emitter): ConversationWorkflow {
     val workflowId = KUUID.randomUUID()
 
     val userJiraApiKey =
@@ -80,7 +82,7 @@ class JiraKiraWorkflowFactory(
           TOOL_GET_ISSUE_WORKLOG -> ::getIssueWorklog
           TOOL_CREATE_WORKLOG_ENTRY -> ::createWorklogEntry
           TOOL_UPDATE_WORKLOG_ENTRY -> ::updateWorklogEntry
-          else -> throw IllegalArgumentException("Unknown tool: ${tool.function.name}")
+          else -> throw AppError.internal("Unknown tool: ${tool.function.name}")
         }
       builder.addTool(definition = tool, handler = fn)
     }
@@ -125,6 +127,10 @@ class JiraKiraWorkflowFactory(
       messageProcessor = messageProcessor,
       repository = specialistRepositoryWrite,
     )
+  }
+
+  override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
+    TODO("Not yet implemented")
   }
 
   /**
