@@ -276,7 +276,6 @@ class WhatsAppAdapter(
       toolchain = null,
       tokenTracker = tokenTracker,
       history = history,
-      emitter = null,
       contextEnrichment =
         ContextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
           listOf(it)

@@ -13,6 +13,7 @@ import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.IncomingMessageAttachment
@@ -55,7 +56,7 @@ abstract class ChatWorkflowBase(
   /** Scope in which [stream] and [onInteractionComplete] run. */
   private val scope = CoroutineScope(Dispatchers.Default)
 
-  protected open val log = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflow")
+  protected open val log = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflowBase")
 
   /**
    * Callback that runs when an interaction with an LLM is complete.
@@ -71,6 +72,22 @@ abstract class ChatWorkflowBase(
     attachments: List<IncomingMessageAttachment>?,
     messages: List<ChatMessage>,
   ): ProcessedMessageGroup
+
+  /** Uses [emitter] to emit each chunk of an LLM stream. */
+  open suspend fun onStreamChunk(chunk: ChatMessageChunk) {
+    chunk.content?.let {
+      emitter.emit(ChatWorkflowMessage.StreamChunk(it), ChatWorkflowMessage::class)
+    }
+  }
+
+  /** Uses [emitter] to emit the final assistant response. */
+  open suspend fun onMessage(message: ChatMessage) {
+    if (message.role == "assistant") {
+      message.content?.let {
+        emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage::class)
+      }
+    }
+  }
 
   override fun id(): KUUID {
     return id
@@ -109,7 +126,11 @@ abstract class ChatWorkflowBase(
     val messageBuffer = mutableListOf<ChatMessage>()
 
     try {
-      agent.completion(userMessage, messageBuffer)
+      agent.completion(
+        userMessage = userMessage,
+        messageBuffer = messageBuffer,
+        onMessage = ::onMessage,
+      )
 
       log.debug(
         "{} - completion complete, took {}ms",
@@ -207,7 +228,13 @@ abstract class ChatWorkflowBase(
     val responseBuffer = StringBuilder()
 
     try {
-      agent.stream(userMessage, messageBuffer, responseBuffer)
+      agent.stream(
+        userMessage = userMessage,
+        messageBuffer = messageBuffer,
+        out = responseBuffer,
+        onChunk = ::onStreamChunk,
+      )
+
       log.debug(
         "{} - stream complete, took {}ms",
         agent.id(),

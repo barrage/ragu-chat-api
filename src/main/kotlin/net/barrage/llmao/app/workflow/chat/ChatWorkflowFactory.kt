@@ -77,11 +77,14 @@ object ChatWorkflowFactory : WorkflowFactory {
     )
   }
 
-  override suspend fun existing(user: User, id: KUUID, emitter: Emitter): Workflow {
+  override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
     // TODO: Pagination
     val chat =
-      chatRepositoryRead.getWithMessages(id = id, userId = user.id, pagination = Pagination(1, 200))
-        ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+      chatRepositoryRead.getWithMessages(
+        id = workflowId,
+        userId = user.id,
+        pagination = Pagination(1, 200),
+      ) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     val agent =
       if (user.isAdmin()) services.admin.agent.getFull(chat.chat.agentId)
@@ -89,7 +92,7 @@ object ChatWorkflowFactory : WorkflowFactory {
         services.user.agent.getFull(chat.chat.agentId, user.entitlements)
       }
 
-    val chatAgent = createChatAgent(id, user, agent, emitter)
+    val chatAgent = createChatAgent(workflowId, user, agent, emitter)
 
     chatAgent.addToHistory(
       chat.messages.items.flatMap { it.messages }.map(ChatMessageProcessor::loadToChatMessage)
@@ -165,7 +168,6 @@ object ChatWorkflowFactory : WorkflowFactory {
             maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
           )
         } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
-      emitter = emitter,
       contextEnrichment = contextEnrichment?.let { listOf(it) },
     )
   }

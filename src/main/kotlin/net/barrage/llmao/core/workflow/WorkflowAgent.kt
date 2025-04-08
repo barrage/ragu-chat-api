@@ -74,24 +74,6 @@ abstract class WorkflowAgent<S>(
   /** The system message. Not included in histories, always sent to the LLM. */
   abstract fun context(): String
 
-  /**
-   * Callback that executes when a stream chunk is received from the LLM. Called for each chunk
-   * sent.
-   *
-   * This is usually used in real-time implementations that need to forward the chunk's contents to
-   * the client.
-   *
-   * Executes only on [stream].
-   */
-  abstract suspend fun onStreamChunk(chunk: ChatMessageChunk)
-
-  /**
-   * Callback that executes when a complete response is received from the LLM.
-   *
-   * Executes only on [completion].
-   */
-  abstract suspend fun onMessage(message: ChatMessage)
-
   /** What to do when a tool call fails. */
   open suspend fun onToolError(toolCallData: ToolCallData, e: Throwable): ToolCallResult {
     log.error("Error in tool call; data: {}", toolCallData, e)
@@ -122,12 +104,15 @@ abstract class WorkflowAgent<S>(
    *   this is not empty, it means a manual cancel occurred. If this is empty at the end of the
    *   stream it means the stream fully completed and the assistant message is the last message in
    *   the buffer.
+   * @param onChunk Callback that executes when a stream chunk is received from the LLM. Called for
+   *   each chunk received from the LLM.
    */
   suspend fun stream(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
-  ) = streamInner(userMessage, messageBuffer, out, 0)
+    onChunk: (suspend (ChatMessageChunk) -> Unit)?,
+  ) = streamInner(userMessage, messageBuffer, out, onChunk, 0)
 
   /**
    * See [stream].
@@ -138,6 +123,7 @@ abstract class WorkflowAgent<S>(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
+    onChunk: (suspend (ChatMessageChunk) -> Unit)?,
     attempt: Int = 0,
   ) {
     // Perform RAG only on the first attempt and swap the initial user message with an enriched one.
@@ -172,7 +158,7 @@ abstract class WorkflowAgent<S>(
     var finishReason: FinishReason? = null
 
     llmStream.collect { chunk ->
-      onStreamChunk(chunk)
+      onChunk?.invoke(chunk)
 
       if (!chunk.content.isNullOrEmpty()) {
         out.append(chunk.content)
@@ -238,6 +224,7 @@ abstract class WorkflowAgent<S>(
       messageBuffer = messageBuffer,
       out = out,
       attempt = attempt + 1,
+      onChunk = onChunk,
     )
   }
 
@@ -249,6 +236,9 @@ abstract class WorkflowAgent<S>(
    * Executes chat completion without streaming and collects the whole interaction.
    *
    * **This implementation includes the user message in the returned list.**
+   *
+   * This implementation is intended to be used outside of real-time workflows. The `onMessage`
+   * callback will be null.
    *
    * @return A list of messages that occurred during inference. If no tools are called, this will
    *   contain the user and assistant message pair. If the agent calls tools, all calls and results
@@ -270,7 +260,7 @@ abstract class WorkflowAgent<S>(
 
     val messageBuffer = mutableListOf<ChatMessage>()
 
-    completionInner(ChatMessage.user(content), messageBuffer)
+    completionInner(ChatMessage.user(content), messageBuffer, null)
 
     // Original content for storage, without any enrichment
     val originalUserMessage =
@@ -283,11 +273,20 @@ abstract class WorkflowAgent<S>(
    * Executes chat completion without streaming and collects the interaction to the passed in
    * message buffer.
    *
-   * **This implementation does not include the user message in the buffer.**
+   * **This implementation does not include the user message in the buffer when the invocation
+   * ends.**
    *
    * This implementation should be used in cases where the completion is cancellable.
+   *
+   * @param userMessage Immutable reference to the original user message.
+   * @param messageBuffer The message buffer for tracking messages.
+   * @param onMessage Callback that executes when a message is received from the LLM.
    */
-  suspend fun completion(userMessage: ChatMessage, messageBuffer: MutableList<ChatMessage>) {
+  suspend fun completion(
+    userMessage: ChatMessage,
+    messageBuffer: MutableList<ChatMessage>,
+    onMessage: (suspend (ChatMessage) -> Unit)?,
+  ) {
     var text = userMessage.content!!.text()
 
     contextEnrichment?.let {
@@ -298,7 +297,7 @@ abstract class WorkflowAgent<S>(
 
     val message = userMessage.copy(content = userMessage.content!!.copyWithText(text))
 
-    completionInner(message, messageBuffer)
+    completionInner(message, messageBuffer, onMessage)
   }
 
   /**
@@ -315,6 +314,7 @@ abstract class WorkflowAgent<S>(
   private suspend fun completionInner(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
+    onMessage: (suspend (ChatMessage) -> Unit)?,
     attempt: Int = 0,
   ) {
     if (attempt == 0) {
@@ -345,7 +345,7 @@ abstract class WorkflowAgent<S>(
 
     val message = completion.choices.first().message
 
-    onMessage(message)
+    onMessage?.invoke(message)
 
     messageBuffer.add(message)
 
@@ -361,7 +361,12 @@ abstract class WorkflowAgent<S>(
         messageBuffer.add(ChatMessage.toolResult(result.content, toolCall.id))
       }
 
-      completionInner(userMessage, messageBuffer, attempt + 1)
+      completionInner(
+        userMessage = userMessage,
+        messageBuffer = messageBuffer,
+        onMessage = onMessage,
+        attempt = attempt + 1,
+      )
     } else if (message.content == null) {
       log.warn("{} - assistant message has no content and no tools have been called", id())
     }

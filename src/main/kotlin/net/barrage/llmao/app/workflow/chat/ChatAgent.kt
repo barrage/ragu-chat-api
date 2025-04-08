@@ -5,7 +5,6 @@ import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.LlmProvider
@@ -14,7 +13,6 @@ import net.barrage.llmao.core.model.AgentInstructions
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
-import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.WorkflowAgent
 import net.barrage.llmao.types.KUUID
 
@@ -42,7 +40,6 @@ class ChatAgent(
   /** Obtained from the global settings. */
   private val titleMaxTokens: Int,
   private val context: String,
-  private val emitter: Emitter? = null,
   user: User,
   model: String,
   llmProvider: LlmProvider,
@@ -62,17 +59,6 @@ class ChatAgent(
     history = history,
     contextEnrichment = contextEnrichment,
   ) {
-  override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
-    if (!chunk.content.isNullOrEmpty()) {
-      emitter?.emit(ChatWorkflowMessage.StreamChunk(chunk.content), ChatWorkflowMessage::class)
-    }
-  }
-
-  override suspend fun onMessage(message: ChatMessage) {
-    message.content?.let {
-      emitter?.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage::class)
-    }
-  }
 
   override fun errorMessage(): String {
     return instructions.errorMessage()

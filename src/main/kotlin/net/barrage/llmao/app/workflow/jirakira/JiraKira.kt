@@ -5,12 +5,8 @@ import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolCallResult
@@ -24,7 +20,6 @@ internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.jirakira.Jir
 
 class JiraKira(
   private val jiraUser: JiraUser,
-  private val emitter: Emitter,
   toolchain: Toolchain<JiraKiraState>,
   user: User,
   tokenTracker: TokenUsageTracker,
@@ -52,16 +47,6 @@ class JiraKira(
 
   override fun id(): String = "JIRAKIRA"
 
-  override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
-    throw AppError.internal("Jira Kira does not support streaming")
-  }
-
-  override suspend fun onMessage(message: ChatMessage) {
-    message.content?.let {
-      emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage::class)
-    }
-  }
-
   override suspend fun onToolError(toolCallData: ToolCallData, e: Throwable): ToolCallResult {
     if (e is JiraError) {
       LOG.error("Jira API error:", e)
@@ -84,8 +69,13 @@ class JiraKira(
 }
 
 class JiraKiraState(
+  /** Output handle for Jira related events, such as worklog creation. */
   val emitter: Emitter,
+
+  /** The Jira user obtained from the API that initialized the workflow. */
   val jiraUser: JiraUser,
+
+  /** The Jira API client. */
   val api: JiraApi,
 
   /**

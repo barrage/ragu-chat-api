@@ -68,9 +68,11 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     }
     val jiraApi = JiraApi(endpoint = endpoint, apiKey = userJiraApiKey, client = httpClient())
     val jiraUser = jiraApi.getCurrentJiraUser()
+
+    val tempoWorklogAttributes = jiraApi.listWorklogAttributes()
     val worklogAttributes = jiraKiraRepository.listAllWorklogAttributes()
 
-    val tools = loadTools(jiraApi, worklogAttributes)
+    val tools = loadTools(tempoWorklogAttributes, worklogAttributes)
 
     val state =
       JiraKiraState(
@@ -115,7 +117,6 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
           llmProvider = providers.llm.getProvider(jiraKiraLlmProvider),
           tokenTracker = tokenTracker,
           model = jiraKiraModel,
-          emitter = emitter,
           user = user,
           toolchain = toolchain,
           history =
@@ -146,8 +147,8 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
    * All attributes are obtained from the Jira API and are matched against the ones defined in the
    * database. Only those that are present in the database will be included in the tool definitions.
    */
-  private suspend fun loadTools(
-    api: JiraApi,
+  private fun loadTools(
+    attributes: List<TempoWorkAttribute>,
 
     /**
      * A set of attributes that are allowed/required to be used in worklog entries. This is
@@ -167,8 +168,6 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
       UpdateWorklogEntrySchema.function.parameters.properties.toMutableMap()
 
     val requiredAttributes = worklogAttributes.filter { it.required }.map { it.key }
-
-    val attributes = api.listWorklogAttributes()
 
     for (attribute in attributes) {
       val worklogAttribute = worklogAttributes.find { it.key == attribute.key }

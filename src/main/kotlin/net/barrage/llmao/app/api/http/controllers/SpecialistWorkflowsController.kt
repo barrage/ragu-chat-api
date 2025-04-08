@@ -7,18 +7,23 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.Adapters
+import net.barrage.llmao.app.JIRAKIRA_WORKFLOW_ID
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.AppError
 
 private const val JIRA_KIRA_NAME = "Gojira"
 
 fun Route.specialistWorkflowRoutes() {
-  get("/workflows", listSpecialists()) {
+  get("/agents/specialists", listSpecialists()) {
     val specialists = mutableListOf<SpecialistAgent>()
 
     Adapters.runIfEnabled<JiraKiraWorkflowFactory> {
       specialists.add(
-        SpecialistAgent(name = JIRA_KIRA_NAME, description = "Be a Jira hero.", workflowTypeId = "")
+        SpecialistAgent(
+          name = JIRA_KIRA_NAME,
+          description = "The hero Jira needs, but does not deserve.",
+          workflowId = JIRAKIRA_WORKFLOW_ID,
+        )
       )
 
       call.respond(specialists)
@@ -27,7 +32,7 @@ fun Route.specialistWorkflowRoutes() {
 }
 
 @Serializable
-data class SpecialistAgent(val name: String, val description: String, val workflowTypeId: String)
+data class SpecialistAgent(val name: String, val description: String, val workflowId: String)
 
 private fun listSpecialists(): RouteConfig.() -> Unit = {
   tags("agents/specialists")
