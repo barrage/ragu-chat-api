@@ -1,6 +1,5 @@
 package net.barrage.llmao.app.workflow.chat
 
-import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.ProcessedMessageGroup
@@ -8,9 +7,9 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.tryUuid
+import net.barrage.llmao.types.KUUID
 
 /** Implementation of a [ChatWorkflowBase] for user-created agents. */
 class ChatWorkflow(

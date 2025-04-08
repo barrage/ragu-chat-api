@@ -21,7 +21,7 @@ import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll

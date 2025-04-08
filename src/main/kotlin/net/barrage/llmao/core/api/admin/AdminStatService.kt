@@ -13,8 +13,8 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
 import net.barrage.llmao.core.token.TokenUsage
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KUUID
 
 class AdminStatService(
   private val providers: ProviderState,

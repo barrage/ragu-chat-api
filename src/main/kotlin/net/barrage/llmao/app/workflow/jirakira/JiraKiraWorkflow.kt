@@ -7,8 +7,8 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.types.KUUID
 
 class JiraKiraWorkflow(
   id: KUUID,

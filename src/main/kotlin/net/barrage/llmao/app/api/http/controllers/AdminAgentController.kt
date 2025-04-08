@@ -24,6 +24,7 @@ import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.api.admin.AdminAgentService
+import net.barrage.llmao.core.api.admin.AdminSettingsService
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration
@@ -36,16 +37,15 @@ import net.barrage.llmao.core.model.CreateAgent
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.model.Message
+import net.barrage.llmao.core.model.SettingKey
 import net.barrage.llmao.core.model.UpdateAgent
 import net.barrage.llmao.core.model.UpdateCollections
 import net.barrage.llmao.core.model.UpdateCollectionsResult
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.api.admin.SettingKey
-import net.barrage.llmao.core.api.admin.AdminSettingsService
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.string
 import net.barrage.llmao.tryUuid
+import net.barrage.llmao.types.KUUID
 
 fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: AdminSettingsService) {
   val maxImageUploadSize = this.environment.config.string("blob.image.maxFileSize").toLong()

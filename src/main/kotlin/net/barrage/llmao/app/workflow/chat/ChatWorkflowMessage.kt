@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.MessageAttachment
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 @Serializable
 @JsonClassDiscriminator("type")

@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.token.TokenUsageAmount
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 /**
  * Native chat message chunk (when streaming) used to handle potentially differing chunks from

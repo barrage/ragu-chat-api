@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 /**
  * An event listener for propagating application events to the chat server. The handler for events

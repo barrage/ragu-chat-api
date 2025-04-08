@@ -3,9 +3,9 @@ package net.barrage.llmao.app.adapters.whatsapp.model
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.Number
 import net.barrage.llmao.core.Validation
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.WhatsAppNumbersRecord
+import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KUUID
 
 @Serializable
 data class WhatsAppNumber(

@@ -23,7 +23,7 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 fun main(args: Array<String>) = EngineMain.main(args)
 

@@ -7,9 +7,9 @@ import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.token.TokenUsage
 import net.barrage.llmao.core.token.toTokenUsage
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.TOKEN_USAGE
+import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 

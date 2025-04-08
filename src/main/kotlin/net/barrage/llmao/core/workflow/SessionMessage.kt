@@ -4,7 +4,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 /** System messages used to control sessions. */
 @Serializable

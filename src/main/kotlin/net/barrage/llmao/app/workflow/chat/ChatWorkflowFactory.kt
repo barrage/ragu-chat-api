@@ -9,8 +9,6 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.RepositoryState
 import net.barrage.llmao.core.api.admin.AdminSettingsService
-import net.barrage.llmao.core.api.admin.SettingKey
-import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
@@ -20,6 +18,7 @@ import net.barrage.llmao.core.llm.ToolRegistry
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.core.model.SettingKey
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.repository.ChatRepositoryRead
@@ -27,11 +26,11 @@ import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.LOG
 import net.barrage.llmao.core.token.TokenUsageTracker
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
 import net.barrage.llmao.tryUuid
+import net.barrage.llmao.types.KUUID
 
 object ChatWorkflowFactory : WorkflowFactory {
   private lateinit var providers: ProviderState

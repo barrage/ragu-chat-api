@@ -2,7 +2,7 @@ package net.barrage.llmao.core.llm
 
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.chat.ChatAgentCollection
+import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker

@@ -11,7 +11,7 @@ import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 /** API designed for end-user operations. Restricts access to chats owned by the user. */
 class PublicChatService(

@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.Api
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 typealias CallableTool<S> = suspend (state: S, jsonArguments: String) -> String
 

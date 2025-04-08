@@ -25,7 +25,7 @@ import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.types.KOffsetDateTime
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance

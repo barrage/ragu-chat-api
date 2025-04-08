@@ -5,7 +5,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -20,7 +19,7 @@ import net.barrage.llmao.core.Range
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -36,11 +35,9 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun invalidJsonFieldType() = test {
+  fun invalidJsonFieldType() = test { client ->
     routing { put("/error-test") { call.receive<TestJson>() } }
     val invalidJson = "{ \"foo\": \"four\", \"bar\": \"twenty\" }"
-
-    val client = createClient { install(ContentNegotiation) { json() } }
 
     val response =
       client.put("/error-test") {
@@ -56,13 +53,11 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun invalidJsonFieldTypeUuid() = test {
+  fun invalidJsonFieldTypeUuid() = test { client ->
     @Serializable data class TestJsonUuid(val foo: KUUID)
     routing { put("/error-test") { call.receive<TestJsonUuid>() } }
     val invalidJson = "{ \"foo\": \"goofd\", \"bar\": \"twenty\" }"
 
-    val client = createClient { install(ContentNegotiation) { json() } }
-
     val response =
       client.put("/error-test") {
         contentType(ContentType.Application.Json)
@@ -76,12 +71,10 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun missingJsonField() = test {
+  fun missingJsonField() = test { client ->
     routing { put("/error-test") { call.receive<TestJson>() } }
     val invalidJson = "{ \"foo\": \"John\" }"
 
-    val client = createClient { install(ContentNegotiation) { json() } }
-
     val response =
       client.put("/error-test") {
         contentType(ContentType.Application.Json)
@@ -95,9 +88,8 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun invalidUuidInPath() = test {
+  fun invalidUuidInPath() = test { client ->
     routing { put("/error/{id}") { KUUID.fromString(call.parameters["id"]) } }
-    val client = createClient { install(ContentNegotiation) { json() } }
     val response = client.put("/error/foo") { contentType(ContentType.Application.Json) }
     val error = response.body<AppError>()
     assertEquals(400, response.status.value)
@@ -105,7 +97,7 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun notBlankValidationFailure() = test {
+  fun notBlankValidationFailure() = test { client ->
     @Serializable
     data class ValidationTestJson(@NotBlank(message = "You done goof'd") val foo: String) :
       Validation
@@ -126,8 +118,6 @@ class AppErrorHandlingTests : IntegrationTest() {
 
     val invalidJson = "{ \"foo\": \"   \" }"
 
-    val client = createClient { install(ContentNegotiation) { json() } }
-
     val response =
       client.put("/error-test") {
         contentType(ContentType.Application.Json)
@@ -143,7 +133,7 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun rangeValidationFailure() = test {
+  fun rangeValidationFailure() = test { client ->
     @Serializable
     data class ValidationTestJson(@Range(min = 0.0, max = 1.0) val foo: Double) : Validation
 
@@ -158,8 +148,6 @@ class AppErrorHandlingTests : IntegrationTest() {
     }
 
     val invalidJson = "{ \"foo\": 6.9 }"
-
-    val client = createClient { install(ContentNegotiation) { json() } }
 
     val response =
       client.put("/error-test") {
@@ -176,7 +164,7 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun rangeUpdateValidationFailure() = test {
+  fun rangeUpdateValidationFailure() = test { client ->
     @Serializable
     data class ValidationTestJson(@Range(min = 0.0, max = 1.0) val foo: PropertyUpdate<Double>) :
       Validation
@@ -193,8 +181,6 @@ class AppErrorHandlingTests : IntegrationTest() {
 
     val invalidJson = "{ \"foo\": 6.9 }"
 
-    val client = createClient { install(ContentNegotiation) { json() } }
-
     val response =
       client.put("/error-test") {
         contentType(ContentType.Application.Json)
@@ -210,15 +196,13 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun happyPathUuid() = test {
+  fun happyPathUuid() = test { client ->
     routing {
       get("/happy/{path}") {
         call.pathUuid("path")
         call.respond(HttpStatusCode.OK)
       }
     }
-
-    val client = createClient { install(ContentNegotiation) { json() } }
     val id = KUUID.randomUUID()
     val response = client.get("/happy/$id") {}
 
@@ -226,7 +210,7 @@ class AppErrorHandlingTests : IntegrationTest() {
   }
 
   @Test
-  fun sadPathUuid() = test {
+  fun sadPathUuid() = test { client ->
     routing {
       get("/sad/{path}") {
         call.pathUuid("path")
@@ -234,7 +218,6 @@ class AppErrorHandlingTests : IntegrationTest() {
       }
     }
 
-    val client = createClient { install(ContentNegotiation) { json() } }
     val response = client.get("/sad/foo") {}
 
     val error = response.body<AppError>()

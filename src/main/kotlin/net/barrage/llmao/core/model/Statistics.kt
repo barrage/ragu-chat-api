@@ -1,7 +1,7 @@
 package net.barrage.llmao.core.model
 
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 @Serializable
 data class AgentCounts(

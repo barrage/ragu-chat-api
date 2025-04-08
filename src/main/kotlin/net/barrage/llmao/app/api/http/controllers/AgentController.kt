@@ -14,7 +14,7 @@ import net.barrage.llmao.core.api.pub.PublicAgentService
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 fun Route.agentsRoutes(service: PublicAgentService) {
   route("/agents") {

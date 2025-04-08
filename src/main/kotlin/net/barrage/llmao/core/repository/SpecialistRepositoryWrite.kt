@@ -5,10 +5,10 @@ import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.model.MessageInsert
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.SpecialistWorkflows.Companion.SPECIALIST_WORKFLOWS
 import net.barrage.llmao.tables.references.SPECIALIST_MESSAGES
 import net.barrage.llmao.tables.references.SPECIALIST_MESSAGE_GROUPS
+import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 

@@ -31,6 +31,8 @@ import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.MessageGroupAggregate
+import net.barrage.llmao.core.model.SettingKey
+import net.barrage.llmao.core.model.SettingsUpdate
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.toAgent
 import net.barrage.llmao.core.model.toAgentCollection
@@ -39,9 +41,6 @@ import net.barrage.llmao.core.model.toChat
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
-import net.barrage.llmao.core.api.admin.SettingKey
-import net.barrage.llmao.core.api.admin.SettingsUpdate
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
@@ -54,6 +53,7 @@ import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_GROUPS
 import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
+import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL

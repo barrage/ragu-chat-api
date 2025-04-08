@@ -1,12 +1,12 @@
 package net.barrage.llmao.app.adapters.whatsapp
 
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -18,14 +18,11 @@ import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResponse
 import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.model.UpdateNumber
 import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
+import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.api.admin.AdminSettingsService
-import net.barrage.llmao.core.api.admin.SettingKey
-import net.barrage.llmao.core.api.admin.SettingUpdate
-import net.barrage.llmao.core.api.admin.SettingsUpdate
-import net.barrage.llmao.core.chat.ChatAgent
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.MessageBasedHistory
@@ -37,6 +34,9 @@ import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages
+import net.barrage.llmao.core.model.SettingKey
+import net.barrage.llmao.core.model.SettingUpdate
+import net.barrage.llmao.core.model.SettingsUpdate
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
@@ -47,8 +47,8 @@ import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTracker
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tryUuid
+import net.barrage.llmao.types.KUUID
 
 private const val WHATSAPP_CHAT_TOKEN_ORIGIN = "workflow.whatsapp"
 private const val MAX_HISTORY_MESSAGES = 50

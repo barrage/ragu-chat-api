@@ -16,7 +16,7 @@ import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.model.ChatWithMessages
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 fun Route.whatsAppHookRoutes(whatsAppAdapter: WhatsAppAdapter) {
   post("/whatsapp/webhook", infobipResponse()) {

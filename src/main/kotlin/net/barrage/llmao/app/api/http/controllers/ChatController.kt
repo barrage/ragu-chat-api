@@ -27,7 +27,7 @@ import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.storage.ATTACHMENTS_PATH
 import net.barrage.llmao.core.storage.BlobStorage
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 fun Route.chatsRoutes(service: PublicChatService, imageStorage: BlobStorage<Image>) {
   route("/chats") {

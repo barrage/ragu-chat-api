@@ -12,8 +12,8 @@ import net.barrage.llmao.core.api.admin.AdminStatService
 import net.barrage.llmao.core.model.AgentChatTimeSeries
 import net.barrage.llmao.core.model.DashboardCounts
 import net.barrage.llmao.core.model.common.Period
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KUUID
 
 fun Route.administrationRouter(service: AdminStatService) {
   get("/admin/providers", providers()) {

@@ -12,7 +12,7 @@ import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.SearchFiltersAdminChats
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 /** Handles Chat CRUD. */
 class AdminChatService(

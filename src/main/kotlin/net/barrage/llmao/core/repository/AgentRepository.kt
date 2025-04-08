@@ -33,7 +33,6 @@ import net.barrage.llmao.core.model.toAgentCollection
 import net.barrage.llmao.core.model.toAgentConfiguration
 import net.barrage.llmao.core.model.toAgentTool
 import net.barrage.llmao.core.set
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
@@ -41,6 +40,7 @@ import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import net.barrage.llmao.tables.references.AGENT_PERMISSIONS
 import net.barrage.llmao.tables.references.AGENT_TOOLS
+import net.barrage.llmao.types.KUUID
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.InsertSetMoreStep

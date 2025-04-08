@@ -31,7 +31,7 @@ import net.barrage.llmao.core.model.UpdateAgentConfiguration
 import net.barrage.llmao.core.model.UpdateAgentInstructions
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll

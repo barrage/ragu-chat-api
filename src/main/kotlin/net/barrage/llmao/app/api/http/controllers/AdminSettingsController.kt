@@ -10,7 +10,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.api.admin.AdminSettingsService
-import net.barrage.llmao.core.api.admin.SettingsUpdate
+import net.barrage.llmao.core.model.SettingsUpdate
 
 fun Route.adminSettingsRoutes(settingsService: AdminSettingsService) {
   route("/admin/settings") {

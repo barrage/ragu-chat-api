@@ -9,12 +9,12 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.receiveJson
 import net.barrage.llmao.sendClientSystem
+import net.barrage.llmao.types.KUUID
 import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals

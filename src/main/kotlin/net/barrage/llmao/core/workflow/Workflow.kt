@@ -1,6 +1,6 @@
 package net.barrage.llmao.core.workflow
 
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 /**
  * A workflow represents interactions between a user and an agent (or multiple).

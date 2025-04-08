@@ -8,10 +8,10 @@ import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.TimeSeries
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentToolsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
+import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KUUID
 
 @Serializable
 data class Agent(

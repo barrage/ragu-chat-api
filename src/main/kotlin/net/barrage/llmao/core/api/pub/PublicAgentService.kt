@@ -7,7 +7,7 @@ import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.repository.AgentRepository
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 /** End-user agent API. */
 class PublicAgentService(private val repository: AgentRepository) {

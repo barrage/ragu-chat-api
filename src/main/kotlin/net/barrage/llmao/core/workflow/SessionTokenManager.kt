@@ -2,10 +2,9 @@ package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
-private val LOG =
-  KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketTokenManager")
+private val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketTokenManager")
 
 /** Handles the registration and removal of WS tokens. */
 class SessionTokenManager {

@@ -9,7 +9,7 @@ import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
-import net.barrage.llmao.core.chat.ChatAgent
+import net.barrage.llmao.app.workflow.chat.ChatAgent
 import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentFull

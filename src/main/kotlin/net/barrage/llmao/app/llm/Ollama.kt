@@ -23,7 +23,7 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.types.KOffsetDateTime
 
 class Ollama(private val endpoint: String) : LlmProvider {
   private val client: HttpClient = httpClient()

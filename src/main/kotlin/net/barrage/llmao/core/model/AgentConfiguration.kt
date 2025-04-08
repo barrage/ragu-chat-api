@@ -10,9 +10,9 @@ import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.addSchemaErr
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.core.types.KOffsetDateTime
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
+import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KUUID
 
 @Serializable
 data class AgentConfiguration(

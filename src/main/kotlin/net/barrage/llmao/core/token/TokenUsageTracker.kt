@@ -6,10 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
-internal val LOG =
-  KtorSimpleLogger("net.barrage.llmao.core.tokens.TokenUsageTracker")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.tokens.TokenUsageTracker")
 
 /** Used for tracking token usage when embedding and performing inference. */
 class TokenUsageTracker(

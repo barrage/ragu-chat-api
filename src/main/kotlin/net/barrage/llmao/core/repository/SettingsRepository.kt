@@ -6,9 +6,9 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.api.admin.LOG
-import net.barrage.llmao.core.api.admin.SettingKey
-import net.barrage.llmao.core.api.admin.SettingsUpdate
 import net.barrage.llmao.core.model.ApplicationSetting
+import net.barrage.llmao.core.model.SettingKey
+import net.barrage.llmao.core.model.SettingsUpdate
 import net.barrage.llmao.core.model.toModel
 import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import org.jooq.DSLContext

@@ -31,7 +31,7 @@ import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.storage.AVATARS_PATH
 import net.barrage.llmao.core.storage.BlobStorage
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 class AdminAgentService(
   private val providers: ProviderState,

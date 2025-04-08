@@ -17,8 +17,7 @@ import io.github.smiley4.schemakenerator.swagger.SwaggerSteps.withTitle
 import io.github.smiley4.schemakenerator.swagger.data.TitleType
 import io.ktor.server.application.*
 import io.ktor.server.routing.Route
-import net.barrage.llmao.core.model.common.Role
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 fun Route.openApiRoutes() {
   route("openapi.json") { openApi() }
@@ -119,21 +118,6 @@ fun RequestConfig.queryListChatsFilters() {
   }
   queryParameter<String>("title") {
     description = "Filter by chat title"
-    required = false
-  }
-}
-
-fun RequestConfig.queryListUsersFilters() {
-  queryParameter<String>("name") {
-    description = "Filter by name"
-    required = false
-  }
-  queryParameter<Role>("role") {
-    description = "Filter by role"
-    required = false
-  }
-  queryParameter<Boolean>("active") {
-    description = "Filter by active status"
     required = false
   }
 }

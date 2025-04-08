@@ -8,23 +8,23 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.api.admin.AdminSettingsService
-import net.barrage.llmao.core.api.admin.SettingKey
 import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolchainBuilder
+import net.barrage.llmao.core.model.SettingKey
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTracker
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
 import net.barrage.llmao.string
+import net.barrage.llmao.types.KUUID
 
 object JiraKiraWorkflowFactory : WorkflowFactory {
   /** Jira endpoint. */

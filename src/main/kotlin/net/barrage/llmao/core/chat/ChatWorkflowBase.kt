@@ -18,10 +18,10 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowAgent
+import net.barrage.llmao.types.KUUID
 
 /**
  * Implementation of a workflow that is essentially a runtime for a conversation with a single

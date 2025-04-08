@@ -25,7 +25,7 @@ import net.barrage.llmao.app.api.http.controllers.specialists.jiraKiraUserRoutes
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowFactory
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.types.KUUID
 
 fun Application.configureRouting(state: ApplicationState) {
   routing {

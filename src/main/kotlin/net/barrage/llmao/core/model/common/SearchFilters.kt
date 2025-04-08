@@ -1,8 +1,6 @@
 package net.barrage.llmao.core.model.common
 
-import net.barrage.llmao.core.types.KUUID
-
-data class SearchFiltersAdminUsers(val name: String?, val active: Boolean?, val role: Role?)
+import net.barrage.llmao.types.KUUID
 
 data class SearchFiltersAdminAgents(val name: String?, val active: Boolean?)
 
