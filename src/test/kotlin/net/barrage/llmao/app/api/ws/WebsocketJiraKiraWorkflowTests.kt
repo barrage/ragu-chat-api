@@ -2,6 +2,7 @@ package net.barrage.llmao.app.api.ws
 
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
 import net.barrage.llmao.ADMIN_USER
@@ -61,6 +62,8 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
     }
 
     assert(asserted)
+    // We have to wait here because pool can get shut down
+    delay(2000)
   }
 
   @Test
@@ -98,5 +101,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
     }
 
     assertEquals(3, assertions)
+    // We have to wait here because pool can get shut down
+    delay(2000)
   }
 }
