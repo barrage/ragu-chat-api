@@ -277,7 +277,7 @@ data class JiraIssueShort(
   val id: String,
   val key: String,
   val summary: String,
-  val assigneeName: String?,
+  val assigneeName: String? = null,
   val priority: String,
   val created: KOffsetDateTime,
   val updated: KOffsetDateTime,
@@ -379,7 +379,7 @@ data class TempoWorklogEntry(
   val location: Location,
   val attributes: Map<String, WorkAttribute>,
   val timeSpentSeconds: Int,
-  val issue: Issue?,
+  val issue: Issue? = null,
   val tempoWorklogId: Int,
   val originId: Int,
   val worker: String,
@@ -407,7 +407,7 @@ data class Issue(
   val id: Int,
   val accountKey: String,
   val estimatedRemainingSeconds: Int? = null,
-  val epicIssue: EpicIssue?,
+  val epicIssue: EpicIssue? = null,
   val projectId: Int,
   val projectKey: String,
   val issueType: String,
@@ -416,7 +416,7 @@ data class Issue(
   val reporterKey: String,
   val issueStatus: String,
   val components: List<String>,
-  val epicKey: String?,
+  val epicKey: String? = null,
   val internalIssue: Boolean,
 )
 
@@ -551,8 +551,8 @@ object CreateWorklogInputSerializer : KSerializer<CreateWorklogInput> {
 @Serializable(with = UpdateWorklogInputSerializer::class)
 data class UpdateWorklogInput(
   val worklogEntryId: Int,
-  val started: KOffsetDateTime?,
-  val timeSpentSeconds: Int?,
+  val started: KOffsetDateTime? = null,
+  val timeSpentSeconds: Int? = null,
   val comment: String,
   val attributes: Map<String, String>,
 )
@@ -560,9 +560,9 @@ data class UpdateWorklogInput(
 @Serializable
 private data class UpdateWorklogInputJira(
   val originId: Int,
-  val started: String?,
-  val timeSpentSeconds: Int?,
-  val comment: String?,
+  val started: String? = null,
+  val timeSpentSeconds: Int? = null,
+  val comment: String? = null,
   val attributes: Map<String, WorklogInputAttributeJira>,
 )
 
