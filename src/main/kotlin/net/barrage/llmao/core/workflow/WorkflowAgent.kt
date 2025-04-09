@@ -11,9 +11,7 @@ import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.LlmProvider
 import net.barrage.llmao.core.llm.ToolCallData
-import net.barrage.llmao.core.llm.ToolCallResult
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.llm.collectToolCalls
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
@@ -22,7 +20,30 @@ import net.barrage.llmao.core.token.TokenUsageType
 
 private const val DEFAULT_MAX_TOOL_ATTEMPTS: Int = 5
 
-abstract class WorkflowAgent<S>(
+/** Interface for real-time event handling in workflows. */
+interface AgentEventHandler {
+  /**
+   * What to do on tool calls.
+   *
+   * If the method returns null, the tool result will not be added to the message buffer for the
+   * current inference run. This is for cases when workflows need to stop inference for some reason.
+   */
+  suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>?
+
+  /**
+   * Callback that executes when a stream chunk is received from the LLM. Called for each chunk
+   * received from the LLM.
+   */
+  suspend fun onStreamChunk(chunk: ChatMessageChunk)
+
+  /**
+   * Callback that executes on each message received from the LLM. All messages passed to this
+   * callback will be the assistant's.
+   */
+  suspend fun onMessage(message: ChatMessage)
+}
+
+abstract class WorkflowAgent(
   /**
    * User entitlements are used to check application permissions.
    *
@@ -42,9 +63,6 @@ abstract class WorkflowAgent<S>(
   /** Completion parameters used for inference. */
   protected val completionParameters: ChatCompletionParameters,
 
-  /** LLM tools. */
-  protected val toolchain: Toolchain<S>?,
-
   /** Used to track token usage, if applicable. */
   protected val tokenTracker: TokenUsageTracker,
 
@@ -62,9 +80,10 @@ abstract class WorkflowAgent<S>(
    * implementation.
    */
   protected val contextEnrichment: List<ContextEnrichment>?,
-) {
+
   /** Available tools. */
-  val tools: List<ToolDefinition>? = toolchain?.listToolSchemas()
+  protected val tools: List<ToolDefinition>?,
+) {
 
   protected open val log = KtorSimpleLogger("net.barrage.llmao.core.workflow.WorkflowAgent")
 
@@ -73,12 +92,6 @@ abstract class WorkflowAgent<S>(
 
   /** The system message. Not included in histories, always sent to the LLM. */
   abstract fun context(): String
-
-  /** What to do when a tool call fails. */
-  open suspend fun onToolError(toolCallData: ToolCallData, e: Throwable): ToolCallResult {
-    log.error("Error in tool call; data: {}", toolCallData, e)
-    return ToolCallResult(id = toolCallData.id, content = "error: ${e.message}")
-  }
 
   open fun errorMessage(): String = "An error occurred. Please try again later."
 
@@ -104,15 +117,15 @@ abstract class WorkflowAgent<S>(
    *   this is not empty, it means a manual cancel occurred. If this is empty at the end of the
    *   stream it means the stream fully completed and the assistant message is the last message in
    *   the buffer.
-   * @param onChunk Callback that executes when a stream chunk is received from the LLM. Called for
-   *   each chunk received from the LLM.
+   * @param eventHandler Event handler for specific LLM outputs. This is necessary here since
+   *   streaming calls usually indicate real-time workflows.
    */
   suspend fun stream(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
-    onChunk: (suspend (ChatMessageChunk) -> Unit)?,
-  ) = streamInner(userMessage, messageBuffer, out, onChunk, 0)
+    eventHandler: AgentEventHandler,
+  ) = streamInner(userMessage, messageBuffer, out, 0, eventHandler)
 
   /**
    * See [stream].
@@ -123,8 +136,8 @@ abstract class WorkflowAgent<S>(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
-    onChunk: (suspend (ChatMessageChunk) -> Unit)?,
     attempt: Int = 0,
+    eventHandler: AgentEventHandler,
   ) {
     // Perform RAG only on the first attempt and swap the initial user message with an enriched one.
     // We need to copy the original since we do not store the enriched message, only the original.
@@ -158,7 +171,7 @@ abstract class WorkflowAgent<S>(
     var finishReason: FinishReason? = null
 
     llmStream.collect { chunk ->
-      onChunk?.invoke(chunk)
+      eventHandler.onStreamChunk(chunk)
 
       if (!chunk.content.isNullOrEmpty()) {
         out.append(chunk.content)
@@ -197,26 +210,15 @@ abstract class WorkflowAgent<S>(
     out.clear()
 
     if (toolCalls.isEmpty()) {
+      // No tool calls means inference is finished
       return
     }
 
     // From this point on, we are handling tool calls and we need to re-prompt the LLM with
     // their results.
 
-    log.debug(
-      "{} - (stream) calling tools: {}",
-      id(),
-      toolCalls.values.joinToString(", ") { it.name },
-    )
-
-    for (toolCall in toolCalls.values) {
-      // Safe to !! because toolchain is not null if toolCalls is not empty
-      try {
-        val result = toolchain!!.processToolCall(toolCall, ::onToolError)
-        messageBuffer.add(ChatMessage.toolResult(result.content, toolCall.id))
-      } catch (e: Throwable) {
-        messageBuffer.add(ChatMessage.toolResult("error: ${e.message}", toolCall.id))
-      }
+    if (!handleToolCalls(toolCalls.values.toList(), messageBuffer, eventHandler)) {
+      return
     }
 
     streamInner(
@@ -224,10 +226,11 @@ abstract class WorkflowAgent<S>(
       messageBuffer = messageBuffer,
       out = out,
       attempt = attempt + 1,
-      onChunk = onChunk,
+      eventHandler = eventHandler,
     )
   }
 
+  /** Add messages to the agent's history. */
   fun addToHistory(messages: List<ChatMessage>) {
     history.add(messages)
   }
@@ -237,8 +240,8 @@ abstract class WorkflowAgent<S>(
    *
    * **This implementation includes the user message in the returned list.**
    *
-   * This implementation is intended to be used outside of real-time workflows. The `onMessage`
-   * callback will be null.
+   * This implementation is intended to be used outside of real-time workflows. The `eventHandler`
+   * will be null.
    *
    * @return A list of messages that occurred during inference. If no tools are called, this will
    *   contain the user and assistant message pair. If the agent calls tools, all calls and results
@@ -260,7 +263,11 @@ abstract class WorkflowAgent<S>(
 
     val messageBuffer = mutableListOf<ChatMessage>()
 
-    completionInner(ChatMessage.user(content), messageBuffer, null)
+    completionInner(
+      userMessage = ChatMessage.user(content),
+      messageBuffer = messageBuffer,
+      eventHandler = null,
+    )
 
     // Original content for storage, without any enrichment
     val originalUserMessage =
@@ -280,12 +287,11 @@ abstract class WorkflowAgent<S>(
    *
    * @param userMessage Immutable reference to the original user message.
    * @param messageBuffer The message buffer for tracking messages.
-   * @param onMessage Callback that executes when a message is received from the LLM.
    */
   suspend fun completion(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
-    onMessage: (suspend (ChatMessage) -> Unit)?,
+    eventHandler: AgentEventHandler,
   ) {
     var text = userMessage.content!!.text()
 
@@ -297,7 +303,7 @@ abstract class WorkflowAgent<S>(
 
     val message = userMessage.copy(content = userMessage.content!!.copyWithText(text))
 
-    completionInner(message, messageBuffer, onMessage)
+    completionInner(message, messageBuffer, 0, eventHandler)
   }
 
   /**
@@ -314,8 +320,8 @@ abstract class WorkflowAgent<S>(
   private suspend fun completionInner(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
-    onMessage: (suspend (ChatMessage) -> Unit)?,
     attempt: Int = 0,
+    eventHandler: AgentEventHandler?,
   ) {
     if (attempt == 0) {
       assert(messageBuffer.isEmpty())
@@ -345,30 +351,45 @@ abstract class WorkflowAgent<S>(
 
     val message = completion.choices.first().message
 
-    onMessage?.invoke(message)
+    eventHandler?.onMessage(message)
 
     messageBuffer.add(message)
 
     if (message.toolCalls != null) {
-      log.debug(
-        "{} - (completion) calling tools: {}",
-        id(),
-        message.toolCalls.joinToString(", ") { it.name },
-      )
-
-      for (toolCall in message.toolCalls) {
-        val result = toolchain!!.processToolCall(toolCall, ::onToolError)
-        messageBuffer.add(ChatMessage.toolResult(result.content, toolCall.id))
+      if (!handleToolCalls(message.toolCalls, messageBuffer, eventHandler)) {
+        return
       }
 
       completionInner(
         userMessage = userMessage,
         messageBuffer = messageBuffer,
-        onMessage = onMessage,
         attempt = attempt + 1,
+        eventHandler = eventHandler,
       )
     } else if (message.content == null) {
       log.warn("{} - assistant message has no content and no tools have been called", id())
     }
+  }
+
+  /**
+   * Process the tool calls using the handler of this instance.
+   *
+   * @return `true` if inference should continue, `false` if it should stop.
+   */
+  private suspend fun handleToolCalls(
+    toolCalls: List<ToolCallData>,
+    messageBuffer: MutableList<ChatMessage>,
+    eventHandler: AgentEventHandler?,
+  ): Boolean {
+    if (eventHandler == null) {
+      log.warn("{} - tool calls received but no handler was provided", id())
+      return false
+    }
+
+    log.debug("{} - calling tools: {}", id(), toolCalls.joinToString(", ") { it.name })
+
+    val len = messageBuffer.size
+    eventHandler.onToolCalls(toolCalls)?.let { messageBuffer.addAll(it) }
+    return messageBuffer.size > len
   }
 }

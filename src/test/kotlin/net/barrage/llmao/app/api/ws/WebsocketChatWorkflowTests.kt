@@ -409,9 +409,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
             assert(message.agentId == agent.agent.id)
             asserted = true
             continue
-          } catch (e: SerializationException) {
-            e.printStackTrace()
-          }
+          } catch (_: SerializationException) {}
 
           try {
             val event = json.decodeFromString<ChatWorkflowMessage>(response)
@@ -425,9 +423,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
             }
 
             continue
-          } catch (e: SerializationException) {
-            e.printStackTrace()
-          }
+          } catch (_: SerializationException) {}
         }
       }
 

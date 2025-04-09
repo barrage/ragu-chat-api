@@ -2,8 +2,8 @@ package net.barrage.llmao.core.llm
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.token.LOG
-import net.barrage.llmao.core.workflow.Emitter
 
 private val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.llm.Toolchain")
 
@@ -17,38 +17,19 @@ private val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.
  */
 class Toolchain<S>(
   private val state: S,
-  private val emitter: Emitter? = null,
   private val agentTools: List<ToolDefinition>,
   private val handlers: Map<String, CallableTool<S>>,
 ) {
 
-  suspend fun processToolCall(
-    data: ToolCallData,
-    onError: suspend (ToolCallData, Throwable) -> ToolCallResult,
-  ): ToolCallResult {
+  suspend fun processToolCall(data: ToolCallData): String {
     LOG.debug("Tool call '{}' - start", data.name)
-
-    emitter?.emit(ToolEvent.ToolCall(data), ToolEvent::class)
 
     if (data.id == null) {
       LOG.debug("Tool call '{}' - ID is null, result will not be correlated with call", data.name)
     }
 
-    val handler = handlers[data.name]
-    val result =
-      try {
-        handler?.invoke(state, data.arguments)
-          ?: throw IllegalStateException("No handler for tool call '${data.name}'")
-      } catch (e: Throwable) {
-        val result = onError(data, e)
-        emitter?.emit(ToolEvent.ToolResult(result), ToolEvent::class)
-        return result
-      }
-
-    val toolResult = ToolCallResult(data.id, result)
-    emitter?.emit(ToolEvent.ToolResult(toolResult), ToolEvent::class)
-
-    return toolResult
+    return handlers[data.name]?.invoke(state, data.arguments)
+      ?: throw AppError.internal("No handler for tool call '${data.name}'")
   }
 
   fun listToolSchemas(): List<ToolDefinition> {
@@ -66,8 +47,7 @@ class ToolchainBuilder<S> {
     return this
   }
 
-  fun build(state: S, emitter: Emitter? = null) =
-    Toolchain(emitter = emitter, state = state, agentTools = agentTools, handlers = handlers)
+  fun build(state: S) = Toolchain(state = state, agentTools = agentTools, handlers = handlers)
 
   fun listToolNames(): List<String> {
     return agentTools.map(ToolDefinition::function).map(ToolFunctionDefinition::name)
@@ -131,9 +111,7 @@ sealed class ToolEvent {
   @Serializable @SerialName("tool.call") data class ToolCall(val data: ToolCallData) : ToolEvent()
 
   /** Sent whenever an agent receives a tool result. */
-  @Serializable
-  @SerialName("tool.result")
-  data class ToolResult(val result: ToolCallResult) : ToolEvent()
+  @Serializable @SerialName("tool.result") data class ToolResult(val result: String) : ToolEvent()
 }
 
 /** Used as a native application model for mapping tool call streams. */
@@ -160,16 +138,6 @@ data class ToolCallChunk(
 
 /** Used as a native application model for mapping function call arguments. */
 @Serializable data class FunctionCall(val name: String?, val arguments: String?)
-
-/** Holds the result of a tool call and its correlation ID. */
-@Serializable
-data class ToolCallResult(
-  /** Tool correlation ID. Used in most LLMs to associate the tool result to the tool call. */
-  val id: String?,
-
-  /** The result of the tool call. */
-  val content: String,
-)
 
 @Serializable data class ToolDefinition(val type: String, val function: ToolFunctionDefinition)
 

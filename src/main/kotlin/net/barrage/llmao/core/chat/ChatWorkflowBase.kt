@@ -16,9 +16,13 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
+import net.barrage.llmao.core.llm.ToolCallData
+import net.barrage.llmao.core.llm.ToolEvent
+import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.workflow.AgentEventHandler
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowAgent
@@ -33,20 +37,23 @@ import net.barrage.llmao.types.KUUID
  *
  * Structured workflows should implement [Workflow] directly.
  */
-abstract class ChatWorkflowBase(
+abstract class ChatWorkflowBase<S>(
   /** Chat ID. */
   val id: KUUID,
 
   /** The proompter. */
   val user: User,
 
+  /** LLM tools. */
+  protected val toolchain: Toolchain<S>?,
+
   /** Encapsulates the agent and its LLM functionality. */
-  protected open val agent: WorkflowAgent<*>,
+  protected open val agent: WorkflowAgent,
 
   /** Output handle. Only chat related events are sent via this reference. */
   protected val emitter: Emitter,
   protected val streamingEnabled: Boolean = true,
-) : Workflow {
+) : Workflow, AgentEventHandler {
   /**
    * If this is not null, it means a stream is currently running and additional input will throw
    * until the stream is complete.
@@ -73,20 +80,37 @@ abstract class ChatWorkflowBase(
     messages: List<ChatMessage>,
   ): ProcessedMessageGroup
 
-  /** Uses [emitter] to emit each chunk of an LLM stream. */
-  open suspend fun onStreamChunk(chunk: ChatMessageChunk) {
+  /** Uses [emitter] to emit each chunk with content of an LLM stream. */
+  override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
     chunk.content?.let {
       emitter.emit(ChatWorkflowMessage.StreamChunk(it), ChatWorkflowMessage::class)
     }
   }
 
-  /** Uses [emitter] to emit the final assistant response. */
-  open suspend fun onMessage(message: ChatMessage) {
+  /** Uses [emitter] to emit any assistant message with content. */
+  override suspend fun onMessage(message: ChatMessage) {
     if (message.role == "assistant") {
       message.content?.let {
         emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage::class)
       }
     }
+  }
+
+  override suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>? {
+    val results = mutableListOf<ChatMessage>()
+    for (toolCall in toolCalls) {
+      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent::class)
+      try {
+        val result = toolchain!!.processToolCall(toolCall)
+        emitter.emit(ToolEvent.ToolResult(result), ToolEvent::class)
+        results.add(ChatMessage.toolResult(result, toolCall.id))
+      } catch (e: Throwable) {
+        val result = "error: ${e.message}"
+        emitter.emit(ToolEvent.ToolResult(result), ToolEvent::class)
+        results.add(ChatMessage.toolResult(result, toolCall.id))
+      }
+    }
+    return results
   }
 
   override fun id(): KUUID {
@@ -129,7 +153,7 @@ abstract class ChatWorkflowBase(
       agent.completion(
         userMessage = userMessage,
         messageBuffer = messageBuffer,
-        onMessage = ::onMessage,
+        eventHandler = this,
       )
 
       log.debug(
@@ -232,7 +256,7 @@ abstract class ChatWorkflowBase(
         userMessage = userMessage,
         messageBuffer = messageBuffer,
         out = responseBuffer,
-        onChunk = ::onStreamChunk,
+        eventHandler = this,
       )
 
       log.debug(

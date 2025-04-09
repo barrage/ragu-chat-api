@@ -8,7 +8,6 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.api.admin.AdminSettingsService
-import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolDefinition
@@ -46,7 +45,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     specialistRepositoryWrite = state.repository.specialistWrite(JIRAKIRA_WORKFLOW_ID)
   }
 
-  override suspend fun new(user: User, agentId: String?, emitter: Emitter): ChatWorkflowBase {
+  override suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow {
     val workflowId = KUUID.randomUUID()
 
     val userJiraApiKey =
@@ -96,7 +95,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
       builder.addTool(definition = tool, handler = fn)
     }
 
-    val toolchain = builder.build(state = state, emitter = emitter)
+    val toolchain = builder.build(state = state)
 
     val tokenizer = Encoder.tokenizer(jiraKiraModel)
 
@@ -112,13 +111,15 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     return JiraKiraWorkflow(
       id = workflowId,
       user = user,
+      toolchain = toolchain,
+      emitter = emitter,
+      repository = specialistRepositoryWrite,
       agent =
         JiraKira(
           llmProvider = providers.llm.getProvider(jiraKiraLlmProvider),
           tokenTracker = tokenTracker,
           model = jiraKiraModel,
           user = user,
-          toolchain = toolchain,
           history =
             tokenizer?.let {
               TokenBasedHistory(
@@ -128,9 +129,8 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
               )
             } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
           jiraUser = jiraUser,
+          tools = toolchain.listToolSchemas(),
         ),
-      emitter = emitter,
-      repository = specialistRepositoryWrite,
     )
   }
 

@@ -76,7 +76,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
 
           try {
             val message = json.decodeFromString<ToolEvent.ToolResult>(response)
-            assertEquals("Success. Worklog entry ID: 464710.", message.result.content)
+            assertEquals("Success. Worklog entry ID: 464710.", message.result)
             assertions += 1
           } catch (_: SerializationException) {}
 

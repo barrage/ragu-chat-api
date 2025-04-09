@@ -1,9 +1,11 @@
 package net.barrage.llmao.app.workflow.chat
 
+import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.ProcessedMessageGroup
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
@@ -16,12 +18,20 @@ class ChatWorkflow(
   id: KUUID,
   user: User,
   emitter: Emitter,
+  toolchain: Toolchain<Api>?,
   override val agent: ChatAgent,
   private val repository: ChatRepositoryWrite,
 
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
-) : ChatWorkflowBase(id = id, user = user, emitter = emitter, agent = agent) {
+) :
+  ChatWorkflowBase<Api>(
+    id = id,
+    user = user,
+    emitter = emitter,
+    toolchain = toolchain,
+    agent = agent,
+  ) {
   override suspend fun onInteractionComplete(
     userMessage: ChatMessage,
     attachments: List<IncomingMessageAttachment>?,

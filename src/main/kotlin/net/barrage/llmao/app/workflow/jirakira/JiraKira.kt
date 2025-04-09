@@ -8,9 +8,7 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.core.llm.ToolCallData
-import net.barrage.llmao.core.llm.ToolCallResult
-import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.workflow.Emitter
@@ -20,21 +18,20 @@ internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.jirakira.Jir
 
 class JiraKira(
   private val jiraUser: JiraUser,
-  toolchain: Toolchain<JiraKiraState>,
   user: User,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
   llmProvider: LlmProvider,
   model: String,
+  tools: List<ToolDefinition>?,
 ) :
-  WorkflowAgent<JiraKiraState>(
+  WorkflowAgent(
     user = user,
     model = model,
     llmProvider = llmProvider,
     tokenTracker = tokenTracker,
     contextEnrichment = null,
     history = history,
-    toolchain = toolchain,
     completionParameters =
       ChatCompletionParameters(
         model = model,
@@ -43,19 +40,10 @@ class JiraKira(
         maxTokens = null,
         tools = null,
       ),
+    tools = tools,
   ) {
 
   override fun id(): String = "JIRAKIRA"
-
-  override suspend fun onToolError(toolCallData: ToolCallData, e: Throwable): ToolCallResult {
-    if (e is JiraError) {
-      LOG.error("Jira API error:", e)
-      return ToolCallResult(id = toolCallData.id, content = "error: ${e.message}")
-    } else {
-      LOG.error("Error in tool call", e)
-      return ToolCallResult(id = toolCallData.id, content = "error: ${e.message}")
-    }
-  }
 
   override fun context(): String {
     return """

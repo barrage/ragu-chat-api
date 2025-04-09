@@ -1,14 +1,13 @@
 package net.barrage.llmao.app.workflow.chat
 
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.LlmProvider
-import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.model.AgentInstructions
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
@@ -44,20 +43,20 @@ class ChatAgent(
   model: String,
   llmProvider: LlmProvider,
   completionParameters: ChatCompletionParameters,
-  toolchain: Toolchain<Api>?,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
   contextEnrichment: List<ContextEnrichment>? = null,
+  tools: List<ToolDefinition>?,
 ) :
-  WorkflowAgent<Api>(
+  WorkflowAgent(
     user = user,
     model = model,
     llmProvider = llmProvider,
     completionParameters = completionParameters,
-    toolchain = toolchain,
     tokenTracker = tokenTracker,
     history = history,
     contextEnrichment = contextEnrichment,
+    tools = tools,
   ) {
 
   override fun errorMessage(): String {

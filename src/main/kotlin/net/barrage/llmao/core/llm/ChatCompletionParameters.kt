@@ -8,7 +8,7 @@ data class ChatCompletionParameters(
   /** How much milligrams of LSD the LLM consumes before generating the response */
   val temperature: Double = 0.1,
 
-  /** The higher the value, the more likely the LLM is to talk about new topics. */
+  /** The higher the value, the less likely the LLM will repeat already generated tokens. */
   val presencePenalty: Double,
 
   /** Maximum number of tokens to generate on completions. */

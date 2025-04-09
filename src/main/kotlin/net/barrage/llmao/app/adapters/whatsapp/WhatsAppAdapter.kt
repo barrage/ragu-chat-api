@@ -263,23 +263,24 @@ class WhatsAppAdapter(
       )
 
     return ChatAgent(
-      agentId = agent.agent.id,
-      configurationId = agent.configuration.id,
-      name = agent.agent.name,
-      instructions = agent.configuration.agentInstructions,
-      titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-      user = user,
-      model = agent.configuration.model,
-      llmProvider = providers.llm.getProvider(agent.configuration.llmProvider),
-      context = agent.configuration.context,
-      completionParameters = completionParameters,
-      toolchain = null,
-      tokenTracker = tokenTracker,
-      history = history,
-      contextEnrichment =
+        agentId = agent.agent.id,
+        configurationId = agent.configuration.id,
+        name = agent.agent.name,
+        instructions = agent.configuration.agentInstructions,
+        titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+        user = user,
+        model = agent.configuration.model,
+        llmProvider = providers.llm.getProvider(agent.configuration.llmProvider),
+        context = agent.configuration.context,
+        completionParameters = completionParameters,
+        tokenTracker = tokenTracker,
+        history = history,
+        contextEnrichment =
         ContextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
-          listOf(it)
+            listOf(it)
         },
+      // TODO: implement
+        tools = null,
     )
   }
 

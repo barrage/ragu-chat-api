@@ -4,6 +4,9 @@ import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.ChatWorkflowBase
 import net.barrage.llmao.core.chat.ProcessedMessageGroup
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ToolCallData
+import net.barrage.llmao.core.llm.ToolEvent
+import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
@@ -14,17 +17,40 @@ class JiraKiraWorkflow(
   id: KUUID,
   user: User,
   emitter: Emitter,
+  toolchain: Toolchain<JiraKiraState>,
   override val agent: JiraKira,
   private val repository: SpecialistRepositoryWrite,
 ) :
-  ChatWorkflowBase(
+  ChatWorkflowBase<JiraKiraState>(
     id = id,
     user = user,
     agent = agent,
     emitter = emitter,
+    toolchain = toolchain,
     streamingEnabled = false,
   ) {
   private var state: JiraKiraWorkflowState = JiraKiraWorkflowState.New
+
+  override suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>? {
+    val results = mutableListOf<ChatMessage>()
+    for (toolCall in toolCalls) {
+      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent::class)
+      val result =
+        try {
+          toolchain!!.processToolCall(toolCall)
+        } catch (e: Throwable) {
+          if (e is JiraError) {
+            LOG.error("Jira API error:", e)
+          } else {
+            LOG.error("Error in tool call", e)
+          }
+          "error: ${e.message}"
+        }
+      emitter.emit(ToolEvent.ToolResult(result), ToolEvent::class)
+      results.add(ChatMessage.toolResult(result, toolCall.id))
+    }
+    return results
+  }
 
   override suspend fun onInteractionComplete(
     userMessage: ChatMessage,

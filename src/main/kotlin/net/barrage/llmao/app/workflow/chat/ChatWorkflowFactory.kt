@@ -65,7 +65,7 @@ object ChatWorkflowFactory : WorkflowFactory {
         services.user.agent.getFull(agentId, user.entitlements)
       }
 
-    val chatAgent = createChatAgent(id, user, agent, emitter)
+    val chatAgent = createChatAgent(id, user, agent)
 
     return ChatWorkflow(
       id = id,
@@ -74,6 +74,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.New,
       user = user,
+      toolchain = loadAgentTools(agent.agent.id),
     )
   }
 
@@ -92,7 +93,7 @@ object ChatWorkflowFactory : WorkflowFactory {
         services.user.agent.getFull(chat.chat.agentId, user.entitlements)
       }
 
-    val chatAgent = createChatAgent(workflowId, user, agent, emitter)
+    val chatAgent = createChatAgent(workflowId, user, agent)
 
     chatAgent.addToHistory(
       chat.messages.items.flatMap { it.messages }.map(ChatMessageProcessor::loadToChatMessage)
@@ -105,16 +106,11 @@ object ChatWorkflowFactory : WorkflowFactory {
       emitter = emitter,
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.Persisted(chat.chat.title!!),
+      toolchain = loadAgentTools(agent.agent.id),
     )
   }
 
-  suspend fun createChatAgent(
-    workflowId: KUUID,
-    user: User,
-    agent: AgentFull,
-    emitter: Emitter? = null,
-  ): ChatAgent {
-
+  suspend fun createChatAgent(workflowId: KUUID, user: User, agent: AgentFull): ChatAgent {
     val tokenizer = Encoder.tokenizer(agent.configuration.model)
 
     val settings = settings.getAllWithDefaults()
@@ -158,7 +154,6 @@ object ChatWorkflowFactory : WorkflowFactory {
           // Tools is a dynamic property that will get set during inference, if the agent has them
           tools = null,
         ),
-      toolchain = loadAgentTools(agent.agent.id, emitter),
       tokenTracker = tokenTracker,
       history =
         tokenizer?.let {
@@ -169,18 +164,15 @@ object ChatWorkflowFactory : WorkflowFactory {
           )
         } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
       contextEnrichment = contextEnrichment?.let { listOf(it) },
+      tools = loadAgentTools(agent.agent.id)?.listToolSchemas(),
     )
   }
 
-  private suspend fun loadAgentTools(agentId: KUUID, emitter: Emitter? = null): Toolchain<Api>? {
+  private suspend fun loadAgentTools(agentId: KUUID): Toolchain<Api>? {
     val agentTools = repository.agent.getAgentTools(agentId).map { it.toolName }
 
     if (agentTools.isEmpty()) {
       return null
-    }
-
-    if (emitter == null) {
-      LOG.warn("Building toolchain without an emitter; Realtime tool call events will not be sent.")
     }
 
     val toolchain = ToolchainBuilder<Api>()
@@ -207,6 +199,6 @@ object ChatWorkflowFactory : WorkflowFactory {
       toolchain.listToolNames().joinToString(", "),
     )
 
-    return toolchain.build(services, emitter)
+    return toolchain.build(services)
   }
 }
