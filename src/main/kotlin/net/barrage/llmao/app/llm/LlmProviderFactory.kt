@@ -2,6 +2,7 @@ package net.barrage.llmao.app.llm
 
 import io.ktor.server.config.*
 import net.barrage.llmao.app.llm.openai.AzureAI
+import net.barrage.llmao.app.llm.openai.OpenAI
 import net.barrage.llmao.app.llm.openai.Vllm
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.llm.LlmProvider
@@ -9,33 +10,28 @@ import net.barrage.llmao.string
 
 class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<LlmProvider>() {
   init {
-    config.tryGetString("ktor.features.llm.openai")?.toBoolean()?.let { enabled ->
-      if (enabled) {
-        providers["openai"] = initOpenAi(config)
-      }
+    if (config.tryGetString("ktor.features.llm.openai").toBoolean()) {
+      with(initOpenAi(config)) { providers[this.id()] = this }
     }
-    config.tryGetString("ktor.features.llm.azure")?.toBoolean()?.let { enabled ->
-      if (enabled) {
-        providers["azure"] = initAzure(config)
-      }
+
+    if (config.tryGetString("ktor.features.llm.azure").toBoolean()) {
+      with(initAzure(config)) { providers[this.id()] = this }
     }
-    config.tryGetString("ktor.features.llm.ollama")?.toBoolean()?.let { enabled ->
-      if (enabled) {
-        providers["ollama"] = initOllama(config)
-      }
+
+    if (config.tryGetString("ktor.features.llm.ollama").toBoolean()) {
+      with(initOllama(config)) { providers[this.id()] = this }
     }
-    config.tryGetString("ktor.features.llm.vllm")?.toBoolean()?.let { enabled ->
-      if (enabled) {
-        providers["vllm"] = initVllm(config)
-      }
+
+    if (config.tryGetString("ktor.features.llm.vllm").toBoolean()) {
+      with(initVllm(config)) { providers[this.id()] = this }
     }
   }
 
-  private fun initOpenAi(config: ApplicationConfig): Vllm {
+  private fun initOpenAi(config: ApplicationConfig): OpenAI {
     val endpoint = config.string("llm.openai.endpoint")
     val apiKey = config.string("llm.openai.apiKey")
 
-    return Vllm(endpoint, apiKey)
+    return OpenAI(endpoint, apiKey)
   }
 
   private fun initAzure(config: ApplicationConfig): AzureAI {
