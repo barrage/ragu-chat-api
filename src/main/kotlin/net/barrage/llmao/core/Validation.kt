@@ -5,7 +5,6 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.functions
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.model.common.PropertyUpdate
 
@@ -55,9 +54,9 @@ interface Validation {
       if (value is Validation) {
         val result = value.validate()
         if (result is ValidationResult.Invalid) {
-          result.reasons.map { reason ->
+          result.reasons.forEach { reason ->
             val original = Json.decodeFromString<ValidationError>(reason)
-            original.copy(fieldName = "${field.name}.${original.fieldName}")
+            errors.add(original.copy(fieldName = "${field.name}.${original.fieldName}"))
           }
         }
       }

@@ -290,6 +290,28 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
+  fun updatingMaxCompletionTokensToZeroFails() = test { client ->
+    val agent = postgres.testAgent()
+    postgres.testAgentConfiguration(agent.id, version = 1)
+
+    val updateAgent =
+      UpdateAgent(
+        configuration = UpdateAgentConfiguration(maxCompletionTokens = PropertyUpdate.Value(0))
+      )
+
+    val response =
+      client.put("/admin/agents/${agent.id}") {
+        header(HttpHeaders.Cookie, adminAccessToken())
+        contentType(ContentType.Application.Json)
+        setBody(updateAgent)
+      }
+
+    assertEquals(422, response.status.value)
+
+    postgres.deleteTestAgent(agent.id)
+  }
+
+  @Test
   fun updatingAgentInstructionsWorks() = test { client ->
     val agent = postgres.testAgent()
     postgres.testAgentConfiguration(agent.id, version = 1)
