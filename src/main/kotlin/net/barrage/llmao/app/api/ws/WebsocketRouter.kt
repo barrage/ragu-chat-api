@@ -24,8 +24,7 @@ import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.SessionTokenManager
 import net.barrage.llmao.types.KUUID
 
-private val LOG =
-  io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketRouter")
+private val LOG = io.ktor.util.logging.KtorSimpleLogger("n.b.l.a.api.ws.WebsocketRouter")
 
 fun Application.websocketServer(listener: EventListener<StateChangeEvent>) {
   val server = SessionManager(listener = listener)
@@ -45,35 +44,26 @@ fun Application.websocketServer(listener: EventListener<StateChangeEvent>) {
       route("/ws") {
         get(websocketGenerateToken()) {
           val user = call.user()
+          LOG.debug("{} - registering token", user.id)
           val token = tokenManager.registerToken(user)
-          call.respond(HttpStatusCode.OK, "$token")
+          call.respond(HttpStatusCode.OK, token)
         }
       }
     }
 
-    // The websocket route is unprotected in regard to the regular HTTP auth mechanisms (read
-    // cookies). We protect it manually with the TokenManager.
     webSocket {
       // Used for debugging
       val connectionStart = Instant.now()
+      LOG.debug("Websocket connection opened ({})", connectionStart.nano)
 
       // Validate session
-      val rawToken = call.queryParam("token")
+      val token = call.queryParam("token")
 
-      if (rawToken == null) {
+      if (token == null) {
         LOG.debug("WS - closing due to missing token")
         close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
         return@webSocket
       }
-
-      val token =
-        try {
-          KUUID.fromString(rawToken)
-        } catch (_: IllegalArgumentException) {
-          LOG.debug("WS - closing due to invalid ID")
-          close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
-          return@webSocket
-        }
 
       val user = tokenManager.removeToken(token)
 

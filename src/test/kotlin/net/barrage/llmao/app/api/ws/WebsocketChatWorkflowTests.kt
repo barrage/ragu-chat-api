@@ -2,7 +2,6 @@ package net.barrage.llmao.app.api.ws
 
 // import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -13,7 +12,8 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlin.random.Random
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
@@ -306,77 +306,49 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
   }
 
   @Test
-  fun sameUserCanOpenMultipleChatsAtOnce() = test {
+  fun sameUserCanOpenMultipleChatsAtOnce() = wsTest { client ->
     var assertedFirst = false
-    var assertedSecond = false
 
     insertVectors(COMPLETIONS_STREAM_PROMPT)
-
-    val client1 = createClient { install(WebSockets) {} }
-    val client2 = createClient { install(WebSockets) {} }
 
     val validAgent = createValidAgent()
 
     runBlocking {
-      launch {
-        var buffer = ""
-        client1.adminWsSession {
-          openNewChat(validAgent.agent.id)
-          // Wait a bit before actually sending the message
-          delay(500)
-          sendMessage("Will this trigger a stream response?") { incoming ->
-            for (frame in incoming) {
-              val response = (frame as Frame.Text).readText()
-              try {
-                val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
-                buffer += message.chunk
-              } catch (_: SerializationException) {}
-              try {
-                val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
-                assert(message.reason == FinishReason.Stop)
-                assertedFirst = true
-                break
-              } catch (_: SerializationException) {}
+      val jobs = mutableListOf<Job>()
+      for (i in 0..<20) {
+        val job = launch {
+          var buffer = ""
+          client.adminWsSession {
+            openNewChat(validAgent.agent.id)
+            sendMessage("Will this trigger a stream response?") { incoming ->
+              for (frame in incoming) {
+                val response = (frame as Frame.Text).readText()
+                try {
+                  val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+                  buffer += message.chunk
+                } catch (_: SerializationException) {}
+                try {
+                  val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+                  assert(message.reason == FinishReason.Stop)
+                  assertedFirst = true
+                  break
+                } catch (_: SerializationException) {}
+              }
+
+              assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
+
+              sendClientSystem(IncomingSystemMessage.CloseWorkflow)
             }
-
-            assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
-
-            sendClientSystem(IncomingSystemMessage.CloseWorkflow)
           }
         }
+        jobs.add(job)
       }
-
-      delay(1000)
-
-      var buffer = ""
-      client2.adminWsSession {
-        openNewChat(validAgent.agent.id)
-        sendMessage("Will this trigger a stream response?") { incoming ->
-          for (frame in incoming) {
-            val response = (frame as Frame.Text).readText()
-            try {
-              val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
-              buffer += message.chunk
-            } catch (_: SerializationException) {}
-            try {
-              val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
-              assert(message.reason == FinishReason.Stop)
-              assertedSecond = true
-              break
-            } catch (_: SerializationException) {}
-          }
-        }
-
-        assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
-
-        sendClientSystem(IncomingSystemMessage.CloseWorkflow)
-      }
+      jobs.joinAll()
     }
 
     deleteVectors()
 
     assert(assertedFirst)
-    assert(assertedSecond)
   }
 
   @Test

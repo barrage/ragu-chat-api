@@ -5,25 +5,25 @@ import net.barrage.llmao.app.llm.openai.AzureAI
 import net.barrage.llmao.app.llm.openai.OpenAI
 import net.barrage.llmao.app.llm.openai.Vllm
 import net.barrage.llmao.core.ProviderFactory
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.string
 
-class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<LlmProvider>() {
+class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<InferenceProvider>() {
   init {
     if (config.tryGetString("ktor.features.llm.openai").toBoolean()) {
-      with(initOpenAi(config)) { providers[this.id()] = this }
+      with(initOpenAi(config)) { providers[id()] = this }
     }
 
     if (config.tryGetString("ktor.features.llm.azure").toBoolean()) {
-      with(initAzure(config)) { providers[this.id()] = this }
+      with(initAzure(config)) { providers[id()] = this }
     }
 
     if (config.tryGetString("ktor.features.llm.ollama").toBoolean()) {
-      with(initOllama(config)) { providers[this.id()] = this }
+      with(initOllama(config)) { providers[id()] = this }
     }
 
     if (config.tryGetString("ktor.features.llm.vllm").toBoolean()) {
-      with(initVllm(config)) { providers[this.id()] = this }
+      with(initVllm(config)) { providers[id()] = this }
     }
   }
 

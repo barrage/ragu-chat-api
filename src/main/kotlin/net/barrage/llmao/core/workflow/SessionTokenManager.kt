@@ -1,33 +1,32 @@
 package net.barrage.llmao.core.workflow
 
-import io.ktor.util.logging.KtorSimpleLogger
+import kotlin.time.ExperimentalTime
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KUUID
 
-private val LOG = KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketTokenManager")
-
 /** Handles the registration and removal of WS tokens. */
-class SessionTokenManager {
-  /** Maps one time tokens to user IDs. */
-  private val tokens: MutableMap<KUUID, User> = mutableMapOf()
+class SessionTokenManager(private val maxTokensPerUser: Int = 20) {
+  private val tokensPending: MutableMap<String, Int> = mutableMapOf()
 
-  /** The reverse of `tokens`. Used to prevent overflowing the map. */
-  private val pendingTokens: MutableMap<User, KUUID> = mutableMapOf()
+  /** Maps one time tokens to user IDs. */
+  private val tokens: MutableMap<String, User> = mutableMapOf()
 
   /** Register a token and map it to the authenticating user's ID. */
-  fun registerToken(user: User): KUUID {
-    val existingToken = pendingTokens[user]
+  @OptIn(ExperimentalStdlibApi::class, ExperimentalTime::class)
+  fun registerToken(user: User): String {
+    val tokenAmount = tokensPending.getOrDefault(user.id, 0)
 
-    if (existingToken != null) {
-      return existingToken
+    if (tokenAmount > maxTokensPerUser) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Max tokens per user reached")
     }
 
-    val token = KUUID.randomUUID()
+    var token = KUUID.randomUUID().toString()
+
+    tokensPending[user.id] = tokensPending.getOrDefault(user.id, 0) + 1
 
     tokens[token] = user
-    pendingTokens[user] = token
-
-    LOG.debug("{} - token registered '{}'", user.id, token)
 
     return token
   }
@@ -36,10 +35,15 @@ class SessionTokenManager {
    * Remove the token from the token map. If this returns a non-null value, the user is
    * authenticated.
    */
-  fun removeToken(token: KUUID): User? {
-    LOG.debug("removing token '{}'", token)
-    val userId = tokens.remove(token) ?: return null
-    pendingTokens.remove(userId)
-    return userId
+  fun removeToken(token: String): User? {
+    val user = tokens.remove(token) ?: return null
+
+    tokensPending[user.id] = tokensPending[user.id]?.let { it - 1 } ?: 0
+
+    if (tokensPending[user.id] == 0) {
+      tokensPending.remove(user.id)
+    }
+
+    return user
   }
 }

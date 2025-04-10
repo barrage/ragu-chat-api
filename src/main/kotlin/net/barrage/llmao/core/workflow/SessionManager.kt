@@ -9,7 +9,6 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.types.KUUID
 
 private val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.SessionManager")
 
@@ -191,4 +190,4 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
 }
 
 /** A session represents a user's connection to the server. */
-data class Session(val user: User, val token: KUUID)
+data class Session(val user: User, val token: String)
