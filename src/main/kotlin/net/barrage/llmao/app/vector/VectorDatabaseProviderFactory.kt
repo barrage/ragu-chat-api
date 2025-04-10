@@ -6,7 +6,7 @@ import net.barrage.llmao.core.vector.VectorDatabase
 
 class VectorDatabaseProviderFactory(config: ApplicationConfig) : ProviderFactory<VectorDatabase>() {
   init {
-    providers["weaviate"] = initWeaviate(config)
+    with(initWeaviate(config)) { providers[id()] = this }
   }
 
   private fun initWeaviate(config: ApplicationConfig): Weaviate {

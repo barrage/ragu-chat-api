@@ -9,7 +9,7 @@ import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.collectToolCalls
@@ -58,7 +58,7 @@ abstract class WorkflowAgent(
   val model: String,
 
   /** LLM provider. */
-  val llmProvider: LlmProvider,
+  val inferenceProvider: InferenceProvider,
 
   /** Completion parameters used for inference. */
   protected val completionParameters: ChatCompletionParameters,
@@ -96,7 +96,7 @@ abstract class WorkflowAgent(
   open fun errorMessage(): String = "An error occurred. Please try again later."
 
   /**
-   * Recursively calls the chat completion stream until no tool calls are returned.
+   * Recursively calls the chat completion stream until no tool calls or tool results are returned.
    *
    * If the agent contains no tools, the response content will be streamed on the first call and
    * this function will be called only once. Note that each call to the LLM is done in streaming
@@ -107,6 +107,12 @@ abstract class WorkflowAgent(
    * This process is repeated until the LLM outputs a final text response or the maximum number of
    * tool attempts is reached.
    *
+   * The [AgentEventHandler] is used to execute the [AgentEventHandler.onStreamChunk] and
+   * [AgentEventHandler.onToolCalls] callbacks. If the `onToolCalls` callback returns null, or an
+   * empty list, this method will return. It is up to the callers to decide what they want to do
+   * with tool calls. The usual thing to do is to call the tool and return the result in the tool
+   * result list, but there may be cases when the caller wants to stop inference.
+   *
    * The final output of the LLM will be captured in `out`.
    *
    * @param userMessage Immutable reference to the original user message.
@@ -115,8 +121,8 @@ abstract class WorkflowAgent(
    *   response.
    * @param out A buffer to capture the final response of the LLM. If the stream gets cancelled and
    *   this is not empty, it means a manual cancel occurred. If this is empty at the end of the
-   *   stream it means the stream fully completed and the assistant message is the last message in
-   *   the buffer.
+   *   stream it means either the stream fully completed and the assistant response is the last
+   *   message in the buffer or the assistant's final response never begun.
    * @param eventHandler Event handler for specific LLM outputs. This is necessary here since
    *   streaming calls usually indicate real-time workflows.
    */
@@ -125,7 +131,7 @@ abstract class WorkflowAgent(
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
     eventHandler: AgentEventHandler,
-  ) = streamInner(userMessage, messageBuffer, out, 0, eventHandler)
+  ) = streamInner(userMessage, messageBuffer, out, eventHandler, 0)
 
   /**
    * See [stream].
@@ -136,8 +142,8 @@ abstract class WorkflowAgent(
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
-    attempt: Int = 0,
     eventHandler: AgentEventHandler,
+    attempt: Int = 0,
   ) {
     // Perform RAG only on the first attempt and swap the initial user message with an enriched one.
     // We need to copy the original since we do not store the enriched message, only the original.
@@ -159,7 +165,7 @@ abstract class WorkflowAgent(
       listOf<ChatMessage>(ChatMessage.system(context())) + history + userMessage + messageBuffer
 
     val llmStream =
-      llmProvider.completionStream(
+      inferenceProvider.completionStream(
         llmInput,
         completionParameters.copy(tools = if (attempt < maxToolAttempts) tools else null),
       )
@@ -184,7 +190,7 @@ abstract class WorkflowAgent(
           amount = tokenUsage,
           usageType = TokenUsageType.COMPLETION,
           model = model,
-          provider = llmProvider.id(),
+          provider = inferenceProvider.id(),
         )
       }
 
@@ -240,8 +246,9 @@ abstract class WorkflowAgent(
    *
    * **This implementation includes the user message in the returned list.**
    *
-   * This implementation is intended to be used outside of real-time workflows. The `eventHandler`
-   * will be null.
+   * This implementation is intended to be used outside of real-time workflows. By default, it does
+   * not handle tool calls. To execute tool calls, pass an [AgentEventHandler] and handle them with
+   * [AgentEventHandler.onToolCalls].
    *
    * @return A list of messages that occurred during inference. If no tools are called, this will
    *   contain the user and assistant message pair. If the agent calls tools, all calls and results
@@ -250,6 +257,7 @@ abstract class WorkflowAgent(
   suspend fun completion(
     text: String,
     attachments: List<IncomingMessageAttachment>? = null,
+    eventHandler: AgentEventHandler? = null,
   ): List<ChatMessage> {
     var text = text
     contextEnrichment?.let {
@@ -266,7 +274,7 @@ abstract class WorkflowAgent(
     completionInner(
       userMessage = ChatMessage.user(content),
       messageBuffer = messageBuffer,
-      eventHandler = null,
+      eventHandler = eventHandler,
     )
 
     // Original content for storage, without any enrichment
@@ -332,7 +340,7 @@ abstract class WorkflowAgent(
     val llmInput = listOf(ChatMessage.system(context())) + history + userMessage + messageBuffer
 
     val completion =
-      llmProvider.chatCompletion(
+      inferenceProvider.chatCompletion(
         messages = llmInput,
         config =
           completionParameters.copy(
@@ -345,7 +353,7 @@ abstract class WorkflowAgent(
         amount = tokenUsage,
         usageType = TokenUsageType.COMPLETION,
         model = model,
-        provider = llmProvider.id(),
+        provider = inferenceProvider.id(),
       )
     }
 

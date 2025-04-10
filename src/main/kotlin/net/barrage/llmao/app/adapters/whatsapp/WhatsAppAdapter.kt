@@ -270,7 +270,7 @@ class WhatsAppAdapter(
         titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
         user = user,
         model = agent.configuration.model,
-        llmProvider = providers.llm.getProvider(agent.configuration.llmProvider),
+        inferenceProvider = providers.llm.getProvider(agent.configuration.llmProvider),
         context = agent.configuration.context,
         completionParameters = completionParameters,
         tokenTracker = tokenTracker,

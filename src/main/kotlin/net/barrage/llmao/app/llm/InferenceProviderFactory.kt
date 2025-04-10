@@ -8,7 +8,7 @@ import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.string
 
-class LlmProviderFactory(config: ApplicationConfig) : ProviderFactory<InferenceProvider>() {
+class InferenceProviderFactory(config: ApplicationConfig) : ProviderFactory<InferenceProvider>() {
   init {
     if (config.tryGetString("ktor.features.llm.openai").toBoolean()) {
       with(initOpenAi(config)) { providers[id()] = this }

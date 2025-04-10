@@ -13,11 +13,11 @@ import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 
 private val SUPPORTED_MODELS = listOf("Qwen/Qwen2.5-1.5B-Instruct")
 
-class Vllm(endpoint: String, apiKey: String) : LlmProvider {
+class Vllm(endpoint: String, apiKey: String) : InferenceProvider {
   private val client: OpenAI =
     OpenAI(
       token = apiKey,

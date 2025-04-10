@@ -34,8 +34,10 @@ sealed class ChatWorkflowMessage {
 
     /**
      * The message group ID of the interaction. Present only when the stream finishes successfully.
+     *
+     * TODO: remove serial name when clients update
      */
-    val messageId: KUUID? = null,
+    @SerialName("messageId") val messageGroupId: KUUID? = null,
 
     /**
      * Contains a list of processed attachment paths, in the order they were sent by the client, if

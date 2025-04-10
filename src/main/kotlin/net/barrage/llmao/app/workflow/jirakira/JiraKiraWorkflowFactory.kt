@@ -116,7 +116,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
       repository = specialistRepositoryWrite,
       agent =
         JiraKira(
-          llmProvider = providers.llm.getProvider(jiraKiraLlmProvider),
+          inferenceProvider = providers.llm.getProvider(jiraKiraLlmProvider),
           tokenTracker = tokenTracker,
           model = jiraKiraModel,
           user = user,

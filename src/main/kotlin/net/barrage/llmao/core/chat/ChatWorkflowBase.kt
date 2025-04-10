@@ -71,7 +71,8 @@ abstract class ChatWorkflowBase<S>(
    * Takes as input the original user message, the attachments that were sent with it, and all the
    * messages that occurred between the prompt and the LLM response.
    *
-   * Has to return the processed message group and all the attachments that were processed.
+   * Has to return the processed message group and all the attachments that were processed so they
+   * can be sent back to the client.
    */
   abstract suspend fun onInteractionComplete(
     /** Original unmodified user message. */
@@ -212,7 +213,7 @@ abstract class ChatWorkflowBase<S>(
             ChatWorkflowMessage.StreamComplete(
               chatId = id,
               reason = finishReason,
-              messageId = processedMessageGroup.messageGroupId,
+              messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
             ),
             ChatWorkflowMessage::class,
@@ -341,7 +342,7 @@ abstract class ChatWorkflowBase<S>(
             ChatWorkflowMessage.StreamComplete(
               chatId = id,
               reason = finishReason,
-              messageId = processedMessageGroup.messageGroupId,
+              messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
             ),
             ChatWorkflowMessage::class,

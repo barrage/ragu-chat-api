@@ -14,7 +14,7 @@ import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 
 class AzureAI(
   /** The `resourceId` identifying the Azure resource. */
@@ -25,7 +25,7 @@ class AzureAI(
 
   /** Which version of the API to use. */
   private val apiVersion: String,
-) : LlmProvider {
+) : InferenceProvider {
   /** Maps LLM identifiers to Azure deployment names. */
   private var deploymentMap = mapOf("gpt-4" to "gpt-4", "gpt-4o" to "gpt-4o")
 

@@ -8,7 +8,7 @@ import net.barrage.llmao.core.api.admin.AdminStatService
 import net.barrage.llmao.core.api.pub.PublicAgentService
 import net.barrage.llmao.core.api.pub.PublicChatService
 import net.barrage.llmao.core.embedding.Embedder
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
@@ -24,7 +24,7 @@ import org.jooq.DSLContext
 /** Encapsulates all available providers for downstream services. */
 class ProviderState(
   /** Providers for LLM inference. */
-  val llm: ProviderFactory<LlmProvider>,
+  val llm: ProviderFactory<InferenceProvider>,
 
   /** Providers for vector databases. */
   val vector: ProviderFactory<VectorDatabase>,

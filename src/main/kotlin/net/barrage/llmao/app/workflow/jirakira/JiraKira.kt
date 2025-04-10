@@ -7,7 +7,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
@@ -21,14 +21,14 @@ class JiraKira(
   user: User,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
-  llmProvider: LlmProvider,
+  inferenceProvider: InferenceProvider,
   model: String,
   tools: List<ToolDefinition>?,
 ) :
   WorkflowAgent(
     user = user,
     model = model,
-    llmProvider = llmProvider,
+    inferenceProvider = inferenceProvider,
     tokenTracker = tokenTracker,
     contextEnrichment = null,
     history = history,

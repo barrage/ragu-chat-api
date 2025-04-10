@@ -10,7 +10,7 @@ interface Identity {
  * - *T* - The type of provider returned by this factory.
  */
 abstract class ProviderFactory<T : Identity> {
-  internal val providers: MutableMap<String, T> = mutableMapOf()
+  protected val providers: MutableMap<String, T> = mutableMapOf()
 
   /** Get a provider and throw an error if it doesn't exist. */
   fun getProvider(providerId: String): T =

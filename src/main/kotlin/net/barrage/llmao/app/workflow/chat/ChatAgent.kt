@@ -6,7 +6,7 @@ import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.model.AgentInstructions
 import net.barrage.llmao.core.model.User
@@ -41,7 +41,7 @@ class ChatAgent(
   private val context: String,
   user: User,
   model: String,
-  llmProvider: LlmProvider,
+  inferenceProvider: InferenceProvider,
   completionParameters: ChatCompletionParameters,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
@@ -51,7 +51,7 @@ class ChatAgent(
   WorkflowAgent(
     user = user,
     model = model,
-    llmProvider = llmProvider,
+    inferenceProvider = inferenceProvider,
     completionParameters = completionParameters,
     tokenTracker = tokenTracker,
     history = history,
@@ -80,14 +80,14 @@ class ChatAgent(
     val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
 
     val completion =
-      llmProvider.chatCompletion(messages, completionParameters.copy(maxTokens = titleMaxTokens))
+      inferenceProvider.chatCompletion(messages, completionParameters.copy(maxTokens = titleMaxTokens))
 
     completion.tokenUsage?.let { tokenUsage ->
       tokenTracker.store(
         amount = tokenUsage,
         usageType = TokenUsageType.COMPLETION_TITLE,
         model = model,
-        provider = llmProvider.id(),
+        provider = inferenceProvider.id(),
       )
     }
 

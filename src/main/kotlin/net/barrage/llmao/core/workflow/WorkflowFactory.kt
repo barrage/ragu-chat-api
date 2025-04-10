@@ -22,7 +22,11 @@ interface WorkflowFactory {
   suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow
 }
 
-/** Top level indirection for creating workflows. */
+/**
+ * Top level workflow factory registry.
+ *
+ * Used by the session manager to create workflows based on input messages.
+ */
 object WorkflowFactoryManager {
   private val factories: MutableMap<String, WorkflowFactory> = mutableMapOf()
 

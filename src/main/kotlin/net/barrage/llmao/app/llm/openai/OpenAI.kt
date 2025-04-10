@@ -3,18 +3,18 @@ package net.barrage.llmao.app.llm.openai
 import com.aallam.openai.api.chat.ChatChoice as OpenAiChatChoice
 import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk as OpenAiChatChunk
-import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 import com.aallam.openai.api.chat.FunctionCall as OpenAiFunctionCall
+import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
+import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
+import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.FunctionTool
 import com.aallam.openai.api.chat.ImagePart
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.chat.TextPart
 import com.aallam.openai.api.chat.Tool
-import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
 import com.aallam.openai.api.chat.ToolId
 import com.aallam.openai.api.chat.ToolType
-import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
 import com.aallam.openai.api.core.Parameters
 import com.aallam.openai.api.logging.LogLevel
 import com.aallam.openai.api.model.ModelId
@@ -36,7 +36,7 @@ import net.barrage.llmao.core.llm.ContentMulti
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.FunctionCall
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolCallChunk
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
@@ -45,7 +45,7 @@ import net.barrage.llmao.core.token.TokenUsageAmount
 private val SUPPORTED_MODELS =
   listOf("gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini")
 
-class OpenAI(endpoint: String, apiKey: String) : LlmProvider {
+class OpenAI(endpoint: String, apiKey: String) : InferenceProvider {
   private val client: OpenAI =
     OpenAI(
       token = apiKey,

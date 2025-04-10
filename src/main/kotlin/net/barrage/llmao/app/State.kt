@@ -9,7 +9,7 @@ import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppRepository
 import net.barrage.llmao.app.adapters.whatsapp.WhatsAppSenderConfig
 import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
-import net.barrage.llmao.app.llm.LlmProviderFactory
+import net.barrage.llmao.app.llm.InferenceProviderFactory
 import net.barrage.llmao.app.storage.MinioImageStorage
 import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
@@ -51,7 +51,7 @@ class ApplicationState(
   val database: DSLContext = initDatabase(config, applicationStopping)
   val providers: ProviderState =
     ProviderState(
-      llm = LlmProviderFactory(config),
+      llm = InferenceProviderFactory(config),
       vector = VectorDatabaseProviderFactory(config),
       embedding = EmbeddingProviderFactory(config),
       image = MinioImageStorage(config),
@@ -92,6 +92,7 @@ class ApplicationState(
 
     runBlocking {
       ChatWorkflowFactory.init(config, this@ApplicationState)
+
       WorkflowFactoryManager.register(ChatWorkflowFactory)
 
       if (config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {

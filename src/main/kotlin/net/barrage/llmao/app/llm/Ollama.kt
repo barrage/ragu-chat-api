@@ -20,12 +20,12 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.llm.LlmProvider
+import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.types.KOffsetDateTime
 
-class Ollama(private val endpoint: String) : LlmProvider {
+class Ollama(private val endpoint: String) : InferenceProvider {
   private val client: HttpClient = httpClient()
 
   override fun id(): String {
