@@ -307,14 +307,13 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
   @Test
   fun sameUserCanOpenMultipleChatsAtOnce() = wsTest { client ->
-    var assertedFirst = false
-
     insertVectors(COMPLETIONS_STREAM_PROMPT)
 
     val validAgent = createValidAgent()
 
     runBlocking {
       val jobs = mutableListOf<Job>()
+      var runsFinished = 0
       for (i in 0..<20) {
         val job = launch {
           var buffer = ""
@@ -330,7 +329,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
                 try {
                   val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
                   assert(message.reason == FinishReason.Stop)
-                  assertedFirst = true
+                  runsFinished += 1
                   break
                 } catch (_: SerializationException) {}
               }
@@ -344,11 +343,10 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         jobs.add(job)
       }
       jobs.joinAll()
+      assertEquals(20, runsFinished)
     }
 
     deleteVectors()
-
-    assert(assertedFirst)
   }
 
   @Test
