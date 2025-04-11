@@ -1,8 +1,6 @@
 package net.barrage.llmao.core.workflow
 
 import kotlin.time.ExperimentalTime
-import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KUUID
 
@@ -19,13 +17,13 @@ class SessionTokenManager(private val maxTokensPerUser: Int = 20) {
     val tokenAmount = tokensPending.getOrDefault(user.id, 0)
 
     if (tokenAmount > maxTokensPerUser) {
-      throw AppError.api(ErrorReason.InvalidOperation, "Max tokens per user reached")
+      tokensPending.remove(user.id)
+      tokens.entries.removeAll { it.value.id != user.id }
     }
 
     var token = KUUID.randomUUID().toString()
 
     tokensPending[user.id] = tokensPending.getOrDefault(user.id, 0) + 1
-
     tokens[token] = user
 
     return token
