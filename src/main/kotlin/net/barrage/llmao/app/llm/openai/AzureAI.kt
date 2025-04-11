@@ -8,6 +8,8 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import net.barrage.llmao.app.llm.DeploymentId
+import net.barrage.llmao.app.llm.ModelDeploymentMap
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.ChatCompletion
@@ -25,13 +27,12 @@ class AzureAI(
 
   /** Which version of the API to use. */
   private val apiVersion: String,
-) : InferenceProvider {
-  /** Maps LLM identifiers to Azure deployment names. */
-  private var deploymentMap = mapOf("gpt-4" to "gpt-4", "gpt-4o" to "gpt-4o")
 
-  override fun id(): String {
-    return "azure"
-  }
+  /** Maps LLM identifiers to Azure deployment names. */
+  private val deploymentMap: ModelDeploymentMap<DeploymentId>,
+) : InferenceProvider {
+
+  override fun id(): String = "azure"
 
   override suspend fun chatCompletion(
     messages: List<ChatMessage>,
@@ -68,28 +69,23 @@ class AzureAI(
     return client(config.model).chatCompletions(chatRequest).map { it.toNativeMessageChunk() }
   }
 
-  override suspend fun supportsModel(model: String): Boolean {
-    return deploymentMap[model] != null
-  }
+  override suspend fun supportsModel(model: String): Boolean = deploymentMap[model] != null
 
-  override suspend fun listModels(): List<String> {
-    return deploymentMap.keys.toList()
-  }
+  override suspend fun listModels(): List<String> = deploymentMap.listModels()
 
-  private fun getModel(model: String): String {
-    return deploymentMap[model]
+  private fun getDeploymentForModel(model: String): String =
+    deploymentMap[model]?.id
       ?: throw AppError.api(
         ErrorReason.InvalidParameter,
         "LLM provider ${id()} does not support model '$model'",
       )
-  }
 
   /**
    * Deployment IDs are tied to models which means we have to instantiate a new client per model
    * inference.
    */
   private fun client(model: String): OpenAI {
-    val deploymentId = getModel(model)
+    val deploymentId = getDeploymentForModel(model)
     val host =
       OpenAIHost(
         baseUrl = "https://$endpoint.openai.azure.com/openai/deployments/$deploymentId/",

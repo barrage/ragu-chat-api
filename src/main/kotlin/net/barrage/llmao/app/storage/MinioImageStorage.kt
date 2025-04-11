@@ -29,13 +29,13 @@ class MinioImageStorage(
 
   override fun id(): String = "minio"
 
-  override fun store(path: String, input: Image) {
+  override fun store(path: String, data: Image) {
     try {
       client.putObject(
         PutObjectArgs.builder()
           .bucket(bucket)
           .`object`(path)
-          .stream(input.data.inputStream(), input.data.size.toLong(), -1)
+          .stream(data.data.inputStream(), data.data.size.toLong(), -1)
           .build()
       )
     } catch (e: MinioException) {

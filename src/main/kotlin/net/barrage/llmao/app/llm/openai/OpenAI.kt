@@ -3,18 +3,18 @@ package net.barrage.llmao.app.llm.openai
 import com.aallam.openai.api.chat.ChatChoice as OpenAiChatChoice
 import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk as OpenAiChatChunk
+import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
 import com.aallam.openai.api.chat.FunctionCall as OpenAiFunctionCall
-import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
-import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
-import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.FunctionTool
 import com.aallam.openai.api.chat.ImagePart
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.chat.TextPart
 import com.aallam.openai.api.chat.Tool
+import com.aallam.openai.api.chat.ToolCall as OpenAiToolCall
 import com.aallam.openai.api.chat.ToolId
 import com.aallam.openai.api.chat.ToolType
+import com.aallam.openai.api.core.FinishReason as OpenAiFinishReason
 import com.aallam.openai.api.core.Parameters
 import com.aallam.openai.api.logging.LogLevel
 import com.aallam.openai.api.model.ModelId
@@ -42,10 +42,8 @@ import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.token.TokenUsageAmount
 
-private val SUPPORTED_MODELS =
-  listOf("gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini")
-
-class OpenAI(endpoint: String, apiKey: String) : InferenceProvider {
+class OpenAI(endpoint: String, apiKey: String, private val models: List<String>) :
+  InferenceProvider {
   private val client: OpenAI =
     OpenAI(
       token = apiKey,
@@ -53,9 +51,7 @@ class OpenAI(endpoint: String, apiKey: String) : InferenceProvider {
       logging = LoggingConfig(logLevel = LogLevel.Info),
     )
 
-  override fun id(): String {
-    return "openai"
-  }
+  override fun id(): String = "openai"
 
   override suspend fun chatCompletion(
     messages: List<ChatMessage>,
@@ -92,13 +88,9 @@ class OpenAI(endpoint: String, apiKey: String) : InferenceProvider {
     return this.client.chatCompletions(chatRequest).map { chunk -> chunk.toNativeMessageChunk() }
   }
 
-  override suspend fun supportsModel(model: String): Boolean {
-    return SUPPORTED_MODELS.contains(model)
-  }
+  override suspend fun supportsModel(model: String): Boolean = models.contains(model)
 
-  override suspend fun listModels(): List<String> {
-    return SUPPORTED_MODELS
-  }
+  override suspend fun listModels(): List<String> = models
 }
 
 fun ToolDefinition.toOpenAiTool(): Tool {

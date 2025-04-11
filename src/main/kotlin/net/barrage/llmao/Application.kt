@@ -75,6 +75,11 @@ fun ApplicationConfig.long(key: String): Long {
   return property(key).getString().toLong()
 }
 
+/** Shorthand for `config.property(key).getString().toLong` */
+fun ApplicationConfig.int(key: String): Int {
+  return property(key).getString().toInt()
+}
+
 fun tryUuid(value: String): KUUID {
   return try {
     KUUID.fromString(value)

@@ -56,6 +56,7 @@ class AgentRepository(private val dslContext: DSLContext) {
     pagination: PaginationSort,
     showDeactivated: Boolean,
     groups: List<String>,
+    availableProviders: List<String>,
   ): CountedList<Agent> {
     val order = getSortOrderAgent(pagination, admin = false)
     val (limit, offset) = pagination.limitOffset()
@@ -66,10 +67,12 @@ class AgentRepository(private val dslContext: DSLContext) {
         .from(AGENTS)
         .leftJoin(AGENT_PERMISSIONS)
         .on(AGENT_PERMISSIONS.AGENT_ID.eq(AGENTS.ID))
+        .leftJoin(AGENT_CONFIGURATIONS)
+        .on(AGENT_CONFIGURATIONS.ID.eq(AGENTS.ACTIVE_CONFIGURATION_ID))
         .where(
-          (if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition()).and(
-            AGENT_PERMISSIONS.GROUP.isNull.or(AGENT_PERMISSIONS.GROUP.`in`(groups))
-          )
+          (if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition())
+            .and(AGENT_PERMISSIONS.GROUP.isNull.or(AGENT_PERMISSIONS.GROUP.`in`(groups)))
+            .and(AGENT_CONFIGURATIONS.LLM_PROVIDER.`in`(availableProviders))
         )
         .awaitSingle()
         .value1() ?: 0

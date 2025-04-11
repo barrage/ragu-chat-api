@@ -82,7 +82,7 @@ class ApplicationState(
       user =
         PublicApi(
           chat = PublicChatService(repository.chatRead(CHAT_WORKFLOW_ID), repository.agent),
-          agent = PublicAgentService(repository.agent),
+          agent = PublicAgentService(providers, repository.agent),
         ),
     )
 

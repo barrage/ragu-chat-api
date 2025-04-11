@@ -14,13 +14,19 @@ import net.barrage.llmao.core.token.TokenUsageAmount
  * @param endpoint The Azure endpoint to use. Should include the resource identifier.
  * @param apiKey The Azure API key to use.
  */
-class OpenAIEmbedder(endpoint: String, apiKey: String) : Embedder {
+class OpenAIEmbedder(
+  endpoint: String,
+  apiKey: String,
+
+  /** Maps model codes to their embedding sizes. */
+  private val models: Map<String, Int>,
+) : Embedder {
   private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
 
   override fun id(): String = "openai"
 
   override suspend fun supportsModel(model: String): Boolean {
-    return OpenAIEmbeddingModel.tryFromString(model) != null
+    return models.containsKey(model)
   }
 
   override suspend fun embed(input: String, model: String): Embeddings {
@@ -46,7 +52,7 @@ class OpenAIEmbedder(endpoint: String, apiKey: String) : Embedder {
   }
 
   override suspend fun vectorSize(model: String): Int {
-    return OpenAIEmbeddingModel.tryFromString(model)?.vectorSize
+    return models[model]
       ?: throw AppError.api(ErrorReason.InvalidParameter, "Model $model not found")
   }
 }

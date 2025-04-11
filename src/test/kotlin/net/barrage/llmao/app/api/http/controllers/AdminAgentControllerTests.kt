@@ -139,7 +139,7 @@ class AdminAgentControllerTests : IntegrationTest() {
           CreateAgentConfiguration(
             context = "context",
             llmProvider = "azure",
-            model = "gpt-4",
+            model = "gpt-4o-mini",
             temperature = 0.5,
             presencePenalty = 0.5,
             maxCompletionTokens = 100,
@@ -159,7 +159,7 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals("TestAgentCreated", body.agent.name)
     assertEquals("description", body.agent.description)
     assertEquals("azure", body.configuration.llmProvider)
-    assertEquals("gpt-4", body.configuration.model)
+    assertEquals("gpt-4o-mini", body.configuration.model)
     assertEquals("title", body.configuration.agentInstructions.titleInstruction)
     assertEquals(1, body.configuration.version)
     assertEquals(0.5, body.configuration.temperature)
@@ -224,7 +224,7 @@ class AdminAgentControllerTests : IntegrationTest() {
           UpdateAgentConfiguration(
             context = "context",
             llmProvider = "azure",
-            model = "gpt-4",
+            model = "gpt-4o-mini",
             temperature = 0.5,
             maxCompletionTokens = PropertyUpdate.Value(100),
             presencePenalty = PropertyUpdate.Value(0.5),
@@ -262,7 +262,7 @@ class AdminAgentControllerTests : IntegrationTest() {
         "configuration": {
           "context": "context",
           "llmProvider": "azure",
-          "model": "gpt-4",
+          "model": "gpt-4o-mini",
           "temperature": 0.5,
           "maxCompletionTokens": null
         }
@@ -326,7 +326,7 @@ class AdminAgentControllerTests : IntegrationTest() {
           UpdateAgentConfiguration(
             context = "context",
             llmProvider = "azure",
-            model = "gpt-4",
+            model = "gpt-4o-mini",
             temperature = 0.5,
             instructions =
               UpdateAgentInstructions(
@@ -353,7 +353,7 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals("english", body.agent.language)
     assertEquals("context", body.configuration.context)
     assertEquals("azure", body.configuration.llmProvider)
-    assertEquals("gpt-4", body.configuration.model)
+    assertEquals("gpt-4o-mini", body.configuration.model)
     assertEquals(0.5, body.configuration.temperature)
     assertEquals(2, body.configuration.version)
     assertEquals("title", body.configuration.agentInstructions.titleInstruction)
@@ -400,7 +400,7 @@ class AdminAgentControllerTests : IntegrationTest() {
       agent.id,
       version = 1,
       llmProvider = "openai",
-      model = "gpt-4",
+      model = "gpt-4o-mini",
       temperature = 0.1,
       presencePenalty = 0.1,
       maxCompletionTokens = 100,
@@ -415,7 +415,7 @@ class AdminAgentControllerTests : IntegrationTest() {
           UpdateAgentConfiguration(
             context = "Test",
             llmProvider = "openai",
-            model = "gpt-4",
+            model = "gpt-4o-mini",
             temperature = 0.1,
             presencePenalty = PropertyUpdate.Value(0.1),
             maxCompletionTokens = PropertyUpdate.Value(100),
@@ -450,7 +450,7 @@ class AdminAgentControllerTests : IntegrationTest() {
           UpdateAgentConfiguration(
             context = "context",
             llmProvider = "azure",
-            model = "gpt-4",
+            model = "gpt-4o-mini",
             temperature = 0.5,
             instructions = null,
           ),
