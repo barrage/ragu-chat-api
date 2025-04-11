@@ -4,6 +4,7 @@ import io.ktor.server.config.*
 import net.barrage.llmao.app.llm.openai.AzureAI
 import net.barrage.llmao.app.llm.openai.OpenAI
 import net.barrage.llmao.app.llm.openai.Vllm
+import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ProviderFactory
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.string
@@ -51,7 +52,17 @@ class InferenceProviderFactory(config: ApplicationConfig) : ProviderFactory<Infe
   private fun initVllm(config: ApplicationConfig): Vllm {
     val endpoint = config.string("llm.vllm.endpoint")
     val apiKey = config.string("llm.vllm.apiKey")
+    val models = config.tryGetStringList("llm.vllm.models")
 
-    return Vllm(endpoint, apiKey)
+    if (models.isNullOrEmpty()) {
+      throw AppError.internal(
+        """vLLM models must be configured; Check your `llm.vllm.models` config.
+          | At least one model must be specified.
+          | If you do not intend to use vLLM, set the `ktor.features.llm.vllm` flag to `false`."""
+          .trimMargin()
+      )
+    }
+
+    return Vllm(endpoint, apiKey, models)
   }
 }

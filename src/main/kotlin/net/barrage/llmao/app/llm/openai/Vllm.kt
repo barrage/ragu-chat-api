@@ -15,9 +15,7 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.InferenceProvider
 
-private val SUPPORTED_MODELS = listOf("Qwen/Qwen2.5-1.5B-Instruct")
-
-class Vllm(endpoint: String, apiKey: String) : InferenceProvider {
+class Vllm(endpoint: String, apiKey: String, private val models: List<String>) : InferenceProvider {
   private val client: OpenAI =
     OpenAI(
       token = apiKey,
@@ -25,9 +23,7 @@ class Vllm(endpoint: String, apiKey: String) : InferenceProvider {
       logging = LoggingConfig(logLevel = LogLevel.Info),
     )
 
-  override fun id(): String {
-    return "vllm"
-  }
+  override fun id(): String = "vllm"
 
   override suspend fun chatCompletion(
     messages: List<ChatMessage>,
@@ -65,10 +61,10 @@ class Vllm(endpoint: String, apiKey: String) : InferenceProvider {
   }
 
   override suspend fun supportsModel(model: String): Boolean {
-    return SUPPORTED_MODELS.contains(model)
+    return models.contains(model)
   }
 
   override suspend fun listModels(): List<String> {
-    return SUPPORTED_MODELS
+    return models
   }
 }
