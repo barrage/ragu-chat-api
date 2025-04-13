@@ -125,7 +125,7 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: AdminSett
           if (contentLength > maxImageUploadSize) {
             throw AppError.api(
               ErrorReason.PayloadTooLarge,
-              "Image size exceeds the maximum allowed size",
+              "Image size exceeds the maximum allowed size of ${maxImageUploadSize / 1024 / 1024}MB",
             )
           }
 

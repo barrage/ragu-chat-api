@@ -13,6 +13,7 @@ val jooqVersion = "3.19.16"
 plugins {
   kotlin("jvm") version "2.1.20"
   kotlin("plugin.serialization") version "2.1.20"
+  id("org.jetbrains.dokka") version "2.0.0"
   id("io.ktor.plugin") version "3.1.1"
   id("nu.studer.jooq") version "9.0"
   id("com.ncorti.ktfmt.gradle") version "0.20.1"

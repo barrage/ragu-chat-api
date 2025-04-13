@@ -7,7 +7,6 @@ import io.weaviate.client.base.Result
 import io.weaviate.client.v1.graphql.model.GraphQLError
 import java.util.UUID
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.core.vector.VectorData
@@ -193,27 +192,22 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
   /** Error in transport to Weaviate. */
   private fun requestError(weaviateError: io.weaviate.client.base.WeaviateError): AppError {
-    LOG.error("GraphQL error: $weaviateError")
-    return AppError.api(ErrorReason.VectorDatabase, "Weaviate GraphQL error: $weaviateError")
+    LOG.error("weaviate GraphQL error: $weaviateError")
+    return AppError.internal()
   }
 
   /** Internal error when remapping GraphQL data. We do not expose our n00bery to clients. */
   private fun mappingError(error: String): AppError {
-    LOG.error("mapping error: $error")
+    LOG.error("weaviate mapping error: $error")
     return AppError.internal()
   }
 
   private fun queryError(errors: Array<GraphQLError>): AppError {
-    LOG.error("query error")
-
-    var message = ""
-
     for (error in errors) {
-      LOG.error(" - ${error.message}")
-      message += "${error.message}\n"
+      LOG.error("weaviate query error: ${error.message}")
     }
 
-    return AppError.api(ErrorReason.VectorDatabase, message)
+    return AppError.internal()
   }
 }
 

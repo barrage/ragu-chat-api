@@ -126,7 +126,7 @@ abstract class ChatWorkflowBase<S>(
     val input = Json.decodeFromString<ChatWorkflowInput>(input)
 
     if (stream != null) {
-      throw AppError.api(ErrorReason.Websocket, "Workflow busy")
+      throw AppError.api(ErrorReason.InvalidOperation, "Workflow is currently busy")
     }
 
     stream =

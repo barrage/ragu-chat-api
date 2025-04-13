@@ -101,14 +101,11 @@ private suspend fun ApplicationCall.handleJsonConvert(err: JsonConvertException)
 fun AppError.code(): HttpStatusCode {
   return when (errorReason) {
     ErrorReason.Authentication -> HttpStatusCode.Unauthorized
-    ErrorReason.CannotDeleteSelf -> HttpStatusCode.Conflict
-    ErrorReason.CannotUpdateSelf -> HttpStatusCode.Conflict
     ErrorReason.EntityDoesNotExist -> HttpStatusCode.NotFound
     ErrorReason.EntityAlreadyExists -> HttpStatusCode.Conflict
-    ErrorReason.InvalidProvider -> HttpStatusCode.BadRequest
-    ErrorReason.InvalidParameter -> HttpStatusCode.BadRequest
+    ErrorReason.InvalidParameter,
     ErrorReason.InvalidOperation -> HttpStatusCode.BadRequest
     ErrorReason.PayloadTooLarge -> HttpStatusCode.PayloadTooLarge
-    else -> HttpStatusCode.InternalServerError
+    ErrorReason.Internal -> HttpStatusCode.InternalServerError
   }
 }

@@ -119,14 +119,13 @@ class WhatsAppAdapter(
     val number = whatsAppRepository.getNumberById(numberId)
 
     if (number.userId != userId) {
-      throw AppError.api(
-        ErrorReason.Authentication,
-        "Cannot update WhatsApp number for other users",
-      )
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp number not found")
     }
 
     val response = whatsAppRepository.updateNumber(numberId, updateNumber)
+
     sendWelcomeMessage(updateNumber.phoneNumber)
+
     return response
   }
 
@@ -134,10 +133,7 @@ class WhatsAppAdapter(
     val number = whatsAppRepository.getNumberById(numberId)
 
     if (number.userId != userId) {
-      throw AppError.api(
-        ErrorReason.Authentication,
-        "Cannot delete WhatsApp number for other users",
-      )
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp number not found")
     }
 
     if (!whatsAppRepository.deleteNumber(numberId)) {
@@ -263,24 +259,24 @@ class WhatsAppAdapter(
       )
 
     return ChatAgent(
-        agentId = agent.agent.id,
-        configurationId = agent.configuration.id,
-        name = agent.agent.name,
-        instructions = agent.configuration.agentInstructions,
-        titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-        user = user,
-        model = agent.configuration.model,
-        inferenceProvider = providers.llm.getProvider(agent.configuration.llmProvider),
-        context = agent.configuration.context,
-        completionParameters = completionParameters,
-        tokenTracker = tokenTracker,
-        history = history,
-        contextEnrichment =
+      agentId = agent.agent.id,
+      configurationId = agent.configuration.id,
+      name = agent.agent.name,
+      instructions = agent.configuration.agentInstructions,
+      titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+      user = user,
+      model = agent.configuration.model,
+      inferenceProvider = providers.llm.getProvider(agent.configuration.llmProvider),
+      context = agent.configuration.context,
+      completionParameters = completionParameters,
+      tokenTracker = tokenTracker,
+      history = history,
+      contextEnrichment =
         ContextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
-            listOf(it)
+          listOf(it)
         },
       // TODO: implement
-        tools = null,
+      tools = null,
     )
   }
 

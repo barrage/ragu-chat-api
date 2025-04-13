@@ -10,7 +10,7 @@ import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.model.User
 
-private val LOG = KtorSimpleLogger("net.barrage.llmao.core.workflow.SessionManager")
+private val LOG = KtorSimpleLogger("n.b.l.c.workflow.SessionManager")
 
 /**
  * The session manage creates sessions and is responsible for broadcasting system events to clients.
@@ -49,15 +49,23 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
       val message = Json.decodeFromString<IncomingSystemMessage>(message)
       handleSystemMessage(session, message, emitter)
     } catch (e: SerializationException) {
-      LOG.debug("Forwarding message to workflow ({})", e.message)
       try {
-        handleChatMessage(session, message)
+        val workflow =
+          workflows[session]
+            ?: throw AppError.api(
+              ErrorReason.InvalidOperation,
+              """Failed to deserialize message as a system message and no workflow is open.
+                | If you are attempting to send a system message check its schema, otherwise open a workflow first with `workflow.new`.
+                | Original error: ${e.message}"""
+                .trimMargin(),
+            )
+        LOG.debug("{} - sending input to workflow '{}'", session.user.id, workflow.id())
+        workflow.execute(message)
       } catch (e: SerializationException) {
         throw AppError.api(ErrorReason.InvalidParameter, "Message format malformed", original = e)
       } catch (e: Throwable) {
-        throw if (e is AppError) {
-          e
-        } else AppError.internal("Error in workflow", original = e)
+        throw if (e is AppError) e
+        else AppError.internal("Unexpected error in workflow", original = e)
       }
     } catch (e: Throwable) {
       if (e is AppError) {
@@ -83,15 +91,6 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         }
       }
     }
-  }
-
-  private fun handleChatMessage(session: Session, input: String) {
-    val workflow =
-      workflows[session] ?: throw AppError.api(ErrorReason.Websocket, "Workflow not opened")
-
-    LOG.debug("{} - sending input to workflow '{}'", session.user.id, workflow.id())
-
-    workflow.execute(input)
   }
 
   private suspend fun handleSystemMessage(
@@ -189,5 +188,5 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
   }
 }
 
-/** A session represents a user's connection to the server. */
+/** A session represents a user's real time connection to the server. */
 data class Session(val user: User, val token: String)
