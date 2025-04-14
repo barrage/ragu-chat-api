@@ -5,7 +5,7 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KUUID
 
 /** Handles the registration and removal of WS tokens. */
-class SessionTokenManager(private val maxTokensPerUser: Int = 20) {
+class SessionTokenManager(private val maxTokensPerUser: Int = 100) {
   private val tokensPending: MutableMap<String, Int> = mutableMapOf()
 
   /** Maps one time tokens to user IDs. */
