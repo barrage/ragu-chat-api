@@ -34,7 +34,11 @@ class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
   /** Emit a system message to the client. */
   override suspend fun <T : Any> emit(message: T, clazz: KClass<T>) {
     if (message !is ChatWorkflowMessage.StreamChunk) {
-      log.debug("Emitting message: {}", message)
+      if (message is Throwable) {
+        log.warn("Emitting error {}", message)
+      } else {
+        log.debug("Emitting message: {}", message)
+      }
     }
     flow.emit(json.encodeToString(serializer(clazz.createType()), message))
   }
