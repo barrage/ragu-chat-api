@@ -13,20 +13,17 @@ import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.embedding.Embeddings
 import net.barrage.llmao.core.token.TokenUsageAmount
 
-class AzureEmbedder(
-  /** The `resourceId` identifying the Azure resource. */
+class VllmEmbedder(
+  /** The base URL of the endpoint. */
   private val endpoint: String,
 
   /** Authorization token. */
   private val apiKey: String,
 
-  /** Which version of the API to use. */
-  private val apiVersion: String,
-
-  /** Maps embedding model identifiers to Azure deployment names. */
+  /** Maps embedding model identifiers to VLLM instances. */
   private val deploymentMap: ModelDeploymentMap<EmbeddingModelDeployment>,
 ) : Embedder {
-  override fun id(): String = "azure"
+  override fun id(): String = "vllm"
 
   override suspend fun supportsModel(model: String): Boolean = deploymentMap.containsKey(model)
 
@@ -36,7 +33,7 @@ class AzureEmbedder(
     val response = client(model).embeddings(request)
 
     if (response.embeddings.isEmpty()) {
-      throw AppError.internal("Azure Embedder generated 0 embeddings")
+      throw AppError.internal("VLLM Embedder generated 0 embeddings")
     }
 
     // We always get embeddings in a 1:1 manner relative to the input
@@ -69,11 +66,7 @@ class AzureEmbedder(
    */
   private fun client(model: String): OpenAI {
     val deploymentId = getDeploymentForModel(model)
-    val host =
-      OpenAIHost(
-        baseUrl = "https://$endpoint.openai.azure.com/openai/deployments/$deploymentId/",
-        queryParams = mapOf("api-version" to apiVersion),
-      )
+    val host = OpenAIHost(baseUrl = "https://$endpoint/$deploymentId/v1/")
     return OpenAI(OpenAIConfig(host = host, headers = mapOf("api-key" to apiKey), token = apiKey))
   }
 }

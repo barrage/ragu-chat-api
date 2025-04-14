@@ -51,13 +51,11 @@ value class ModelDeploymentMap<T>(internal val m: Map<ModelCode, T>) {
     }
   }
 
-  operator fun get(model: String): T? {
-    return m[ModelCode(model)]
-  }
+  operator fun get(model: String): T? = m[ModelCode(model)]
 
-  fun listModels(): List<String> {
-    return m.keys.map(ModelCode::code)
-  }
+  fun listModels(): List<String> = m.keys.map(ModelCode::code)
 
   fun isEmpty() = m.isEmpty()
+
+  fun containsKey(model: String) = m.containsKey(ModelCode(model))
 }

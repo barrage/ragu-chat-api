@@ -64,7 +64,7 @@ class Vllm(
     }
   }
 
-  override suspend fun supportsModel(model: String): Boolean = deploymentMap[model] != null
+  override suspend fun supportsModel(model: String): Boolean = deploymentMap.containsKey(model)
 
   override suspend fun listModels(): List<String> = deploymentMap.listModels()
 

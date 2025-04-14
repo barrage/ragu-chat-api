@@ -25,9 +25,7 @@ class OpenAIEmbedder(
 
   override fun id(): String = "openai"
 
-  override suspend fun supportsModel(model: String): Boolean {
-    return models.containsKey(model)
-  }
+  override suspend fun supportsModel(model: String): Boolean = models.containsKey(model)
 
   override suspend fun embed(input: String, model: String): Embeddings {
     val request = EmbeddingRequest(ModelId(model), listOf(input))
