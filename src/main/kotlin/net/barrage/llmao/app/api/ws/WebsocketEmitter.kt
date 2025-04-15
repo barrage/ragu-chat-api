@@ -35,7 +35,7 @@ class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
   override suspend fun <T : Any> emit(message: T, clazz: KClass<T>) {
     if (message !is ChatWorkflowMessage.StreamChunk) {
       if (message is Throwable) {
-        log.warn("Emitting error {}", message)
+        @Suppress("LoggingPlaceholderCountMatchesArgumentCount") log.warn("Emitting error", message)
       } else {
         log.debug("Emitting message: {}", message)
       }

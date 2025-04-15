@@ -81,9 +81,8 @@ dependencies {
   // Infobip
   implementation("com.infobip:infobip-api-java-client:4.4.0")
 
-  // AI
-  implementation("com.aallam.openai:openai-client:4.0.1")
-  implementation("io.ktor:ktor-client-okhttp")
+  // OpenAI
+  implementation("com.aallam.openai:openai-client-jvm:4.0.1")
   implementation("com.knuddels:jtokkit:1.1.0")
 
   // Tests
