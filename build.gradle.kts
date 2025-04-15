@@ -26,7 +26,7 @@ group = "net.barrage"
 version = "0.2.0"
 
 application {
-  mainClass.set("io.ktor.server.netty.EngineMain")
+  mainClass.set("io.ktor.server.cio.EngineMain")
   val isDevelopment: Boolean = project.ext.has("development")
   applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
@@ -50,16 +50,16 @@ dependencies {
   implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-resources-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-request-validation:$ktorVersion")
+  implementation("io.ktor:ktor-server-request-validation-jvm:$ktorVersion")
   implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-websockets:$ktorVersion")
-  implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+  implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-websockets-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion")
 
-  implementation("io.ktor:ktor-client-logging:$ktorVersion")
+  implementation("io.ktor:ktor-client-logging-jvm:$ktorVersion")
   implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-client-apache-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+  implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
+  implementation("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
 
   implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
 
