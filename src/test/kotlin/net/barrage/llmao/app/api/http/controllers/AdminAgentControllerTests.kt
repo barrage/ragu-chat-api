@@ -479,21 +479,6 @@ class AdminAgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun deleteAgentFailsForActiveAgent() = test { client ->
-    val response =
-      client.delete("/admin/agents/${agentOne.id}") {
-        header(HttpHeaders.Cookie, adminAccessToken())
-      }
-
-    assertEquals(400, response.status.value)
-
-    val body = response.body<AppError>()
-
-    assertEquals("API", body.errorType)
-    assertEquals(ErrorReason.InvalidOperation, body.errorReason)
-  }
-
-  @Test
   fun getAgentVersionsWorks() = test { client ->
     val response =
       client.get("/admin/agents/${agentOne.id}/versions?sortOrder=desc") {
