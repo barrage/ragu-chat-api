@@ -477,10 +477,7 @@ class AgentRepository(private val dslContext: DSLContext) {
   }
 
   suspend fun delete(id: KUUID): Int {
-    return dslContext
-      .deleteFrom(AGENTS)
-      .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isFalse))
-      .awaitSingle()
+    return dslContext.deleteFrom(AGENTS).where(AGENTS.ID.eq(id)).awaitSingle()
   }
 
   suspend fun getAgentCounts(): AgentCounts {
