@@ -78,10 +78,6 @@ class AdminAgentService(
   suspend fun delete(id: KUUID) {
     val agent = agentRepository.getAgent(id) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
 
-    if (agent.active) {
-      throw AppError.api(ErrorReason.InvalidOperation, "Cannot delete active agent")
-    }
-
     if (agent.avatar != null) {
       avatarStorage.delete(agent.avatar)
     }
