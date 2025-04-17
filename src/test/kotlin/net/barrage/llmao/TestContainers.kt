@@ -84,9 +84,6 @@ class TestPostgres {
   init {
     container.start()
 
-    // Fixes all errors related to container not being ready yet
-    sleep(150)
-
     initConnectionPool()
     initDslContext()
 
@@ -98,24 +95,35 @@ class TestPostgres {
         databaseName = "test"
       }
 
-    // The insane lengths one has to go through to make this
-    // hot garbage piece of shit library shut the fuck up is unfathomable
     val originalOut = System.out
     val originalErr = System.err
-    try {
-      System.setOut(PrintStream(FileOutputStream("/dev/null")))
-      System.setErr(PrintStream(FileOutputStream("/dev/null")))
-      val liquibase =
-        Liquibase(
-          "db/changelog.yaml",
-          ClassLoaderResourceAccessor(),
-          JdbcConnection(dataSource.connection),
-        )
-      liquibase.update()
-    } finally {
-      System.setOut(originalOut)
-      System.setErr(originalErr)
+
+    var attempt = 0
+    while (attempt < 5) {
+      try {
+        // Disable liquibase output
+        System.setOut(PrintStream(FileOutputStream("/dev/null")))
+        System.setErr(PrintStream(FileOutputStream("/dev/null")))
+        val liquibase =
+          Liquibase(
+            "db/changelog.yaml",
+            ClassLoaderResourceAccessor(),
+            JdbcConnection(dataSource.connection),
+          )
+        liquibase.update()
+        break
+      } catch (e: Throwable) {
+        System.setOut(originalOut)
+        println("Postgres initialization error: ${e.message}")
+        println("Attempting reconnection...")
+        System.setOut(PrintStream(FileOutputStream("/dev/null")))
+        attempt += 1
+        sleep(500)
+      }
     }
+
+    System.setOut(originalOut)
+    System.setErr(originalErr)
   }
 
   private fun initConnectionPool() {
