@@ -98,7 +98,7 @@ suspend fun createWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraEvent.WorklogCreated(worklog), JiraKiraEvent::class)
+  state.emitter.emit(JiraKiraEvent.WorklogCreated(worklog), JiraKiraEvent.serializer())
 
   return "Success. Worklog entry ID: ${worklog.tempoWorklogId}."
 }
@@ -141,7 +141,7 @@ suspend fun updateWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraEvent.WorklogUpdated(worklog), JiraKiraEvent::class)
+  state.emitter.emit(JiraKiraEvent.WorklogUpdated(worklog), JiraKiraEvent.serializer())
 
   return "success"
 }

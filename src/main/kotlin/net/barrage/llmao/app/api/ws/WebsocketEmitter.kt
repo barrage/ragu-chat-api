@@ -2,12 +2,10 @@ package net.barrage.llmao.app.api.ws
 
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
-import kotlin.reflect.KClass
-import kotlin.reflect.full.createType
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.workflow.Emitter
 
@@ -21,7 +19,7 @@ class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
   /** Used to emit messages to the collector, which in turn forwards them to the client. */
   val flow: MutableSharedFlow<String> = MutableSharedFlow()
 
-  val log = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.app.api.ws.WebsocketEmitter")
+  val log = io.ktor.util.logging.KtorSimpleLogger("n.b.l.a.api.ws.WebsocketEmitter")
 
   /**
    * Start the job that collects messages from the flow and forwards anything emitted to the client.
@@ -32,7 +30,7 @@ class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
   }
 
   /** Emit a system message to the client. */
-  override suspend fun <T : Any> emit(message: T, clazz: KClass<T>) {
+  override suspend fun <T> emit(message: T, serializer: KSerializer<T>) {
     if (message !is ChatWorkflowMessage.StreamChunk) {
       if (message is Throwable) {
         @Suppress("LoggingPlaceholderCountMatchesArgumentCount") log.warn("Emitting error", message)
@@ -40,6 +38,6 @@ class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
         log.debug("Emitting message: {}", message)
       }
     }
-    flow.emit(json.encodeToString(serializer(clazz.createType()), message))
+    flow.emit(json.encodeToString(serializer, message))
   }
 }

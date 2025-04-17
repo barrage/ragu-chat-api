@@ -34,7 +34,7 @@ class JiraKiraWorkflow(
   override suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>? {
     val results = mutableListOf<ChatMessage>()
     for (toolCall in toolCalls) {
-      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent::class)
+      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent.serializer())
       val result =
         try {
           toolchain!!.processToolCall(toolCall)
@@ -46,7 +46,7 @@ class JiraKiraWorkflow(
           }
           "error: ${e.message}"
         }
-      emitter.emit(ToolEvent.ToolResult(result), ToolEvent::class)
+      emitter.emit(ToolEvent.ToolResult(result), ToolEvent.serializer())
       results.add(ChatMessage.toolResult(result, toolCall.id))
     }
     return results

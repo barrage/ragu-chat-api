@@ -22,6 +22,7 @@ import net.barrage.llmao.core.StateChangeEvent
 import net.barrage.llmao.core.workflow.Session
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.SessionTokenManager
+import net.barrage.llmao.core.workflow.emit
 import net.barrage.llmao.types.KUUID
 
 private val LOG = io.ktor.util.logging.KtorSimpleLogger("n.b.l.a.api.ws.WebsocketRouter")
@@ -89,13 +90,13 @@ fun Application.websocketServer(listener: EventListener<StateChangeEvent>) {
             try {
               server.handleMessage(session, frame.readText(), emitter)
             } catch (error: AppError) {
-              emitter.emit(error, AppError::class)
+              emitter.emit(error)
             }
           }
         }
         .onFailure { e ->
           if (e is AppError) {
-            emitter.emit(e, AppError::class)
+            emitter.emit(e)
           }
           LOG.error("Websocket exception occurred {}", e.message)
           val formatter =

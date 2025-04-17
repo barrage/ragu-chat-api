@@ -66,7 +66,10 @@ class ChatWorkflow(
         log.debug("{} - generated title ({})", id, title)
 
         repository.updateTitle(id, user.id, title)
-        emitter.emit(ChatWorkflowMessage.ChatTitleUpdated(id, title), ChatWorkflowMessage::class)
+        emitter.emit(
+          ChatWorkflowMessage.ChatTitleUpdated(id, title),
+          ChatWorkflowMessage.serializer(),
+        )
         state = ChatWorkflowState.Persisted(title)
 
         ProcessedMessageGroup(groupId, attachmentsInsert)

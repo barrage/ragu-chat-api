@@ -90,7 +90,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         for (channel in systemSessions.values) {
           channel.emit(
             OutgoingSystemMessage.AgentDeactivated(event.agentId),
-            OutgoingSystemMessage::class,
+            OutgoingSystemMessage.serializer(),
           )
         }
       }
@@ -126,7 +126,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
 
         systemSessions[session]?.emit(
           OutgoingSystemMessage.WorkflowOpen(workflow.id()),
-          OutgoingSystemMessage::class,
+          OutgoingSystemMessage.serializer(),
         )
 
         LOG.debug(
@@ -144,7 +144,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
           LOG.debug("{} - workflow already open ({})", session.user.id, workflow.id())
           systemSessions[session]?.emit(
             OutgoingSystemMessage.WorkflowOpen(workflow.id()),
-            OutgoingSystemMessage::class,
+            OutgoingSystemMessage.serializer(),
           )
           return
         }
@@ -162,7 +162,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         workflows[session] = existingWorkflow
         systemSessions[session]?.emit(
           OutgoingSystemMessage.WorkflowOpen(message.workflowId),
-          OutgoingSystemMessage::class,
+          OutgoingSystemMessage.serializer(),
         )
 
         LOG.debug("{} - opened workflow {}", session.user.id, existingWorkflow.id())
@@ -171,7 +171,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         workflows.remove(session)?.let {
           systemSessions[session]?.emit(
             OutgoingSystemMessage.WorkflowClosed(it.id()),
-            OutgoingSystemMessage::class,
+            OutgoingSystemMessage.serializer(),
           )
           it.cancelStream()
           LOG.debug(

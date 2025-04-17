@@ -26,6 +26,7 @@ import net.barrage.llmao.core.workflow.AgentEventHandler
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowAgent
+import net.barrage.llmao.core.workflow.emit
 import net.barrage.llmao.types.KUUID
 
 /**
@@ -84,7 +85,7 @@ abstract class ChatWorkflowBase<S>(
   /** Uses [emitter] to emit each chunk with content of an LLM stream. */
   override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
     chunk.content?.let {
-      emitter.emit(ChatWorkflowMessage.StreamChunk(it), ChatWorkflowMessage::class)
+      emitter.emit(ChatWorkflowMessage.StreamChunk(it), ChatWorkflowMessage.serializer())
     }
   }
 
@@ -92,7 +93,7 @@ abstract class ChatWorkflowBase<S>(
   override suspend fun onMessage(message: ChatMessage) {
     if (message.role == "assistant") {
       message.content?.let {
-        emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage::class)
+        emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage.serializer())
       }
     }
   }
@@ -100,14 +101,14 @@ abstract class ChatWorkflowBase<S>(
   override suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>? {
     val results = mutableListOf<ChatMessage>()
     for (toolCall in toolCalls) {
-      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent::class)
+      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent.serializer())
       try {
         val result = toolchain!!.processToolCall(toolCall)
-        emitter.emit(ToolEvent.ToolResult(result), ToolEvent::class)
+        emitter.emit(ToolEvent.ToolResult(result), ToolEvent.serializer())
         results.add(ChatMessage.toolResult(result, toolCall.id))
       } catch (e: Throwable) {
         val result = "error: ${e.message}"
-        emitter.emit(ToolEvent.ToolResult(result), ToolEvent::class)
+        emitter.emit(ToolEvent.ToolResult(result), ToolEvent.serializer())
         results.add(ChatMessage.toolResult(result, toolCall.id))
       }
     }
@@ -216,13 +217,13 @@ abstract class ChatWorkflowBase<S>(
               messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
             ),
-            ChatWorkflowMessage::class,
+            ChatWorkflowMessage.serializer(),
           )
         }
       } else {
         emitter.emit(
           ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason),
-          ChatWorkflowMessage::class,
+          ChatWorkflowMessage.serializer(),
         )
       }
 
@@ -345,13 +346,13 @@ abstract class ChatWorkflowBase<S>(
               messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
             ),
-            ChatWorkflowMessage::class,
+            ChatWorkflowMessage.serializer(),
           )
         }
       } else {
         emitter.emit(
           ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason),
-          ChatWorkflowMessage::class,
+          ChatWorkflowMessage.serializer(),
         )
       }
 
@@ -381,11 +382,11 @@ abstract class ChatWorkflowBase<S>(
     when (e) {
       is AppError -> {
         log.error("{} - error in stream", id, e)
-        emitter.emit(e.withDisplayMessage(agent.errorMessage()), AppError::class)
+        emitter.emit(e.withDisplayMessage(agent.errorMessage()))
       }
       else -> {
         log.error("{} - unexpected error in stream", id, e)
-        emitter.emit(AppError.internal().withDisplayMessage(agent.errorMessage()), AppError::class)
+        emitter.emit(AppError.internal().withDisplayMessage(agent.errorMessage()))
       }
     }
   }
