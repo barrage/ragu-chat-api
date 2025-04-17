@@ -4,8 +4,8 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.application.install
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.cio.EngineMain
+import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
@@ -75,7 +75,7 @@ fun ApplicationConfig.long(key: String): Long {
   return property(key).getString().toLong()
 }
 
-/** Shorthand for `config.property(key).getString().toLong` */
+/** Shorthand for `config.property(key).getString().toInt` */
 fun ApplicationConfig.int(key: String): Int {
   return property(key).getString().toInt()
 }

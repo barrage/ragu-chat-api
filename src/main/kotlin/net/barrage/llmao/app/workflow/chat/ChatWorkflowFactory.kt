@@ -14,6 +14,8 @@ import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
+import net.barrage.llmao.core.llm.ToolDefinition
+import net.barrage.llmao.core.llm.ToolFunctionDefinition
 import net.barrage.llmao.core.llm.ToolRegistry
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.llm.ToolchainBuilder
@@ -192,11 +194,12 @@ object ChatWorkflowFactory : WorkflowFactory {
 
       toolchain.addTool(definition, handler)
     }
+    val tools = toolchain.build(services)
 
     LOG.info(
       "Loading toolchain for '{}', available tools: {}",
       agentId,
-      toolchain.listToolNames().joinToString(", "),
+      tools.listToolSchemas().map(ToolDefinition::function).map(ToolFunctionDefinition::name),
     )
 
     return toolchain.build(services)

@@ -5,19 +5,14 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.token.LOG
 
-private val LOG = io.ktor.util.logging.KtorSimpleLogger("net.barrage.llmao.core.llm.Toolchain")
-
 /**
- * Container for all available tools an agent can use. Holds all tool definitions and their handlers
- * obtained from the [ToolRegistry]. Holds an event listener to broadcast tool events, as well as
- * the service state for executing tool calls.
+ * Container for all available tools an agent can use.
  *
- * Toolchains emit tool call events, 2 for each tool; one for the tool call and one for the tool
- * result.
+ * To construct a toolchain, use [ToolchainBuilder].
  */
 class Toolchain<S>(
   private val state: S,
-  private val agentTools: List<ToolDefinition>,
+  private val definitions: List<ToolDefinition>,
   private val handlers: Map<String, CallableTool<S>>,
 ) {
 
@@ -33,25 +28,22 @@ class Toolchain<S>(
   }
 
   fun listToolSchemas(): List<ToolDefinition> {
-    return agentTools
+    return definitions
   }
 }
 
+/** Builder for [Toolchain]s. */
 class ToolchainBuilder<S> {
-  private val agentTools = mutableListOf<ToolDefinition>()
+  private val definitions = mutableListOf<ToolDefinition>()
   private val handlers = mutableMapOf<String, CallableTool<S>>()
 
   fun addTool(definition: ToolDefinition, handler: CallableTool<S>): ToolchainBuilder<S> {
-    agentTools.add(definition)
+    definitions.add(definition)
     handlers[definition.function.name] = handler
     return this
   }
 
-  fun build(state: S) = Toolchain(state = state, agentTools = agentTools, handlers = handlers)
-
-  fun listToolNames(): List<String> {
-    return agentTools.map(ToolDefinition::function).map(ToolFunctionDefinition::name)
-  }
+  fun build(state: S) = Toolchain(state = state, definitions = definitions, handlers = handlers)
 }
 
 /** Used to collect tool calls from streaming responses. */
@@ -139,6 +131,11 @@ data class ToolCallChunk(
 /** Used as a native application model for mapping function call arguments. */
 @Serializable data class FunctionCall(val name: String?, val arguments: String?)
 
+/**
+ * Represents a tool schema that must be sent to an LLM in order for it to be able to call it.
+ *
+ * This class is the root of the schema.
+ */
 @Serializable data class ToolDefinition(val type: String, val function: ToolFunctionDefinition)
 
 @Serializable

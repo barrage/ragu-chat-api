@@ -38,9 +38,13 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
     systemSessions.remove(session)
   }
 
-  /** Removes the session and its corresponding chat associated with the user and token pair. */
+  /** Removes the session and its corresponding workflow associated with the user and token pair. */
   fun removeWorkflow(session: Session) {
-    LOG.info("{} - removing session", session.user.id)
+    LOG.info(
+      "{} - removing workflow; total workflows in manager: {}",
+      session.user.id,
+      workflows.size,
+    )
     workflows.remove(session)
   }
 
@@ -126,7 +130,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         )
 
         LOG.debug(
-          "{} - started workflow ({}) total workflows in manager: {}",
+          "{} - started workflow ({}); total workflows in manager: {}",
           session.user.id,
           workflow.id(),
           workflows.size,
@@ -171,7 +175,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
           )
           it.cancelStream()
           LOG.debug(
-            "{} - closed workflow ({}) total workflows in manager: {}",
+            "{} - closed workflow ({}); total workflows in manager: {}",
             session.user.id,
             it.id(),
             workflows.size,
