@@ -2,14 +2,14 @@ package net.barrage.llmao.app.workflow.chat
 
 import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ChatWorkflowBase
-import net.barrage.llmao.core.chat.ProcessedMessageGroup
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
+import net.barrage.llmao.core.workflow.ChatWorkflowBase
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.core.workflow.ProcessedMessageGroup
 import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KUUID
 
@@ -49,8 +49,6 @@ class ChatWorkflow(
 
     return when (state) {
       ChatWorkflowState.New -> {
-        log.debug("{} - persisting chat with message pair", id)
-
         val groupId =
           repository.insertChatWithMessages(
             chatId = id,
@@ -63,8 +61,6 @@ class ChatWorkflow(
 
         val title = agent.createTitle(originalPrompt, assistantMessage.content!!.text())
 
-        log.debug("{} - generated title ({})", id, title)
-
         repository.updateTitle(id, user.id, title)
         emitter.emit(
           ChatWorkflowMessage.ChatTitleUpdated(id, title),
@@ -75,7 +71,6 @@ class ChatWorkflow(
         ProcessedMessageGroup(groupId, attachmentsInsert)
       }
       is ChatWorkflowState.Persisted -> {
-        log.debug("{} - persisting message pair", id)
         val groupId =
           repository.insertMessages(
             chatId = id,

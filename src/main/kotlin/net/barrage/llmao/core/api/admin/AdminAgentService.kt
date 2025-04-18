@@ -42,7 +42,7 @@ class AdminAgentService(
   /** The image storage provider for avatars. */
   private val avatarStorage: BlobStorage<Image>,
 ) {
-  private val log = KtorSimpleLogger("net.barrage.llmao.core.api.admin.AgentService")
+  private val log = KtorSimpleLogger("n.b.l.c.api.admin.AgentService")
 
   suspend fun listAgents(
     pagination: PaginationSort,

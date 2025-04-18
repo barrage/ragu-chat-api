@@ -51,7 +51,7 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
 
     location /<MODEL> {
-        rewrite ^/<MODEL>(/.*)$ /$1 break;
+        rewrite ^/<MODEL>(/.*)$ $1 break;
         proxy_pass http://localhost:<VLLM_PORT>;
     }
 }
@@ -105,12 +105,12 @@ server {
     # use the proxy_set_header directives from the previous section
 
     location /qwen {
-        rewrite ^/qwen(/.*)$ /$1 break;
+        rewrite ^/qwen(/.*)$ $1 break;
         proxy_pass http://localhost:8000;
     }
 
     location /mistral {
-        rewrite ^/mistral(/.*)$ /$1 break;
+        rewrite ^/mistral(/.*)$ $1 break;
         proxy_pass http://localhost:8001;
     }
 }

@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.workflow.Emitter
 
 val json = Json {
@@ -30,14 +29,6 @@ class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
   }
 
   /** Emit a system message to the client. */
-  override suspend fun <T> emit(message: T, serializer: KSerializer<T>) {
-    if (message !is ChatWorkflowMessage.StreamChunk) {
-      if (message is Throwable) {
-        @Suppress("LoggingPlaceholderCountMatchesArgumentCount") log.warn("Emitting error", message)
-      } else {
-        log.debug("Emitting message: {}", message)
-      }
-    }
+  override suspend fun <T> emit(message: T, serializer: KSerializer<T>) =
     flow.emit(json.encodeToString(serializer, message))
-  }
 }

@@ -8,7 +8,7 @@ import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.chat.ChatWorkflowInput
+import net.barrage.llmao.core.workflow.ChatWorkflowInput
 import net.barrage.llmao.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage

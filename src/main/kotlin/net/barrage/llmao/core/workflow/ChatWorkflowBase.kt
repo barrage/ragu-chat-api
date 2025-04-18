@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.chat
+package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.*
 import java.time.Instant
@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
@@ -22,11 +23,6 @@ import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.workflow.AgentEventHandler
-import net.barrage.llmao.core.workflow.Emitter
-import net.barrage.llmao.core.workflow.Workflow
-import net.barrage.llmao.core.workflow.WorkflowAgent
-import net.barrage.llmao.core.workflow.emit
 import net.barrage.llmao.types.KUUID
 
 /**
@@ -64,7 +60,7 @@ abstract class ChatWorkflowBase<S>(
   /** Scope in which [stream] and [onInteractionComplete] run. */
   private val scope = CoroutineScope(Dispatchers.Default)
 
-  protected open val log = KtorSimpleLogger("net.barrage.llmao.core.workflow.chat.ChatWorkflowBase")
+  protected open val log = KtorSimpleLogger("n.b.l.c.workflow.ChatWorkflowBase")
 
   /**
    * Callback that runs when an interaction with an LLM is complete.
@@ -157,18 +153,7 @@ abstract class ChatWorkflowBase<S>(
         messageBuffer = messageBuffer,
         eventHandler = this,
       )
-
-      log.debug(
-        "{} - completion complete, took {}ms",
-        agent.id(),
-        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-      )
     } catch (_: CancellationException) {
-      log.debug(
-        "{} - completion cancelled, took {}ms",
-        agent.id(),
-        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-      )
       finishReason = FinishReason.ManualStop
     } catch (e: Throwable) {
       handleError(e)
@@ -228,8 +213,8 @@ abstract class ChatWorkflowBase<S>(
       }
 
       log.debug(
-        "{} - response emitted ({}ms), finish reason: {}",
-        agent.id(),
+        "{} - workflow response emitted ({}ms), finish reason: {}",
+        user.id,
         Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
         finishReason.value,
       )
@@ -260,20 +245,9 @@ abstract class ChatWorkflowBase<S>(
         out = responseBuffer,
         eventHandler = this,
       )
-
-      log.debug(
-        "{} - stream complete, took {}ms",
-        agent.id(),
-        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-      )
     } catch (_: CancellationException) {
       // If the stream is cancelled from outside, a
       // CancellationException is thrown with a specific message indicating the reason.
-      log.debug(
-        "{} - stream cancelled, took {}ms",
-        agent.id(),
-        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-      )
       finishReason = FinishReason.ManualStop
     } catch (e: Throwable) {
       handleError(e)
@@ -357,8 +331,8 @@ abstract class ChatWorkflowBase<S>(
       }
 
       log.debug(
-        "{} - stream complete emitted ({}ms), finish reason: {}",
-        agent.id(),
+        "{} - streaming workflow response emitted ({}ms), finish reason: {}",
+        user.id,
         Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
         finishReason.value,
       )

@@ -1,8 +1,6 @@
 package net.barrage.llmao.app.workflow.jirakira
 
 import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.ChatWorkflowBase
-import net.barrage.llmao.core.chat.ProcessedMessageGroup
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolEvent
@@ -10,7 +8,9 @@ import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
+import net.barrage.llmao.core.workflow.ChatWorkflowBase
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.core.workflow.ProcessedMessageGroup
 import net.barrage.llmao.types.KUUID
 
 class JiraKiraWorkflow(

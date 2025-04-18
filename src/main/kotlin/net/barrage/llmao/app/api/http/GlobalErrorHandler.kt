@@ -14,7 +14,7 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ValidationError
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.plugins.GlobalErrorHandler")
+internal val LOG = KtorSimpleLogger("n.b.l.a.plugins.GlobalErrorHandler")
 
 fun Application.configureErrorHandling() {
   install(StatusPages) {

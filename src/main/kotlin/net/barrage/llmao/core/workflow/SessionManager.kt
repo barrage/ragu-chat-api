@@ -63,7 +63,6 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
                 | Original error: ${e.message}"""
                 .trimMargin(),
             )
-        LOG.debug("{} - sending input to workflow '{}'", session.user.id, workflow.id())
         workflow.execute(message)
       } catch (e: SerializationException) {
         throw AppError.api(ErrorReason.InvalidParameter, "Message format malformed", original = e)
@@ -72,10 +71,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         else AppError.internal("Unexpected error in workflow", original = e)
       }
     } catch (e: Throwable) {
-      if (e is AppError) {
-        throw e
-      }
-      throw AppError.internal("Error in workflow", original = e)
+      throw if (e is AppError) e else AppError.internal("Error in workflow", original = e)
     }
   }
 
@@ -107,13 +103,6 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         val workflowType = message.workflowType
         val agentId = message.agentId
 
-        LOG.debug(
-          "{} - opening workflow (type: {}, agent: {})",
-          session.user.id,
-          workflowType,
-          agentId,
-        )
-
         val workflow =
           WorkflowFactoryManager.new(
             workflowType = workflowType,
@@ -132,7 +121,7 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
         LOG.debug(
           "{} - started workflow ({}); total workflows in manager: {}",
           session.user.id,
-          workflow.id(),
+          message.workflowType,
           workflows.size,
         )
       }
@@ -175,18 +164,14 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
           )
           it.cancelStream()
           LOG.debug(
-            "{} - closed workflow ({}); total workflows in manager: {}",
+            "{} - closed workflow; total workflows in manager: {}",
             session.user.id,
-            it.id(),
             workflows.size,
           )
         }
       }
       is IncomingSystemMessage.CancelWorkflowStream -> {
-        workflows[session]?.let {
-          LOG.debug("{} - cancelling stream in workflow '{}'", session.user.id, it.id())
-          it.cancelStream()
-        }
+        workflows[session]?.cancelStream()
       }
     }
   }

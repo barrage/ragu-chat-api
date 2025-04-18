@@ -10,8 +10,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.time.Duration.Companion.seconds
 import net.barrage.llmao.app.api.http.queryParam
@@ -45,7 +43,6 @@ fun Application.websocketServer(listener: EventListener<StateChangeEvent>) {
       route("/ws") {
         get(websocketGenerateToken()) {
           val user = call.user()
-          LOG.debug("{} - registering token", user.id)
           val token = tokenManager.registerToken(user)
           call.respond(HttpStatusCode.OK, token)
         }
@@ -55,7 +52,6 @@ fun Application.websocketServer(listener: EventListener<StateChangeEvent>) {
     webSocket {
       // Used for debugging
       val connectionStart = Instant.now()
-      LOG.debug("Websocket connection opened ({})", connectionStart.nano)
 
       // Validate session
       val token = call.queryParam("token")
@@ -79,53 +75,33 @@ fun Application.websocketServer(listener: EventListener<StateChangeEvent>) {
       val emitter = WebsocketEmitter(this)
       server.registerSystemEmitter(session, emitter)
 
-      LOG.debug("Websocket connection opened for '{}' with token '{}'", user.username, token)
+      LOG.debug("{} - websocket connection open", user.id)
 
-      runCatching {
-          for (frame in incoming) {
-            if (frame !is Frame.Text) {
-              LOG.warn("Unsupported frame received, {}", frame)
-              continue
-            }
-            try {
-              server.handleMessage(session, frame.readText(), emitter)
-            } catch (error: AppError) {
-              emitter.emit(error)
-            }
+      try {
+        for (frame in incoming) {
+          if (frame !is Frame.Text) {
+            LOG.warn("Unsupported frame received, {}", frame)
+            continue
           }
+          runCatching { server.handleMessage(session, frame.readText(), emitter) }
+            .onFailure { e ->
+              LOG.error("error in websocket session", e)
+              emitter.emit(e as? AppError ?: AppError.internal(e.message))
+            }
         }
-        .onFailure { e ->
-          if (e is AppError) {
-            emitter.emit(e)
-          }
-          LOG.error("Websocket exception occurred {}", e.message)
-          val formatter =
-            DateTimeFormatter.ofPattern("yyyy/MM/dd:HH:mm:ss").withZone(ZoneId.systemDefault())
-          LOG.debug(
-            "Connection for user-token '{}'-'{}' closed. Start: {}, End: {}, Duration: {}ms",
-            user.id,
-            token,
-            formatter.format(Instant.ofEpochMilli(connectionStart.toEpochMilli())),
-            formatter.format(Instant.now()),
-            Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
-          )
-          server.removeWorkflow(session)
-          server.removeSystemEmitter(session)
-        }
-
-      // From this point on, the websocket connection is closed
-      val formatter =
-        DateTimeFormatter.ofPattern("yyyy/MM/dd:HH:mm:ss").withZone(ZoneId.systemDefault())
-      LOG.debug(
-        "Connection for user-token '{}'-'{}' closed. Start: {}, End: {}, Duration: {}ms",
-        user.id,
-        token,
-        formatter.format(Instant.ofEpochMilli(connectionStart.toEpochMilli())),
-        formatter.format(Instant.now()),
-        Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
-      )
-      server.removeWorkflow(session)
-      server.removeSystemEmitter(session)
+      } catch (e: Throwable) {
+        LOG.error("error in websocket session", e)
+      } finally {
+        // From this point on, the websocket connection is closed
+        LOG.debug(
+          "Connection for user-token '{}'-'{}' closed. Duration: {}ms",
+          user.id,
+          token,
+          Instant.now().toEpochMilli() - connectionStart.toEpochMilli(),
+        )
+        server.removeWorkflow(session)
+        server.removeSystemEmitter(session)
+      }
     }
   }
 }
