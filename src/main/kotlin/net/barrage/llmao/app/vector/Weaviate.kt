@@ -101,8 +101,6 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
           )
       }
 
-      println(results)
-
       LOG.debug(
         "successful query in '{}' ({}/{} results)",
         collectionName,
