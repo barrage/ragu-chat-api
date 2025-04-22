@@ -27,6 +27,6 @@
     <logger name="io.ktor.auth.jwt" level="ERROR"/>
 
     <!-- If you want to see the full authentication process -->
-    <logger name="io.ktor.server.auth" level="TRACE"/>
-    <logger name="io.ktor.server.auth.jwt" level="TRACE"/>
+    <logger name="io.ktor.server.auth" level="ERROR"/>
+    <logger name="io.ktor.server.auth.jwt" level="ERROR"/>
 </configuration>
