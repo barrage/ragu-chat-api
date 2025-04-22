@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.api.http.controllers
+package net.barrage.llmao.app.workflow.chat.controllers
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.get
@@ -9,9 +9,9 @@ import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.query
 import net.barrage.llmao.app.api.http.queryPaginationSort
 import net.barrage.llmao.app.api.http.user
+import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.api.pub.PublicAgentService
-import net.barrage.llmao.core.model.Agent
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.types.KUUID

@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.api.http.controllers
+package net.barrage.llmao.app.workflow.chat.controllers
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.delete
@@ -9,86 +9,120 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import net.barrage.llmao.app.api.http.dto.SearchFiltersAdminChatQuery
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
 import net.barrage.llmao.app.api.http.pathUuid
 import net.barrage.llmao.app.api.http.query
-import net.barrage.llmao.app.api.http.queryListChatsFilters
 import net.barrage.llmao.app.api.http.queryPagination
 import net.barrage.llmao.app.api.http.queryPaginationSort
+import net.barrage.llmao.app.api.http.user
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.api.admin.AdminChatService
+import net.barrage.llmao.core.api.pub.PublicChatService
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage
+import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
+import net.barrage.llmao.core.storage.ATTACHMENTS_PATH
+import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.types.KUUID
 
-fun Route.adminChatsRoutes(service: AdminChatService) {
-  route("/admin/chats") {
-    get(adminGetAllChats()) {
+fun Route.chatsRoutes(service: PublicChatService, imageStorage: BlobStorage<Image>) {
+  route("/chats") {
+    get(getAllChats()) {
+      val user = call.user()
       val pagination = call.query(PaginationSort::class)
-      val filters = call.query(SearchFiltersAdminChatQuery::class).toSearchFiltersAdminChats()
-      val chats = service.listChatsAdmin(pagination, filters)
+      val chats = service.listChats(pagination, user.id)
       call.respond(HttpStatusCode.OK, chats)
     }
 
     route("/{chatId}") {
-      get(adminGetChatWithUserAndAgent()) {
+      get(getChatWithAgent()) {
+        val user = call.user()
         val chatId = call.pathUuid("chatId")
-        val chat = service.getChatWithAgent(chatId)
+        val chat = service.getChatWithAgent(chatId, user.id)
         call.respond(HttpStatusCode.OK, chat)
       }
 
-      put(adminUpdateTitle()) {
+      put(updateTitle()) {
+        val user = call.user()
         val chatId = call.pathUuid("chatId")
         val input: UpdateChatTitleDTO = call.receive()
-        val chat = service.updateTitle(chatId, input.title)
+        val chat = service.userUpdateTitle(chatId, user.id, input.title)
         call.respond(HttpStatusCode.OK, chat)
       }
 
-      delete(adminDeleteChat()) {
+      delete(deleteChat()) {
+        val user = call.user()
         val chatId = call.pathUuid("chatId")
-        service.deleteChat(chatId)
+        service.deleteChat(chatId, user.id)
         call.respond(HttpStatusCode.NoContent)
       }
 
       route("/messages") {
-        get(adminGetMessages()) {
+        get(getMessages()) {
+          val user = call.user()
           val chatId = call.pathUuid("chatId")
           val pagination = call.query(Pagination::class)
-          val messages = service.getMessages(chatId, pagination = pagination)
+          val messages = service.getMessages(chatId, user.id, pagination)
           call.respond(HttpStatusCode.OK, messages)
         }
 
-        patch("/{messageGroupId}", adminEvaluate()) {
+        patch("/{messageGroupId}", evaluate()) {
+          val user = call.user()
           val input: EvaluateMessage = call.receive()
           val chatId = call.pathUuid("chatId")
           val messageGroupId = call.pathUuid("messageGroupId")
-          service.evaluateMessage(chatId = chatId, messageGroupId = messageGroupId, input)
+          service.evaluateMessage(chatId, messageGroupId, user.id, input)
           call.respond(HttpStatusCode.NoContent)
         }
+      }
+
+      get("/attachments/images/{path}") {
+        val user = call.user()
+
+        val chatId = call.pathUuid("chatId")
+
+        // Throws if not found
+        service.getChat(chatId, user.id)
+
+        val imagePath = call.parameters["path"]!!
+
+        val image = imageStorage.retrieve("${ATTACHMENTS_PATH}/$imagePath")
+
+        if (image == null) {
+          call.respond(HttpStatusCode.NotFound)
+          return@get
+        }
+
+        call.response.header(
+          HttpHeaders.ContentDisposition,
+          ContentDisposition.Inline.withParameter(ContentDisposition.Parameters.FileName, imagePath)
+            .toString(),
+        )
+
+        call.respondBytes(
+          image.data,
+          ContentType.parse(image.type.contentType()),
+          HttpStatusCode.OK,
+        )
       }
     }
   }
 }
 
 // OpenAPI documentation
-private fun adminGetAllChats(): RouteConfig.() -> Unit = {
-  tags("admin/chats")
+private fun getAllChats(): RouteConfig.() -> Unit = {
+  tags("chats")
   description = "Retrieve list of all chats"
-  request {
-    queryPaginationSort()
-    queryListChatsFilters()
-  }
+  request { queryPaginationSort() }
   response {
     HttpStatusCode.OK to
       {
         description = "A list of Chat objects representing all the chats"
-        body<CountedList<Chat>> {}
+        body<List<Chat>> {}
       }
     HttpStatusCode.InternalServerError to
       {
@@ -98,40 +132,41 @@ private fun adminGetAllChats(): RouteConfig.() -> Unit = {
   }
 }
 
-private fun adminGetChatWithUserAndAgent(): RouteConfig.() -> Unit = {
-  tags("admin/chats")
-  description = "Get single chat"
+private fun getChatWithAgent(): RouteConfig.() -> Unit = {
+  tags("chats")
+  description = "Retrieve chat by ID"
   request {
     pathParameter<KUUID>("chatId") {
       description = "Chat ID"
-      example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
+      required = true
     }
   }
   response {
     HttpStatusCode.OK to
       {
-        description = "Single chat"
-        body<ChatWithAgent> {}
+        description = "Chat retrieved successfully"
+        body<ChatWithAgent>()
       }
     HttpStatusCode.NotFound to
       {
         description = "Chat not found"
-        body<List<AppError>> {}
+        body<List<AppError>>()
       }
     HttpStatusCode.InternalServerError to
       {
-        description = "Internal server error occurred while retrieving chats"
+        description = "Internal server error occurred while retrieving chat"
         body<List<AppError>> {}
       }
   }
 }
 
-private fun adminGetMessages(): RouteConfig.() -> Unit = {
-  tags("admin/chats")
+private fun getMessages(): RouteConfig.() -> Unit = {
+  tags("chats")
   description = "Retrieve chat messages"
   request {
     pathParameter<KUUID>("chatId") {
       description = "The ID of the chat to retrieve messages from"
+      required = true
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
     queryPagination()
@@ -139,7 +174,7 @@ private fun adminGetMessages(): RouteConfig.() -> Unit = {
   response {
     HttpStatusCode.OK to
       {
-        description = "A list of Message objects representing all the messages from a chat"
+        description = "A counted list of Message objects representing all the messages from a chat"
         body<CountedList<MessageGroupAggregate>> {}
       }
     HttpStatusCode.InternalServerError to
@@ -150,8 +185,8 @@ private fun adminGetMessages(): RouteConfig.() -> Unit = {
   }
 }
 
-private fun adminUpdateTitle(): RouteConfig.() -> Unit = {
-  tags("admin/chats")
+private fun updateTitle(): RouteConfig.() -> Unit = {
+  tags("chats")
   description = "Update chat title"
   request {
     pathParameter<KUUID>("chatId") {
@@ -174,8 +209,8 @@ private fun adminUpdateTitle(): RouteConfig.() -> Unit = {
   }
 }
 
-private fun adminEvaluate(): RouteConfig.() -> Unit = {
-  tags("admin/chats")
+private fun evaluate(): RouteConfig.() -> Unit = {
+  tags("chats")
   description = "Evaluate chat message"
   request {
     pathParameter<KUUID>("chatId") {
@@ -196,17 +231,17 @@ private fun adminEvaluate(): RouteConfig.() -> Unit = {
       }
     HttpStatusCode.InternalServerError to
       {
-        description = "Internal server error occurred while retrieving message"
+        description = "Internal server error occurred while retrieving chat"
         body<List<AppError>> {}
       }
   }
 }
 
-private fun adminDeleteChat(): RouteConfig.() -> Unit = {
-  tags("admin/chats")
+private fun deleteChat(): RouteConfig.() -> Unit = {
+  tags("chats")
   description = "Delete chat"
   request {
-    pathParameter<KUUID>("id") {
+    pathParameter<KUUID>("chatId") {
       description = "The ID of the chat"
       example("default") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }

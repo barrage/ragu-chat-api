@@ -14,7 +14,7 @@ import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.WorkflowAgent
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.jirakira.JiraKira")
+internal val LOG = KtorSimpleLogger("n.b.l.a.workflow.jirakira.JiraKira")
 
 class JiraKira(
   private val jiraUser: JiraUser,
@@ -98,7 +98,7 @@ suspend fun createWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraEvent.WorklogCreated(worklog), JiraKiraEvent.serializer())
+  state.emitter.emit(JiraKiraMessage.WorklogCreated(worklog), JiraKiraMessage.serializer())
 
   return "Success. Worklog entry ID: ${worklog.tempoWorklogId}."
 }
@@ -141,7 +141,7 @@ suspend fun updateWorklogEntry(state: JiraKiraState, input: String): String {
     worklog.timeSpent,
   )
 
-  state.emitter.emit(JiraKiraEvent.WorklogUpdated(worklog), JiraKiraEvent.serializer())
+  state.emitter.emit(JiraKiraMessage.WorklogUpdated(worklog), JiraKiraMessage.serializer())
 
   return "success"
 }

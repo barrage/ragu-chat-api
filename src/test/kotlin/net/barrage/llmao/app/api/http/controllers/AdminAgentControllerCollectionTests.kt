@@ -8,10 +8,11 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.UpdateCollectionAddition
-import net.barrage.llmao.core.model.UpdateCollections
-import net.barrage.llmao.core.model.UpdateCollectionsResult
+import net.barrage.llmao.app.workflow.chat.ChatPlugin
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.UpdateCollectionAddition
+import net.barrage.llmao.app.workflow.chat.model.UpdateCollections
+import net.barrage.llmao.app.workflow.chat.model.UpdateCollectionsResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -131,14 +132,14 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
       setBody(updateCollections)
     }
 
-    val agentOneBefore = app.services.admin.agent.getFull(agentOne.id)
+    val agentOneBefore = ChatPlugin.api.admin.agent.getFull(agentOne.id)
 
     assertEquals(1, agentOneBefore.collections.size)
     assertEquals("Kusturica", agentOneBefore.collections[0].collection)
     assertEquals(10, agentOneBefore.collections[0].amount)
     assertEquals("you pass the butter", agentOneBefore.collections[0].instruction)
 
-    val agentTwoBefore = app.services.admin.agent.getFull(agentOne.id)
+    val agentTwoBefore = ChatPlugin.api.admin.agent.getFull(agentOne.id)
 
     assertEquals(1, agentTwoBefore.collections.size)
     assertEquals("Kusturica", agentTwoBefore.collections[0].collection)
@@ -150,10 +151,10 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
         header(HttpHeaders.Cookie, adminAccessToken())
       }
 
-    val agentOneAfter = app.services.admin.agent.getFull(agentOne.id)
+    val agentOneAfter = ChatPlugin.api.admin.agent.getFull(agentOne.id)
     assertEquals(0, agentOneAfter.collections.size)
 
-    val agentTwoAfter = app.services.admin.agent.getFull(agentTwo.id)
+    val agentTwoAfter = ChatPlugin.api.admin.agent.getFull(agentTwo.id)
     assertEquals(0, agentTwoAfter.collections.size)
 
     assertEquals(204, response.status.value)

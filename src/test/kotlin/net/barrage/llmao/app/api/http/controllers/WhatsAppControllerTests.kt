@@ -19,8 +19,8 @@ import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.model.Message
 import net.barrage.llmao.app.adapters.whatsapp.model.Price
 import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.AgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages
 import net.barrage.llmao.core.model.MessageGroupAggregate

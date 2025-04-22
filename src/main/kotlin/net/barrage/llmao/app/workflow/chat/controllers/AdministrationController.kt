@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.api.http.controllers
+package net.barrage.llmao.app.workflow.chat.controllers
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.get
@@ -6,10 +6,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import net.barrage.llmao.app.api.http.queryParam
+import net.barrage.llmao.app.workflow.chat.model.AgentChatTimeSeries
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ProvidersResponse
 import net.barrage.llmao.core.api.admin.AdminStatService
-import net.barrage.llmao.core.model.AgentChatTimeSeries
 import net.barrage.llmao.core.model.DashboardCounts
 import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.types.KOffsetDateTime

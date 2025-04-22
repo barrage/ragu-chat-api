@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.api.http.controllers
+package net.barrage.llmao.app.workflow.chat.controllers
 
 import io.ktor.http.*
 import io.ktor.server.response.*

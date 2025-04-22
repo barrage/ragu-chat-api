@@ -24,15 +24,6 @@ fun Route.openApiRoutes() {
   route("swagger-ui") { swaggerUI("/openapi.json") }
 }
 
-fun Application.openapi() {
-  install(OpenApi) {
-    server {
-      url = "http://localhost:42069"
-      description = "Local Server"
-    }
-  }
-}
-
 fun Application.configureOpenApi() {
   install(OpenApi) {
     info {

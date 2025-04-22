@@ -10,10 +10,10 @@ import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentChatTimeSeries
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.core.ProvidersResponse
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.AgentChatTimeSeries
-import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.DashboardCounts
 import org.junit.jupiter.api.Assertions.assertEquals

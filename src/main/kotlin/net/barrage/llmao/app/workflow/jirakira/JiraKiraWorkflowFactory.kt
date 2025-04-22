@@ -2,7 +2,6 @@ package net.barrage.llmao.app.workflow.jirakira
 
 import io.ktor.server.config.ApplicationConfig
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.JIRAKIRA_WORKFLOW_ID
 import net.barrage.llmao.app.api.http.httpClient
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -30,20 +29,20 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
   private lateinit var endpoint: String
   private lateinit var providers: ProviderState
   private lateinit var settings: AdminSettingsService
-  private lateinit var tokenUsageRepositoryW: TokenUsageRepositoryWrite
-  lateinit var jiraKiraRepository: JiraKiraRepository
+  private lateinit var tokenUsageWrite: TokenUsageRepositoryWrite
+  private lateinit var jiraKiraRepository: JiraKiraRepository
   private lateinit var specialistRepositoryWrite: SpecialistRepositoryWrite
 
-  override fun id(): String = JIRAKIRA_WORKFLOW_ID
-
-  override suspend fun init(config: ApplicationConfig, state: ApplicationState) {
+  fun init(config: ApplicationConfig, state: ApplicationState) {
     endpoint = config.string("jirakira.endpoint")
     providers = state.providers
-    settings = state.services.admin.settings
-    tokenUsageRepositoryW = state.repository.tokenUsageW
+    settings = state.settings
+    tokenUsageWrite = state.tokenUsageWrite
     jiraKiraRepository = JiraKiraRepository(state.database)
-    specialistRepositoryWrite = state.repository.specialistWrite(JIRAKIRA_WORKFLOW_ID)
+    specialistRepositoryWrite = SpecialistRepositoryWrite(state.database, JIRAKIRA_WORKFLOW_ID)
   }
+
+  override fun id(): String = JIRAKIRA_WORKFLOW_ID
 
   override suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow {
     val workflowId = KUUID.randomUUID()
@@ -101,7 +100,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
 
     val tokenTracker =
       TokenUsageTracker(
-        repository = tokenUsageRepositoryW,
+        repository = tokenUsageWrite,
         user = user,
         originType = JIRAKIRA_WORKFLOW_ID,
         originId = workflowId,

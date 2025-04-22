@@ -8,8 +8,9 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
-import net.barrage.llmao.core.model.AgentChatsOnDate
-import net.barrage.llmao.core.model.AgentConfigurationEvaluatedMessageCounts
+import net.barrage.llmao.app.workflow.chat.model.AgentChatsOnDate
+import net.barrage.llmao.app.workflow.chat.model.AgentConfigurationEvaluatedMessageCounts
+import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatCount
 import net.barrage.llmao.core.model.ChatCounts
@@ -23,7 +24,6 @@ import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.core.model.common.SearchFiltersAdminChats
 import net.barrage.llmao.core.model.common.SortOrder
-import net.barrage.llmao.core.model.toAgent
 import net.barrage.llmao.core.model.toChat
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageAttachment

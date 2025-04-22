@@ -8,11 +8,13 @@ import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
+import net.barrage.llmao.app.workflow.chat.CHAT_WORKFLOW_ID
 import net.barrage.llmao.app.workflow.chat.ChatAgent
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.AgentConfiguration
-import net.barrage.llmao.core.model.AgentFull
+import net.barrage.llmao.app.workflow.chat.ChatPlugin
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.token.TokenUsageType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -55,9 +57,9 @@ class TokenUsageTests : IntegrationTest() {
     assertEquals(COMPLETIONS_RESPONSE, response.last().content!!.text())
 
     // Use delays since storing the usage is done in a separate coroutine
-    delay(200)
+    delay(1000)
     val usage =
-      app.services.admin.admin.listTokenUsage(agentId = agent.id).items.find {
+      ChatPlugin.api.admin.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION
       }!!
     assertEquals(CHAT_WORKFLOW_ID, usage.origin.type)
@@ -72,9 +74,9 @@ class TokenUsageTests : IntegrationTest() {
     assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
 
     // Use delays since storing the usage is done in a separate coroutine
-    delay(200)
+    delay(1000)
     val usage =
-      app.services.admin.admin.listTokenUsage(agentId = agent.id).items.find {
+      ChatPlugin.api.admin.admin.listTokenUsage(agentId = agent.id).items.find {
         it.usageType == TokenUsageType.COMPLETION_TITLE
       }!!
     assertEquals(CHAT_WORKFLOW_ID, usage.origin.type)

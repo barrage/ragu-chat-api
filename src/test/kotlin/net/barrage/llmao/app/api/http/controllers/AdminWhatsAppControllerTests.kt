@@ -12,11 +12,11 @@ import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppAgentUpdate
 import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.AgentConfiguration
-import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages
 import net.barrage.llmao.core.model.MessageGroupAggregate
@@ -256,30 +256,18 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
 
     assertEquals(messageGroupOne.messages[0].id, checkGroupOne.messages[0].id)
     assertEquals(messageGroupOne.messages[0].content, checkGroupOne.messages[0].content)
-    assertEquals(
-      messageGroupOne.messages[0].senderType,
-      checkGroupOne.messages[0].senderType,
-    )
+    assertEquals(messageGroupOne.messages[0].senderType, checkGroupOne.messages[0].senderType)
 
     assertEquals(messageGroupOne.messages[1].id, checkGroupOne.messages[1].id)
     assertEquals(messageGroupOne.messages[1].content, checkGroupOne.messages[1].content)
-    assertEquals(
-      messageGroupOne.messages[1].senderType,
-      checkGroupOne.messages[1].senderType,
-    )
+    assertEquals(messageGroupOne.messages[1].senderType, checkGroupOne.messages[1].senderType)
 
     assertEquals(messageGroupTwo.messages[0].id, checkGroupTwo.messages[0].id)
     assertEquals(messageGroupTwo.messages[0].content, checkGroupTwo.messages[0].content)
-    assertEquals(
-      messageGroupTwo.messages[0].senderType,
-      checkGroupTwo.messages[0].senderType,
-    )
+    assertEquals(messageGroupTwo.messages[0].senderType, checkGroupTwo.messages[0].senderType)
 
-    assertEquals(messageGroupTwo.messages[1].id,checkGroupTwo.messages[1].id)
+    assertEquals(messageGroupTwo.messages[1].id, checkGroupTwo.messages[1].id)
     assertEquals(messageGroupTwo.messages[1].content, checkGroupTwo.messages[1].content)
-    assertEquals(
-      messageGroupTwo.messages[1].senderType,
-      checkGroupTwo.messages[1].senderType,
-    )
+    assertEquals(messageGroupTwo.messages[1].senderType, checkGroupTwo.messages[1].senderType)
   }
 }

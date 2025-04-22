@@ -3,7 +3,6 @@ package net.barrage.llmao.core
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.api.admin.AdminAgentService
 import net.barrage.llmao.core.api.admin.AdminChatService
-import net.barrage.llmao.core.api.admin.AdminSettingsService
 import net.barrage.llmao.core.api.admin.AdminStatService
 import net.barrage.llmao.core.api.pub.PublicAgentService
 import net.barrage.llmao.core.api.pub.PublicChatService
@@ -15,7 +14,6 @@ import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.repository.SettingsRepository
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
-import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.vector.VectorDatabase
@@ -88,7 +86,6 @@ class AdminApi(
   val chat: AdminChatService,
   val agent: AdminAgentService,
   val admin: AdminStatService,
-  val settings: AdminSettingsService,
 )
 
 class PublicApi(val chat: PublicChatService, val agent: PublicAgentService)
@@ -97,7 +94,6 @@ class PublicApi(val chat: PublicChatService, val agent: PublicAgentService)
 class RepositoryState(private val database: DSLContext) {
   val agent: AgentRepository = AgentRepository(database)
   val settings: SettingsRepository = SettingsRepository(database)
-  val tokenUsageR: TokenUsageRepositoryRead = TokenUsageRepositoryRead(database)
   val tokenUsageW: TokenUsageRepositoryWrite = TokenUsageRepositoryWrite(database)
 
   /** Get a chat R repository for the given type of chat. */

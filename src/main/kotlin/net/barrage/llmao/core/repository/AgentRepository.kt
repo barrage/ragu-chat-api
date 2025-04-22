@@ -6,32 +6,32 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitLast
 import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentCollection
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.AgentFull
+import net.barrage.llmao.app.workflow.chat.model.AgentGroupUpdate
+import net.barrage.llmao.app.workflow.chat.model.AgentTool
+import net.barrage.llmao.app.workflow.chat.model.AgentWithConfiguration
+import net.barrage.llmao.app.workflow.chat.model.CollectionInsert
+import net.barrage.llmao.app.workflow.chat.model.CollectionRemove
+import net.barrage.llmao.app.workflow.chat.model.CreateAgent
+import net.barrage.llmao.app.workflow.chat.model.UpdateAgent
+import net.barrage.llmao.app.workflow.chat.model.UpdateAgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.UpdateAgentInstructions
+import net.barrage.llmao.app.workflow.chat.model.toAgent
+import net.barrage.llmao.app.workflow.chat.model.toAgentCollection
+import net.barrage.llmao.app.workflow.chat.model.toAgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.toAgentTool
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.AgentCollection
-import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.AgentCounts
-import net.barrage.llmao.core.model.AgentFull
-import net.barrage.llmao.core.model.AgentGroupUpdate
-import net.barrage.llmao.core.model.AgentTool
 import net.barrage.llmao.core.model.AgentUpdateTools
-import net.barrage.llmao.core.model.AgentWithConfiguration
-import net.barrage.llmao.core.model.CollectionInsert
-import net.barrage.llmao.core.model.CollectionRemove
-import net.barrage.llmao.core.model.CreateAgent
-import net.barrage.llmao.core.model.UpdateAgent
-import net.barrage.llmao.core.model.UpdateAgentConfiguration
-import net.barrage.llmao.core.model.UpdateAgentInstructions
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.SearchFiltersAdminAgents
 import net.barrage.llmao.core.model.common.SortOrder
-import net.barrage.llmao.core.model.toAgent
-import net.barrage.llmao.core.model.toAgentCollection
-import net.barrage.llmao.core.model.toAgentConfiguration
-import net.barrage.llmao.core.model.toAgentTool
 import net.barrage.llmao.core.set
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
@@ -369,7 +369,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENT_CONFIGURATIONS.PRESENCE_PENALTY, create.configuration.presencePenalty)
           .set(
             AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-            create.configuration.instructions?.titleInstruction,
+              create.configuration.instructions?.titleInstruction,
           )
           .set(AGENT_CONFIGURATIONS.ERROR_MESSAGE, create.configuration.instructions?.errorMessage)
           .returning()

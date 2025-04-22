@@ -1,7 +1,5 @@
 package net.barrage.llmao.core.workflow
 
-import io.ktor.server.config.ApplicationConfig
-import net.barrage.llmao.app.ApplicationState
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.User
@@ -14,8 +12,6 @@ interface WorkflowFactory {
    * types.
    */
   fun id(): String
-
-  suspend fun init(config: ApplicationConfig, state: ApplicationState)
 
   suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow
 

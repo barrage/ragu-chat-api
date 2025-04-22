@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.workflow.chat
 
 import io.ktor.util.logging.KtorSimpleLogger
+import net.barrage.llmao.app.workflow.chat.model.AgentInstructions
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
@@ -8,7 +9,6 @@ import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.model.AgentInstructions
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
@@ -80,7 +80,10 @@ class ChatAgent(
     val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
 
     val completion =
-      inferenceProvider.chatCompletion(messages, completionParameters.copy(maxTokens = titleMaxTokens))
+      inferenceProvider.chatCompletion(
+        messages,
+        completionParameters.copy(maxTokens = titleMaxTokens),
+      )
 
     completion.tokenUsage?.let { tokenUsage ->
       tokenTracker.store(

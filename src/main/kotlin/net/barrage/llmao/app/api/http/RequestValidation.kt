@@ -4,9 +4,9 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.requestvalidation.*
 import net.barrage.llmao.app.adapters.whatsapp.model.UpdateNumber
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
-import net.barrage.llmao.core.model.CreateAgent
-import net.barrage.llmao.core.model.UpdateAgent
-import net.barrage.llmao.core.model.UpdateCollections
+import net.barrage.llmao.app.workflow.chat.model.CreateAgent
+import net.barrage.llmao.app.workflow.chat.model.UpdateAgent
+import net.barrage.llmao.app.workflow.chat.model.UpdateCollections
 
 fun Application.configureRequestValidation() {
   install(RequestValidation) {

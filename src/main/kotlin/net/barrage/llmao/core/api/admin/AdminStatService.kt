@@ -1,11 +1,11 @@
 package net.barrage.llmao.core.api.admin
 
 import java.time.ZoneOffset
+import net.barrage.llmao.app.workflow.chat.model.AgentChatTimeSeries
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.ProvidersResponse
-import net.barrage.llmao.core.model.AgentChatTimeSeries
 import net.barrage.llmao.core.model.DashboardCounts
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Period

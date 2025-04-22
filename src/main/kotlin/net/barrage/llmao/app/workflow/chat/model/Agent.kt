@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.model
+package net.barrage.llmao.app.workflow.chat.model
 
 import java.time.LocalDate
 import kotlinx.serialization.EncodeDefault

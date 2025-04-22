@@ -1,13 +1,11 @@
 package net.barrage.llmao.app.workflow.chat
 
-import io.ktor.server.config.ApplicationConfig
 import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.CHAT_WORKFLOW_ID
+import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.core.Api
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.RepositoryState
 import net.barrage.llmao.core.api.admin.AdminSettingsService
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.MessageBasedHistory
@@ -19,12 +17,13 @@ import net.barrage.llmao.core.llm.ToolFunctionDefinition
 import net.barrage.llmao.core.llm.ToolRegistry
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.llm.ToolchainBuilder
-import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.SettingKey
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
+import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
+import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.LOG
 import net.barrage.llmao.core.token.TokenUsageTracker
@@ -36,22 +35,28 @@ import net.barrage.llmao.types.KUUID
 
 object ChatWorkflowFactory : WorkflowFactory {
   private lateinit var providers: ProviderState
-  private lateinit var services: Api
-  private lateinit var repository: RepositoryState
+  private lateinit var api: Api
+  private lateinit var agentRepository: AgentRepository
+  private lateinit var tokenUsageWrite: TokenUsageRepositoryWrite
   private lateinit var settings: AdminSettingsService
-  private lateinit var chatRepositoryWrite: ChatRepositoryWrite
   private lateinit var chatRepositoryRead: ChatRepositoryRead
+  private lateinit var chatRepositoryWrite: ChatRepositoryWrite
+
+  fun init(providers: ProviderState, api: Api, state: ApplicationState) {
+    val chatRead = ChatRepositoryRead(state.database, CHAT_WORKFLOW_ID)
+    val chatWrite = ChatRepositoryWrite(state.database, CHAT_WORKFLOW_ID)
+    val agentRepository = AgentRepository(state.database)
+
+    this.providers = providers
+    this.api = api
+    this.agentRepository = agentRepository
+    tokenUsageWrite = state.tokenUsageWrite
+    settings = state.settings
+    chatRepositoryRead = chatRead
+    chatRepositoryWrite = chatWrite
+  }
 
   override fun id(): String = CHAT_WORKFLOW_ID
-
-  override suspend fun init(config: ApplicationConfig, state: ApplicationState) {
-    providers = state.providers
-    services = state.services
-    repository = state.repository
-    settings = services.admin.settings
-    chatRepositoryWrite = repository.chatWrite(CHAT_WORKFLOW_ID)
-    chatRepositoryRead = repository.chatRead(CHAT_WORKFLOW_ID)
-  }
 
   override suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow {
     if (agentId == null) {
@@ -62,9 +67,9 @@ object ChatWorkflowFactory : WorkflowFactory {
     val agent =
       if (user.isAdmin()) {
         // Load it regardless of active status
-        services.admin.agent.getFull(agentId)
+        api.admin.agent.getFull(agentId)
       } else {
-        services.user.agent.getFull(agentId, user.entitlements)
+        api.user.agent.getFull(agentId, user.entitlements)
       }
 
     val chatAgent = createChatAgent(id, user, agent)
@@ -90,9 +95,9 @@ object ChatWorkflowFactory : WorkflowFactory {
       ) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
     val agent =
-      if (user.isAdmin()) services.admin.agent.getFull(chat.chat.agentId)
+      if (user.isAdmin()) api.admin.agent.getFull(chat.chat.agentId)
       else {
-        services.user.agent.getFull(chat.chat.agentId, user.entitlements)
+        api.user.agent.getFull(chat.chat.agentId, user.entitlements)
       }
 
     val chatAgent = createChatAgent(workflowId, user, agent)
@@ -119,7 +124,7 @@ object ChatWorkflowFactory : WorkflowFactory {
 
     val tokenTracker =
       TokenUsageTracker(
-        repository = repository.tokenUsageW,
+        repository = tokenUsageWrite,
         user = user,
         agentId = agent.agent.id,
         originType = CHAT_WORKFLOW_ID,
@@ -171,7 +176,7 @@ object ChatWorkflowFactory : WorkflowFactory {
   }
 
   private suspend fun loadAgentTools(agentId: KUUID): Toolchain<Api>? {
-    val agentTools = repository.agent.getAgentTools(agentId).map { it.toolName }
+    val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
 
     if (agentTools.isEmpty()) {
       return null
@@ -194,7 +199,7 @@ object ChatWorkflowFactory : WorkflowFactory {
 
       toolchain.addTool(definition, handler)
     }
-    val tools = toolchain.build(services)
+    val tools = toolchain.build(api)
 
     LOG.info(
       "Loading toolchain for '{}', available tools: {}",
@@ -202,6 +207,6 @@ object ChatWorkflowFactory : WorkflowFactory {
       tools.listToolSchemas().map(ToolDefinition::function).map(ToolFunctionDefinition::name),
     )
 
-    return toolchain.build(services)
+    return toolchain.build(api)
   }
 }

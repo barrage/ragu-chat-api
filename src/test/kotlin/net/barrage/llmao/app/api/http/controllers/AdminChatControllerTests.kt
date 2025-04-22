@@ -18,9 +18,9 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.api.http.dto.UpdateChatTitleDTO
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.core.ValidationError
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.AgentConfiguration
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithAgent
 import net.barrage.llmao.core.model.EvaluateMessage

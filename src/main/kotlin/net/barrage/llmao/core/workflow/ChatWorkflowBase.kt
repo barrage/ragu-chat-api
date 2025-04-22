@@ -30,7 +30,7 @@ import net.barrage.llmao.types.KUUID
  * agent.
  *
  * If a workflow is conversation based, i.e. does not have structured input and only accepts text
- * messages with attachments, this class should be used as the base.
+ * messages with attachments, this class can be used as the base.
  *
  * Structured workflows should implement [Workflow] directly.
  */
@@ -49,6 +49,10 @@ abstract class ChatWorkflowBase<S>(
 
   /** Output handle. Only chat related events are sent via this reference. */
   protected val emitter: Emitter,
+
+  /**
+   * Whether to call the LLM in streaming mode.
+   */
   protected val streamingEnabled: Boolean = true,
 ) : Workflow, AgentEventHandler {
   /**

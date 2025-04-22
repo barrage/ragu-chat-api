@@ -19,6 +19,7 @@ import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResult
 import net.barrage.llmao.app.adapters.whatsapp.model.UpdateNumber
 import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.app.workflow.chat.ChatAgent
+import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
@@ -31,7 +32,6 @@ import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
-import net.barrage.llmao.core.model.AgentFull
 import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.ChatWithMessages
 import net.barrage.llmao.core.model.SettingKey

@@ -5,8 +5,8 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.core.model.Agent
-import net.barrage.llmao.core.model.AgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals

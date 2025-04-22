@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.api.http.controllers.specialists
+package net.barrage.llmao.app.workflow.jirakira
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.delete
@@ -11,9 +11,6 @@ import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.api.http.queryParam
 import net.barrage.llmao.app.api.http.user
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraKeyStore
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraRepository
-import net.barrage.llmao.app.workflow.jirakira.WorklogAttribute
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 
