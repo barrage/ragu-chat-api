@@ -1,18 +1,18 @@
 package net.barrage.llmao.app.workflow.jirakira
 
 import io.ktor.server.config.ApplicationConfig
-import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.api.http.httpClient
+import net.barrage.llmao.app.http.httpClient
 import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.administration.settings.SettingKey
+import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolchainBuilder
-import net.barrage.llmao.core.model.SettingKey
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
@@ -28,7 +28,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
   /** Jira endpoint. */
   private lateinit var endpoint: String
   private lateinit var providers: ProviderState
-  private lateinit var settings: AdminSettingsService
+  private lateinit var settings: Settings
   private lateinit var tokenUsageWrite: TokenUsageRepositoryWrite
   private lateinit var jiraKiraRepository: JiraKiraRepository
   private lateinit var specialistRepositoryWrite: SpecialistRepositoryWrite
@@ -58,7 +58,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     val jiraKiraLlmProvider = settings[SettingKey.JIRA_KIRA_LLM_PROVIDER]
     val jiraKiraModel = settings[SettingKey.JIRA_KIRA_MODEL]
 
-    if (!providers.llm.getProvider(jiraKiraLlmProvider).supportsModel(jiraKiraModel)) {
+    if (!providers.llm[jiraKiraLlmProvider].supportsModel(jiraKiraModel)) {
       throw AppError.api(
         ErrorReason.InvalidOperation,
         "JiraKira LLM provider does not support the configured JiraKira model",
@@ -115,7 +115,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
       repository = specialistRepositoryWrite,
       agent =
         JiraKira(
-          inferenceProvider = providers.llm.getProvider(jiraKiraLlmProvider),
+          inferenceProvider = providers.llm[jiraKiraLlmProvider],
           tokenTracker = tokenTracker,
           model = jiraKiraModel,
           user = user,

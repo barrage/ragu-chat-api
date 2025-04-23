@@ -9,8 +9,8 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.app.api.http.queryParam
-import net.barrage.llmao.app.api.http.user
+import net.barrage.llmao.app.http.queryParam
+import net.barrage.llmao.app.http.user
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 

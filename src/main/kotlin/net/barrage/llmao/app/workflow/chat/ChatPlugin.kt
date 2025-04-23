@@ -2,40 +2,52 @@ package net.barrage.llmao.app.workflow.chat
 
 import io.ktor.server.auth.authenticate
 import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
-import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.WHATSAPP_CHAT_TYPE
-import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
-import net.barrage.llmao.app.adapters.whatsapp.WhatsAppAdapter
-import net.barrage.llmao.app.adapters.whatsapp.WhatsAppRepository
-import net.barrage.llmao.app.adapters.whatsapp.WhatsAppSenderConfig
-import net.barrage.llmao.app.adapters.whatsapp.adminWhatsAppRoutes
-import net.barrage.llmao.app.adapters.whatsapp.whatsAppHookRoutes
-import net.barrage.llmao.app.adapters.whatsapp.whatsAppRoutes
-import net.barrage.llmao.app.workflow.chat.controllers.adminAgentsRoutes
-import net.barrage.llmao.app.workflow.chat.controllers.adminChatsRoutes
-import net.barrage.llmao.app.workflow.chat.controllers.administrationRouter
-import net.barrage.llmao.app.workflow.chat.controllers.agentsRoutes
-import net.barrage.llmao.app.workflow.chat.controllers.chatsRoutes
-import net.barrage.llmao.app.workflow.chat.controllers.specialistWorkflowRoutes
-import net.barrage.llmao.core.AdminApi
-import net.barrage.llmao.core.Api
+import io.ktor.util.logging.KtorSimpleLogger
+import net.barrage.llmao.app.workflow.chat.api.AdminAgentService
+import net.barrage.llmao.app.workflow.chat.api.AdminApi
+import net.barrage.llmao.app.workflow.chat.api.AdminChatService
+import net.barrage.llmao.app.workflow.chat.api.Api
+import net.barrage.llmao.app.workflow.chat.api.PublicAgentService
+import net.barrage.llmao.app.workflow.chat.api.PublicApi
+import net.barrage.llmao.app.workflow.chat.api.PublicChatService
+import net.barrage.llmao.app.workflow.chat.model.AgentDeactivated
+import net.barrage.llmao.app.workflow.chat.model.CreateAgent
+import net.barrage.llmao.app.workflow.chat.model.UpdateAgent
+import net.barrage.llmao.app.workflow.chat.model.UpdateChatTitleDTO
+import net.barrage.llmao.app.workflow.chat.model.UpdateCollections
+import net.barrage.llmao.app.workflow.chat.repository.AgentRepository
+import net.barrage.llmao.app.workflow.chat.routes.adminAgentsRoutes
+import net.barrage.llmao.app.workflow.chat.routes.adminChatsRoutes
+import net.barrage.llmao.app.workflow.chat.routes.agentsRoutes
+import net.barrage.llmao.app.workflow.chat.routes.avatarRoutes
+import net.barrage.llmao.app.workflow.chat.routes.chatsRoutes
+import net.barrage.llmao.app.workflow.chat.routes.specialistWorkflowRoutes
+import net.barrage.llmao.app.workflow.chat.whatsapp.WhatsAppAdapter
+import net.barrage.llmao.app.workflow.chat.whatsapp.WhatsAppRepository
+import net.barrage.llmao.app.workflow.chat.whatsapp.WhatsAppSenderConfig
+import net.barrage.llmao.app.workflow.chat.whatsapp.adminWhatsAppRoutes
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
+import net.barrage.llmao.app.workflow.chat.whatsapp.whatsAppHookRoutes
+import net.barrage.llmao.app.workflow.chat.whatsapp.whatsAppRoutes
+import net.barrage.llmao.core.ApplicationState
+import net.barrage.llmao.core.Event
 import net.barrage.llmao.core.Plugin
-import net.barrage.llmao.core.PublicApi
-import net.barrage.llmao.core.api.admin.AdminAgentService
-import net.barrage.llmao.core.api.admin.AdminChatService
-import net.barrage.llmao.core.api.admin.AdminStatService
-import net.barrage.llmao.core.api.pub.PublicAgentService
-import net.barrage.llmao.core.api.pub.PublicChatService
-import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
+import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 import net.barrage.llmao.string
 
 const val CHAT_WORKFLOW_ID = "CHAT"
+const val WHATSAPP_CHAT_TYPE = "WHATSAPP"
+const val WHATSAPP_FEATURE_FLAG = "ktor.features.whatsApp"
 
-object ChatPlugin : Plugin {
+internal val LOG = KtorSimpleLogger("n.b.l.a.workflow.chat.ChatPlugin")
+
+class ChatPlugin : Plugin {
   lateinit var api: Api
 
   private var whatsapp: WhatsAppAdapter? = null
@@ -56,11 +68,9 @@ object ChatPlugin : Plugin {
                 state.providers,
                 agentRepository,
                 chatRead,
-                state.listener,
                 state.providers.image,
+                state.listener,
               ),
-            admin =
-              AdminStatService(state.providers, agentRepository, chatRead, state.tokenUsageRead),
           ),
         user =
           PublicApi(
@@ -97,11 +107,12 @@ object ChatPlugin : Plugin {
   }
 
   override fun Route.routes(state: ApplicationState) {
+    avatarRoutes(state.providers.image)
+
     // Admin API routes
     authenticate("admin") {
       adminAgentsRoutes(api.admin.agent, state.settings)
       adminChatsRoutes(api.admin.chat)
-      administrationRouter(api.admin.admin)
     }
 
     // User API routes
@@ -115,6 +126,33 @@ object ChatPlugin : Plugin {
       whatsAppHookRoutes(it)
       authenticate("admin") { adminWhatsAppRoutes(it) }
       authenticate("user") { whatsAppRoutes(it) }
+    }
+  }
+
+  override fun RequestValidationConfig.requestValidation() {
+    validate<CreateAgent>(CreateAgent::validate)
+    validate<UpdateAgent>(UpdateAgent::validate)
+    validate<UpdateCollections>(UpdateCollections::validate)
+
+    // Chat DTOs validations
+    validate<UpdateChatTitleDTO>(UpdateChatTitleDTO::validate)
+
+    // WhatsApp DTOs validations
+    validate<UpdateNumber>(UpdateNumber::validate)
+  }
+
+  override suspend fun handleEvent(manager: SessionManager, event: Event) {
+    when (event) {
+      is AgentDeactivated -> {
+        LOG.info("Handling agent deactivated event ({})", event.agentId)
+
+        manager.retainWorkflows {
+          val chat = it as? ChatWorkflow ?: return@retainWorkflows true
+          chat.agentId() != event.agentId
+        }
+
+        manager.broadcast(OutgoingSystemMessage.AgentDeactivated(event.agentId))
+      }
     }
   }
 }

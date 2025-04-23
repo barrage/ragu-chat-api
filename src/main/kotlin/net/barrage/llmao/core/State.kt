@@ -1,23 +1,60 @@
 package net.barrage.llmao.core
 
+import io.ktor.server.application.Application
+import io.ktor.server.config.ApplicationConfig
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.core.api.admin.AdminAgentService
-import net.barrage.llmao.core.api.admin.AdminChatService
-import net.barrage.llmao.core.api.admin.AdminStatService
-import net.barrage.llmao.core.api.pub.PublicAgentService
-import net.barrage.llmao.core.api.pub.PublicChatService
+import net.barrage.llmao.app.administration.settings.SettingsRepositoryPostgres
+import net.barrage.llmao.app.blob.MinioImageStorage
+import net.barrage.llmao.app.embeddings.EmbeddingProviderFactory
+import net.barrage.llmao.app.llm.InferenceProviderFactory
+import net.barrage.llmao.app.vector.VectorDatabaseProviderFactory
+import net.barrage.llmao.core.administration.Administration
+import net.barrage.llmao.core.administration.settings.Settings
+import net.barrage.llmao.core.blob.BlobStorage
+import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.embedding.Embedder
+import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.model.Image
-import net.barrage.llmao.core.repository.AgentRepository
-import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
-import net.barrage.llmao.core.repository.SettingsRepository
-import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
+import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.core.storage.BlobStorage
 import net.barrage.llmao.core.vector.VectorDatabase
 import org.jooq.DSLContext
+
+fun Application.state(): ApplicationState {
+  return ApplicationState(environment.config, initDatabase(environment.config))
+}
+
+/** Application state available to plugins. */
+class ApplicationState(config: ApplicationConfig, val database: DSLContext) {
+  val providers: ProviderState =
+    ProviderState(
+      llm = InferenceProviderFactory(config),
+      vector = VectorDatabaseProviderFactory(config),
+      embedding = EmbeddingProviderFactory(config),
+      image = MinioImageStorage(config),
+    )
+
+  /** A key-value storage API for application settings. */
+  val settings: Settings = Settings(SettingsRepositoryPostgres(database))
+
+  val tokenUsageWrite: TokenUsageRepositoryWrite = TokenUsageRepositoryWrite(database)
+  val tokenUsageRead: TokenUsageRepositoryRead = TokenUsageRepositoryRead(database)
+
+  /**
+   * Handle to the event listener.
+   *
+   * Events can be dispatched to this handle and are forwarded to all registered plugins via the
+   * session manager.
+   */
+  val listener: EventListener = EventListener()
+
+  init {
+    ChatMessageProcessor.init(providers)
+    ContextEnrichmentFactory.init(providers)
+    Administration.init(providers, tokenUsageRead)
+  }
+}
 
 /** Encapsulates all available providers for downstream services. */
 class ProviderState(
@@ -54,7 +91,7 @@ class ProviderState(
   ) {
     if (llmProvider != null && model != null) {
       // Throws if invalid provider
-      val llm = llm.getProvider(llmProvider)
+      val llm = llm[llmProvider]
       if (!llm.supportsModel(model)) {
         throw AppError.api(
           ErrorReason.InvalidParameter,
@@ -65,11 +102,11 @@ class ProviderState(
 
     if (vectorProvider != null) {
       // Throws if invalid provider
-      vector.getProvider(vectorProvider)
+      vector[vectorProvider]
     }
 
     if (embeddingProvider != null && embeddingModel != null) {
-      val embedder = embedding.getProvider(embeddingProvider)
+      val embedder = embedding[embeddingProvider]
       if (!embedder.supportsModel(embeddingModel)) {
         throw AppError.api(
           ErrorReason.InvalidParameter,
@@ -78,35 +115,6 @@ class ProviderState(
       }
     }
   }
-}
-
-class Api(val admin: AdminApi, val user: PublicApi)
-
-class AdminApi(
-  val chat: AdminChatService,
-  val agent: AdminAgentService,
-  val admin: AdminStatService,
-)
-
-class PublicApi(val chat: PublicChatService, val agent: PublicAgentService)
-
-/** Encapsulates all repository instances. */
-class RepositoryState(private val database: DSLContext) {
-  val agent: AgentRepository = AgentRepository(database)
-  val settings: SettingsRepository = SettingsRepository(database)
-  val tokenUsageW: TokenUsageRepositoryWrite = TokenUsageRepositoryWrite(database)
-
-  /** Get a chat R repository for the given type of chat. */
-  fun chatRead(type: String): ChatRepositoryRead = ChatRepositoryRead(database, type)
-
-  /** Get a chat W repository for the given type of chat. */
-  fun chatWrite(type: String): ChatRepositoryWrite = ChatRepositoryWrite(database, type)
-
-  // fun specialistRead(type: String): SpecialistRepositoryRead = SpecialistRepositoryRead(database,
-  // type)
-
-  fun specialistWrite(type: String): SpecialistRepositoryWrite =
-    SpecialistRepositoryWrite(database, type)
 }
 
 @Serializable

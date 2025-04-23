@@ -3,13 +3,13 @@ package net.barrage.llmao.app.workflow.jirakira
 import io.ktor.server.auth.authenticate
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.routing.Route
-import net.barrage.llmao.app.ApplicationState
+import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 
 const val JIRAKIRA_WORKFLOW_ID = "JIRAKIRA"
 
-object JiraKiraPlugin : Plugin {
+class JiraKiraPlugin : Plugin {
   private lateinit var repository: JiraKiraRepository
 
   override fun id(): String = JIRAKIRA_WORKFLOW_ID

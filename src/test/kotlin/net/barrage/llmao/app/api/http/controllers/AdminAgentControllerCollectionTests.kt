@@ -8,8 +8,8 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.app.workflow.chat.ChatPlugin
 import net.barrage.llmao.app.workflow.chat.model.Agent
+import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.UpdateCollectionAddition
 import net.barrage.llmao.app.workflow.chat.model.UpdateCollections
 import net.barrage.llmao.app.workflow.chat.model.UpdateCollectionsResult
@@ -39,8 +39,7 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
   }
 
   @Test
-  fun updateAgentCollectionsWorks() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun updateAgentCollectionsWorks() = test { client ->
     val updateCollections =
       UpdateCollections(
         add =
@@ -71,8 +70,7 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
   }
 
   @Test
-  fun updateAgentCollectionFailsCollectionNotFound() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun updateAgentCollectionFailsCollectionNotFound() = test { client ->
     val updateCollections =
       UpdateCollections(
         add =
@@ -103,9 +101,7 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
   }
 
   @Test
-  fun removeCollectionFromAllAgents() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
+  fun removeCollectionFromAllAgents() = test { client ->
     val updateCollections =
       UpdateCollections(
         add =
@@ -132,14 +128,20 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
       setBody(updateCollections)
     }
 
-    val agentOneBefore = ChatPlugin.api.admin.agent.getFull(agentOne.id)
+    val agentOneBefore =
+      client
+        .get("/admin/agents/${agentOne.id}") { header("Cookie", adminAccessToken()) }
+        .body<AgentFull>()
 
     assertEquals(1, agentOneBefore.collections.size)
     assertEquals("Kusturica", agentOneBefore.collections[0].collection)
     assertEquals(10, agentOneBefore.collections[0].amount)
     assertEquals("you pass the butter", agentOneBefore.collections[0].instruction)
 
-    val agentTwoBefore = ChatPlugin.api.admin.agent.getFull(agentOne.id)
+    val agentTwoBefore =
+      client
+        .get("/admin/agents/${agentTwo.id}") { header("Cookie", adminAccessToken()) }
+        .body<AgentFull>()
 
     assertEquals(1, agentTwoBefore.collections.size)
     assertEquals("Kusturica", agentTwoBefore.collections[0].collection)
@@ -151,10 +153,17 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
         header(HttpHeaders.Cookie, adminAccessToken())
       }
 
-    val agentOneAfter = ChatPlugin.api.admin.agent.getFull(agentOne.id)
+    val agentOneAfter =
+      client
+        .get("/admin/agents/${agentOne.id}") { header("Cookie", adminAccessToken()) }
+        .body<AgentFull>()
     assertEquals(0, agentOneAfter.collections.size)
 
-    val agentTwoAfter = ChatPlugin.api.admin.agent.getFull(agentTwo.id)
+    val agentTwoAfter =
+      client
+        .get("/admin/agents/${agentTwo.id}") { header("Cookie", adminAccessToken()) }
+        .body<AgentFull>()
+
     assertEquals(0, agentTwoAfter.collections.size)
 
     assertEquals(204, response.status.value)

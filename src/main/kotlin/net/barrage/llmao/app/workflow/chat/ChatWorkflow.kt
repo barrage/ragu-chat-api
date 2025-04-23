@@ -1,6 +1,6 @@
 package net.barrage.llmao.app.workflow.chat
 
-import net.barrage.llmao.core.Api
+import net.barrage.llmao.app.workflow.chat.api.Api
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.Toolchain
@@ -32,6 +32,10 @@ class ChatWorkflow(
     toolchain = toolchain,
     agent = agent,
   ) {
+  fun agentId(): KUUID {
+    return agent.agentId
+  }
+
   override suspend fun onInteractionComplete(
     userMessage: ChatMessage,
     attachments: List<IncomingMessageAttachment>?,

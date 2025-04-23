@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageContentPart
 import net.barrage.llmao.core.llm.ChatMessageImage
@@ -17,10 +18,8 @@ import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.Message
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.MessageAttachmentType
-import net.barrage.llmao.core.storage.ATTACHMENTS_PATH
 
-private val LOG =
-  io.ktor.util.logging.KtorSimpleLogger("n.b.l.c.chat.ChatMessageProcessor")
+private val LOG = io.ktor.util.logging.KtorSimpleLogger("n.b.l.c.chat.ChatMessageProcessor")
 
 /**
  * Responsible for converting native chat message attachments such as storage and retrieval.

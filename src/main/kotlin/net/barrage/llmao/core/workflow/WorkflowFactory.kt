@@ -2,17 +2,17 @@ package net.barrage.llmao.core.workflow
 
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.Identity
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KUUID
 
-/** Implement on classes that produce workflows. */
-interface WorkflowFactory {
-  /**
-   * Used by workflow factories, and in turn the [WorkflowFactoryManager], to identify workflow
-   * types.
-   */
-  fun id(): String
-
+/**
+ * Implement on classes that produce workflows.
+ *
+ * [Identity] is used by workflow factories, and in turn the [WorkflowFactoryManager], to identify
+ * workflow types.
+ */
+interface WorkflowFactory : Identity {
   suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow
 
   suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow

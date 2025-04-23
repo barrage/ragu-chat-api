@@ -3,11 +3,11 @@ package net.barrage.llmao.core.repository
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.app.workflow.chat.model.Chat
+import net.barrage.llmao.app.workflow.chat.model.toChat
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.MessageInsert
-import net.barrage.llmao.core.model.toChat
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_ATTACHMENTS

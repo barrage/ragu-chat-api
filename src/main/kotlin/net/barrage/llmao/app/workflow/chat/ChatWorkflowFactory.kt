@@ -1,12 +1,14 @@
 package net.barrage.llmao.app.workflow.chat
 
-import net.barrage.llmao.app.ApplicationState
+import net.barrage.llmao.app.workflow.chat.api.Api
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
-import net.barrage.llmao.core.Api
+import net.barrage.llmao.app.workflow.chat.repository.AgentRepository
 import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.api.admin.AdminSettingsService
+import net.barrage.llmao.core.administration.settings.SettingKey
+import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
@@ -14,18 +16,14 @@ import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolFunctionDefinition
-import net.barrage.llmao.core.llm.ToolRegistry
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.llm.ToolchainBuilder
-import net.barrage.llmao.core.model.SettingKey
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
-import net.barrage.llmao.core.repository.AgentRepository
 import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
-import net.barrage.llmao.core.token.LOG
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
@@ -38,7 +36,7 @@ object ChatWorkflowFactory : WorkflowFactory {
   private lateinit var api: Api
   private lateinit var agentRepository: AgentRepository
   private lateinit var tokenUsageWrite: TokenUsageRepositoryWrite
-  private lateinit var settings: AdminSettingsService
+  private lateinit var settings: Settings
   private lateinit var chatRepositoryRead: ChatRepositoryRead
   private lateinit var chatRepositoryWrite: ChatRepositoryWrite
 
@@ -146,7 +144,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
       user = user,
       model = agent.configuration.model,
-      inferenceProvider = providers.llm.getProvider(agent.configuration.llmProvider),
+      inferenceProvider = providers.llm[agent.configuration.llmProvider],
       context = agent.configuration.context,
       completionParameters =
         ChatCompletionParameters(

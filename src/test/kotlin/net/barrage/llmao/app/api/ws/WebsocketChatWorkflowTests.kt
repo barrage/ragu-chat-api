@@ -1,7 +1,9 @@
 package net.barrage.llmao.app.api.ws
 
 // import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
+import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -27,14 +29,13 @@ import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.adminWsSession
-import net.barrage.llmao.app.workflow.chat.ChatPlugin
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.UpdateAgent
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.model.common.Pagination
+import net.barrage.llmao.core.model.MessageGroupAggregate
+import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.json
@@ -45,7 +46,6 @@ import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 
@@ -200,8 +200,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     client.adminWsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
-      val error = assertThrows<AppError> { ChatPlugin.api.admin.chat.getChatWithAgent(chatId) }
-      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
+      val error =
+        client.get("/admin/chats/$chatId/messages") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+          header(HttpHeaders.Accept, ContentType.Application.Json)
+        }
+      assertEquals(404, error.status.value)
 
       var buffer = ""
 
@@ -224,7 +228,14 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-      val messages = ChatPlugin.api.admin.chat.getMessages(chatId, Pagination(1, 50))
+      val messages =
+        client
+          .get("/admin/chats/$chatId/messages") {
+            header(HttpHeaders.Cookie, adminAccessToken())
+            header(HttpHeaders.Accept, ContentType.Application.Json)
+          }
+          .body<CountedList<MessageGroupAggregate>>()
+
       assertEquals(2, messages.items[0].messages.size)
     }
 
@@ -243,12 +254,18 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     client.adminWsSession {
       val chatOne = openNewChat(validAgent.agent.id)
-      val errorOne = assertThrows<AppError> { ChatPlugin.api.admin.chat.getChatWithAgent(chatOne) }
-      assertEquals(ErrorReason.EntityDoesNotExist, errorOne.errorReason)
+      val errorOne =
+        client.get("/admin/chats/$chatOne/messages") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+        }
+      assertEquals(404, errorOne.status.value)
 
       val chatTwo = openNewChat(validAgent.agent.id)
-      val errorTwo = assertThrows<AppError> { ChatPlugin.api.admin.chat.getChatWithAgent(chatTwo) }
-      assertEquals(ErrorReason.EntityDoesNotExist, errorTwo.errorReason)
+      val errorTwo =
+        client.get("/admin/chats/$chatTwo/messages") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+        }
+      assertEquals(404, errorTwo.status.value)
 
       asserted = true
     }
@@ -269,8 +286,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     client.adminWsSession {
       val chatId = openNewChat(validAgent.agent.id)
 
-      val error = assertThrows<AppError> { ChatPlugin.api.admin.chat.getChatWithAgent(chatId) }
-      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
+      val error =
+        client.get("/admin/chats/$chatId/messages") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+        }
+
+      assertEquals(404, error.status.value)
 
       val msg = "{ \"text\": \"Will this trigger a stream response?\" }"
 
@@ -297,7 +318,13 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         } catch (_: SerializationException) {}
       }
 
-      val messages = ChatPlugin.api.admin.chat.getMessages(chatId, Pagination(1, 50))
+      val messages =
+        client
+          .get("/admin/chats/$chatId/messages") {
+            header(HttpHeaders.Cookie, adminAccessToken())
+            header(HttpHeaders.Accept, ContentType.Application.Json)
+          }
+          .body<CountedList<MessageGroupAggregate>>()
       assertEquals(2, messages.items[0].messages.size)
     }
 
@@ -367,6 +394,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         runBlocking {
           httpClient.put("/admin/agents/${agent.agent.id}") {
             header(HttpHeaders.Cookie, adminAccessToken())
+            header(HttpHeaders.Accept, ContentType.Application.Json)
             contentType(ContentType.Application.Json)
             setBody(UpdateAgent(active = false))
           }
@@ -486,7 +514,13 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
       assertEquals(COMPLETIONS_STREAM_RESPONSE, buffer)
 
-      val groups = ChatPlugin.api.admin.chat.getMessages(chatId, Pagination(1, 50))
+      val groups =
+        client
+          .get("/admin/chats/$chatId/messages") {
+            header(HttpHeaders.Cookie, adminAccessToken())
+            header(HttpHeaders.Accept, ContentType.Application.Json)
+          }
+          .body<CountedList<MessageGroupAggregate>>()
 
       // These are the two message groups
       assertEquals(2, groups.items[0].messages.size)

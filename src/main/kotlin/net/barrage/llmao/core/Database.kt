@@ -1,5 +1,7 @@
 package net.barrage.llmao.core
 
+import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.config.*
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
@@ -12,7 +14,6 @@ import io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD
 import io.r2dbc.spi.ConnectionFactoryOptions.PORT
 import io.r2dbc.spi.ConnectionFactoryOptions.USER
 import java.time.Duration
-import kotlinx.coroutines.Job
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -33,7 +34,7 @@ import org.postgresql.ds.PGSimpleDataSource
  * The only exception to the dependency inversion principle. Repositories depend directly on
  * [DSLContext] since there is almost no reason to abstract it.
  */
-fun initDatabase(config: ApplicationConfig, applicationStopping: Job): DSLContext {
+fun Application.initDatabase(config: ApplicationConfig): DSLContext {
   val r2dbcHost = config.property("db.r2dbcHost").getString()
   val r2dbcPort = config.property("db.r2dbcPort").getString()
   val r2dbcDatabase = config.property("db.r2dbcDatabase").getString()
@@ -61,7 +62,7 @@ fun initDatabase(config: ApplicationConfig, applicationStopping: Job): DSLContex
   val pool = ConnectionPool(poolConfiguration)
 
   // Monitor shutdown to close the connection pool
-  applicationStopping.invokeOnCompletion { pool.dispose() }
+  monitor.subscribe(ApplicationStopping) { pool.dispose() }
 
   val configuration = DefaultConfiguration().set(pool).set(SQLDialect.POSTGRES)
 

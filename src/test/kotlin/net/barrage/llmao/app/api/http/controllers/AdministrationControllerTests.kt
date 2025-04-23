@@ -1,10 +1,8 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
@@ -13,9 +11,9 @@ import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentChatTimeSeries
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.Chat
+import net.barrage.llmao.app.workflow.chat.model.DashboardCounts
 import net.barrage.llmao.core.ProvidersResponse
-import net.barrage.llmao.core.model.Chat
-import net.barrage.llmao.core.model.DashboardCounts
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -51,8 +49,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getProvidersTest() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getProvidersTest() = test { client ->
     val response = client.get("/admin/providers") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(HttpStatusCode.OK, response.status)
@@ -64,8 +61,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getListOfProviderLanguageModelsTestOpenAI() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getListOfProviderLanguageModelsTestOpenAI() = test { client ->
     val response =
       client.get("/admin/providers/llm/openai") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
@@ -76,8 +72,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getListOfProviderLanguageModelsTestAzure() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getListOfProviderLanguageModelsTestAzure() = test { client ->
     val response =
       client.get("/admin/providers/llm/azure") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
@@ -88,8 +83,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getListOfProviderLanguageModelsTestOllama() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getListOfProviderLanguageModelsTestOllama() = test { client ->
     val response =
       client.get("/admin/providers/llm/ollama") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
@@ -99,8 +93,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getDefaultDashboardCounts() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getDefaultDashboardCounts() = test { client ->
     val response =
       client.get("/admin/dashboard/counts") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
@@ -121,8 +114,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getChatHistoryCountsByAgentWeek() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getChatHistoryCountsByAgentWeek() = test { client ->
     val response =
       client.get("/admin/dashboard/chat/history?period=WEEK") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -147,8 +139,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getChatHistoryCountsByAgentMonth() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getChatHistoryCountsByAgentMonth() = test { client ->
     val response =
       client.get("/admin/dashboard/chat/history?period=MONTH") {
         header(HttpHeaders.Cookie, adminAccessToken())
@@ -173,8 +164,7 @@ class AdministrationControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun getChatHistoryCountsByAgentYear() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun getChatHistoryCountsByAgentYear() = test { client ->
     val response =
       client.get("/admin/dashboard/chat/history?period=YEAR") {
         header(HttpHeaders.Cookie, adminAccessToken())

@@ -11,7 +11,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.app.api.http.pathUuid
+import net.barrage.llmao.app.http.pathUuid
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.NotBlank

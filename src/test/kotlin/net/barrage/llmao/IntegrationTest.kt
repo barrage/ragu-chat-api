@@ -1,6 +1,5 @@
 package net.barrage.llmao
 
-// import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.ktor.client.HttpClient
@@ -18,12 +17,8 @@ import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
 import java.util.*
-import kotlinx.coroutines.CompletableJob
-import kotlinx.coroutines.Job
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.WHATSAPP_FEATURE_FLAG
-import net.barrage.llmao.core.EventListener
+import net.barrage.llmao.app.workflow.chat.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KOffsetDateTime
 import org.junit.jupiter.api.AfterAll
@@ -56,11 +51,8 @@ open class IntegrationTest(
   private var minio: TestMinio? = null
   var weaviate: TestWeaviate? = null
   var wiremock: WireMockServer? = null
-  lateinit var app: ApplicationState
 
   private var cfg = ConfigLoader.load("application.example.conf")
-
-  private val applicationStoppingJob: CompletableJob = Job()
 
   init {
     // Postgres
@@ -106,7 +98,12 @@ open class IntegrationTest(
   /** Main execution function for websocket tests that exposes a websocket client. */
   fun wsTest(block: suspend ApplicationTestBuilder.(client: HttpClient) -> Unit) = testApplication {
     environment { config = cfg }
-    block(createClient { install(WebSockets) {} })
+    block(
+      createClient {
+        install(WebSockets) {}
+        install(ContentNegotiation) { json(json = Json { ignoreUnknownKeys = true }) }
+      }
+    )
   }
 
   @BeforeAll
@@ -122,8 +119,6 @@ open class IntegrationTest(
     if (useMinio) {
       loadMinio()
     }
-
-    app = ApplicationState(cfg, applicationStoppingJob, EventListener())
   }
 
   @AfterAll

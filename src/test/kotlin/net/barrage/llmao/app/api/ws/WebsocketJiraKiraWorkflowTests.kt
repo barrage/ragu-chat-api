@@ -11,10 +11,10 @@ import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminWsSession
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraMessage
+import net.barrage.llmao.core.administration.settings.SettingKey
+import net.barrage.llmao.core.administration.settings.SettingUpdate
+import net.barrage.llmao.core.administration.settings.SettingsUpdate
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.model.SettingKey
-import net.barrage.llmao.core.model.SettingUpdate
-import net.barrage.llmao.core.model.SettingsUpdate
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage

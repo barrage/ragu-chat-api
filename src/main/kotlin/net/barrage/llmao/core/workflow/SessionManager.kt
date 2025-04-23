@@ -4,18 +4,21 @@ import io.ktor.util.logging.KtorSimpleLogger
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.Event
 import net.barrage.llmao.core.EventListener
-import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.model.User
 
 private val LOG = KtorSimpleLogger("n.b.l.c.workflow.SessionManager")
 
 /**
- * The session manage creates sessions and is responsible for broadcasting system events to clients.
+ * The session manager creates sessions and is responsible for broadcasting system events to
+ * clients.
  */
-class SessionManager(listener: EventListener<StateChangeEvent>) {
+class SessionManager(private val plugins: Plugins, listener: EventListener) {
   /** Maps user ID + token pairs to their sessions. */
   private val workflows: MutableMap<Session, Workflow> = ConcurrentHashMap()
 
@@ -23,7 +26,9 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
    * Maps user ID + token pairs directly to their output emitters. Used to broadcast system events
    * to all connected clients.
    */
-  private val systemSessions: MutableMap<Session, Emitter> = ConcurrentHashMap()
+  val systemSessions: MutableMap<Session, Emitter> = ConcurrentHashMap()
+
+  val tokenManager: SessionTokenManager = SessionTokenManager()
 
   init {
     LOG.info("Starting session manager")
@@ -45,8 +50,11 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
       session.user.id,
       workflows.size,
     )
-    workflows.remove(session)
+    workflows.remove(session)?.cancelStream()
   }
+
+  fun retainWorkflows(condition: (Workflow) -> Boolean) =
+    workflows.entries.retainAll { entry -> condition(entry.value) }
 
   suspend fun handleMessage(session: Session, message: String, emitter: Emitter) {
     try {
@@ -75,22 +83,17 @@ class SessionManager(listener: EventListener<StateChangeEvent>) {
     }
   }
 
-  /** Handle a system event from the [EventListener]. */
-  private suspend fun handleEvent(event: StateChangeEvent) {
-    when (event) {
-      is StateChangeEvent.AgentDeactivated -> {
-        LOG.info("Handling agent deactivated event ({})", event.agentId)
-
-        workflows.values.retainAll { chat -> chat.agentId() != event.agentId.toString() }
-
-        for (channel in systemSessions.values) {
-          channel.emit(
-            OutgoingSystemMessage.AgentDeactivated(event.agentId),
-            OutgoingSystemMessage.serializer(),
-          )
-        }
-      }
+  suspend inline fun <reified T> broadcast(value: T) {
+    for (emitter in systemSessions.values) {
+      emitter.emit(value, serializer<T>())
     }
+  }
+
+  /** Handle a system event from the [EventListener]. */
+  private suspend fun handleEvent(event: Event) {
+    // TODO: Make it so plugins can directly modify the session manager by registering an onEvent
+    // handler on it.
+    plugins.emitEvent(this, event)
   }
 
   private suspend fun handleSystemMessage(

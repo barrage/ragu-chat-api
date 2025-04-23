@@ -11,9 +11,6 @@ interface Workflow {
   /** Get the workflow's ID (primary key). */
   fun id(): KUUID
 
-  /** Get the workflow's agent ID. */
-  fun agentId(): String
-
   /**
    * The main entry point to the workflow.
    *

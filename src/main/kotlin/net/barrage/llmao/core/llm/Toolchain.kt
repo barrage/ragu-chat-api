@@ -1,9 +1,13 @@
 package net.barrage.llmao.core.llm
 
+import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.token.LOG
+
+typealias CallableTool<S> = suspend (state: S, jsonArguments: String) -> String
+
+private val LOG = KtorSimpleLogger("n.b.l.c.llm.Toolchain")
 
 /**
  * Container for all available tools an agent can use.

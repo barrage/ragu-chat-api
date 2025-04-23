@@ -15,9 +15,9 @@ import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
+import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

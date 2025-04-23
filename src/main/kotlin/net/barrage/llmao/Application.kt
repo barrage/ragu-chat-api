@@ -1,49 +1,57 @@
 package net.barrage.llmao
 
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.application.install
+import io.ktor.server.auth.authenticate
 import io.ktor.server.cio.EngineMain
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import kotlinx.coroutines.CompletableJob
-import kotlinx.coroutines.Job
+import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.plugins.requestvalidation.RequestValidation
+import io.ktor.server.response.respond
+import io.ktor.server.routing.get
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.ApplicationState
-import net.barrage.llmao.app.api.http.configureCors
-import net.barrage.llmao.app.api.http.configureErrorHandling
-import net.barrage.llmao.app.api.http.configureOpenApi
-import net.barrage.llmao.app.api.http.configureRequestValidation
-import net.barrage.llmao.app.api.http.configureRouting
-import net.barrage.llmao.app.api.http.installJwtAuth
-import net.barrage.llmao.app.api.http.noAuth
-import net.barrage.llmao.app.api.ws.websocketServer
+import net.barrage.llmao.app.administration.administrationRouter
+import net.barrage.llmao.app.administration.settings.adminSettingsRoutes
+import net.barrage.llmao.app.http.configureErrorHandling
+import net.barrage.llmao.app.http.configureOpenApi
+import net.barrage.llmao.app.http.installJwtAuth
+import net.barrage.llmao.app.http.noAuth
+import net.barrage.llmao.app.http.openApiRoutes
+import net.barrage.llmao.app.workflow.chat.ChatPlugin
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraPlugin
+import net.barrage.llmao.app.ws.websocketServer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.EventListener
-import net.barrage.llmao.core.StateChangeEvent
+import net.barrage.llmao.core.Plugins
+import net.barrage.llmao.core.state
+import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.types.KUUID
+
+// TODO: Remove in favor of annotation processing at one point
+private const val JIRAKIRA_FEATURE_FLAG = "ktor.features.specialists.jirakira"
 
 fun main(args: Array<String>) = EngineMain.main(args)
 
 fun Application.module() {
-  val applicationStoppingJob: CompletableJob = Job()
+  val state = state()
+  val plugins = Plugins()
 
-  monitor.subscribe(ApplicationStopping) { applicationStoppingJob.complete() }
-  val stateChangeListener = EventListener<StateChangeEvent>()
+  plugins.register(ChatPlugin())
 
-  val state = ApplicationState(environment.config, applicationStoppingJob, stateChangeListener)
-
-  install(ContentNegotiation) {
-    json(
-      Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = true
-      }
-    )
+  if (environment.config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
+    plugins.register(JiraKiraPlugin())
   }
+
+  runBlocking { plugins.configure(environment.config, state) }
+
+  val sessionManager = SessionManager(plugins, state.listener)
 
   if (environment.config.string("jwt.enabled").toBoolean()) {
     installJwtAuth(
@@ -57,12 +65,36 @@ fun Application.module() {
     noAuth()
   }
 
-  configureOpenApi()
-  websocketServer(listener = stateChangeListener)
-  configureRouting(state)
-  configureRequestValidation()
+  install(ContentNegotiation) {
+    json(
+      Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        encodeDefaults = true
+      }
+    )
+  }
+
+  install(RequestValidation) { with(plugins) { requestValidation() } }
+
   configureErrorHandling()
   configureCors()
+  configureOpenApi()
+
+  websocketServer(sessionManager)
+  routing {
+    route("/__health") { get { call.respond(HttpStatusCode.OK) } }
+
+    openApiRoutes()
+
+    // Admin API routes
+    authenticate("admin") {
+      adminSettingsRoutes(state.settings)
+      administrationRouter()
+    }
+
+    with(plugins) { route(state) }
+  }
 }
 
 /** Shorthand for `config.property(key).getString()` */
@@ -78,6 +110,20 @@ fun ApplicationConfig.long(key: String): Long {
 /** Shorthand for `config.property(key).getString().toInt` */
 fun ApplicationConfig.int(key: String): Int {
   return property(key).getString().toInt()
+}
+
+private fun Application.configureCors() {
+  val origins = environment.config.property("cors.origins").getList()
+  val methods = environment.config.property("cors.methods").getList().map { HttpMethod(it) }
+  val headers = environment.config.property("cors.headers").getList()
+
+  install(CORS) {
+    this.allowCredentials = true
+    this.allowOrigins { origins.contains(it) }
+    this.methods.addAll(methods)
+    this.headers.addAll(headers)
+    this.allowNonSimpleContentTypes = true
+  }
 }
 
 fun tryUuid(value: String): KUUID {

@@ -1,24 +1,22 @@
 package net.barrage.llmao.app.api.http.controllers
 
 import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppAgentUpdate
-import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
+import net.barrage.llmao.app.workflow.chat.model.Chat
+import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppAgentUpdate
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.model.Chat
-import net.barrage.llmao.core.model.ChatWithMessages
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.types.KUUID
@@ -94,9 +92,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun successfullySetsWhatsAppAgent() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
+  fun successfullySetsWhatsAppAgent() = test { client ->
     val response = client.get("/admin/whatsapp/agent") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
@@ -124,9 +120,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun failsToSetNonExistingWhatsAppAgent() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
-
+  fun failsToSetNonExistingWhatsAppAgent() = test { client ->
     val responseUpdate =
       client.put("/admin/whatsapp/agent") {
         header("Cookie", adminAccessToken())
@@ -140,8 +134,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminGetWhatsAppAgent() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminGetWhatsAppAgent() = test { client ->
     val response = client.get("/admin/whatsapp/agent") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
@@ -151,8 +144,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminGetWhatsAppNumbersForUser() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminGetWhatsAppNumbersForUser() = test { client ->
     val response =
       client.get("/admin/whatsapp/numbers/${USER_USER.id}") { header("Cookie", adminAccessToken()) }
 
@@ -164,8 +156,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminAddWhatsAppNumberForUser() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminAddWhatsAppNumberForUser() = test { client ->
     val response =
       client.post("/admin/whatsapp/numbers/${USER_USER.id}") {
         header("Cookie", adminAccessToken())
@@ -182,8 +173,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminAddWhatsAppNumberForUserFailsDuplicate() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminAddWhatsAppNumberForUserFailsDuplicate() = test { client ->
     val response =
       client.post("/admin/whatsapp/numbers/${USER_USER.id}") {
         header("Cookie", adminAccessToken())
@@ -198,8 +188,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminUpdateWhatsAppNumberForUser() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminUpdateWhatsAppNumberForUser() = test { client ->
     val response =
       client.put("/admin/whatsapp/numbers/${USER_USER.id}/${number.id}") {
         header("Cookie", adminAccessToken())
@@ -214,8 +203,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminDeleteWhatsAppNumberForUser() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminDeleteWhatsAppNumberForUser() = test { client ->
     val response =
       client.delete("/admin/whatsapp/numbers/${USER_USER.id}/${number.id}") {
         header("Cookie", adminAccessToken())
@@ -225,8 +213,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminGetAllWhatsAppChats() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminGetAllWhatsAppChats() = test { client ->
     val response = client.get("/admin/whatsapp/chats") { header("Cookie", adminAccessToken()) }
 
     assertEquals(200, response.status.value)
@@ -237,8 +224,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
   }
 
   @Test
-  fun adminGetWhatsAppChat() = test {
-    val client = createClient { install(ContentNegotiation) { json() } }
+  fun adminGetWhatsAppChat() = test { client ->
     val response =
       client.get("/admin/whatsapp/chats/${chat.id}") { header("Cookie", adminAccessToken()) }
 

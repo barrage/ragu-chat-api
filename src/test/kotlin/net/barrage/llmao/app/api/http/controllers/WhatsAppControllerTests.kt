@@ -12,17 +12,17 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
-import net.barrage.llmao.app.adapters.whatsapp.model.Contact
-import net.barrage.llmao.app.adapters.whatsapp.model.InfobipMessageType
-import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResponse
-import net.barrage.llmao.app.adapters.whatsapp.model.InfobipResult
-import net.barrage.llmao.app.adapters.whatsapp.model.Message
-import net.barrage.llmao.app.adapters.whatsapp.model.Price
-import net.barrage.llmao.app.adapters.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
-import net.barrage.llmao.core.model.Chat
-import net.barrage.llmao.core.model.ChatWithMessages
+import net.barrage.llmao.app.workflow.chat.model.Chat
+import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.Contact
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipMessageType
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResponse
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResult
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.Message
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.Price
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.userAccessToken
 import org.junit.jupiter.api.AfterEach
@@ -99,7 +99,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
 
     /** Webhook tests */
     @Test
-    fun webhookIncomingMessage() = test {
+    fun webhookIncomingMessage() = test { client ->
       val infobipResponse =
         InfobipResponse(
           results =
@@ -121,7 +121,6 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
           pendingMessageCount = 0,
         )
 
-      val client = createClient { install(ContentNegotiation) { json() } }
       val response =
         client.post("/whatsapp/webhook") {
           header("Content-Type", "application/json")
@@ -133,8 +132,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
 
     /** User tests */
     @Test
-    fun getWhatsAppNumbersForUser() = test {
-      val client = createClient { install(ContentNegotiation) { json() } }
+    fun getWhatsAppNumbersForUser() = test { client ->
       val response = client.get("/whatsapp/numbers") { header("Cookie", userAccessToken()) }
 
       assertEquals(200, response.status.value)
@@ -145,8 +143,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
     }
 
     @Test
-    fun addWhatsAppNumberForUser() = test {
-      val client = createClient { install(ContentNegotiation) { json() } }
+    fun addWhatsAppNumberForUser() = test { client ->
       val response =
         client.post("/whatsapp/numbers") {
           header("Cookie", userAccessToken())
@@ -163,8 +160,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
     }
 
     @Test
-    fun updateWhatsAppNumberForUser() = test {
-      val client = createClient { install(ContentNegotiation) { json() } }
+    fun updateWhatsAppNumberForUser() = test { client ->
       val response =
         client.put("/whatsapp/numbers/${whatsAppNumber.id}") {
           header("Cookie", userAccessToken())
@@ -179,8 +175,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
     }
 
     @Test
-    fun deleteWhatsAppNumberForUser() = test {
-      val client = createClient { install(ContentNegotiation) { json() } }
+    fun deleteWhatsAppNumberForUser() = test { client ->
       val response =
         client.delete("/whatsapp/numbers/${whatsAppNumber.id}") {
           header("Cookie", userAccessToken())
@@ -190,8 +185,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
     }
 
     @Test
-    fun getWhatsAppChatsForUser() = test {
-      val client = createClient { install(ContentNegotiation) { json() } }
+    fun getWhatsAppChatsForUser() = test { client ->
       val response = client.get("/whatsapp/chats") { header("Cookie", userAccessToken()) }
 
       assertEquals(200, response.status.value)

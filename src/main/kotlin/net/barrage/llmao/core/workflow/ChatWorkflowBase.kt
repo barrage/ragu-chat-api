@@ -45,14 +45,12 @@ abstract class ChatWorkflowBase<S>(
   protected val toolchain: Toolchain<S>?,
 
   /** Encapsulates the agent and its LLM functionality. */
-  protected open val agent: WorkflowAgent,
+  open val agent: WorkflowAgent,
 
   /** Output handle. Only chat related events are sent via this reference. */
   protected val emitter: Emitter,
 
-  /**
-   * Whether to call the LLM in streaming mode.
-   */
+  /** Whether to call the LLM in streaming mode. */
   protected val streamingEnabled: Boolean = true,
 ) : Workflow, AgentEventHandler {
   /**
@@ -117,10 +115,6 @@ abstract class ChatWorkflowBase<S>(
 
   override fun id(): KUUID {
     return id
-  }
-
-  override fun agentId(): String {
-    return agent.id()
   }
 
   override fun execute(input: String) {

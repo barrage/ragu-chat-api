@@ -12,7 +12,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.api.http.httpClient
+import net.barrage.llmao.app.http.httpClient
 import net.barrage.llmao.core.llm.ChatChoice
 import net.barrage.llmao.core.llm.ChatCompletion
 import net.barrage.llmao.core.llm.ChatCompletionParameters

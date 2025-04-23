@@ -1,31 +1,32 @@
 package net.barrage.llmao.app
 
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.ADMIN_USER
-import net.barrage.llmao.COMPLETIONS_COMPLETION_PROMPT
-import net.barrage.llmao.COMPLETIONS_RESPONSE
+import net.barrage.llmao.COMPLETIONS_STREAM_PROMPT
+import net.barrage.llmao.COMPLETIONS_STREAM_RESPONSE
 import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
-import net.barrage.llmao.COMPLETIONS_TITLE_RESPONSE
 import net.barrage.llmao.IntegrationTest
+import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.workflow.chat.CHAT_WORKFLOW_ID
-import net.barrage.llmao.app.workflow.chat.ChatAgent
-import net.barrage.llmao.app.workflow.chat.ChatPlugin
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
-import net.barrage.llmao.app.workflow.chat.model.AgentFull
-import net.barrage.llmao.core.model.Chat
+import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.token.TokenUsage
 import net.barrage.llmao.core.token.TokenUsageType
-import org.junit.jupiter.api.Assertions.assertEquals
+import net.barrage.llmao.openSendAndCollect
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
 
 class TokenUsageTests : IntegrationTest() {
-  private lateinit var workflow: ChatAgent
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
-  private lateinit var chat: Chat
 
   @BeforeAll
   fun setup() {
@@ -38,50 +39,38 @@ class TokenUsageTests : IntegrationTest() {
           model = "gpt-4o",
           titleInstruction = COMPLETIONS_TITLE_PROMPT,
         )
-      chat = postgres.testChat(ADMIN_USER, agent.id, null)
-      val agent =
-        AgentFull(
-          agent,
-          configuration = agentConfiguration,
-          collections = listOf(),
-          groups = listOf(),
-        )
-
-      workflow = ChatWorkflowFactory.createChatAgent(chat.id, ADMIN_USER, agent)
     }
   }
 
   @Test
-  fun registersUsageWhenCallingChatCompletion() = test {
-    val response = workflow.completion(COMPLETIONS_COMPLETION_PROMPT)
-    assertEquals(COMPLETIONS_RESPONSE, response.last().content!!.text())
+  fun registersUsageWhenCallingChatCompletion() = wsTest { client ->
+    val (chatId, response) =
+      client.openSendAndCollect(agentId = agent.id, message = COMPLETIONS_STREAM_PROMPT)
+    assertEquals(COMPLETIONS_STREAM_RESPONSE, response)
 
-    // Use delays since storing the usage is done in a separate coroutine
-    delay(1000)
+    // Use delays since storing the usage is done asynchronously
+    delay(200)
     val usage =
-      ChatPlugin.api.admin.admin.listTokenUsage(agentId = agent.id).items.find {
-        it.usageType == TokenUsageType.COMPLETION
-      }!!
-    assertEquals(CHAT_WORKFLOW_ID, usage.origin.type)
-    assertEquals(chat.id, usage.origin.id)
-    assertEquals(ADMIN_USER.id, usage.userId)
-    assertEquals(agent.id, usage.agentId)
-  }
+      client
+        .get("/admin/tokens/usage") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+          header(HttpHeaders.Accept, ContentType.Application.Json)
+        }
+        .body<CountedList<TokenUsage>>()
+        .items
 
-  @Test
-  fun registersUsageWhenCallingTitleCompletion() = test {
-    val response = workflow.createTitle("foo", "bar")
-    assertEquals(COMPLETIONS_TITLE_RESPONSE, response)
+    val completionUsage = usage.find { it.usageType == TokenUsageType.COMPLETION }!!
 
-    // Use delays since storing the usage is done in a separate coroutine
-    delay(1000)
-    val usage =
-      ChatPlugin.api.admin.admin.listTokenUsage(agentId = agent.id).items.find {
-        it.usageType == TokenUsageType.COMPLETION_TITLE
-      }!!
-    assertEquals(CHAT_WORKFLOW_ID, usage.origin.type)
-    assertEquals(chat.id, usage.origin.id)
-    assertEquals(ADMIN_USER.id, usage.userId)
-    assertEquals(agent.id, usage.agentId)
+    assertEquals(CHAT_WORKFLOW_ID, completionUsage.origin.type)
+    assertEquals(chatId, completionUsage.origin.id)
+    assertEquals(ADMIN_USER.id, completionUsage.userId)
+    assertEquals(agent.id, completionUsage.agentId)
+
+    val titleUsage = usage.find { it.usageType == TokenUsageType.COMPLETION_TITLE }!!
+
+    assertEquals(CHAT_WORKFLOW_ID, titleUsage.origin.type)
+    assertEquals(chatId, titleUsage.origin.id)
+    assertEquals(ADMIN_USER.id, titleUsage.userId)
+    assertEquals(agent.id, titleUsage.agentId)
   }
 }

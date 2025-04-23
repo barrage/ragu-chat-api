@@ -14,13 +14,14 @@ import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.app.workflow.chat.controllers.AgentDisplay
+import net.barrage.llmao.app.workflow.chat.routes.AgentDisplay
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.AgentInstructions
 import net.barrage.llmao.app.workflow.chat.model.AgentWithConfiguration
+import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.CreateAgent
 import net.barrage.llmao.app.workflow.chat.model.CreateAgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.UpdateAgent
@@ -28,7 +29,6 @@ import net.barrage.llmao.app.workflow.chat.model.UpdateAgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.UpdateAgentInstructions
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.model.Chat
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PropertyUpdate

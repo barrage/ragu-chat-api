@@ -43,9 +43,7 @@ object ContextEnrichmentFactory {
 
     for (collection in collections) {
       val collectionInfo =
-        providers.vector
-          .getProvider(collection.vectorProvider)
-          .getCollectionInfo(collection.collection)
+        providers.vector[collection.vectorProvider].getCollectionInfo(collection.collection)
 
       if (collectionInfo == null) {
         LOG.warn("Collection '{}' does not exist, skipping", collection.collection)
@@ -130,9 +128,7 @@ class RagContextEnrichment(
     // Embed the input per collection provider and model
     for (collection in collections) {
       val embeddings =
-        providers.embedding
-          .getProvider(collection.embeddingProvider)
-          .embed(input, collection.embeddingModel)
+        providers.embedding[collection.embeddingProvider].embed(input, collection.embeddingModel)
 
       embeddings.usage?.let { tokenUsage ->
         tokenTracker.store(
@@ -169,7 +165,7 @@ class RagContextEnrichment(
 
     // Query each vector provider for the most similar vectors
     providerQueries.forEach { (provider, queries) ->
-      val vectorDb = providers.vector.getProvider(provider)
+      val vectorDb = providers.vector[provider]
       try {
         relatedChunks[provider] = vectorDb.query(queries)
       } catch (e: Throwable) {

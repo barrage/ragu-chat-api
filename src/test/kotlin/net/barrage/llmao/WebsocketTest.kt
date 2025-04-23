@@ -7,11 +7,15 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.workflow.ChatWorkflowInput
-import net.barrage.llmao.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.types.KUUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 
 val json = Json { ignoreUnknownKeys = true }
@@ -26,6 +30,47 @@ suspend fun HttpClient.userWsSession(block: suspend ClientWebSocketSession.() ->
   webSocket("/?token=$token") { block() }
 }
 
+/** Open a new chat, send a message and collect the response. */
+suspend fun HttpClient.openSendAndCollect(
+  agentId: KUUID? = null,
+  chatId: KUUID? = null,
+  message: String,
+): Pair<KUUID, String> {
+  var buffer = ""
+  lateinit var openChatId: KUUID
+
+  adminWsSession {
+    openChatId =
+      agentId?.let { openNewChat(it) }
+        ?: chatId?.let { openExistingChat(it) }
+        ?: throw IllegalArgumentException("Must provide either agentId or chatId")
+
+    sendMessage(message) { incoming ->
+      for (frame in incoming) {
+        val response = (frame as Frame.Text).readText()
+        try {
+          val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+          buffer += message.chunk
+        } catch (_: SerializationException) {}
+
+        try {
+          val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+          assert(message.reason == FinishReason.Stop)
+          break
+        } catch (_: SerializationException) {}
+
+        try {
+          val message = json.decodeFromString<AppError>(response)
+          throw message
+          break
+        } catch (_: SerializationException) {}
+      }
+    }
+  }
+
+  return Pair(openChatId, buffer)
+}
+
 suspend fun ClientWebSocketSession.sendClientSystem(message: IncomingSystemMessage) {
   send(Frame.Text(Json.encodeToString(message)))
 }
@@ -37,6 +82,18 @@ suspend fun ClientWebSocketSession.openNewChat(
 ): KUUID {
   // Open a chat and confirm it's open
   sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agentId?.toString(), workflowType))
+  val chatOpen = (incoming.receive() as Frame.Text).readText()
+  val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
+  assertNotNull(workflowOpenMessage.id)
+  return workflowOpenMessage.id
+}
+
+suspend fun ClientWebSocketSession.openExistingChat(
+  chatId: KUUID,
+  workflowType: String = "CHAT",
+): KUUID {
+  // Open a chat and confirm it's open
+  sendClientSystem(IncomingSystemMessage.LoadExistingWorkflow(workflowType, chatId))
   val chatOpen = (incoming.receive() as Frame.Text).readText()
   val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
   assertNotNull(workflowOpenMessage.id)

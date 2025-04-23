@@ -11,10 +11,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
-import net.barrage.llmao.core.model.ApplicationSettings
-import net.barrage.llmao.core.model.SettingKey
-import net.barrage.llmao.core.model.SettingUpdate
-import net.barrage.llmao.core.model.SettingsUpdate
+import net.barrage.llmao.core.administration.settings.ApplicationSettings
+import net.barrage.llmao.core.administration.settings.SettingKey
+import net.barrage.llmao.core.administration.settings.SettingUpdate
+import net.barrage.llmao.core.administration.settings.SettingsUpdate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test

@@ -1,6 +1,5 @@
 package net.barrage.llmao.app.workflow.chat
 
-import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.app.workflow.chat.model.AgentInstructions
 import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionParameters
@@ -14,8 +13,6 @@ import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.core.workflow.WorkflowAgent
 import net.barrage.llmao.types.KUUID
-
-private val LOG = KtorSimpleLogger("net.barrage.llmao.app.workflow.chat.ChatAgent")
 
 /**
  * Implementation of [WorkflowAgent] for custom chat agents.

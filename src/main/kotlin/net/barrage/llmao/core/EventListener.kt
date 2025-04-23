@@ -5,30 +5,30 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import net.barrage.llmao.types.KUUID
 
 /**
  * An event listener for propagating application events to the chat server. The handler for events
  * is set with [start].
  */
-class EventListener<T> {
-  private val q: MutableSharedFlow<T> = MutableSharedFlow()
+class EventListener {
+  private val q: MutableSharedFlow<Event> = MutableSharedFlow()
+  private val scope = CoroutineScope(Dispatchers.Default)
   private var job: Job? = null
 
   /**
    * Starts the event listener job using the given handler to handle events. Must be called only
    * once or it will throw.
    */
-  fun start(handler: suspend (T) -> Unit) {
+  internal fun start(handler: suspend (Event) -> Unit) {
     if (job != null) {
       throw IllegalStateException("Event listener already started")
     }
 
-    job = CoroutineScope(Dispatchers.Default).launch { q.collect { event -> handler(event) } }
+    job = scope.launch { q.collect { event -> handler(event) } }
   }
 
   /** Dispatch an event to the listener. Must be called after [start] or it will throw. */
-  suspend fun dispatch(event: T) {
+  suspend fun dispatch(event: Event) {
     if (job == null) {
       throw IllegalStateException(
         "Event listener not started; Ensure you are calling 'start' first."
@@ -39,6 +39,5 @@ class EventListener<T> {
   }
 }
 
-sealed class StateChangeEvent {
-  data class AgentDeactivated(val agentId: KUUID) : StateChangeEvent()
-}
+/** Marker interface for events. */
+interface Event
