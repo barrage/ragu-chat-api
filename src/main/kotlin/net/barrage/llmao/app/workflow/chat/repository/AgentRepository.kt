@@ -93,9 +93,13 @@ class AgentRepository(private val dslContext: DSLContext) {
         .from(AGENTS)
         .leftJoin(AGENT_PERMISSIONS)
         .on(AGENT_PERMISSIONS.AGENT_ID.eq(AGENTS.ID))
+        .leftJoin(AGENT_CONFIGURATIONS)
+        .on(AGENT_CONFIGURATIONS.ID.eq(AGENTS.ACTIVE_CONFIGURATION_ID))
         .where(
           (if (!showDeactivated) AGENTS.ACTIVE.eq(true) else DSL.noCondition()).and(
-            AGENT_PERMISSIONS.GROUP.isNull.or(AGENT_PERMISSIONS.GROUP.`in`(groups))
+            AGENT_PERMISSIONS.GROUP.isNull
+              .or(AGENT_PERMISSIONS.GROUP.`in`(groups))
+              .and(AGENT_CONFIGURATIONS.LLM_PROVIDER.`in`(availableProviders))
           )
         )
         .orderBy(order)
