@@ -3,6 +3,7 @@ package net.barrage.llmao.app.workflow.chat.api
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.ChatWithAgent
 import net.barrage.llmao.app.workflow.chat.repository.AgentRepository
+import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryRead
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.EvaluateMessage
@@ -10,7 +11,6 @@ import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.types.KUUID
 
 /** API designed for end-user operations. Restricts access to chats owned by the user. */

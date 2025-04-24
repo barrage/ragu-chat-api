@@ -199,7 +199,7 @@ class TestPostgres {
     version: Int = 1,
     context: String = "Test",
     llmProvider: String = "openai",
-    model: String = "gpt-4",
+    model: String = "gpt-4o-mini",
     temperature: Double = 0.1,
     presencePenalty: Double? = null,
     maxCompletionTokens: Int? = null,

@@ -78,6 +78,14 @@ class ProviderState(
     return ProvidersResponse(llmProviders, vectorProviders, embeddingProviders)
   }
 
+  suspend fun listAvailableLlms(): List<String> {
+    val llms = mutableListOf<String>()
+    for (provider in llm.listProviders()) {
+      llms.addAll(llm[provider].listModels())
+    }
+    return llms
+  }
+
   /**
    * Checks whether the providers and their respective models are supported. Data passed to this
    * function should come from already validated DTOs.

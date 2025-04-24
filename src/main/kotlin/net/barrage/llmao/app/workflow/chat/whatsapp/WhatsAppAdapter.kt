@@ -1,12 +1,12 @@
 package net.barrage.llmao.app.workflow.chat.whatsapp
 
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.ApiClient
 import com.infobip.ApiException
 import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -19,6 +19,8 @@ import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.repository.AgentRepository
+import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryRead
+import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryWrite
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResponse
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResult
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
@@ -42,8 +44,6 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTracker
@@ -66,7 +66,7 @@ class WhatsAppAdapter(
   private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
 ) {
   private var whatsAppApi: WhatsAppApi
-  private val log = KtorSimpleLogger("n.b.l.a.adapters.whatsapp")
+  private val log = KtorSimpleLogger("n.b.l.a.workflow.chat.whatsapp")
 
   init {
     val apiClient =

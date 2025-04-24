@@ -22,13 +22,13 @@ import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.ChatWithAgent
 import net.barrage.llmao.app.workflow.chat.model.UpdateChatTitleDTO
+import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryRead
+import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.core.repository.ChatRepositoryRead
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll

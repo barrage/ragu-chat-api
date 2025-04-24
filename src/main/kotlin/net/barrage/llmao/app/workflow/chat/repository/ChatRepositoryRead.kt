@@ -1,4 +1,4 @@
-package net.barrage.llmao.core.repository
+package net.barrage.llmao.app.workflow.chat.repository
 
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
@@ -18,6 +18,7 @@ import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.model.SearchFiltersAdminChats
 import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.app.workflow.chat.model.toChat
+import net.barrage.llmao.app.workflow.chat.model.toChatMessageGroup
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
@@ -27,7 +28,6 @@ import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageAttachment
-import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
 import net.barrage.llmao.core.set
 import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
@@ -271,7 +271,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
 
         val message =
           record.into(MESSAGES).toMessage(if (attachments.isEmpty()) null else attachments)
-        val group = record.into(MESSAGE_GROUPS).toMessageGroup()
+        val group = record.into(MESSAGE_GROUPS).toChatMessageGroup()
         val evaluation =
           record.into(MESSAGE_GROUP_EVALUATIONS).let { eval ->
             eval.id?.let { eval.toMessageGroupEvaluation() }
@@ -520,7 +520,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .asFlow()
       .collect { record ->
         val message = record.into(MESSAGES).toMessage()
-        val group = record.into(MESSAGE_GROUPS).toMessageGroup()
+        val group = record.into(MESSAGE_GROUPS).toChatMessageGroup()
         val evaluation = record.into(MESSAGE_GROUP_EVALUATIONS).toMessageGroupEvaluation()
         messageGroups
           .computeIfAbsent(group.id) { _ ->

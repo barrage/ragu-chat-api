@@ -23,14 +23,11 @@ import net.barrage.llmao.types.KUUID
  * This also ensures consistency when fetching the messages.
  */
 @Serializable
-data class MessageGroup(
+open class MessageGroup(
   val id: KUUID,
 
-  /** The chat ID this message group belongs to. */
+  /** The workflow ID this message group belongs to. */
   val chatId: KUUID,
-
-  /** The agent configuration at the time of interaction. */
-  val agentConfigurationId: KUUID,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,
 )
@@ -39,7 +36,6 @@ fun MessageGroupsRecord.toMessageGroup() =
   MessageGroup(
     id = this.id!!,
     chatId = this.chatId,
-    agentConfigurationId = this.agentConfigurationId,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )

@@ -1,12 +1,12 @@
 package net.barrage.llmao.app.workflow.chat
 
 import net.barrage.llmao.app.workflow.chat.api.Api
+import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.workflow.ChatWorkflowBase
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.ProcessedMessageGroup

@@ -41,6 +41,29 @@ class AgentControllerTests : IntegrationTest() {
   }
 
   @Test
+  fun agentIsNotListedWhenItsModelIsNotAvailable() = test { client ->
+    val agent = postgres.testAgent()
+    postgres.testAgentConfiguration(agent.id, model = "ThatWhichDoesNotExist")
+
+    val response = client.get("/agents") { header(HttpHeaders.Cookie, userAccessToken()) }
+    assertEquals(200, response.status.value)
+    val body = response.body<CountedList<Agent>>()
+    assertNotNull(body)
+
+    // Includes the initial agent
+    assertEquals(1, body.total)
+  }
+
+  @Test
+  fun agentIsListedForUserWithSufficientPermissions() = test { client ->
+    val response = client.get("/agents") { header(HttpHeaders.Cookie, userAccessToken()) }
+    assertEquals(200, response.status.value)
+    val body = response.body<CountedList<Agent>>()
+    assertNotNull(body)
+    assertEquals(1, body.total)
+  }
+
+  @Test
   fun agentNotFoundForUserWithInsufficientPermissions() = test { client ->
     val agent = postgres.testAgent(groups = listOf("admin"))
     postgres.testAgentConfiguration(agent.id)
@@ -51,16 +74,7 @@ class AgentControllerTests : IntegrationTest() {
   }
 
   @Test
-  fun listingAgentsWorksDefaultPagination() = test { client ->
-    val response = client.get("/agents") { header(HttpHeaders.Cookie, userAccessToken()) }
-    assertEquals(200, response.status.value)
-    val body = response.body<CountedList<Agent>>()
-    assertNotNull(body)
-    assertEquals(1, body.total)
-  }
-
-  @Test
-  fun getAgentById() = test { client ->
+  fun agentFoundForUserWithSufficientPermissions() = test { client ->
     val response =
       client.get("/agents/${agent.id}") { header(HttpHeaders.Cookie, userAccessToken()) }
     assertEquals(200, response.status.value)

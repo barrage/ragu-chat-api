@@ -21,7 +21,7 @@ class PublicAgentService(
     showDeactivated: Boolean,
     groups: List<String>,
   ): CountedList<Agent> =
-    repository.getAll(pagination, showDeactivated, groups, providers.llm.listProviders())
+    repository.getAll(pagination, showDeactivated, groups, providers.listAvailableLlms())
 
   suspend fun getAgent(id: KUUID, groups: List<String>): Agent =
     repository.getAgent(id, groups)

@@ -19,6 +19,7 @@ import net.barrage.llmao.app.workflow.chat.model.UpdateCollections
 import net.barrage.llmao.app.workflow.chat.model.UpdateCollectionsFailure
 import net.barrage.llmao.app.workflow.chat.model.UpdateCollectionsResult
 import net.barrage.llmao.app.workflow.chat.repository.AgentRepository
+import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryRead
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.EventListener
@@ -30,7 +31,6 @@ import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.repository.ChatRepositoryRead
 import net.barrage.llmao.types.KUUID
 
 class AdminAgentService(
