@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.workflow
 
+import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.Identity
@@ -13,8 +14,10 @@ import net.barrage.llmao.types.KUUID
  * workflow types.
  */
 interface WorkflowFactory : Identity {
-  suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow
+  /** Instantiate a new workflow. */
+  suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow
 
+  /** Continue an existing workflow. */
   suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow
 }
 
@@ -26,11 +29,16 @@ interface WorkflowFactory : Identity {
 object WorkflowFactoryManager {
   private val factories: MutableMap<String, WorkflowFactory> = mutableMapOf()
 
-  suspend fun new(workflowType: String, user: User, agentId: String?, emitter: Emitter): Workflow {
-    if (!factories.containsKey(workflowType)) {
-      throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
-    }
-    return factories[workflowType]!!.new(user, agentId, emitter)
+  suspend fun new(
+    workflowType: String,
+    user: User,
+    emitter: Emitter,
+    params: JsonElement?,
+  ): Workflow {
+    val factory =
+      factories[workflowType]
+        ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+    return factory.new(user, emitter, params)
   }
 
   suspend fun existing(

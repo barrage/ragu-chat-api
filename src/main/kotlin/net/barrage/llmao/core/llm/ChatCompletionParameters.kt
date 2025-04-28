@@ -9,10 +9,10 @@ data class ChatCompletionParameters(
   val temperature: Double = 0.1,
 
   /** The higher the value, the less likely the LLM will repeat already generated tokens. */
-  val presencePenalty: Double,
+  val presencePenalty: Double? = null,
 
   /** Maximum number of tokens to generate on completions. */
-  val maxTokens: Int?,
+  val maxTokens: Int? = null,
 
   /** Available tools to call. */
   val tools: List<ToolDefinition>? = null,

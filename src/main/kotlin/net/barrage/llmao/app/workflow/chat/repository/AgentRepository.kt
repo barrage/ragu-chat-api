@@ -21,7 +21,6 @@ import net.barrage.llmao.app.workflow.chat.model.CreateAgent
 import net.barrage.llmao.app.workflow.chat.model.SearchFiltersAdminAgents
 import net.barrage.llmao.app.workflow.chat.model.UpdateAgent
 import net.barrage.llmao.app.workflow.chat.model.UpdateAgentConfiguration
-import net.barrage.llmao.app.workflow.chat.model.UpdateAgentInstructions
 import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.app.workflow.chat.model.toAgentCollection
 import net.barrage.llmao.app.workflow.chat.model.toAgentConfiguration
@@ -34,7 +33,6 @@ import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.set
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
-import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
@@ -45,7 +43,6 @@ import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.InsertSetMoreStep
 import org.jooq.SortField
-import org.jooq.UpdateSetMoreStep
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
@@ -601,7 +598,10 @@ class AgentRepository(private val dslContext: DSLContext) {
         context
           .update(AGENTS)
           .set(AGENTS.ACTIVE_CONFIGURATION_ID, configuration.id)
-          .apply { update.applyUpdates(this) }
+          .set(update.name, AGENTS.NAME)
+          .set(update.description, AGENTS.DESCRIPTION)
+          .set(update.active, AGENTS.ACTIVE)
+          .set(update.language, AGENTS.LANGUAGE)
           .where(AGENTS.ID.eq(id))
           .returning()
           .awaitSingle()
@@ -984,60 +984,38 @@ private fun SearchFiltersAdminAgents.generateConditions(): Condition {
   return DSL.and(nameCondition, activeCondition)
 }
 
-private fun UpdateAgent.applyUpdates(
-  statement: UpdateSetMoreStep<AgentsRecord>
-): UpdateSetMoreStep<AgentsRecord> {
-  var statement = statement
-  statement = statement.set(name, AGENTS.NAME)
-  statement = statement.set(description, AGENTS.DESCRIPTION)
-  statement = statement.set(active, AGENTS.ACTIVE)
-  statement = statement.set(language, AGENTS.LANGUAGE)
-  return statement
-}
-
 private fun UpdateAgentConfiguration.insertSet(
   statement: InsertSetMoreStep<AgentConfigurationsRecord>,
   currentConfiguration: AgentConfiguration,
 ): InsertSetMoreStep<AgentConfigurationsRecord> {
-  var statement = statement
-  statement = statement.set(context, AGENT_CONFIGURATIONS.CONTEXT, currentConfiguration.context)
-  statement =
-    statement.set(llmProvider, AGENT_CONFIGURATIONS.LLM_PROVIDER, currentConfiguration.llmProvider)
-  statement = statement.set(model, AGENT_CONFIGURATIONS.MODEL, currentConfiguration.model)
-  statement =
-    statement.set(temperature, AGENT_CONFIGURATIONS.TEMPERATURE, currentConfiguration.temperature)
-  statement =
-    statement.set(
-      maxCompletionTokens,
-      AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
-      defaultIfUndefined = currentConfiguration.maxCompletionTokens,
-    )
-  statement =
-    statement.set(
-      presencePenalty,
-      AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
-      defaultIfUndefined = currentConfiguration.presencePenalty,
-    )
-  statement = instructions?.insertSet(statement, currentConfiguration) ?: statement
-  return statement
-}
+  var statement =
+    statement
+      .set(context, AGENT_CONFIGURATIONS.CONTEXT, currentConfiguration.context)
+      .set(llmProvider, AGENT_CONFIGURATIONS.LLM_PROVIDER, currentConfiguration.llmProvider)
+      .set(model, AGENT_CONFIGURATIONS.MODEL, currentConfiguration.model)
+      .set(temperature, AGENT_CONFIGURATIONS.TEMPERATURE, currentConfiguration.temperature)
+      .set(
+        maxCompletionTokens,
+        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
+        defaultIfUndefined = currentConfiguration.maxCompletionTokens,
+      )
+      .set(
+        presencePenalty,
+        AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
+        defaultIfUndefined = currentConfiguration.presencePenalty,
+      )
 
-private fun UpdateAgentInstructions.insertSet(
-  statement: InsertSetMoreStep<AgentConfigurationsRecord>,
-  currentConfiguration: AgentConfiguration,
-): InsertSetMoreStep<AgentConfigurationsRecord> {
-  var statement = statement
-  statement =
-    statement.set(
-      titleInstruction,
-      AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
-      defaultIfUndefined = currentConfiguration.agentInstructions.titleInstruction,
-    )
-  statement =
-    statement.set(
-      errorMessage,
-      AGENT_CONFIGURATIONS.ERROR_MESSAGE,
-      defaultIfUndefined = currentConfiguration.agentInstructions.errorMessage,
-    )
-  return statement
+  return instructions?.let {
+    statement
+      .set(
+        instructions.titleInstruction,
+        AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+        defaultIfUndefined = currentConfiguration.agentInstructions.titleInstruction,
+      )
+      .set(
+        instructions.errorMessage,
+        AGENT_CONFIGURATIONS.ERROR_MESSAGE,
+        defaultIfUndefined = currentConfiguration.agentInstructions.errorMessage,
+      )
+  } ?: statement
 }

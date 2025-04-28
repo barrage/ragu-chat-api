@@ -9,7 +9,9 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
+import net.barrage.llmao.app.workflow.chat.NewChatWorkflow
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.workflow.ChatWorkflowInput
@@ -81,7 +83,12 @@ suspend fun ClientWebSocketSession.openNewChat(
   workflowType: String = "CHAT",
 ): KUUID {
   // Open a chat and confirm it's open
-  sendClientSystem(IncomingSystemMessage.CreateNewWorkflow(agentId?.toString(), workflowType))
+  sendClientSystem(
+    IncomingSystemMessage.CreateNewWorkflow(
+      workflowType,
+      agentId?.let { Json.encodeToJsonElement(NewChatWorkflow(it)) },
+    )
+  )
   val chatOpen = (incoming.receive() as Frame.Text).readText()
   val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
   assertNotNull(workflowOpenMessage.id)

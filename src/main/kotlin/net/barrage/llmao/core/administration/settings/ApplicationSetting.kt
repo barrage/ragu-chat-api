@@ -48,6 +48,11 @@ fun ApplicationSettingsRecord.toModel(): ApplicationSetting {
 @Serializable
 value class ApplicationSettings(private val m: Map<SettingKey, ApplicationSetting>) {
   operator fun get(key: SettingKey): String {
+    if (!m.containsKey(key))
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "Missing setting '$key'; If the setting is optional, use `getOptional` instead.",
+      )
     return m[key]!!.value
   }
 
@@ -123,7 +128,21 @@ enum class SettingKey {
    *
    * DEFAULT: -
    */
-  JIRA_TIME_SLOT_ATTRIBUTE_KEY;
+  JIRA_TIME_SLOT_ATTRIBUTE_KEY,
+
+  /**
+   * The LLM provider to use for Tripotron.
+   *
+   * DEFAULT: -
+   */
+  TRIPOTRON_LLM_PROVIDER,
+
+  /**
+   * Which model will be used for Tripotron. Has to be compatible with [TRIPOTRON_LLM_PROVIDER].
+   *
+   * DEFAULT: -
+   */
+  TRIPOTRON_MODEL;
 
   companion object {
     fun tryFromString(value: String): SettingKey {

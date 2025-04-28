@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.workflow.jirakira
 
 import io.ktor.server.config.ApplicationConfig
+import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.app.http.httpClient
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ApplicationState
@@ -15,9 +16,8 @@ import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
-import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
-import net.barrage.llmao.core.token.TokenUsageTracker
+import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
@@ -29,7 +29,6 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
   private lateinit var endpoint: String
   private lateinit var providers: ProviderState
   private lateinit var settings: Settings
-  private lateinit var tokenUsageWrite: TokenUsageRepositoryWrite
   private lateinit var jiraKiraRepository: JiraKiraRepository
   private lateinit var specialistRepositoryWrite: SpecialistRepositoryWrite
 
@@ -37,14 +36,13 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     endpoint = config.string("jirakira.endpoint")
     providers = state.providers
     settings = state.settings
-    tokenUsageWrite = state.tokenUsageWrite
     jiraKiraRepository = JiraKiraRepository(state.database)
     specialistRepositoryWrite = SpecialistRepositoryWrite(state.database, JIRAKIRA_WORKFLOW_ID)
   }
 
   override fun id(): String = JIRAKIRA_WORKFLOW_ID
 
-  override suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow {
+  override suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow {
     val workflowId = KUUID.randomUUID()
 
     val userJiraApiKey =
@@ -98,14 +96,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
 
     val tokenizer = Encoder.tokenizer(jiraKiraModel)
 
-    val tokenTracker =
-      TokenUsageTracker(
-        repository = tokenUsageWrite,
-        user = user,
-        originType = JIRAKIRA_WORKFLOW_ID,
-        originId = workflowId,
-        agentId = null,
-      )
+    val tokenTracker = TokenUsageTrackerFactory.newTracker(user, JIRAKIRA_WORKFLOW_ID, workflowId)
 
     return JiraKiraWorkflow(
       id = workflowId,

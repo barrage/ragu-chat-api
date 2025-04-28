@@ -19,6 +19,7 @@ import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
+import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.core.vector.VectorDatabase
 import net.barrage.llmao.int
 import net.barrage.llmao.string
@@ -40,9 +41,6 @@ class ApplicationState(config: ApplicationConfig, val database: DSLContext) {
 
   /** A key-value storage API for application settings. */
   val settings: Settings = Settings(SettingsRepositoryPostgres(database))
-
-  val tokenUsageWrite: TokenUsageRepositoryWrite = TokenUsageRepositoryWrite(database)
-  val tokenUsageRead: TokenUsageRepositoryRead = TokenUsageRepositoryRead(database)
 
   /**
    * Handle to the event listener.
@@ -73,7 +71,8 @@ class ApplicationState(config: ApplicationConfig, val database: DSLContext) {
   init {
     ChatMessageProcessor.init(providers)
     ContextEnrichmentFactory.init(providers)
-    Administration.init(providers, tokenUsageRead)
+    TokenUsageTrackerFactory.init(TokenUsageRepositoryWrite(database))
+    Administration.init(providers, TokenUsageRepositoryRead(database))
   }
 }
 

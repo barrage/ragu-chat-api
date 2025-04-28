@@ -44,9 +44,8 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
-import net.barrage.llmao.core.token.TokenUsageTracker
+import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KUUID
 
@@ -63,7 +62,6 @@ class WhatsAppAdapter(
   private val chatRepositoryRead: ChatRepositoryRead,
   private val chatRepositoryWrite: ChatRepositoryWrite,
   private val settings: Settings,
-  private val tokenUsageRepositoryW: TokenUsageRepositoryWrite,
 ) {
   private var whatsAppApi: WhatsAppApi
   private val log = KtorSimpleLogger("n.b.l.a.workflow.chat.whatsapp")
@@ -250,13 +248,7 @@ class WhatsAppAdapter(
 
     val user = User(id = userId, entitlements = listOf("user"), username = username, email = null)
     val tokenTracker =
-      TokenUsageTracker(
-        user = user,
-        agentId = agent.agent.id,
-        originType = WHATSAPP_CHAT_TOKEN_ORIGIN,
-        originId = chat.id,
-        repository = tokenUsageRepositoryW,
-      )
+      TokenUsageTrackerFactory.newTracker(user, WHATSAPP_CHAT_TOKEN_ORIGIN, chat.id)
 
     return ChatAgent(
       agentId = agent.agent.id,

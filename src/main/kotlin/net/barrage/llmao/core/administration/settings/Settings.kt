@@ -6,7 +6,12 @@
  */
 package net.barrage.llmao.core.administration.settings
 
-/** The main API for managing application settings. */
+/**
+ * The main API for managing application settings.
+ *
+ * TODO: Remove SettingKey in favor of arbitrary keys.
+ * TODO: Namespace settings and instantiate this per namespace.
+ */
 class Settings(private val repository: SettingsRepository) {
   /** Return all application settings, populating the list with any missing values with defaults. */
   suspend fun getAllWithDefaults(): ApplicationSettings {

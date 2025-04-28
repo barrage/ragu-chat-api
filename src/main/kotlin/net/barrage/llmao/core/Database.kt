@@ -25,6 +25,7 @@ import org.jooq.Record
 import org.jooq.SQLDialect
 import org.jooq.TableField
 import org.jooq.UpdateSetMoreStep
+import org.jooq.UpdateSetStep
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
 import org.jooq.impl.DefaultConfiguration
@@ -106,6 +107,40 @@ fun <R : Record, T> UpdateSetMoreStep<R>.set(
   return when (update) {
     // Do nothing when property is not set
     is PropertyUpdate.Undefined -> this
+
+    // Property is being updated to new value
+    is PropertyUpdate.Value -> set(field, update.value)
+
+    // Property is being removed
+    is PropertyUpdate.Null -> setNull(field)
+  }
+}
+
+/** The same as a regular `set` but with a remapping function. */
+fun <I, R : Record, T> UpdateSetMoreStep<R>.set(
+  update: PropertyUpdate<I>,
+  field: TableField<R, T>,
+  remap: (I) -> T,
+): UpdateSetMoreStep<R> {
+  return when (update) {
+    // Do nothing when property is not set
+    is PropertyUpdate.Undefined -> this
+
+    // Property is being updated to new value
+    is PropertyUpdate.Value -> set(field, remap(update.value))
+
+    // Property is being removed
+    is PropertyUpdate.Null -> setNull(field)
+  }
+}
+
+fun <R : Record, T> UpdateSetStep<R>.set(
+  update: PropertyUpdate<T>,
+  field: TableField<R, T>,
+): UpdateSetMoreStep<R> {
+  return when (update) {
+    // Do nothing when property is not set
+    is PropertyUpdate.Undefined -> this as UpdateSetMoreStep<R>
 
     // Property is being updated to new value
     is PropertyUpdate.Value -> set(field, update.value)

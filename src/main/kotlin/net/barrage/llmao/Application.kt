@@ -26,6 +26,7 @@ import net.barrage.llmao.app.http.noAuth
 import net.barrage.llmao.app.http.openApiRoutes
 import net.barrage.llmao.app.workflow.chat.ChatPlugin
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraPlugin
+import net.barrage.llmao.app.workflow.tripotron.TripotronPlugin
 import net.barrage.llmao.app.ws.websocketServer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -36,6 +37,7 @@ import net.barrage.llmao.types.KUUID
 
 // TODO: Remove in favor of annotation processing at one point
 private const val JIRAKIRA_FEATURE_FLAG = "ktor.features.specialists.jirakira"
+private const val TRIPOTRON_FEATURE_FLAG = "ktor.features.specialists.tripotron"
 
 fun main(args: Array<String>) = EngineMain.main(args)
 
@@ -47,6 +49,10 @@ fun Application.module() {
 
   if (environment.config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
     plugins.register(JiraKiraPlugin())
+  }
+
+  if (environment.config.string(TRIPOTRON_FEATURE_FLAG).toBoolean()) {
+    plugins.register(TripotronPlugin())
   }
 
   runBlocking { plugins.configure(environment.config, state) }

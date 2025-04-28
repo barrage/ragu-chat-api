@@ -4,6 +4,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
+import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.types.KUUID
 
 /** System messages used to control sessions. */
@@ -13,7 +14,7 @@ import net.barrage.llmao.types.KUUID
 sealed class IncomingSystemMessage {
   @Serializable
   @SerialName("workflow.new")
-  data class CreateNewWorkflow(val agentId: String? = null, val workflowType: String) :
+  data class CreateNewWorkflow(val workflowType: String, val params: JsonElement?) :
     IncomingSystemMessage()
 
   @Serializable

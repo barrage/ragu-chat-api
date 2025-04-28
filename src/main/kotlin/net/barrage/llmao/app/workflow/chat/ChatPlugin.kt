@@ -98,7 +98,6 @@ class ChatPlugin : Plugin {
           chatRepositoryWrite = wappChatWrite,
           whatsAppRepository = WhatsAppRepository(state.database),
           settings = state.settings,
-          tokenUsageRepositoryW = state.tokenUsageWrite,
         )
     }
 

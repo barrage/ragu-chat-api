@@ -43,7 +43,7 @@ class JiraKira(
     tools = tools,
   ) {
 
-  override fun id(): String = "JIRAKIRA"
+  override fun id(): String = JIRAKIRA_WORKFLOW_ID
 
   override fun context(): String {
     return """

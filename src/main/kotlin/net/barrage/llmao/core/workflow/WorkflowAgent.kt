@@ -69,8 +69,10 @@ abstract class WorkflowAgent(
   /**
    * The chat history. Has to be managed from outside since messages need to be stored, and we can
    * only reason about which messages to add based on whether or not they are successfully stored.
+   *
+   * If this is null, the agent will not use history.
    */
-  protected val history: ChatHistory,
+  protected val history: ChatHistory?,
 
   /** Prevents the LLM from infinitely calling tools. */
   protected val maxToolAttempts: Int = DEFAULT_MAX_TOOL_ATTEMPTS,
@@ -161,6 +163,7 @@ abstract class WorkflowAgent(
 
     log.debug("{} - starting stream (attempt: {})", id(), attempt + 1)
 
+    val history = history ?: emptyList()
     val llmInput =
       listOf<ChatMessage>(ChatMessage.system(context())) + history + userMessage + messageBuffer
 
@@ -238,7 +241,7 @@ abstract class WorkflowAgent(
 
   /** Add messages to the agent's history. */
   fun addToHistory(messages: List<ChatMessage>) {
-    history.add(messages)
+    history?.add(messages)
   }
 
   /**
@@ -337,6 +340,7 @@ abstract class WorkflowAgent(
 
     log.debug("{} - starting completion (attempt: {})", id(), attempt + 1)
 
+    val history = history ?: emptyList()
     val llmInput = listOf(ChatMessage.system(context())) + history + userMessage + messageBuffer
 
     val completion =

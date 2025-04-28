@@ -104,14 +104,14 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
     when (message) {
       is IncomingSystemMessage.CreateNewWorkflow -> {
         val workflowType = message.workflowType
-        val agentId = message.agentId
+        val params = message.params
 
         val workflow =
           WorkflowFactoryManager.new(
             workflowType = workflowType,
             user = session.user,
-            agentId = agentId,
             emitter = emitter,
+            params = params,
           )
 
         workflows[session] = workflow

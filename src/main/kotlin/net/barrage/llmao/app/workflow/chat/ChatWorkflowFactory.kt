@@ -1,5 +1,8 @@
 package net.barrage.llmao.app.workflow.chat
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.app.workflow.chat.api.Api
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.repository.AgentRepository
@@ -22,20 +25,17 @@ import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
-import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
-import net.barrage.llmao.core.token.TokenUsageTracker
+import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
-import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KUUID
 
 object ChatWorkflowFactory : WorkflowFactory {
   private lateinit var providers: ProviderState
   private lateinit var api: Api
   private lateinit var agentRepository: AgentRepository
-  private lateinit var tokenUsageWrite: TokenUsageRepositoryWrite
   private lateinit var settings: Settings
   private lateinit var chatRepositoryRead: ChatRepositoryRead
   private lateinit var chatRepositoryWrite: ChatRepositoryWrite
@@ -48,7 +48,6 @@ object ChatWorkflowFactory : WorkflowFactory {
     this.providers = providers
     this.api = api
     this.agentRepository = agentRepository
-    tokenUsageWrite = state.tokenUsageWrite
     settings = state.settings
     chatRepositoryRead = chatRead
     chatRepositoryWrite = chatWrite
@@ -56,12 +55,14 @@ object ChatWorkflowFactory : WorkflowFactory {
 
   override fun id(): String = CHAT_WORKFLOW_ID
 
-  override suspend fun new(user: User, agentId: String?, emitter: Emitter): Workflow {
-    if (agentId == null) {
-      throw AppError.api(ErrorReason.InvalidParameter, "Missing agentId")
+  override suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow {
+    if (params == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "Missing agent ID in creation parameters")
     }
+
+    val agentId = Json.decodeFromJsonElement(NewChatWorkflow.serializer(), params).agentId
     val id = KUUID.randomUUID()
-    val agentId = tryUuid(agentId)
+
     val agent =
       if (user.isAdmin()) {
         // Load it regardless of active status
@@ -120,14 +121,7 @@ object ChatWorkflowFactory : WorkflowFactory {
 
     val settings = settings.getAllWithDefaults()
 
-    val tokenTracker =
-      TokenUsageTracker(
-        repository = tokenUsageWrite,
-        user = user,
-        agentId = agent.agent.id,
-        originType = CHAT_WORKFLOW_ID,
-        originId = workflowId,
-      )
+    val tokenTracker = TokenUsageTrackerFactory.newTracker(user, CHAT_WORKFLOW_ID, workflowId)
 
     val contextEnrichment =
       ContextEnrichmentFactory.collectionEnrichment(
@@ -208,3 +202,5 @@ object ChatWorkflowFactory : WorkflowFactory {
     return toolchain.build(api)
   }
 }
+
+@Serializable data class NewChatWorkflow(val agentId: KUUID)
