@@ -2,6 +2,7 @@ package net.barrage.llmao.core
 
 import io.ktor.server.application.Application
 import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.config.tryGetString
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.administration.settings.SettingsRepositoryPostgres
 import net.barrage.llmao.app.blob.MinioImageStorage
@@ -19,6 +20,8 @@ import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.core.vector.VectorDatabase
+import net.barrage.llmao.int
+import net.barrage.llmao.string
 import org.jooq.DSLContext
 
 fun Application.state(): ApplicationState {
@@ -48,6 +51,24 @@ class ApplicationState(config: ApplicationConfig, val database: DSLContext) {
    * session manager.
    */
   val listener: EventListener = EventListener()
+
+  /** Handle for sending emails, configured via application properties. */
+  val email =
+    Email(
+      host = config.string("email.host"),
+      port = config.int("email.port"),
+      auth =
+        run {
+          val username = config.tryGetString("email.username")
+          val password = config.tryGetString("email.password")
+
+          if (username == null || password == null) {
+            return@run null
+          }
+
+          EmailAuthentication(username, password)
+        },
+    )
 
   init {
     ChatMessageProcessor.init(providers)

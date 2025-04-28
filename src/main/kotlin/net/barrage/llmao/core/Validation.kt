@@ -83,7 +83,7 @@ annotation class NotBlank(
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
-annotation class Email(
+annotation class ValidEmail(
   val code: String = "email",
   val message: String = "Value is not valid email",
 )
@@ -153,7 +153,7 @@ private fun validateInternal(
         listOf(ValidationError(annotation.code, annotation.message, fieldName))
       }
     }
-    is Email -> {
+    is ValidEmail -> {
       return if (validateEmail(value as String)) {
         null
       } else {

@@ -85,9 +85,13 @@ dependencies {
   implementation("com.aallam.openai:openai-client-jvm:4.0.1")
   implementation("com.knuddels:jtokkit:1.1.0")
 
+  // Email
+  implementation("org.apache.commons:commons-email:1.5")
+
   // Tests
   testImplementation("org.testcontainers:postgresql:1.20.2")
   testImplementation("org.testcontainers:weaviate:1.20.2")
+
 
   // https://mvnrepository.com/artifact/org.wiremock.integrations.testcontainers/wiremock-testcontainers-module
   testImplementation("org.wiremock:wiremock:3.12.1")
