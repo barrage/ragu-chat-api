@@ -8,6 +8,7 @@ import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.workflow.ChatWorkflowBase
+import net.barrage.llmao.core.workflow.ChatWorkflowInput
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.ProcessedMessageGroup
 import net.barrage.llmao.types.KUUID
@@ -20,13 +21,14 @@ class JiraKiraWorkflow(
   override val agent: JiraKira,
   private val repository: JiraKiraRepository,
 ) :
-  ChatWorkflowBase<JiraKiraState>(
+  ChatWorkflowBase<ChatWorkflowInput, JiraKiraState>(
     id = id,
     user = user,
     agent = agent,
     emitter = emitter,
     toolchain = toolchain,
     streamingEnabled = false,
+    inputSerializer = ChatWorkflowInput.serializer(),
   ) {
   private var state: JiraKiraWorkflowState = JiraKiraWorkflowState.New
 

@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.tripotron
+package net.barrage.llmao.app.workflow.bonvoyage
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.model.common.PropertyUpdate

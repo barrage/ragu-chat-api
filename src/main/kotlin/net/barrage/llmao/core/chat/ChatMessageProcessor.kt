@@ -18,6 +18,8 @@ import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.Message
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.MessageAttachmentType
+import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.core.workflow.WorkflowInput
 
 private val LOG = io.ktor.util.logging.KtorSimpleLogger("n.b.l.c.chat.ChatMessageProcessor")
 
@@ -44,8 +46,8 @@ object ChatMessageProcessor {
    * the original as it is needed for [storeMessageAttachments] later, since we prompt first and
    * only store images on success.
    */
-  fun toContentMulti(text: String, attachments: List<IncomingMessageAttachment>): ContentMulti {
-    val contentParts = mutableListOf<ChatMessageContentPart>(ChatMessageContentPart.Text(text))
+  fun toContentMulti(text: String?, attachments: List<IncomingMessageAttachment>): ContentMulti {
+    val contentParts = text?.let { mutableListOf<ChatMessageContentPart>(ChatMessageContentPart.Text(it)) } ?: mutableListOf()
     val content =
       attachments.fold(contentParts) { acc, attachment ->
         when (attachment) {

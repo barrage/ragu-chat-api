@@ -10,13 +10,13 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.workflow.chat.NewChatWorkflow
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.workflow.ChatWorkflowInput
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.types.KUUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 
@@ -51,12 +51,12 @@ suspend fun HttpClient.openSendAndCollect(
       for (frame in incoming) {
         val response = (frame as Frame.Text).readText()
         try {
-          val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+          val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
           buffer += message.chunk
         } catch (_: SerializationException) {}
 
         try {
-          val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+          val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
           assert(message.reason == FinishReason.Stop)
           break
         } catch (_: SerializationException) {}

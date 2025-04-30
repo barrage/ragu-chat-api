@@ -9,17 +9,12 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.workflow.Emitter
 
-val json = Json {
-  ignoreUnknownKeys = true
-  encodeDefaults = true
-}
-
 /** Represents a 2 way communication channel between the server and a client. */
-class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
+class WebsocketEmitter(ws: WebSocketServerSession, private val converter: Json) : Emitter {
   /** Used to emit messages to the collector, which in turn forwards them to the client. */
   val flow: MutableSharedFlow<String> = MutableSharedFlow()
 
-  val log = KtorSimpleLogger("n.b.l.a.api.ws.WebsocketEmitter")
+  val log = KtorSimpleLogger("n.b.l.a.ws.WebsocketEmitter")
 
   /**
    * Start the job that collects messages from the flow and forwards anything emitted to the client.
@@ -31,5 +26,5 @@ class WebsocketEmitter(ws: WebSocketServerSession) : Emitter {
 
   /** Emit a system message to the client. */
   override suspend fun <T> emit(message: T, serializer: KSerializer<T>) =
-    flow.emit(json.encodeToString(serializer, message))
+    flow.emit(converter.encodeToString(serializer, message))
 }

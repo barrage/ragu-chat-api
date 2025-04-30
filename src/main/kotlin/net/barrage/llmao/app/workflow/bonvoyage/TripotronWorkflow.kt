@@ -1,11 +1,10 @@
-package net.barrage.llmao.app.workflow.tripotron
+package net.barrage.llmao.app.workflow.bonvoyage
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatMessage
@@ -15,6 +14,7 @@ import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.workflow.AgentEventHandler
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.core.workflow.emit
 import net.barrage.llmao.types.KUUID
 
@@ -73,7 +73,7 @@ class TripotronWorkflow(
   override suspend fun onMessage(message: ChatMessage) {
     if (message.role == "assistant") {
       message.content?.let {
-        emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage.serializer())
+        emitter.emit(WorkflowOutput.Response(it.text()), WorkflowOutput.serializer())
       }
     }
   }

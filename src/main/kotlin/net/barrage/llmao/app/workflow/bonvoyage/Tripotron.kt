@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.tripotron
+package net.barrage.llmao.app.workflow.bonvoyage
 
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.InferenceProvider

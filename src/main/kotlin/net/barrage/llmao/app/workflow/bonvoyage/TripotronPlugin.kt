@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.tripotron
+package net.barrage.llmao.app.workflow.bonvoyage
 
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.response.respond
@@ -16,13 +16,13 @@ class TripotronPlugin() : Plugin {
 
   override fun id(): String = TRIPOTRON_WORKFLOW_ID
 
-  override suspend fun configure(config: ApplicationConfig, state: ApplicationState) {
+  override suspend fun configureState(config: ApplicationConfig, state: ApplicationState) {
     repository = TripotronRepository(state.database)
     TripotronWorkflowFactory.init(config, state)
     WorkflowFactoryManager.register(TripotronWorkflowFactory)
   }
 
-  override fun Route.routes(state: ApplicationState) {
+  override fun Route.configureRoutes(state: ApplicationState) {
     route("/tripotron/trips") { get { call.respond(repository.listTrips()) } }
   }
 }

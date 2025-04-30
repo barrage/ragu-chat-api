@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.tripotron
+package net.barrage.llmao.app.workflow.bonvoyage
 
 import io.ktor.server.config.ApplicationConfig
 import kotlinx.serialization.json.Json

@@ -26,7 +26,7 @@ import net.barrage.llmao.app.http.noAuth
 import net.barrage.llmao.app.http.openApiRoutes
 import net.barrage.llmao.app.workflow.chat.ChatPlugin
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraPlugin
-import net.barrage.llmao.app.workflow.tripotron.TripotronPlugin
+import net.barrage.llmao.app.workflow.bonvoyage.TripotronPlugin
 import net.barrage.llmao.app.ws.websocketServer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -55,7 +55,7 @@ fun Application.module() {
     plugins.register(TripotronPlugin())
   }
 
-  runBlocking { plugins.configure(environment.config, state) }
+  runBlocking { plugins.configureState(environment.config, state) }
 
   val sessionManager = SessionManager(plugins, state.listener)
 
@@ -81,13 +81,13 @@ fun Application.module() {
     )
   }
 
-  install(RequestValidation) { with(plugins) { requestValidation() } }
+  install(RequestValidation) { with(plugins) { configureRequestValidation() } }
 
   configureErrorHandling()
   configureCors()
   configureOpenApi()
 
-  websocketServer(sessionManager)
+  websocketServer(sessionManager, plugins)
   routing {
     route("/__health") { get { call.respond(HttpStatusCode.OK) } }
 
@@ -99,7 +99,7 @@ fun Application.module() {
       administrationRouter()
     }
 
-    with(plugins) { route(state) }
+    with(plugins) { configureRoutes(state) }
   }
 }
 

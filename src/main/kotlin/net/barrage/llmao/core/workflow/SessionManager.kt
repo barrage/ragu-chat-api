@@ -28,7 +28,7 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
    */
   val systemSessions: MutableMap<Session, Emitter> = ConcurrentHashMap()
 
-  val tokenManager: SessionTokenManager = SessionTokenManager()
+  val tokens: SessionTokenManager = SessionTokenManager()
 
   init {
     LOG.info("Starting session manager")

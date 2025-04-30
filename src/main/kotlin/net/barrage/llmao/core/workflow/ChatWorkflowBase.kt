@@ -7,9 +7,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.chat.ChatMessageProcessor
@@ -34,7 +33,7 @@ import net.barrage.llmao.types.KUUID
  *
  * Structured workflows should implement [Workflow] directly.
  */
-abstract class ChatWorkflowBase<S>(
+abstract class ChatWorkflowBase<I: WorkflowInput, S>(
   /** Chat ID. */
   val id: KUUID,
 
@@ -52,6 +51,11 @@ abstract class ChatWorkflowBase<S>(
 
   /** Whether to call the LLM in streaming mode. */
   protected val streamingEnabled: Boolean = true,
+
+  /**
+   * Deserializes the workflow input to the specified input type.
+   */
+  private val inputSerializer: KSerializer<I>
 ) : Workflow, AgentEventHandler {
   /**
    * If this is not null, it means a stream is currently running and additional input will throw
@@ -83,7 +87,7 @@ abstract class ChatWorkflowBase<S>(
   /** Uses [emitter] to emit each chunk with content of an LLM stream. */
   override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
     chunk.content?.let {
-      emitter.emit(ChatWorkflowMessage.StreamChunk(it), ChatWorkflowMessage.serializer())
+      emitter.emit(WorkflowOutput.StreamChunk(it), WorkflowOutput.serializer())
     }
   }
 
@@ -91,7 +95,7 @@ abstract class ChatWorkflowBase<S>(
   override suspend fun onMessage(message: ChatMessage) {
     if (message.role == "assistant") {
       message.content?.let {
-        emitter.emit(ChatWorkflowMessage.Response(it.text()), ChatWorkflowMessage.serializer())
+        emitter.emit(WorkflowOutput.Response(it.text()), WorkflowOutput.serializer())
       }
     }
   }
@@ -118,7 +122,7 @@ abstract class ChatWorkflowBase<S>(
   }
 
   override fun execute(input: String) {
-    val input = Json.decodeFromString<ChatWorkflowInput>(input)
+    val input = Json.decodeFromString(inputSerializer,input)
 
     if (stream != null) {
       throw AppError.api(ErrorReason.InvalidOperation, "Workflow is currently busy")
@@ -129,18 +133,17 @@ abstract class ChatWorkflowBase<S>(
       else scope.launch { execute(input) }
   }
 
-  private suspend fun execute(input: ChatWorkflowInput) {
+  private suspend fun execute(input: I) {
+    input.validate()
+
     val streamStart = Instant.now()
     var finishReason = FinishReason.Stop
 
-    val attachments =
-      if (input.attachments != null && input.attachments.isEmpty()) {
-        null
-      } else input.attachments
-
     val content =
-      attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
-        ?: ContentSingle(input.text)
+      input.attachments()?.let { ChatMessageProcessor.toContentMulti(input.text(), it) }
+        // We can safely !! because we validated the input and text must be present if
+        // attachments are not
+        ?: ContentSingle(input.text()!!)
 
     val userMessage = ChatMessage.user(content)
     val messageBuffer = mutableListOf<ChatMessage>()
@@ -189,24 +192,24 @@ abstract class ChatWorkflowBase<S>(
           val processedMessageGroup =
             onInteractionComplete(
               userMessage = userMessage,
-              attachments = input.attachments,
+              attachments = input.attachments(),
               messages = messageBuffer,
             )
 
           emitter.emit(
-            ChatWorkflowMessage.StreamComplete(
+            WorkflowOutput.StreamComplete(
               chatId = id,
               reason = finishReason,
               messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
             ),
-            ChatWorkflowMessage.serializer(),
+            WorkflowOutput.serializer(),
           )
         }
       } else {
         emitter.emit(
-          ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason),
-          ChatWorkflowMessage.serializer(),
+          WorkflowOutput.StreamComplete(chatId = id, reason = finishReason),
+          WorkflowOutput.serializer(),
         )
       }
 
@@ -219,18 +222,15 @@ abstract class ChatWorkflowBase<S>(
     }
   }
 
-  private suspend fun executeStreaming(input: ChatWorkflowInput) {
+  private suspend fun executeStreaming(input: I) {
+    input.validate()
+
     val streamStart = Instant.now()
     var finishReason = FinishReason.Stop
 
-    val attachments =
-      if (input.attachments != null && input.attachments.isEmpty()) {
-        null
-      } else input.attachments
-
     val content =
-      attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
-        ?: ContentSingle(input.text)
+      input.attachments()?.let { ChatMessageProcessor.toContentMulti(input.text(), it) }
+        ?: ContentSingle(input.text()!!)
 
     val userMessage = ChatMessage.user(content)
     val messageBuffer = mutableListOf<ChatMessage>()
@@ -307,24 +307,24 @@ abstract class ChatWorkflowBase<S>(
           val processedMessageGroup =
             onInteractionComplete(
               userMessage = userMessage,
-              attachments = input.attachments,
+              attachments = input.attachments(),
               messages = messageBuffer,
             )
 
           emitter.emit(
-            ChatWorkflowMessage.StreamComplete(
+            WorkflowOutput.StreamComplete(
               chatId = id,
               reason = finishReason,
               messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
             ),
-            ChatWorkflowMessage.serializer(),
+            WorkflowOutput.serializer(),
           )
         }
       } else {
         emitter.emit(
-          ChatWorkflowMessage.StreamComplete(chatId = id, reason = finishReason),
-          ChatWorkflowMessage.serializer(),
+          WorkflowOutput.StreamComplete(chatId = id, reason = finishReason),
+          WorkflowOutput.serializer(),
         )
       }
 
@@ -363,12 +363,6 @@ abstract class ChatWorkflowBase<S>(
     }
   }
 }
-
-@Serializable
-data class ChatWorkflowInput(
-  val text: String,
-  val attachments: List<IncomingMessageAttachment>? = null,
-)
 
 data class ProcessedMessageGroup(
   val messageGroupId: KUUID,

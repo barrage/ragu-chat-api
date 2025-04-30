@@ -5,6 +5,7 @@ import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
 import io.ktor.util.logging.KtorSimpleLogger
+import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import net.barrage.llmao.app.workflow.chat.api.AdminAgentService
 import net.barrage.llmao.app.workflow.chat.api.AdminApi
 import net.barrage.llmao.app.workflow.chat.api.AdminChatService
@@ -39,6 +40,7 @@ import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.string
 
 const val CHAT_WORKFLOW_ID = "CHAT"
@@ -54,7 +56,7 @@ class ChatPlugin : Plugin {
 
   override fun id(): String = "CHAT"
 
-  override suspend fun configure(config: ApplicationConfig, state: ApplicationState) {
+  override suspend fun configureState(config: ApplicationConfig, state: ApplicationState) {
     val chatRead = ChatRepositoryRead(state.database, CHAT_WORKFLOW_ID)
     val agentRepository = AgentRepository(state.database)
 
@@ -105,7 +107,7 @@ class ChatPlugin : Plugin {
     WorkflowFactoryManager.register(ChatWorkflowFactory)
   }
 
-  override fun Route.routes(state: ApplicationState) {
+  override fun Route.configureRoutes(state: ApplicationState) {
     avatarRoutes(state.providers.image)
 
     // Admin API routes
@@ -128,7 +130,7 @@ class ChatPlugin : Plugin {
     }
   }
 
-  override fun RequestValidationConfig.requestValidation() {
+  override fun RequestValidationConfig.configureRequestValidation() {
     validate<CreateAgent>(CreateAgent::validate)
     validate<UpdateAgent>(UpdateAgent::validate)
     validate<UpdateCollections>(UpdateCollections::validate)
@@ -153,5 +155,9 @@ class ChatPlugin : Plugin {
         manager.broadcast(OutgoingSystemMessage.AgentDeactivated(event.agentId))
       }
     }
+  }
+
+  override fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {
+    subclass(ChatTitleUpdated::class, ChatTitleUpdated.serializer())
   }
 }

@@ -28,7 +28,6 @@ import net.barrage.llmao.COMPLETIONS_TITLE_PROMPT
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.adminWsSession
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.UpdateAgent
 import net.barrage.llmao.core.AppError
@@ -37,7 +36,7 @@ import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.json
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.sendMessage
@@ -45,7 +44,7 @@ import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import kotlin.random.Random
+import net.barrage.llmao.json
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 
@@ -79,12 +78,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
             buffer += message.chunk
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assert(message.reason == FinishReason.Stop)
             asserted = true
             break
@@ -126,12 +125,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
             buffer += message.chunk
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assert(message.reason == FinishReason.Stop)
             asserted = true
             break
@@ -168,12 +167,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
             buffer += message.chunk
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assert(message.reason == FinishReason.Stop)
             asserted = true
             break
@@ -213,12 +212,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
             buffer += message.chunk
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assert(message.reason == FinishReason.Stop)
             asserted = true
             break
@@ -302,16 +301,16 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       for (frame in incoming) {
         val response = (frame as Frame.Text).readText()
         try {
-          json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+          json.decodeFromString<WorkflowOutput.StreamChunk>(response)
           // Send cancel immediately after first chunk
           if (!cancelSent) {
             cancelSent = true
             sendClientSystem(IncomingSystemMessage.CancelWorkflowStream)
           }
-        } catch (_: SerializationException) {}
+        } catch (_: SerializationException) {        }
 
         try {
-          val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+          val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
           assert(message.reason == FinishReason.ManualStop)
           asserted = true
           break
@@ -351,11 +350,11 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
               for (frame in incoming) {
                 val response = (frame as Frame.Text).readText()
                 try {
-                  val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+                  val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
                   buffer += message.chunk
                 } catch (_: SerializationException) {}
                 try {
-                  val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+                  val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
                   assert(message.reason == FinishReason.Stop)
                   runsFinished += 1
                   break
@@ -383,7 +382,6 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
     insertVectors(COMPLETIONS_STREAM_PROMPT)
 
-    val httpClient = createClient { install(ContentNegotiation) { json() } }
     val agent = createValidAgent()
 
     client.adminWsSession {
@@ -392,7 +390,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       sendMessage("Will this trigger a stream response?") { incoming ->
         // Block on this so we can see what happens.
         runBlocking {
-          httpClient.put("/admin/agents/${agent.agent.id}") {
+          client.put("/admin/agents/${agent.agent.id}") {
             header(HttpHeaders.Cookie, adminAccessToken())
             header(HttpHeaders.Accept, ContentType.Application.Json)
             contentType(ContentType.Application.Json)
@@ -411,17 +409,15 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
           } catch (_: SerializationException) {}
 
           try {
-            val event = json.decodeFromString<ChatWorkflowMessage>(response)
+            val event = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
+            buffer += event.chunk
+          } catch (e: SerializationException) {
 
-            if (event is ChatWorkflowMessage.StreamChunk) {
-              buffer += event.chunk
-            }
+          }
 
-            if (event is ChatWorkflowMessage.StreamComplete) {
-              break
-            }
-
-            continue
+          try {
+            json.decodeFromString<WorkflowOutput.StreamComplete>(response)
+            break
           } catch (_: SerializationException) {}
         }
       }
@@ -449,10 +445,16 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       sendMessage("Give me an error") { incoming ->
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
-          val message = json.decodeFromString<AppError>(response)
-          assertEquals("This is an error message.", message.displayMessage)
-          asserted = true
-          break
+          try {
+            val message = json.decodeFromString<AppError>(response)
+            assertEquals("This is an error message.", message.displayMessage)
+            asserted = true
+            break
+          } catch (e: SerializationException) {
+            println(e)
+            println(response)
+            break
+          }
         }
       }
     }
@@ -481,12 +483,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
             buffer += message.chunk
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assert(message.reason == FinishReason.Stop)
             break
           } catch (_: SerializationException) {}
@@ -500,12 +502,12 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamChunk>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
             buffer += message.chunk
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.StreamComplete>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assert(message.reason == FinishReason.Stop)
             break
           } catch (_: SerializationException) {}

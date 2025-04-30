@@ -3,6 +3,7 @@ package net.barrage.llmao.app.ws
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
@@ -13,22 +14,44 @@ import io.ktor.websocket.*
 import java.time.Instant
 import java.util.*
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import net.barrage.llmao.app.http.queryParam
 import net.barrage.llmao.app.http.user
 import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.workflow.Session
 import net.barrage.llmao.core.workflow.SessionManager
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.core.workflow.emit
 import net.barrage.llmao.types.KUUID
 
 private val LOG = KtorSimpleLogger("n.b.l.a.api.ws.WebsocketRouter")
 
-fun Application.websocketServer(manager: SessionManager) {
+fun Application.websocketServer(manager: SessionManager, plugins: Plugins) {
+
+  val serializer = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+    classDiscriminator = "type"
+    serializersModule = SerializersModule {
+      polymorphic(WorkflowOutput::class) {
+        subclass(WorkflowOutput.StreamChunk::class)
+        subclass(WorkflowOutput.StreamComplete::class)
+        subclass(WorkflowOutput.Response::class)
+        with(plugins) { configureOutputSerialization() }
+      }
+    }
+  }
+
   install(WebSockets) {
     // FIXME: Shrink
     maxFrameSize = Long.MAX_VALUE
     masking = false
     pingPeriod = 5.seconds
+    contentConverter = KotlinxWebsocketSerializationConverter(serializer)
   }
 
   routing {
@@ -37,7 +60,7 @@ fun Application.websocketServer(manager: SessionManager) {
       route("/ws") {
         get(websocketGenerateToken()) {
           val user = call.user()
-          val token = manager.tokenManager.registerToken(user)
+          val token = manager.tokens.registerToken(user)
           call.respond(HttpStatusCode.OK, token)
         }
       }
@@ -56,7 +79,7 @@ fun Application.websocketServer(manager: SessionManager) {
         return@webSocket
       }
 
-      val user = manager.tokenManager.removeToken(token)
+      val user = manager.tokens.removeToken(token)
 
       if (user == null) {
         LOG.debug("WS - closing due to no token entry")
@@ -66,7 +89,7 @@ fun Application.websocketServer(manager: SessionManager) {
 
       val session = Session(user, token)
 
-      val emitter = WebsocketEmitter(this)
+      val emitter = WebsocketEmitter(this, serializer)
       manager.registerSystemEmitter(session, emitter)
 
       LOG.debug("{} - websocket connection open", user.id)

@@ -4,16 +4,16 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
+import net.barrage.llmao.core.workflow.WorkflowOutput
 
-@OptIn(ExperimentalSerializationApi::class)
 @Serializable
-@JsonClassDiscriminator("type")
-sealed class JiraKiraMessage {
+@OptIn(ExperimentalSerializationApi::class)
+sealed class JiraKiraWorkflowOutput : WorkflowOutput() {
   @Serializable
   @SerialName("jirakira.worklog_created")
-  data class WorklogCreated(val worklog: TempoWorklogEntry) : JiraKiraMessage()
+  data class WorklogCreated(val worklog: TempoWorklogEntry) : JiraKiraWorkflowOutput()
 
   @Serializable
   @SerialName("jirakira.worklog_updated")
-  data class WorklogUpdated(val worklog: TempoWorklogEntry) : JiraKiraMessage()
+  data class WorklogUpdated(val worklog: TempoWorklogEntry) : JiraKiraWorkflowOutput()
 }

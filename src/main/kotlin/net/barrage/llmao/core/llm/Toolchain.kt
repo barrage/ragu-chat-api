@@ -13,6 +13,8 @@ private val LOG = KtorSimpleLogger("n.b.l.c.llm.Toolchain")
  * Container for all available tools an agent can use.
  *
  * To construct a toolchain, use [ToolchainBuilder].
+ *
+ * @param S The type of state the tools can operate on.
  */
 class Toolchain<S>(
   private val state: S,

@@ -8,8 +8,10 @@ import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.workflow.ChatWorkflowBase
+import net.barrage.llmao.core.workflow.ChatWorkflowInput
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.ProcessedMessageGroup
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KUUID
 
@@ -25,12 +27,13 @@ class ChatWorkflow(
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
 ) :
-  ChatWorkflowBase<Api>(
+  ChatWorkflowBase<ChatWorkflowInput, Api>(
     id = id,
     user = user,
     emitter = emitter,
     toolchain = toolchain,
     agent = agent,
+    inputSerializer = ChatWorkflowInput.serializer(),
   ) {
   fun agentId(): KUUID {
     return agent.agentId
@@ -67,8 +70,8 @@ class ChatWorkflow(
 
         repository.updateTitle(id, user.id, title)
         emitter.emit(
-          ChatWorkflowMessage.ChatTitleUpdated(id, title),
-          ChatWorkflowMessage.serializer(),
+          ChatTitleUpdated(id, title),
+          WorkflowOutput.serializer(),
         )
         state = ChatWorkflowState.Persisted(title)
 

@@ -3,14 +3,18 @@ package net.barrage.llmao.core
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
+import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import net.barrage.llmao.core.workflow.SessionManager
+import net.barrage.llmao.core.workflow.WorkflowOutput
 
 interface Plugin : Identity {
-  suspend fun configure(config: ApplicationConfig, state: ApplicationState)
+  suspend fun configureState(config: ApplicationConfig, state: ApplicationState)
 
-  fun Route.routes(state: ApplicationState) {}
+  fun Route.configureRoutes(state: ApplicationState) {}
 
-  fun RequestValidationConfig.requestValidation() {}
+  fun RequestValidationConfig.configureRequestValidation() {}
+
+  fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() { }
 
   suspend fun handleEvent(manager: SessionManager, event: Event) {}
 }
@@ -35,9 +39,9 @@ class Plugins {
    *
    * Called once on application startup.
    */
-  suspend fun configure(config: ApplicationConfig, state: ApplicationState) {
+  suspend fun configureState(config: ApplicationConfig, state: ApplicationState) {
     for (plugin in plugins) {
-      plugin.configure(config, state)
+      plugin.configureState(config, state)
     }
   }
 
@@ -53,9 +57,9 @@ class Plugins {
    *
    * Called once on application startup.
    */
-  fun Route.route(state: ApplicationState) {
+  fun Route.configureRoutes(state: ApplicationState) {
     for (plugin in plugins) {
-      with(plugin) { routes(state) }
+      with(plugin) { configureRoutes(state) }
     }
   }
 
@@ -64,9 +68,15 @@ class Plugins {
    *
    * Called once on application startup.
    */
-  fun RequestValidationConfig.requestValidation() {
+  fun RequestValidationConfig.configureRequestValidation() {
     for (plugin in plugins) {
-      with(plugin) { requestValidation() }
+      with(plugin) { configureRequestValidation() }
+    }
+  }
+
+  fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {
+    for (plugin in plugins) {
+      with(plugin) { configureOutputSerialization() }
     }
   }
 }

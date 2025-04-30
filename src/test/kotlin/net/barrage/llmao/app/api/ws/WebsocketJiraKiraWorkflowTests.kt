@@ -9,12 +9,12 @@ import net.barrage.llmao.ADMIN_USER
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminWsSession
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowMessage
-import net.barrage.llmao.app.workflow.jirakira.JiraKiraMessage
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowOutput
 import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.SettingUpdate
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
 import net.barrage.llmao.core.llm.ToolEvent
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage
@@ -52,7 +52,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           val response = (frame as Frame.Text).readText()
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.Response>(response)
+            val message = json.decodeFromString<WorkflowOutput.Response>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             asserted = true
             break
@@ -84,14 +84,14 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<JiraKiraMessage.WorklogCreated>(response)
+            val message = json.decodeFromString<JiraKiraWorkflowOutput.WorklogCreated>(response)
             // Has to match the response from wiremock at rest_api_2_issue_response.json
             assertEquals("RAGU-420", message.worklog.issue?.key)
             assertions += 1
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<ChatWorkflowMessage.Response>(response)
+            val message = json.decodeFromString<WorkflowOutput.Response>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             assertions += 1
             break

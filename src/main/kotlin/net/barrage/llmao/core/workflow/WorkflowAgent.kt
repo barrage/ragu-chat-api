@@ -175,7 +175,7 @@ abstract class WorkflowAgent(
 
     val toolCalls: MutableMap<Int, ToolCallData> = mutableMapOf()
 
-    // The finish reason will get adjusted when the last chunk found.
+    // The finish reason will get adjusted when the last chunk is found.
     // It is guaranteed that the LLM stream will return the finish reason.
     var finishReason: FinishReason? = null
 
@@ -223,10 +223,8 @@ abstract class WorkflowAgent(
       return
     }
 
-    // From this point on, we are handling tool calls and we need to re-prompt the LLM with
-    // their results.
-
     if (!handleToolCalls(toolCalls.values.toList(), messageBuffer, eventHandler)) {
+      // If the handler returns null or empty, we stop inference
       return
     }
 
