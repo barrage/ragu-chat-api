@@ -5,9 +5,11 @@ import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk as OpenAiChatChunk
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage as OpenAiChatMessage
+import com.aallam.openai.api.chat.ChatResponseFormat
 import com.aallam.openai.api.chat.FunctionCall as OpenAiFunctionCall
 import com.aallam.openai.api.chat.FunctionTool
 import com.aallam.openai.api.chat.ImagePart
+import com.aallam.openai.api.chat.JsonSchema
 import com.aallam.openai.api.chat.StreamOptions
 import com.aallam.openai.api.chat.TextPart
 import com.aallam.openai.api.chat.Tool
@@ -60,11 +62,17 @@ class OpenAI(endpoint: String, apiKey: String, private val models: List<String>)
     val chatRequest =
       ChatCompletionRequest(
         messages = messages.map { it.toOpenAiChatMessage() },
-        model = ModelId(config.model),
-        temperature = config.temperature,
-        presencePenalty = config.presencePenalty,
-        maxTokens = config.maxTokens,
-        tools = config.tools?.map { it.toOpenAiTool() },
+        model = ModelId(config.base.model),
+        temperature = config.base.temperature,
+        presencePenalty = config.base.presencePenalty,
+        maxTokens = config.base.maxTokens,
+        tools = config.agent?.tools?.listToolSchemas()?.map { it.toOpenAiTool() },
+        responseFormat =
+          config.agent?.responseFormat?.let {
+            ChatResponseFormat.jsonSchema(
+              JsonSchema(name = it.name, schema = it.schema, strict = it.strict)
+            )
+          },
       )
 
     return client.chatCompletion(chatRequest).toNativeChatCompletion()
@@ -78,11 +86,17 @@ class OpenAI(endpoint: String, apiKey: String, private val models: List<String>)
       ChatCompletionRequest(
         messages = messages.map { it.toOpenAiChatMessage() },
         streamOptions = StreamOptions(true),
-        model = ModelId(config.model),
-        temperature = config.temperature,
-        presencePenalty = config.presencePenalty,
-        maxTokens = config.maxTokens,
-        tools = config.tools?.map { it.toOpenAiTool() },
+        model = ModelId(config.base.model),
+        temperature = config.base.temperature,
+        presencePenalty = config.base.presencePenalty,
+        maxTokens = config.base.maxTokens,
+        tools = config.agent?.tools?.listToolSchemas()?.map { it.toOpenAiTool() },
+        responseFormat =
+          config.agent?.responseFormat?.let {
+            ChatResponseFormat.jsonSchema(
+              JsonSchema(name = it.name, schema = it.schema, strict = it.strict)
+            )
+          },
       )
 
     return this.client.chatCompletions(chatRequest).map { chunk -> chunk.toNativeMessageChunk() }

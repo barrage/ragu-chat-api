@@ -3,7 +3,6 @@ package net.barrage.llmao.app.workflow.jirakira
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.workflow.WorkflowOutput
 
 @Serializable

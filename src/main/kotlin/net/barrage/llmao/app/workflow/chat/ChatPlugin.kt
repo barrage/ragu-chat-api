@@ -103,6 +103,7 @@ class ChatPlugin : Plugin {
         )
     }
 
+    ChatToolExecutor.init(api)
     ChatWorkflowFactory.init(state.providers, api, state)
     WorkflowFactoryManager.register(ChatWorkflowFactory)
   }

@@ -2,7 +2,6 @@ package net.barrage.llmao.app.api.ws
 
 // import net.barrage.llmao.app.workflow.IncomingSessionMessageSerializer
 import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.put
@@ -37,6 +36,7 @@ import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.WorkflowOutput
+import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendClientSystem
 import net.barrage.llmao.sendMessage
@@ -44,7 +44,6 @@ import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import net.barrage.llmao.json
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 
@@ -307,7 +306,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
             cancelSent = true
             sendClientSystem(IncomingSystemMessage.CancelWorkflowStream)
           }
-        } catch (_: SerializationException) {        }
+        } catch (_: SerializationException) {}
 
         try {
           val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
@@ -411,9 +410,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
           try {
             val event = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
             buffer += event.chunk
-          } catch (e: SerializationException) {
-
-          }
+          } catch (e: SerializationException) {}
 
           try {
             json.decodeFromString<WorkflowOutput.StreamComplete>(response)

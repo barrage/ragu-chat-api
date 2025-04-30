@@ -13,9 +13,9 @@ import kotlinx.serialization.json.encodeToJsonElement
 import net.barrage.llmao.app.workflow.chat.NewChatWorkflow
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.workflow.ChatWorkflowInput
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.core.workflow.WorkflowInput
 import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.types.KUUID
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -112,7 +112,7 @@ suspend fun ClientWebSocketSession.sendMessage(
   text: String,
   block: suspend (ReceiveChannel<Frame>) -> Unit,
 ) {
-  send(Frame.Text(json.encodeToString(ChatWorkflowInput(text))))
+  send(Frame.Text(json.encodeToString(WorkflowInput(text))))
   block(incoming)
 }
 

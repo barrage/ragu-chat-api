@@ -36,7 +36,7 @@ import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
-import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
@@ -236,7 +236,7 @@ class WhatsAppAdapter(
       } ?: MessageBasedHistory(messages = messages, maxMessages = MAX_HISTORY_MESSAGES)
 
     val completionParameters =
-      ChatCompletionParameters(
+      ChatCompletionBaseParameters(
         model = agent.configuration.model,
         temperature = agent.configuration.temperature,
         presencePenalty =
@@ -268,8 +268,6 @@ class WhatsAppAdapter(
         ContextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
           listOf(it)
         },
-      // TODO: implement
-      tools = null,
     )
   }
 

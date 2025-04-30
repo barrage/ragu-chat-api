@@ -5,16 +5,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ChatMessageChunk
-import net.barrage.llmao.core.llm.ToolCallData
+import net.barrage.llmao.core.llm.ResponseFormat
 import net.barrage.llmao.core.model.IncomingMessageAttachment
-import net.barrage.llmao.core.workflow.AgentEventHandler
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
-import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.core.workflow.emit
 import net.barrage.llmao.types.KUUID
 
@@ -29,7 +28,7 @@ class TripotronWorkflow(
   /** Output handle. */
   private val emitter: Emitter,
   private val repository: TripotronRepository,
-) : Workflow, AgentEventHandler {
+) : Workflow {
   private val scope = CoroutineScope(Dispatchers.Default)
   private var stream: Job? = null
 
@@ -64,24 +63,10 @@ class TripotronWorkflow(
     stream!!.cancel()
   }
 
-  override suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>? {
-    return null
-  }
-
-  override suspend fun onStreamChunk(chunk: ChatMessageChunk) {}
-
-  override suspend fun onMessage(message: ChatMessage) {
-    if (message.role == "assistant") {
-      message.content?.let {
-        emitter.emit(WorkflowOutput.Response(it.text()), WorkflowOutput.serializer())
-      }
-    }
-  }
-
   private suspend fun handleExpenseInput(input: TripotronInput.ExpenseUpload) {
     val attachment = listOf(IncomingMessageAttachment.Image(input.data))
 
-    val response = tripotron.completion(input.description, attachment, this)
+    val response = tripotron.completion(input.description, attachment)
 
     val userMessage = response.first()
     val assistantMessage = response.last()
@@ -94,9 +79,59 @@ class TripotronWorkflow(
     val insert = listOf(userMessage.toInsert(attachments)) + listOf(assistantMessage.toInsert())
 
     repository.insertMessages(id, insert)
-    //    emitter.emit(TripotronOutput.ExpenseRegistered(expense))
+    // emitter.emit(TripotronOutput.ExpenseRegistered(expense))
   }
 }
+
+private val EXPENSE_FORMAT =
+  ResponseFormat(
+    name = "TravelExpenseUpload",
+    schema =
+      JsonObject(
+        mapOf(
+          "type" to JsonPrimitive("object"),
+          "properties" to
+            JsonObject(
+              mapOf(
+                "amount" to
+                  JsonObject(
+                    mapOf(
+                      "type" to JsonPrimitive("number"),
+                      "description" to
+                        JsonPrimitive("The total amount of money spent indicated on the receipt."),
+                    )
+                  ),
+                "currency" to
+                  JsonObject(
+                    mapOf(
+                      "type" to JsonPrimitive("string"),
+                      "description" to
+                        JsonPrimitive(
+                          "The currency of the expense as indicated on the receipt. If not indicated, default to EUR."
+                        ),
+                    )
+                  ),
+                "description" to
+                  JsonObject(
+                    mapOf(
+                      "type" to JsonPrimitive("string"),
+                      "description" to
+                        JsonPrimitive(
+                          """
+                    A description of the expense. If the user provides a description, use it.
+                    Otherwise, attempt to describe it based on the image of the receipt.
+                    If still unclear, leave it empty."""
+                            .trimMargin()
+                        ),
+                    )
+                  ),
+              )
+            ),
+          "additionalProperties" to JsonPrimitive(false),
+          "required" to JsonArray(listOf(JsonPrimitive("amount"), JsonPrimitive("currency"))),
+        )
+      ),
+  )
 
 sealed class TripotronWorkflowState {
   /** Travel data has been sent and the workflow is accepting expense data. */

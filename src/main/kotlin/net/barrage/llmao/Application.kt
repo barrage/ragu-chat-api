@@ -24,9 +24,9 @@ import net.barrage.llmao.app.http.configureOpenApi
 import net.barrage.llmao.app.http.installJwtAuth
 import net.barrage.llmao.app.http.noAuth
 import net.barrage.llmao.app.http.openApiRoutes
+import net.barrage.llmao.app.workflow.bonvoyage.TripotronPlugin
 import net.barrage.llmao.app.workflow.chat.ChatPlugin
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraPlugin
-import net.barrage.llmao.app.workflow.bonvoyage.TripotronPlugin
 import net.barrage.llmao.app.ws.websocketServer
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason

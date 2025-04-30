@@ -18,7 +18,13 @@ const val GET_BIRTHDAY = "get_agent_birthday"
  *
  * The registry contains the tool schemas and their implementations.
  */
-object ToolRegistry {
+object ChatToolExecutor {
+  private lateinit var services: Api
+
+  fun init(services: Api) {
+    this.services = services
+  }
+
   fun listToolDefinitions(): List<ToolDefinition> {
     return listOf(getAgentBirthdayDefinition())
   }
@@ -30,16 +36,18 @@ object ToolRegistry {
     }
   }
 
-  fun getToolFunction(name: String): CallableTool<Api>? {
+  fun getToolFunction(name: String): CallableTool? {
     return when (name) {
-      GET_BIRTHDAY -> { services, arguments ->
-          val toolData = Json.decodeFromString<GetAgentBirthdayArguments>(arguments)
-          val agentId = toolData.agentId
-          val birthday = services.admin.agent.getAgent(agentId).createdAt
-          "The birthday for agent $agentId is $birthday"
-        }
+      GET_BIRTHDAY -> ::getAgentBirthday
       else -> null
     }
+  }
+
+  private suspend fun getAgentBirthday(arguments: String): String {
+    val toolData = Json.decodeFromString<GetAgentBirthdayArguments>(arguments)
+    val agentId = toolData.agentId
+    val birthday = services.admin.agent.getAgent(agentId).createdAt
+    return "The birthday for agent $agentId is $birthday"
   }
 
   private fun getAgentBirthdayDefinition(): ToolDefinition {

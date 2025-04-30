@@ -9,4 +9,3 @@ import net.barrage.llmao.types.KUUID
 @Serializable
 @SerialName("chat.title")
 data class ChatTitleUpdated(val chatId: KUUID, val title: String) : WorkflowOutput()
-

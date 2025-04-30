@@ -17,12 +17,12 @@ import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
-import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolFunctionDefinition
-import net.barrage.llmao.core.llm.Toolchain
-import net.barrage.llmao.core.llm.ToolchainBuilder
+import net.barrage.llmao.core.llm.Tools
+import net.barrage.llmao.core.llm.ToolsBuilder
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.token.Encoder
@@ -80,7 +80,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.New,
       user = user,
-      toolchain = loadAgentTools(agent.agent.id),
+      tools = loadAgentTools(agent.agent.id),
     )
   }
 
@@ -112,7 +112,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       emitter = emitter,
       repository = chatRepositoryWrite,
       state = ChatWorkflowState.Persisted(chat.chat.title!!),
-      toolchain = loadAgentTools(agent.agent.id),
+      tools = loadAgentTools(agent.agent.id),
     )
   }
 
@@ -141,7 +141,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       inferenceProvider = providers.llm[agent.configuration.llmProvider],
       context = agent.configuration.context,
       completionParameters =
-        ChatCompletionParameters(
+        ChatCompletionBaseParameters(
           model = agent.configuration.model,
           temperature = agent.configuration.temperature,
           presencePenalty =
@@ -150,8 +150,6 @@ object ChatWorkflowFactory : WorkflowFactory {
           maxTokens =
             agent.configuration.maxCompletionTokens
               ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
-          // Tools is a dynamic property that will get set during inference, if the agent has them
-          tools = null,
         ),
       tokenTracker = tokenTracker,
       history =
@@ -163,27 +161,26 @@ object ChatWorkflowFactory : WorkflowFactory {
           )
         } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
       contextEnrichment = contextEnrichment?.let { listOf(it) },
-      tools = loadAgentTools(agent.agent.id)?.listToolSchemas(),
     )
   }
 
-  private suspend fun loadAgentTools(agentId: KUUID): Toolchain<Api>? {
+  private suspend fun loadAgentTools(agentId: KUUID): Tools? {
     val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
 
     if (agentTools.isEmpty()) {
       return null
     }
 
-    val toolchain = ToolchainBuilder<Api>()
+    val toolchain = ToolsBuilder()
 
     for (tool in agentTools) {
-      val definition = ToolRegistry.getToolDefinition(tool)
+      val definition = ChatToolExecutor.getToolDefinition(tool)
       if (definition == null) {
         LOG.warn("Attempted to load tool '$tool' but it does not exist in the tool registry")
         continue
       }
 
-      val handler = ToolRegistry.getToolFunction(tool)
+      val handler = ChatToolExecutor.getToolFunction(tool)
       if (handler == null) {
         LOG.warn("Attempted to load tool '$tool' but it does not have a handler")
         continue
@@ -191,7 +188,7 @@ object ChatWorkflowFactory : WorkflowFactory {
 
       toolchain.addTool(definition, handler)
     }
-    val tools = toolchain.build(api)
+    val tools = toolchain.build()
 
     LOG.info(
       "Loading toolchain for '{}', available tools: {}",
@@ -199,7 +196,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       tools.listToolSchemas().map(ToolDefinition::function).map(ToolFunctionDefinition::name),
     )
 
-    return toolchain.build(api)
+    return toolchain.build()
   }
 }
 

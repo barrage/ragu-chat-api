@@ -40,7 +40,6 @@ fun Application.websocketServer(manager: SessionManager, plugins: Plugins) {
       polymorphic(WorkflowOutput::class) {
         subclass(WorkflowOutput.StreamChunk::class)
         subclass(WorkflowOutput.StreamComplete::class)
-        subclass(WorkflowOutput.Response::class)
         with(plugins) { configureOutputSerialization() }
       }
     }

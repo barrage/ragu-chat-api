@@ -1,7 +1,7 @@
 package net.barrage.llmao.app.workflow.chat.api
 
+import net.barrage.llmao.app.workflow.chat.ChatToolExecutor
 import net.barrage.llmao.app.workflow.chat.LOG
-import net.barrage.llmao.app.workflow.chat.ToolRegistry
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.AgentConfigurationWithEvaluationCounts
@@ -201,7 +201,7 @@ class AdminAgentService(
   }
 
   fun listAvailableAgentTools(): List<ToolDefinition> {
-    return ToolRegistry.listToolDefinitions()
+    return ChatToolExecutor.listToolDefinitions()
   }
 
   suspend fun listAgentTools(agentId: KUUID): List<AgentTool> {
@@ -210,7 +210,7 @@ class AdminAgentService(
 
   suspend fun updateAgentTools(agentId: KUUID, update: AgentUpdateTools) {
     for (toolName in update.add) {
-      if (ToolRegistry.getToolDefinition(toolName) == null) {
+      if (ChatToolExecutor.getToolDefinition(toolName) == null) {
         throw AppError.api(ErrorReason.EntityDoesNotExist, "Tool '$toolName' does not exist")
       }
     }

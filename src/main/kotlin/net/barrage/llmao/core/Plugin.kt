@@ -14,7 +14,7 @@ interface Plugin : Identity {
 
   fun RequestValidationConfig.configureRequestValidation() {}
 
-  fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() { }
+  fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {}
 
   suspend fun handleEvent(manager: SessionManager, event: Event) {}
 }

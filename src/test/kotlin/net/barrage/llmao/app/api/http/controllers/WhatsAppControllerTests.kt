@@ -65,21 +65,19 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
           context = "WhatsApp Test Agent Context",
         )
 
-      whatsAppChat = postgres.testChat(USER_USER, whatsAppAgentOne.id, whatsAppAgentOneConfiguration.id, type = "WHATSAPP")
+      whatsAppChat =
+        postgres.testChat(
+          USER_USER,
+          whatsAppAgentOne.id,
+          whatsAppAgentOneConfiguration.id,
+          type = "WHATSAPP",
+        )
 
       whatsAppMessageOne =
-        postgres.testMessagePair(
-          whatsAppChat.id,
-          "First Message",
-          "First Response",
-        )
+        postgres.testMessagePair(whatsAppChat.id, "First Message", "First Response")
 
       whatsAppMessageTwo =
-        postgres.testMessagePair(
-          whatsAppChat.id,
-          "Second Message",
-          "Second Response",
-        )
+        postgres.testMessagePair(whatsAppChat.id, "Second Message", "Second Response")
 
       postgres.setWhatsAppAgent(whatsAppAgentOne.id)
     }

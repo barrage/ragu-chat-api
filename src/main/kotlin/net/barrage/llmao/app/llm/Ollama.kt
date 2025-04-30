@@ -38,13 +38,13 @@ class Ollama(private val endpoint: String) : InferenceProvider {
   ): ChatCompletion {
     val request =
       ChatRequest(
-        config.model,
+        config.base.model,
         messages,
         // TODO: Implement the rest of the options
         CompletionRequestOptions(
-          config.temperature,
-          maxTokens = config.maxTokens,
-          tools = config.tools,
+          config.base.temperature,
+          maxTokens = config.base.maxTokens,
+          tools = config.agent?.tools?.listToolSchemas(),
         ),
         false,
       )
@@ -64,13 +64,13 @@ class Ollama(private val endpoint: String) : InferenceProvider {
   ): Flow<ChatMessageChunk> {
     val request =
       ChatRequest(
-        config.model,
+        config.base.model,
         messages,
         // TODO: Implement the rest of the options
         CompletionRequestOptions(
-          config.temperature,
-          maxTokens = config.maxTokens,
-          tools = config.tools,
+          config.base.temperature,
+          maxTokens = config.base.maxTokens,
+          tools = config.agent?.tools?.listToolSchemas(),
         ),
         true,
       )

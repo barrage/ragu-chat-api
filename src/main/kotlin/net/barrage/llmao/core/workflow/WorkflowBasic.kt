@@ -7,56 +7,46 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.llm.ChatCompletionAgentParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.llm.ToolCallData
-import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.llm.Tools
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KUUID
 
 /**
- * Implementation of a workflow that is essentially a runtime for a conversation with a single
- * agent.
+ * Implementation of a workflow that is for a conversation with a single agent.
  *
  * If a workflow is conversation based, i.e. does not have structured input and only accepts text
  * messages with attachments, this class can be used as the base.
  *
  * Structured workflows should implement [Workflow] directly.
  */
-abstract class ChatWorkflowBase<I: WorkflowInput, S>(
-  /** Chat ID. */
+abstract class WorkflowBasic(
+  /** Workflow ID. */
   val id: KUUID,
 
   /** The proompter. */
   val user: User,
 
-  /** LLM tools. */
-  protected val toolchain: Toolchain<S>?,
-
   /** Encapsulates the agent and its LLM functionality. */
   open val agent: WorkflowAgent,
+  val tools: Tools? = null,
 
-  /** Output handle. Only chat related events are sent via this reference. */
+  /** Output handle. */
   protected val emitter: Emitter,
 
   /** Whether to call the LLM in streaming mode. */
   protected val streamingEnabled: Boolean = true,
-
-  /**
-   * Deserializes the workflow input to the specified input type.
-   */
-  private val inputSerializer: KSerializer<I>
-) : Workflow, AgentEventHandler {
+) : Workflow {
   /**
    * If this is not null, it means a stream is currently running and additional input will throw
    * until the stream is complete.
@@ -84,100 +74,42 @@ abstract class ChatWorkflowBase<I: WorkflowInput, S>(
     messages: List<ChatMessage>,
   ): ProcessedMessageGroup
 
-  /** Uses [emitter] to emit each chunk with content of an LLM stream. */
-  override suspend fun onStreamChunk(chunk: ChatMessageChunk) {
-    chunk.content?.let {
-      emitter.emit(WorkflowOutput.StreamChunk(it), WorkflowOutput.serializer())
-    }
-  }
-
-  /** Uses [emitter] to emit any assistant message with content. */
-  override suspend fun onMessage(message: ChatMessage) {
-    if (message.role == "assistant") {
-      message.content?.let {
-        emitter.emit(WorkflowOutput.Response(it.text()), WorkflowOutput.serializer())
-      }
-    }
-  }
-
-  override suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>? {
-    val results = mutableListOf<ChatMessage>()
-    for (toolCall in toolCalls) {
-      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent.serializer())
-      try {
-        val result = toolchain!!.processToolCall(toolCall)
-        emitter.emit(ToolEvent.ToolResult(result), ToolEvent.serializer())
-        results.add(ChatMessage.toolResult(result, toolCall.id))
-      } catch (e: Throwable) {
-        val result = "error: ${e.message}"
-        emitter.emit(ToolEvent.ToolResult(result), ToolEvent.serializer())
-        results.add(ChatMessage.toolResult(result, toolCall.id))
-      }
-    }
-    return results
-  }
-
   override fun id(): KUUID {
     return id
   }
 
   override fun execute(input: String) {
-    val input = Json.decodeFromString(inputSerializer,input)
-
     if (stream != null) {
       throw AppError.api(ErrorReason.InvalidOperation, "Workflow is currently busy")
     }
 
-    stream =
-      if (streamingEnabled) scope.launch { executeStreaming(input) }
-      else scope.launch { execute(input) }
-  }
+    val input = Json.decodeFromString<WorkflowInput>(input)
 
-  private suspend fun execute(input: I) {
     input.validate()
 
     val streamStart = Instant.now()
-    var finishReason = FinishReason.Stop
+    stream =
+      scope.launch {
+        val content =
+          input.attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
+            // We can safely !! because we validated the input and text must be present if
+            // attachments are not
+            ?: ContentSingle(input.text!!)
 
-    val content =
-      input.attachments()?.let { ChatMessageProcessor.toContentMulti(input.text(), it) }
-        // We can safely !! because we validated the input and text must be present if
-        // attachments are not
-        ?: ContentSingle(input.text()!!)
+        val userMessage = ChatMessage.user(content)
 
-    val userMessage = ChatMessage.user(content)
-    val messageBuffer = mutableListOf<ChatMessage>()
+        var (finishReason, messageBuffer) =
+          if (streamingEnabled) executeStreaming(userMessage) else executeCompletion(userMessage)
 
-    try {
-      agent.completion(
-        userMessage = userMessage,
-        messageBuffer = messageBuffer,
-        eventHandler = this,
-      )
-    } catch (_: CancellationException) {
-      finishReason = FinishReason.ManualStop
-    } catch (e: Throwable) {
-      handleError(e)
-    } finally {
-      val lastMessage = messageBuffer.lastOrNull()
-
-      when {
-        lastMessage?.role == "tool" -> {
-          // First completion and some tools were called, but the actual answer response was not
-          // sent
-          // Discard everything
-          messageBuffer.clear()
+        if (messageBuffer.isEmpty()) {
+          emitter.emit(
+            WorkflowOutput.StreamComplete(chatId = id, reason = finishReason),
+            WorkflowOutput.serializer(),
+          )
+          stream = null
+          return@launch
         }
-        lastMessage?.role == "assistant" && lastMessage.content == null -> {
-          // The captured response is a tool call
-          // Discard everything
-          messageBuffer.clear()
-        }
-      }
 
-      stream = null
-
-      if (messageBuffer.isNotEmpty()) {
         val assistantMessage = messageBuffer.last()
 
         assert(assistantMessage.role == "assistant")
@@ -192,7 +124,7 @@ abstract class ChatWorkflowBase<I: WorkflowInput, S>(
           val processedMessageGroup =
             onInteractionComplete(
               userMessage = userMessage,
-              attachments = input.attachments(),
+              attachments = input.attachments,
               messages = messageBuffer,
             )
 
@@ -202,46 +134,76 @@ abstract class ChatWorkflowBase<I: WorkflowInput, S>(
               reason = finishReason,
               messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
+              content = assistantMessage.content!!.text(),
             ),
             WorkflowOutput.serializer(),
           )
         }
-      } else {
-        emitter.emit(
-          WorkflowOutput.StreamComplete(chatId = id, reason = finishReason),
-          WorkflowOutput.serializer(),
-        )
-      }
 
-      log.debug(
-        "{} - workflow response emitted ({}ms), finish reason: {}",
-        user.id,
-        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-        finishReason.value,
-      )
-    }
+        log.debug(
+          "{} - streaming workflow response emitted ({}ms), finish reason: {}",
+          user.id,
+          Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
+          finishReason.value,
+        )
+        stream = null
+      }
   }
 
-  private suspend fun executeStreaming(input: I) {
-    input.validate()
+  suspend fun executeCompletion(userMessage: ChatMessage): Pair<FinishReason, List<ChatMessage>> {
+    var finishReason = FinishReason.Stop
+    val messageBuffer = mutableListOf<ChatMessage>()
 
-    val streamStart = Instant.now()
+    try {
+      agent.completion(
+        userMessage = userMessage,
+        messageBuffer = messageBuffer,
+        params = ChatCompletionAgentParameters(tools = tools),
+        emitter = emitter,
+      )
+    } catch (_: CancellationException) {
+      finishReason = FinishReason.ManualStop
+    } catch (e: Throwable) {
+      handleError(e)
+    } finally {
+      val lastMessage = messageBuffer.lastOrNull()
+      when {
+        lastMessage?.role == "tool" -> {
+          // First completion and some tools were called, but the actual answer response was not
+          // sent
+          // Discard everything
+          messageBuffer.clear()
+        }
+        lastMessage?.role == "assistant" && lastMessage.content == null -> {
+          // The captured response is a tool call
+          // Discard everything
+          messageBuffer.clear()
+        }
+      }
+    }
+
+    return Pair(finishReason, messageBuffer)
+  }
+
+  suspend fun executeStreaming(userMessage: ChatMessage): Pair<FinishReason, List<ChatMessage>> {
     var finishReason = FinishReason.Stop
 
-    val content =
-      input.attachments()?.let { ChatMessageProcessor.toContentMulti(input.text(), it) }
-        ?: ContentSingle(input.text()!!)
-
-    val userMessage = ChatMessage.user(content)
     val messageBuffer = mutableListOf<ChatMessage>()
     val responseBuffer = StringBuilder()
 
+    suspend fun handler(chunk: ChatMessageChunk) {
+      chunk.content?.let {
+        emitter.emit(WorkflowOutput.StreamChunk(chunk.content), WorkflowOutput.serializer())
+      }
+    }
     try {
       agent.stream(
         userMessage = userMessage,
         messageBuffer = messageBuffer,
         out = responseBuffer,
-        eventHandler = this,
+        params = ChatCompletionAgentParameters(tools = tools),
+        emitter = emitter,
+        streamHandler = ::handler,
       )
     } catch (_: CancellationException) {
       // If the stream is cancelled from outside, a
@@ -290,51 +252,9 @@ abstract class ChatWorkflowBase<I: WorkflowInput, S>(
           assert(responseBuffer.isBlank())
         }
       }
-
-      stream = null
-
-      if (messageBuffer.isNotEmpty()) {
-        val assistantMessage = messageBuffer.last()
-
-        assert(assistantMessage.role == "assistant")
-        assert(assistantMessage.finishReason != null)
-
-        finishReason = assistantMessage.finishReason!!
-
-        agent.addToHistory(messages = listOf(userMessage) + messageBuffer)
-
-        scope.launch {
-          val processedMessageGroup =
-            onInteractionComplete(
-              userMessage = userMessage,
-              attachments = input.attachments(),
-              messages = messageBuffer,
-            )
-
-          emitter.emit(
-            WorkflowOutput.StreamComplete(
-              chatId = id,
-              reason = finishReason,
-              messageGroupId = processedMessageGroup.messageGroupId,
-              attachmentPaths = processedMessageGroup.attachments,
-            ),
-            WorkflowOutput.serializer(),
-          )
-        }
-      } else {
-        emitter.emit(
-          WorkflowOutput.StreamComplete(chatId = id, reason = finishReason),
-          WorkflowOutput.serializer(),
-        )
-      }
-
-      log.debug(
-        "{} - streaming workflow response emitted ({}ms), finish reason: {}",
-        user.id,
-        Instant.now().toEpochMilli() - streamStart.toEpochMilli(),
-        finishReason.value,
-      )
     }
+
+    return Pair(finishReason, messageBuffer)
   }
 
   override fun cancelStream() {

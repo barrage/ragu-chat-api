@@ -5,21 +5,18 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.AppError
 
-typealias CallableTool<S> = suspend (state: S, jsonArguments: String) -> String
+typealias CallableTool = suspend (jsonArguments: String) -> String
 
 private val LOG = KtorSimpleLogger("n.b.l.c.llm.Toolchain")
 
 /**
- * Container for all available tools an agent can use.
+ * Container for all available tools an agent can use at time of inference.
  *
- * To construct a toolchain, use [ToolchainBuilder].
- *
- * @param S The type of state the tools can operate on.
+ * To construct a toolchain, use [ToolsBuilder].
  */
-class Toolchain<S>(
-  private val state: S,
+class Tools(
   private val definitions: List<ToolDefinition>,
-  private val handlers: Map<String, CallableTool<S>>,
+  private val handlers: Map<String, CallableTool>,
 ) {
 
   suspend fun processToolCall(data: ToolCallData): String {
@@ -29,7 +26,7 @@ class Toolchain<S>(
       LOG.debug("Tool call '{}' - ID is null, result will not be correlated with call", data.name)
     }
 
-    return handlers[data.name]?.invoke(state, data.arguments)
+    return handlers[data.name]?.invoke(data.arguments)
       ?: throw AppError.internal("No handler for tool call '${data.name}'")
   }
 
@@ -38,18 +35,18 @@ class Toolchain<S>(
   }
 }
 
-/** Builder for [Toolchain]s. */
-class ToolchainBuilder<S> {
+/** Builder for [Tools]s. */
+class ToolsBuilder {
   private val definitions = mutableListOf<ToolDefinition>()
-  private val handlers = mutableMapOf<String, CallableTool<S>>()
+  private val handlers = mutableMapOf<String, CallableTool>()
 
-  fun addTool(definition: ToolDefinition, handler: CallableTool<S>): ToolchainBuilder<S> {
+  fun addTool(definition: ToolDefinition, handler: CallableTool): ToolsBuilder {
     definitions.add(definition)
     handlers[definition.function.name] = handler
     return this
   }
 
-  fun build(state: S) = Toolchain(state = state, definitions = definitions, handlers = handlers)
+  fun build() = Tools(definitions = definitions, handlers = handlers)
 }
 
 /** Used to collect tool calls from streaming responses. */

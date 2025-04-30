@@ -2,56 +2,31 @@ package net.barrage.llmao.app.workflow.jirakira
 
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ToolCallData
-import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.llm.Tools
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.workflow.ChatWorkflowBase
-import net.barrage.llmao.core.workflow.ChatWorkflowInput
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.ProcessedMessageGroup
+import net.barrage.llmao.core.workflow.WorkflowBasic
 import net.barrage.llmao.types.KUUID
 
 class JiraKiraWorkflow(
   id: KUUID,
   user: User,
   emitter: Emitter,
-  toolchain: Toolchain<JiraKiraState>,
+  tools: Tools,
   override val agent: JiraKira,
   private val repository: JiraKiraRepository,
 ) :
-  ChatWorkflowBase<ChatWorkflowInput, JiraKiraState>(
+  WorkflowBasic(
     id = id,
     user = user,
     agent = agent,
     emitter = emitter,
-    toolchain = toolchain,
     streamingEnabled = false,
-    inputSerializer = ChatWorkflowInput.serializer(),
+    tools = tools,
   ) {
   private var state: JiraKiraWorkflowState = JiraKiraWorkflowState.New
-
-  override suspend fun onToolCalls(toolCalls: List<ToolCallData>): List<ChatMessage>? {
-    val results = mutableListOf<ChatMessage>()
-    for (toolCall in toolCalls) {
-      emitter.emit(ToolEvent.ToolCall(toolCall), ToolEvent.serializer())
-      val result =
-        try {
-          toolchain!!.processToolCall(toolCall)
-        } catch (e: Throwable) {
-          if (e is JiraError) {
-            LOG.error("Jira API error:", e)
-          } else {
-            LOG.error("Error in tool call", e)
-          }
-          "error: ${e.message}"
-        }
-      emitter.emit(ToolEvent.ToolResult(result), ToolEvent.serializer())
-      results.add(ChatMessage.toolResult(result, toolCall.id))
-    }
-    return results
-  }
 
   override suspend fun onInteractionComplete(
     userMessage: ChatMessage,

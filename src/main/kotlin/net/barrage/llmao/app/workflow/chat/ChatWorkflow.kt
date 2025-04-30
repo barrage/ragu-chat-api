@@ -1,40 +1,29 @@
 package net.barrage.llmao.app.workflow.chat
 
-import net.barrage.llmao.app.workflow.chat.api.Api
 import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryWrite
 import net.barrage.llmao.core.chat.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.Toolchain
+import net.barrage.llmao.core.llm.Tools
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.workflow.ChatWorkflowBase
-import net.barrage.llmao.core.workflow.ChatWorkflowInput
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.ProcessedMessageGroup
+import net.barrage.llmao.core.workflow.WorkflowBasic
 import net.barrage.llmao.core.workflow.WorkflowOutput
-import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KUUID
 
-/** Implementation of a [ChatWorkflowBase] for user-created agents. */
+/** Implementation of a [WorkflowBasic] for user-created agents. */
 class ChatWorkflow(
   id: KUUID,
   user: User,
   emitter: Emitter,
-  toolchain: Toolchain<Api>?,
+  tools: Tools?,
   override val agent: ChatAgent,
   private val repository: ChatRepositoryWrite,
 
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
-) :
-  ChatWorkflowBase<ChatWorkflowInput, Api>(
-    id = id,
-    user = user,
-    emitter = emitter,
-    toolchain = toolchain,
-    agent = agent,
-    inputSerializer = ChatWorkflowInput.serializer(),
-  ) {
+) : WorkflowBasic(id = id, user = user, emitter = emitter, agent = agent) {
   fun agentId(): KUUID {
     return agent.agentId
   }
@@ -61,7 +50,7 @@ class ChatWorkflow(
             chatId = id,
             userId = user.id,
             username = user.username,
-            agentId = tryUuid(agent.id()),
+            agentId = agent.agentId,
             agentConfigurationId = agent.configurationId,
             messages = messagesInsert,
           )
@@ -69,10 +58,7 @@ class ChatWorkflow(
         val title = agent.createTitle(originalPrompt, assistantMessage.content!!.text())
 
         repository.updateTitle(id, user.id, title)
-        emitter.emit(
-          ChatTitleUpdated(id, title),
-          WorkflowOutput.serializer(),
-        )
+        emitter.emit(ChatTitleUpdated(id, title), WorkflowOutput.serializer())
         state = ChatWorkflowState.Persisted(title)
 
         ProcessedMessageGroup(groupId, attachmentsInsert)

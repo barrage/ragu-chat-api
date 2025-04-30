@@ -13,7 +13,7 @@ import net.barrage.llmao.core.chat.MessageBasedHistory
 import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
-import net.barrage.llmao.core.llm.ToolchainBuilder
+import net.barrage.llmao.core.llm.ToolsBuilder
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
@@ -68,28 +68,27 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     val tools = loadTools(tempoWorklogAttributes, worklogAttributes)
 
     val state =
-      JiraKiraState(
+      JiraKiraToolExecutor(
         jiraUser = jiraUser,
         timeSlotAttributeKey = jiraTimeSlotAttributeKey,
         emitter = emitter,
         api = jiraApi,
       )
 
-    val builder = ToolchainBuilder<JiraKiraState>()
+    val builder = ToolsBuilder()
     for (tool in tools) {
       val fn =
         when (tool.function.name) {
-          TOOL_LIST_USER_OPEN_ISSUES -> ::listUserOpenIssues
-          TOOL_GET_ISSUE_ID -> ::getIssueId
-          TOOL_GET_ISSUE_WORKLOG -> ::getIssueWorklog
-          TOOL_CREATE_WORKLOG_ENTRY -> ::createWorklogEntry
-          TOOL_UPDATE_WORKLOG_ENTRY -> ::updateWorklogEntry
+          TOOL_LIST_USER_OPEN_ISSUES -> state::listUserOpenIssues
+          TOOL_GET_ISSUE_ID -> state::getIssueId
+          TOOL_GET_ISSUE_WORKLOG -> state::getIssueWorklog
+          TOOL_CREATE_WORKLOG_ENTRY -> state::createWorklogEntry
+          TOOL_UPDATE_WORKLOG_ENTRY -> state::updateWorklogEntry
           else -> throw AppError.internal("Unknown tool: ${tool.function.name}")
         }
       builder.addTool(definition = tool, handler = fn)
     }
-
-    val toolchain = builder.build(state = state)
+    val toolchain = builder.build()
 
     val tokenizer = Encoder.tokenizer(jiraKiraModel)
 
@@ -98,7 +97,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     return JiraKiraWorkflow(
       id = workflowId,
       user = user,
-      toolchain = toolchain,
+      tools = toolchain,
       emitter = emitter,
       repository = jiraKiraRepository,
       agent =

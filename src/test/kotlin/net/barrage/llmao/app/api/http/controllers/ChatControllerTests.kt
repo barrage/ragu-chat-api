@@ -47,18 +47,8 @@ class ChatControllerTests : IntegrationTest() {
       chatOne = postgres.testChat(USER_USER, agent.id, agentConfiguration.id)
       chatTwo = postgres.testChat(USER_USER, agent.id, agentConfiguration.id)
 
-      messageGroupOne =
-        postgres.testMessagePair(
-          chatOne.id,
-          "First Message",
-          "First Response",
-        )
-      messageGroupTwo =
-        postgres.testMessagePair(
-          chatOne.id,
-          "Second Message",
-          "Second Response",
-        )
+      messageGroupOne = postgres.testMessagePair(chatOne.id, "First Message", "First Response")
+      messageGroupTwo = postgres.testMessagePair(chatOne.id, "Second Message", "Second Response")
     }
   }
 

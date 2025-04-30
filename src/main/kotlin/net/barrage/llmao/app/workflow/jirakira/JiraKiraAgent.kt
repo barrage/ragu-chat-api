@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.chat.ChatHistory
-import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.model.User
@@ -14,7 +14,7 @@ import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.WorkflowAgent
 
-internal val LOG = KtorSimpleLogger("n.b.l.a.workflow.jirakira.JiraKira")
+internal val LOG = KtorSimpleLogger("n.b.l.a.workflow.jirakira.JiraKiraAgent")
 
 class JiraKira(
   private val jiraUser: JiraUser,
@@ -33,14 +33,12 @@ class JiraKira(
     contextEnrichment = null,
     history = history,
     completionParameters =
-      ChatCompletionParameters(
+      ChatCompletionBaseParameters(
         model = model,
         temperature = 0.1,
         presencePenalty = 0.0,
         maxTokens = null,
-        tools = null,
       ),
-    tools = tools,
   ) {
 
   override fun id(): String = JIRAKIRA_WORKFLOW_ID
@@ -56,7 +54,7 @@ class JiraKira(
   }
 }
 
-class JiraKiraState(
+class JiraKiraToolExecutor(
   /** Output handle for Jira related events, such as worklog creation. */
   val emitter: Emitter,
 
@@ -74,90 +72,96 @@ class JiraKiraState(
    * is obtained per issue.
    */
   val timeSlotAttributeKey: String?,
-)
+) {
+  suspend fun createWorklogEntry(input: String): String {
+    LOG.debug("{} - creating worklog entry; input: {}", jiraUser.name, input)
 
-suspend fun createWorklogEntry(state: JiraKiraState, input: String): String {
-  LOG.debug("{} - creating worklog entry; input: {}", state.jiraUser.name, input)
+    val input = Json.decodeFromString<CreateWorklogInput>(input)
 
-  val input = Json.decodeFromString<CreateWorklogInput>(input)
+    val issueKey = api.getIssueKey(input.issueId)
 
-  val issueKey = state.api.getIssueKey(input.issueId)
-
-  val timeSlotAccount =
-    state.timeSlotAttributeKey?.let {
-      val acc = state.api.getDefaultBillingAccountForIssue(issueKey.issueKey) ?: return@let null
-      val timeSlotAccount = TimeSlotAttribute(state.timeSlotAttributeKey, acc.key)
-      LOG.debug("{} - using timeslot account: {}", state.jiraUser.name, timeSlotAccount)
-      timeSlotAccount
-    }
-
-  val worklog = state.api.createWorklogEntry(input, state.jiraUser.key, timeSlotAccount)
-
-  LOG.debug(
-    "Worklog for issue ${input.issueId} created successfully for issue (time: {})",
-    worklog.timeSpent,
-  )
-
-  state.emitter.emit(JiraKiraWorkflowOutput.WorklogCreated(worklog), JiraKiraWorkflowOutput.serializer())
-
-  return "Success. Worklog entry ID: ${worklog.tempoWorklogId}."
-}
-
-suspend fun listUserOpenIssues(state: JiraKiraState, input: String): String {
-  LOG.debug("{} - listing open issues; input: {}", state.jiraUser.name, input)
-
-  val input = Json.decodeFromString<ProjectKey>(input)
-
-  return state.api.getOpenIssuesForProject(input.project).joinToString("\n")
-}
-
-suspend fun getIssueId(state: JiraKiraState, input: String): String {
-  LOG.debug("{} - getting ID for issue; input: {}", state.jiraUser.name, input)
-
-  val input = Json.decodeFromString<IssueKey>(input)
-
-  return state.api.getIssueId(input.issueKey)
-}
-
-suspend fun updateWorklogEntry(state: JiraKiraState, input: String): String {
-  LOG.debug("{} - updating worklog entry; input: {}", state.jiraUser.name, input)
-
-  val input =
-    try {
-      Json.decodeFromString<UpdateWorklogInput>(input)
-    } catch (e: SerializationException) {
-      LOG.error("Failed to decode tool call arguments: {}", input, e)
-      if (e.message?.startsWith("Missing required field") == true) {
-        // Sometimes gippitties can be self-healing
-        return "${e.message}"
+    val timeSlotAccount =
+      timeSlotAttributeKey?.let {
+        val acc = api.getDefaultBillingAccountForIssue(issueKey.issueKey) ?: return@let null
+        val timeSlotAccount = TimeSlotAttribute(timeSlotAttributeKey, acc.key)
+        LOG.debug("{} - using timeslot account: {}", jiraUser.name, timeSlotAccount)
+        timeSlotAccount
       }
-      throw e
-    }
 
-  val worklog = state.api.updateWorklogEntry(input)
+    val worklog = api.createWorklogEntry(input, jiraUser.key, timeSlotAccount)
 
-  LOG.debug(
-    "Worklog for issue ${worklog.issue?.key} updated successfully (time: {})",
-    worklog.timeSpent,
-  )
+    LOG.debug(
+      "Worklog for issue ${input.issueId} created successfully for issue (time: {})",
+      worklog.timeSpent,
+    )
 
-  state.emitter.emit(JiraKiraWorkflowOutput.WorklogUpdated(worklog), JiraKiraWorkflowOutput.serializer())
+    emitter.emit(
+      JiraKiraWorkflowOutput.WorklogCreated(worklog),
+      JiraKiraWorkflowOutput.serializer(),
+    )
 
-  return "success"
-}
+    return "Success. Worklog entry ID: ${worklog.tempoWorklogId}."
+  }
 
-suspend fun getIssueWorklog(state: JiraKiraState, input: String): String {
-  LOG.debug("{} - getting issue worklog; input: {}", state.jiraUser.name, input)
+  suspend fun listUserOpenIssues(input: String): String {
+    LOG.debug("{} - listing open issues; input: {}", jiraUser.name, input)
 
-  val input = Json.decodeFromString<IssueKeyOrId>(input)
+    val input = Json.decodeFromString<ProjectKey>(input)
 
-  val worklog = state.api.getIssueWorklog(input.issueKeyOrId, state.jiraUser.key)
+    return api.getOpenIssuesForProject(input.project).joinToString("\n")
+  }
 
-  val result = worklog.joinToString("\n")
+  suspend fun getIssueId(input: String): String {
+    LOG.debug("{} - getting ID for issue; input: {}", jiraUser.name, input)
 
-  LOG.debug("{} - worklog: {}", state.jiraUser.name, result)
+    val input = Json.decodeFromString<IssueKey>(input)
 
-  return result
+    return api.getIssueId(input.issueKey)
+  }
+
+  suspend fun updateWorklogEntry(input: String): String {
+    LOG.debug("{} - updating worklog entry; input: {}", jiraUser.name, input)
+
+    val input =
+      try {
+        Json.decodeFromString<UpdateWorklogInput>(input)
+      } catch (e: SerializationException) {
+        LOG.error("Failed to decode tool call arguments: {}", input, e)
+        if (e.message?.startsWith("Missing required field") == true) {
+          // Sometimes gippitties can be self-healing
+          return "${e.message}"
+        }
+        throw e
+      }
+
+    val worklog = api.updateWorklogEntry(input)
+
+    LOG.debug(
+      "Worklog for issue ${worklog.issue?.key} updated successfully (time: {})",
+      worklog.timeSpent,
+    )
+
+    emitter.emit(
+      JiraKiraWorkflowOutput.WorklogUpdated(worklog),
+      JiraKiraWorkflowOutput.serializer(),
+    )
+
+    return "success"
+  }
+
+  suspend fun getIssueWorklog(input: String): String {
+    LOG.debug("{} - getting issue worklog; input: {}", jiraUser.name, input)
+
+    val input = Json.decodeFromString<IssueKeyOrId>(input)
+
+    val worklog = api.getIssueWorklog(input.issueKeyOrId, jiraUser.key)
+
+    val result = worklog.joinToString("\n")
+
+    LOG.debug("{} - worklog: {}", jiraUser.name, result)
+
+    return result
+  }
 }
 
 const val JIRA_KIRA_CONTEXT =

@@ -85,7 +85,6 @@ object TripotronWorkflowFactory : WorkflowFactory {
               vehicleRegistration = params.vehicleRegistration,
               startMileage = params.startMileage,
             ),
-          tools = null,
         ),
       repository = repository,
     )
@@ -122,7 +121,6 @@ object TripotronWorkflowFactory : WorkflowFactory {
               startMileage = trip.startMileage,
               endMileage = trip.endMileage,
             ),
-          tools = null,
         ),
       repository = repository,
     )

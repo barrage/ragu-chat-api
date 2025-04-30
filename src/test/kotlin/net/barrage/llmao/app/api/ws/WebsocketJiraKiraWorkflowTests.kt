@@ -52,7 +52,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           val response = (frame as Frame.Text).readText()
 
           try {
-            val message = json.decodeFromString<WorkflowOutput.Response>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             asserted = true
             break
@@ -91,7 +91,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<WorkflowOutput.Response>(response)
+            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             assertions += 1
             break

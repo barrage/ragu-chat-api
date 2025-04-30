@@ -2,12 +2,12 @@ package net.barrage.llmao.app.workflow.chat
 
 import net.barrage.llmao.app.workflow.chat.model.AgentInstructions
 import net.barrage.llmao.core.chat.ChatHistory
+import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.InferenceProvider
-import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
@@ -39,11 +39,10 @@ class ChatAgent(
   user: User,
   model: String,
   inferenceProvider: InferenceProvider,
-  completionParameters: ChatCompletionParameters,
+  completionParameters: ChatCompletionBaseParameters,
   tokenTracker: TokenUsageTracker,
   history: ChatHistory,
   contextEnrichment: List<ContextEnrichment>? = null,
-  tools: List<ToolDefinition>?,
 ) :
   WorkflowAgent(
     user = user,
@@ -53,7 +52,6 @@ class ChatAgent(
     tokenTracker = tokenTracker,
     history = history,
     contextEnrichment = contextEnrichment,
-    tools = tools,
   ) {
 
   override fun errorMessage(): String {
@@ -79,7 +77,7 @@ class ChatAgent(
     val completion =
       inferenceProvider.chatCompletion(
         messages,
-        completionParameters.copy(maxTokens = titleMaxTokens),
+        ChatCompletionParameters(completionParameters.copy(maxTokens = titleMaxTokens)),
       )
 
     completion.tokenUsage?.let { tokenUsage ->
