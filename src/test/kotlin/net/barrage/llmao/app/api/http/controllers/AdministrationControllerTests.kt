@@ -43,8 +43,8 @@ class AdministrationControllerTests : IntegrationTest() {
       agentThreeConfiguration =
         postgres.testAgentConfiguration(agentThree.id, llmProvider = "azure")
 
-      chatOne = postgres.testChat(USER_USER, agentOne.id)
-      chatTwo = postgres.testChat(USER_USER, agentOne.id)
+      chatOne = postgres.testChat(USER_USER, agentOne.id, agentOneConfiguration.id)
+      chatTwo = postgres.testChat(USER_USER, agentOne.id, agentOneConfiguration.id)
     }
   }
 

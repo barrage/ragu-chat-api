@@ -15,7 +15,6 @@ import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolchainBuilder
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.core.workflow.Emitter
@@ -30,14 +29,12 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
   private lateinit var providers: ProviderState
   private lateinit var settings: Settings
   private lateinit var jiraKiraRepository: JiraKiraRepository
-  private lateinit var specialistRepositoryWrite: SpecialistRepositoryWrite
 
   fun init(config: ApplicationConfig, state: ApplicationState) {
     endpoint = config.string("jirakira.endpoint")
     providers = state.providers
     settings = state.settings
     jiraKiraRepository = JiraKiraRepository(state.database)
-    specialistRepositoryWrite = SpecialistRepositoryWrite(state.database, JIRAKIRA_WORKFLOW_ID)
   }
 
   override fun id(): String = JIRAKIRA_WORKFLOW_ID
@@ -103,7 +100,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
       user = user,
       toolchain = toolchain,
       emitter = emitter,
-      repository = specialistRepositoryWrite,
+      repository = jiraKiraRepository,
       agent =
         JiraKira(
           inferenceProvider = providers.llm[jiraKiraLlmProvider],

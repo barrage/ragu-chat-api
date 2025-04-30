@@ -13,10 +13,8 @@ internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.tokens.TokenUsageTra
 /** Used for tracking token usage when embedding and performing inference. */
 class TokenUsageTracker(
   private val user: User,
-  // TODO: Change to workflow ID
-  private val agentId: KUUID? = null,
-  private val originType: String,
-  private val originId: KUUID,
+  private val workflowId: KUUID,
+  private val workflowType: String,
   private val repository: TokenUsageRepositoryWrite,
 ) {
   private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
@@ -27,9 +25,8 @@ class TokenUsageTracker(
         repository.insert(
           userId = user.id,
           username = user.username,
-          agentId = agentId,
-          origin = originType,
-          originId = originId,
+          workflowId = workflowId,
+          workflowType = workflowType,
           amountPrompt = amount.prompt,
           amountCompletion = amount.completion,
           amountTotal = amount.total,

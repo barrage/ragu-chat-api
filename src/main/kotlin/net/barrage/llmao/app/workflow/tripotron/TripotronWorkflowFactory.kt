@@ -10,7 +10,6 @@ import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
@@ -21,13 +20,11 @@ object TripotronWorkflowFactory : WorkflowFactory {
   private lateinit var providers: ProviderState
   private lateinit var settings: Settings
   private lateinit var repository: TripotronRepository
-  private lateinit var tripotronWrite: SpecialistRepositoryWrite
 
   fun init(config: ApplicationConfig, state: ApplicationState) {
     providers = state.providers
     settings = state.settings
     repository = TripotronRepository(state.database)
-    tripotronWrite = SpecialistRepositoryWrite(state.database, TRIPOTRON_WORKFLOW_ID)
   }
 
   override suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow {
@@ -90,7 +87,6 @@ object TripotronWorkflowFactory : WorkflowFactory {
             ),
           tools = null,
         ),
-      tripotronWrite = tripotronWrite,
       repository = repository,
     )
   }
@@ -128,7 +124,6 @@ object TripotronWorkflowFactory : WorkflowFactory {
             ),
           tools = null,
         ),
-      tripotronWrite = tripotronWrite,
       repository = repository,
     )
   }

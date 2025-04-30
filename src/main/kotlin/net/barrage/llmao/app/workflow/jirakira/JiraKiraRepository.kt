@@ -4,9 +4,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.core.database.insertMessages
+import net.barrage.llmao.core.model.MessageInsert
+import net.barrage.llmao.tables.references.JIRAKIRA_WORKFLOWS
 import net.barrage.llmao.tables.references.JIRA_API_KEYS
 import net.barrage.llmao.tables.references.JIRA_WORKLOG_ATTRIBUTES
+import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
+import org.jooq.kotlin.coroutines.transactionCoroutine
 
 class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore {
   override suspend fun setUserApiKey(userId: String, apiKey: String) {
@@ -63,4 +69,24 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
       .where(JIRA_WORKLOG_ATTRIBUTES.ID.eq(id))
       .awaitFirstOrNull()
   }
+
+  suspend fun insertWorkflowWithMessages(
+    workflowId: KUUID,
+    userId: String,
+    username: String?,
+    messages: List<MessageInsert>,
+  ): KUUID =
+    dslContext.transactionCoroutine { ctx ->
+      ctx
+        .dsl()
+        .insertInto(JIRAKIRA_WORKFLOWS)
+        .set(JIRAKIRA_WORKFLOWS.ID, workflowId)
+        .set(JIRAKIRA_WORKFLOWS.USER_ID, userId)
+        .set(JIRAKIRA_WORKFLOWS.USERNAME, username)
+        .awaitSingle()
+      ctx.dsl().insertMessages(workflowId, messages)
+    }
+
+  suspend fun insertMessages(workflowId: KUUID, messages: List<MessageInsert>): KUUID =
+    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(workflowId, messages) }
 }

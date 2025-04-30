@@ -27,11 +27,11 @@ import net.barrage.llmao.app.workflow.chat.model.toAgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.toAgentTool
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.SortOrder
-import net.barrage.llmao.core.set
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.AGENT_COLLECTIONS

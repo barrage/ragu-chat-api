@@ -51,21 +51,19 @@ class AdminChatControllerTests : IntegrationTest() {
       agent = postgres.testAgent(active = true)
       agentConfiguration = postgres.testAgentConfiguration(agent.id)
 
-      chatOne = postgres.testChat(USER_USER, agent.id)
-      chatTwo = postgres.testChat(USER_USER, agent.id)
-      chatThree = postgres.testChat(ADMIN_USER, agent.id)
+      chatOne = postgres.testChat(USER_USER, agent.id, agentConfiguration.id)
+      chatTwo = postgres.testChat(USER_USER, agent.id, agentConfiguration.id)
+      chatThree = postgres.testChat(ADMIN_USER, agent.id, agentConfiguration.id)
 
       messageGroupOne =
         postgres.testMessagePair(
           chatId = chatOne.id,
-          agentConfigurationId = agentConfiguration.id,
           userContent = "First Message",
           assistantContent = "First Response",
         )
       messageGroupTwo =
         postgres.testMessagePair(
           chatId = chatOne.id,
-          agentConfigurationId = agentConfiguration.id,
           userContent = "Second Message",
           assistantContent = "Second Response",
         )

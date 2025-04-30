@@ -183,6 +183,7 @@ class WhatsAppAdapter(
         userId = whatsAppNumber.userId,
         username = whatsAppNumber.username,
         agentId = agent.agent.id,
+        agentConfigurationId = agent.configuration.id,
       )
     val chatAgent = getChatAgent(whatsAppNumber.userId, whatsAppNumber.username, chat, agent)
 
@@ -196,7 +197,7 @@ class WhatsAppAdapter(
 
     val messageInfo = sendWhatsAppMessage(whatsAppMessage)
 
-    storeMessages(chatId = chat.id, agentConfigurationId = chatAgent.configurationId, messages)
+    storeMessages(chatId = chat.id, messages)
 
     log.debug(
       "WhatsApp message sent to: {}, status: {}",
@@ -321,7 +322,12 @@ class WhatsAppAdapter(
     }
   }
 
-  private suspend fun getOrInsertChat(userId: String, username: String?, agentId: KUUID): Chat {
+  private suspend fun getOrInsertChat(
+    userId: String,
+    username: String?,
+    agentId: KUUID,
+    agentConfigurationId: KUUID,
+  ): Chat {
     val chat = chatRepositoryRead.getSingleByUserId(userId)
 
     if (chat == null) {
@@ -331,18 +337,15 @@ class WhatsAppAdapter(
         agentId = agentId,
         userId = userId,
         username = username,
+        agentConfigurationId = agentConfigurationId,
       )
     }
 
     return chat.chat
   }
 
-  private suspend fun storeMessages(
-    chatId: KUUID,
-    agentConfigurationId: KUUID,
-    messages: List<ChatMessage>,
-  ) {
-    chatRepositoryWrite.insertMessages(chatId, agentConfigurationId, messages.map { it.toInsert() })
+  private suspend fun storeMessages(chatId: KUUID, messages: List<ChatMessage>) {
+    chatRepositoryWrite.insertMessages(chatId, messages.map { it.toInsert() })
   }
 }
 

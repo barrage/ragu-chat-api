@@ -1,6 +1,24 @@
 databaseChangeLog:
   - logicalFilePath: src/main/resources/db/changelog.yaml
   - changeSet:
+      id: 0
+      author: barrage
+      changes:
+        - tagDatabase:
+            tag: 0.0
+        - sqlFile:
+            encoding: utf8
+            path: migrations/0_extensions/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: migrations/0_extensions/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+
+  - changeSet:
       id: 1
       author: barrage
       changes:
@@ -8,15 +26,16 @@ databaseChangeLog:
             tag: 1.0
         - sqlFile:
             encoding: utf8
-            path: migrations/1_extensions/up.sql
+            path: migrations/1_application_settings/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/1_extensions/down.sql
+            path: migrations/1_application_settings/down.sql
             relativeToChangelogFile: true
             splitStatements: false
+
 
   - changeSet:
       id: 2
@@ -26,13 +45,13 @@ databaseChangeLog:
             tag: 2.0
         - sqlFile:
             encoding: utf8
-            path: migrations/2_agents/up.sql
+            path: migrations/2_messages/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/2_agents/down.sql
+            path: migrations/2_messages/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -44,13 +63,13 @@ databaseChangeLog:
             tag: 3.0
         - sqlFile:
             encoding: utf8
-            path: migrations/3_chats/up.sql
+            path: migrations/3_token_usage/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/3_chats/down.sql
+            path: migrations/3_token_usage/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -62,13 +81,13 @@ databaseChangeLog:
             tag: 4.0
         - sqlFile:
             encoding: utf8
-            path: migrations/4_whatsapp/up.sql
+            path: migrations/4_chats/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/4_whatsapp/down.sql
+            path: migrations/4_chats/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -80,13 +99,13 @@ databaseChangeLog:
             tag: 5.0
         - sqlFile:
             encoding: utf8
-            path: migrations/5_application_settings/up.sql
+            path: migrations/5_whatsapp/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/5_application_settings/down.sql
+            path: migrations/5_whatsapp/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -98,13 +117,13 @@ databaseChangeLog:
             tag: 6.0
         - sqlFile:
             encoding: utf8
-            path: migrations/6_specialists/up.sql
+            path: migrations/6_jirakira/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/6_specialists/down.sql
+            path: migrations/6_jirakira/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -116,66 +135,12 @@ databaseChangeLog:
             tag: 7.0
         - sqlFile:
             encoding: utf8
-            path: migrations/7_jira_kira/up.sql
+            path: migrations/7_bonvoyage/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/7_jira_kira/down.sql
-            relativeToChangelogFile: true
-            splitStatements: false
-
-  - changeSet:
-      id: 8
-      author: barrage
-      changes:
-        - tagDatabase:
-            tag: 8.0
-        - sqlFile:
-            encoding: utf8
-            path: migrations/8_token_usage/up.sql
-            relativeToChangelogFile: true
-            splitStatements: false
-      rollback:
-        - sqlFile:
-            encoding: utf8
-            path: migrations/8_token_usage/down.sql
-            relativeToChangelogFile: true
-            splitStatements: false
-
-  - changeSet:
-      id: 9
-      author: barrage
-      changes:
-        - tagDatabase:
-            tag: 8.0
-        - sqlFile:
-            encoding: utf8
-            path: migrations/9_chat_message_attachments/up.sql
-            relativeToChangelogFile: true
-            splitStatements: false
-      rollback:
-        - sqlFile:
-            encoding: utf8
-            path: migrations/9_chat_message_attachments/down.sql
-            relativeToChangelogFile: true
-            splitStatements: false
-
-  - changeSet:
-      id: 10
-      author: barrage
-      changes:
-        - tagDatabase:
-            tag: 10.0
-        - sqlFile:
-            encoding: utf8
-            path: migrations/10_tripotron/up.sql
-            relativeToChangelogFile: true
-            splitStatements: false
-      rollback:
-        - sqlFile:
-            encoding: utf8
-            path: migrations/10_tripotron/down.sql
+            path: migrations/7_bonvoyage/down.sql
             relativeToChangelogFile: true
             splitStatements: false

@@ -61,16 +61,14 @@ class TokenUsageTests : IntegrationTest() {
 
     val completionUsage = usage.find { it.usageType == TokenUsageType.COMPLETION }!!
 
-    assertEquals(CHAT_WORKFLOW_ID, completionUsage.origin.type)
-    assertEquals(chatId, completionUsage.origin.id)
+    assertEquals(CHAT_WORKFLOW_ID, completionUsage.workflowType)
+    assertEquals(chatId, completionUsage.workflowId)
     assertEquals(ADMIN_USER.id, completionUsage.userId)
-    assertEquals(agent.id, completionUsage.agentId)
 
     val titleUsage = usage.find { it.usageType == TokenUsageType.COMPLETION_TITLE }!!
 
-    assertEquals(CHAT_WORKFLOW_ID, titleUsage.origin.type)
-    assertEquals(chatId, titleUsage.origin.id)
+    assertEquals(CHAT_WORKFLOW_ID, titleUsage.workflowType)
+    assertEquals(chatId, titleUsage.workflowId)
     assertEquals(ADMIN_USER.id, titleUsage.userId)
-    assertEquals(agent.id, titleUsage.agentId)
   }
 }

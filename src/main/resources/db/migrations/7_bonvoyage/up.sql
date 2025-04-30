@@ -1,5 +1,5 @@
 -- A Tripotron workflow is essentially an entry for a business trip.
-CREATE TABLE tripotron_workflows(
+CREATE TABLE bonvoyage_workflows(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id TEXT NOT NULL,
     -- Includes first and last names
@@ -21,9 +21,11 @@ CREATE TABLE tripotron_workflows(
     end_mileage TEXT
 );
 
-CREATE TABLE tripotron_travel_expenses(
+SELECT manage_message_group_parent('bonvoyage_workflows');
+
+CREATE TABLE bonvoyage_travel_expenses(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workflow_id UUID NOT NULL REFERENCES tripotron_workflows(id) ON DELETE CASCADE,
+    workflow_id UUID NOT NULL REFERENCES bonvoyage_workflows(id) ON DELETE CASCADE,
     amount FLOAT NOT NULL,
     currency TEXT NOT NULL,
     image_path TEXT NOT NULL,
@@ -34,5 +36,5 @@ CREATE TABLE tripotron_travel_expenses(
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-SELECT manage_updated_at('tripotron_workflows');
-SELECT manage_updated_at('tripotron_travel_expenses');
+SELECT manage_updated_at('bonvoyage_workflows');
+SELECT manage_updated_at('bonvoyage_travel_expenses');

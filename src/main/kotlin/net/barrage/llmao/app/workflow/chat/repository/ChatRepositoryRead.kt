@@ -18,7 +18,7 @@ import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.model.SearchFiltersAdminChats
 import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.app.workflow.chat.model.toChat
-import net.barrage.llmao.app.workflow.chat.model.toChatMessageGroup
+import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
@@ -28,8 +28,8 @@ import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageAttachment
+import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
-import net.barrage.llmao.core.set
 import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
@@ -66,6 +66,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
           CHATS.USER_ID,
           CHATS.USERNAME,
           CHATS.AGENT_ID,
+          CHATS.AGENT_CONFIGURATION_ID,
           CHATS.TITLE,
           CHATS.TYPE,
           CHATS.CREATED_AT,
@@ -103,6 +104,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
           CHATS.USER_ID,
           CHATS.USERNAME,
           CHATS.AGENT_ID,
+          CHATS.AGENT_CONFIGURATION_ID,
           CHATS.TITLE,
           CHATS.TYPE,
           CHATS.CREATED_AT,
@@ -137,6 +139,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
           CHATS.ID,
           CHATS.USER_ID,
           CHATS.AGENT_ID,
+          CHATS.AGENT_CONFIGURATION_ID,
           CHATS.TITLE,
           CHATS.TYPE,
           CHATS.CREATED_AT,
@@ -160,6 +163,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         CHATS.USER_ID,
         CHATS.USERNAME,
         CHATS.AGENT_ID,
+        CHATS.AGENT_CONFIGURATION_ID,
         CHATS.TITLE,
         CHATS.TYPE,
         CHATS.CREATED_AT,
@@ -198,9 +202,9 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         .selectCount()
         .from(MESSAGE_GROUPS)
         .leftJoin(CHATS)
-        .on(MESSAGE_GROUPS.CHAT_ID.eq(CHATS.ID))
+        .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
         .where(
-          MESSAGE_GROUPS.CHAT_ID.eq(chatId)
+          MESSAGE_GROUPS.PARENT_ID.eq(chatId)
             .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
         )
         .awaitSingle()
@@ -214,7 +218,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       dslContext
         .select(MESSAGE_GROUPS.ID)
         .from(MESSAGE_GROUPS)
-        .where(MESSAGE_GROUPS.CHAT_ID.eq(chatId))
+        .where(MESSAGE_GROUPS.PARENT_ID.eq(chatId))
         .orderBy(MESSAGE_GROUPS.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
@@ -223,10 +227,8 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .select(
         // Group
         MESSAGE_GROUPS.ID,
-        MESSAGE_GROUPS.CHAT_ID,
-        MESSAGE_GROUPS.AGENT_CONFIGURATION_ID,
+        MESSAGE_GROUPS.PARENT_ID,
         MESSAGE_GROUPS.CREATED_AT,
-        MESSAGE_GROUPS.UPDATED_AT,
         // Evaluation
         MESSAGE_GROUP_EVALUATIONS.ID,
         MESSAGE_GROUP_EVALUATIONS.EVALUATION,
@@ -243,11 +245,10 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         MESSAGES.TOOL_CALL_ID,
         MESSAGES.FINISH_REASON,
         MESSAGES.CREATED_AT,
-        MESSAGES.UPDATED_AT,
       )
       .from(MESSAGE_GROUPS)
       .leftJoin(CHATS)
-      .on(MESSAGE_GROUPS.CHAT_ID.eq(CHATS.ID))
+      .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
       .leftJoin(MESSAGE_GROUP_EVALUATIONS)
       .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
       .leftJoin(MESSAGES)
@@ -271,7 +272,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
 
         val message =
           record.into(MESSAGES).toMessage(if (attachments.isEmpty()) null else attachments)
-        val group = record.into(MESSAGE_GROUPS).toChatMessageGroup()
+        val group = record.into(MESSAGE_GROUPS).toMessageGroup()
         val evaluation =
           record.into(MESSAGE_GROUP_EVALUATIONS).let { eval ->
             eval.id?.let { eval.toMessageGroupEvaluation() }
@@ -443,10 +444,12 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
           DSL.sum(DSL.`when`(MESSAGE_GROUP_EVALUATIONS.EVALUATION.isFalse, 1).otherwise(0))
             .`as`("negative"),
         )
-        .from(MESSAGE_GROUPS)
+        .from(CHATS)
+        .leftJoin(MESSAGE_GROUPS)
+        .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
         .leftJoin(MESSAGE_GROUP_EVALUATIONS)
-        .on(MESSAGE_GROUPS.ID.eq(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID))
-        .where(MESSAGE_GROUPS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId))
+        .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
+        .where(CHATS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId))
         .awaitSingle()
 
     val total = result.get("total", Int::class.java) ?: 0
@@ -466,7 +469,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     val (limit, offset) = pagination.limitOffset()
 
     val where = {
-      MESSAGE_GROUPS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId)
+      CHATS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId)
         .and(
           evaluation?.let { MESSAGE_GROUP_EVALUATIONS.EVALUATION.eq(evaluation) }
             ?: DSL.noCondition()
@@ -476,8 +479,10 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     val count =
       dslContext
         .selectCount()
-        .from(MESSAGE_GROUPS)
-        .rightJoin(MESSAGE_GROUP_EVALUATIONS)
+        .from(CHATS)
+        .leftJoin(MESSAGE_GROUPS)
+        .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
+        .leftJoin(MESSAGE_GROUP_EVALUATIONS)
         .on(MESSAGE_GROUPS.ID.eq(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID))
         .where(where())
         .awaitSingle()
@@ -488,10 +493,8 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     dslContext
       .select(
         MESSAGE_GROUPS.ID,
-        MESSAGE_GROUPS.CHAT_ID,
-        MESSAGE_GROUPS.AGENT_CONFIGURATION_ID,
+        MESSAGE_GROUPS.PARENT_ID,
         MESSAGE_GROUPS.CREATED_AT,
-        MESSAGE_GROUPS.UPDATED_AT,
         MESSAGES.ID,
         MESSAGES.ORDER,
         MESSAGES.MESSAGE_GROUP_ID,
@@ -501,17 +504,18 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         MESSAGES.TOOL_CALL_ID,
         MESSAGES.FINISH_REASON,
         MESSAGES.CREATED_AT,
-        MESSAGES.UPDATED_AT,
         MESSAGE_GROUP_EVALUATIONS.ID,
         MESSAGE_GROUP_EVALUATIONS.EVALUATION,
         MESSAGE_GROUP_EVALUATIONS.FEEDBACK,
         MESSAGE_GROUP_EVALUATIONS.CREATED_AT,
         MESSAGE_GROUP_EVALUATIONS.UPDATED_AT,
       )
-      .from(MESSAGE_GROUPS)
+      .from(CHATS)
+      .leftJoin(MESSAGE_GROUPS)
+      .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
       .leftJoin(MESSAGES)
       .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
-      .rightJoin(MESSAGE_GROUP_EVALUATIONS)
+      .leftJoin(MESSAGE_GROUP_EVALUATIONS)
       .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
       .where(where())
       .orderBy(order)
@@ -520,7 +524,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .asFlow()
       .collect { record ->
         val message = record.into(MESSAGES).toMessage()
-        val group = record.into(MESSAGE_GROUPS).toChatMessageGroup()
+        val group = record.into(MESSAGE_GROUPS).toMessageGroup()
         val evaluation = record.into(MESSAGE_GROUP_EVALUATIONS).toMessageGroupEvaluation()
         messageGroups
           .computeIfAbsent(group.id) { _ ->
@@ -538,7 +542,6 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     val sortField =
       when (sortBy) {
         "createdAt" -> MESSAGE_GROUPS.CREATED_AT
-        "updatedAt" -> MESSAGE_GROUPS.UPDATED_AT
         "evaluation" -> MESSAGE_GROUP_EVALUATIONS.EVALUATION
         else -> MESSAGES.CREATED_AT
       }

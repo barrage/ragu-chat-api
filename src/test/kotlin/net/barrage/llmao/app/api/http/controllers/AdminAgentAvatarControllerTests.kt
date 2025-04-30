@@ -26,43 +26,13 @@ import org.junit.jupiter.api.Test
 
 class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
   private lateinit var agentOne: Agent
-  private lateinit var agentOneConfigurationV1: AgentConfiguration
-  private lateinit var agentOneConfigurationV2: AgentConfiguration
-  private lateinit var agentOneChat: Chat
-  private lateinit var chatPositiveMessage: MessageGroupAggregate
-  private lateinit var chatNegativeMessage: MessageGroupAggregate
   private lateinit var agentTwo: Agent
-  private lateinit var agentTwoConfiguration: AgentConfiguration
 
   @BeforeAll
   fun setup() {
     runBlocking {
       agentOne = postgres.testAgent(name = "TestAgentOne")
       agentTwo = postgres.testAgent(name = "TestAgentTwo", active = false)
-
-      agentOneConfigurationV1 = postgres.testAgentConfiguration(agentOne.id, version = 1)
-      agentOneConfigurationV2 = postgres.testAgentConfiguration(agentOne.id, version = 2)
-      agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id)
-
-      agentOneChat = postgres.testChat(USER_USER, agentOne.id)
-
-      chatPositiveMessage =
-        postgres.testMessagePair(
-          agentOneChat.id,
-          agentOneConfigurationV1.id,
-          "First Message",
-          "First Response",
-          evaluation = true,
-        )
-
-      chatNegativeMessage =
-        postgres.testMessagePair(
-          agentOneChat.id,
-          agentOneConfigurationV1.id,
-          "Second Message",
-          "Second Response",
-          evaluation = false,
-        )
     }
   }
 
@@ -125,14 +95,14 @@ class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
     assertEquals(204, responseDelete.status.value)
 
     val responseCheck =
-      client.get("/admin/agents/${agentOne.id}") { header(HttpHeaders.Cookie, adminAccessToken()) }
+      client.get("/agents/${agentOne.id}") { header(HttpHeaders.Cookie, adminAccessToken()) }
 
     assertEquals(200, responseCheck.status.value)
 
-    val bodyCheck = responseCheck.body<AgentFull>()
+    val bodyCheck = responseCheck.body<Agent>()
 
-    assertEquals(agentOne.id, bodyCheck.agent.id)
-    assertNull(bodyCheck.agent.avatar, "Avatar should be null")
+    assertEquals(agentOne.id, bodyCheck.id)
+    assertNull(bodyCheck.avatar, "Avatar should be null")
 
     val responseCheckAvatar =
       client.get("/avatars/${agentOne.id}.jpeg") { header(HttpHeaders.Cookie, adminAccessToken()) }

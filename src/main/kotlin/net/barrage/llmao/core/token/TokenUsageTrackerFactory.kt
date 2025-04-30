@@ -8,11 +8,11 @@ import net.barrage.llmao.types.KUUID
 object TokenUsageTrackerFactory {
   private lateinit var repository: TokenUsageRepositoryWrite
 
-  fun newTracker(user: User, originType: String, originId: KUUID): TokenUsageTracker {
+  fun newTracker(user: User, workflowType: String, workflowId: KUUID): TokenUsageTracker {
     return TokenUsageTracker(
       user = user,
-      originType = originType,
-      originId = originId,
+      workflowType = workflowType,
+      workflowId = workflowId,
       repository = repository,
     )
   }

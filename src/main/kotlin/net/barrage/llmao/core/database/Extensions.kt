@@ -1,98 +1,58 @@
-package net.barrage.llmao.core
+package net.barrage.llmao.core.database
 
-import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationStopping
-import io.ktor.server.config.*
-import io.r2dbc.pool.ConnectionPool
-import io.r2dbc.pool.ConnectionPoolConfiguration
-import io.r2dbc.spi.ConnectionFactories
-import io.r2dbc.spi.ConnectionFactoryOptions
-import io.r2dbc.spi.ConnectionFactoryOptions.DATABASE
-import io.r2dbc.spi.ConnectionFactoryOptions.DRIVER
-import io.r2dbc.spi.ConnectionFactoryOptions.HOST
-import io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD
-import io.r2dbc.spi.ConnectionFactoryOptions.PORT
-import io.r2dbc.spi.ConnectionFactoryOptions.USER
-import java.time.Duration
-import liquibase.Liquibase
-import liquibase.database.jvm.JdbcConnection
-import liquibase.resource.ClassLoaderResourceAccessor
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.model.common.PropertyUpdate
+import net.barrage.llmao.tables.references.MESSAGES
+import net.barrage.llmao.tables.references.MESSAGE_ATTACHMENTS
+import net.barrage.llmao.tables.references.MESSAGE_GROUPS
+import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep
 import org.jooq.InsertSetMoreStep
 import org.jooq.Record
-import org.jooq.SQLDialect
 import org.jooq.TableField
 import org.jooq.UpdateSetMoreStep
 import org.jooq.UpdateSetStep
-import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
-import org.jooq.impl.DefaultConfiguration
-import org.postgresql.ds.PGSimpleDataSource
 
-/**
- * The only exception to the dependency inversion principle. Repositories depend directly on
- * [DSLContext] since there is almost no reason to abstract it.
- */
-fun Application.initDatabase(config: ApplicationConfig): DSLContext {
-  val r2dbcHost = config.property("db.r2dbcHost").getString()
-  val r2dbcPort = config.property("db.r2dbcPort").getString()
-  val r2dbcDatabase = config.property("db.r2dbcDatabase").getString()
-  val user = config.property("db.user").getString()
-  val pw = config.property("db.password").getString()
+suspend fun DSLContext.insertMessages(workflowId: KUUID, messages: List<MessageInsert>): KUUID {
+  val messageGroupId =
+    insertInto(MESSAGE_GROUPS)
+      .set(MESSAGE_GROUPS.PARENT_ID, workflowId)
+      .returning(MESSAGE_GROUPS.ID)
+      .awaitSingle()
+      .id
 
-  val connectionFactory =
-    ConnectionFactories.get(
-      ConnectionFactoryOptions.builder()
-        .option(DRIVER, "postgresql")
-        .option(HOST, r2dbcHost)
-        .option(PORT, r2dbcPort.toInt())
-        .option(USER, user)
-        .option(PASSWORD, pw)
-        .option(DATABASE, r2dbcDatabase)
-        .build()
-    )
+  messages.forEachIndexed { index, message ->
+    val messageId =
+      insertInto(MESSAGES)
+        .set(MESSAGES.ORDER, index)
+        .set(MESSAGES.MESSAGE_GROUP_ID, messageGroupId)
+        .set(MESSAGES.SENDER_TYPE, message.senderType)
+        .set(MESSAGES.CONTENT, message.content)
+        .set(MESSAGES.FINISH_REASON, message.finishReason?.value)
+        .set(MESSAGES.TOOL_CALLS, message.toolCalls?.let { Json.encodeToString(it) })
+        .set(MESSAGES.TOOL_CALL_ID, message.toolCallId)
+        .returning(MESSAGES.ID)
+        .awaitFirstOrNull()
+        ?.id ?: throw AppError.internal("Failed to insert message")
 
-  val poolConfiguration: ConnectionPoolConfiguration =
-    ConnectionPoolConfiguration.builder(connectionFactory)
-      .maxIdleTime(Duration.ofMillis(1000))
-      .maxSize(10)
-      .build()
-
-  val pool = ConnectionPool(poolConfiguration)
-
-  // Monitor shutdown to close the connection pool
-  monitor.subscribe(ApplicationStopping) { pool.dispose() }
-
-  val configuration = DefaultConfiguration().set(pool).set(SQLDialect.POSTGRES)
-
-  val dslContext = DSL.using(configuration)
-
-  if (config.property("db.runMigrations").getString().toBoolean()) {
-    runLiquibaseMigration(config)
-  }
-
-  return dslContext
-}
-
-private fun runLiquibaseMigration(config: ApplicationConfig) {
-  val url = config.property("db.url").getString()
-  val user = config.property("db.user").getString()
-  val pw = config.property("db.password").getString()
-  val changeLogFile = "db/changelog.yaml"
-  val dataSource =
-    PGSimpleDataSource().apply {
-      setURL(url)
-      this.user = user
-      this.password = pw
+    message.attachments?.forEach { attachment ->
+      insertInto(MESSAGE_ATTACHMENTS)
+        .set(MESSAGE_ATTACHMENTS.MESSAGE_ID, messageId)
+        .set(MESSAGE_ATTACHMENTS.TYPE, attachment.type.name)
+        .set(MESSAGE_ATTACHMENTS.PROVIDER, attachment.provider)
+        .set(MESSAGE_ATTACHMENTS.ORDER, attachment.order)
+        .set(MESSAGE_ATTACHMENTS.URL, attachment.url)
+        .awaitFirstOrNull() ?: throw AppError.internal("Failed to insert attachment")
     }
-
-  dataSource.connection.use { connection ->
-    val liquibase =
-      Liquibase(changeLogFile, ClassLoaderResourceAccessor(), JdbcConnection(connection))
-    liquibase.update("main")
   }
+
+  return messageGroupId as KUUID
 }
 
 /**

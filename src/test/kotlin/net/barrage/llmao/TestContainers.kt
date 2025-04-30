@@ -186,8 +186,8 @@ class TestPostgres {
     groups?.let {
       dslContext
         .insertInto(AGENT_PERMISSIONS)
-        .columns(AGENT_PERMISSIONS.AGENT_ID, AGENT_PERMISSIONS.GROUP)
-        .apply { groups.forEach { group -> values(agent.id, group) } }
+        .columns(AGENT_PERMISSIONS.AGENT_ID, AGENT_PERMISSIONS.GROUP, AGENT_PERMISSIONS.CREATED_BY)
+        .apply { groups.forEach { group -> values(agent.id, group, ADMIN_USER.id) } }
         .awaitSingle()
     }
 
@@ -272,6 +272,7 @@ class TestPostgres {
   suspend fun testChat(
     user: User,
     agentId: UUID,
+    agentConfigurationId: UUID,
     title: String? = "Test Chat Title",
     type: String = "CHAT",
   ): Chat {
@@ -281,6 +282,7 @@ class TestPostgres {
       .set(CHATS.USER_ID, user.id)
       .set(CHATS.USERNAME, user.username)
       .set(CHATS.AGENT_ID, agentId)
+      .set(CHATS.AGENT_CONFIGURATION_ID, agentConfigurationId)
       .set(CHATS.TITLE, title)
       .set(CHATS.TYPE, type)
       .returning()
@@ -294,7 +296,6 @@ class TestPostgres {
 
   suspend fun testMessagePair(
     chatId: UUID,
-    agentConfigurationId: KUUID,
     userContent: String = "Test message",
     assistantContent: String = "Test response",
     evaluation: Boolean? = null,
@@ -303,8 +304,7 @@ class TestPostgres {
     val messageGroup =
       dslContext
         .insertInto(MESSAGE_GROUPS)
-        .set(MESSAGE_GROUPS.CHAT_ID, chatId)
-        .set(MESSAGE_GROUPS.AGENT_CONFIGURATION_ID, agentConfigurationId)
+        .set(MESSAGE_GROUPS.PARENT_ID, chatId)
         .returning()
         .awaitSingle()
 

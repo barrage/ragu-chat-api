@@ -4,6 +4,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import jdk.internal.agent.resources.agent
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.USER_USER
@@ -60,12 +61,11 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
           context = "WhatsApp Test Agent Context",
         )
 
-      chat = postgres.testChat(USER_USER, whatsAppAgentOne.id, type = "WHATSAPP")
+      chat = postgres.testChat(USER_USER, whatsAppAgentOne.id, whatsAppAgentOneConfiguration.id, type = "WHATSAPP")
 
       messageGroupOne =
         postgres.testMessagePair(
           chat.id,
-          whatsAppAgentOneConfiguration.id,
           "First Message",
           "First Response",
         )
@@ -73,7 +73,6 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
       messageGroupTwo =
         postgres.testMessagePair(
           chat.id,
-          whatsAppAgentOneConfiguration.id,
           "Second Message",
           "Second Response",
         )

@@ -7,7 +7,6 @@ import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.Toolchain
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.workflow.ChatWorkflowBase
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.ProcessedMessageGroup
@@ -19,7 +18,7 @@ class JiraKiraWorkflow(
   emitter: Emitter,
   toolchain: Toolchain<JiraKiraState>,
   override val agent: JiraKira,
-  private val repository: SpecialistRepositoryWrite,
+  private val repository: JiraKiraRepository,
 ) :
   ChatWorkflowBase<JiraKiraState>(
     id = id,

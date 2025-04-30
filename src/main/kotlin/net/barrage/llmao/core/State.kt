@@ -13,6 +13,7 @@ import net.barrage.llmao.core.administration.Administration
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.blob.BlobStorage
 import net.barrage.llmao.core.chat.ChatMessageProcessor
+import net.barrage.llmao.core.database.initDatabase
 import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.InferenceProvider

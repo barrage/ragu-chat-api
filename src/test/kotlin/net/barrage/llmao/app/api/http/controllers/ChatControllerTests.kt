@@ -44,20 +44,18 @@ class ChatControllerTests : IntegrationTest() {
       agent = postgres.testAgent(active = true)
       agentConfiguration = postgres.testAgentConfiguration(agent.id)
 
-      chatOne = postgres.testChat(USER_USER, agent.id)
-      chatTwo = postgres.testChat(USER_USER, agent.id)
+      chatOne = postgres.testChat(USER_USER, agent.id, agentConfiguration.id)
+      chatTwo = postgres.testChat(USER_USER, agent.id, agentConfiguration.id)
 
       messageGroupOne =
         postgres.testMessagePair(
           chatOne.id,
-          agentConfiguration.id,
           "First Message",
           "First Response",
         )
       messageGroupTwo =
         postgres.testMessagePair(
           chatOne.id,
-          agentConfiguration.id,
           "Second Message",
           "Second Response",
         )
@@ -120,7 +118,7 @@ class ChatControllerTests : IntegrationTest() {
 
   @Test
   fun shouldDeleteChat() = test { client ->
-    val chatDelete = postgres.testChat(USER_USER, agent.id)
+    val chatDelete = postgres.testChat(USER_USER, agent.id, agentConfiguration.id)
     val response = client.delete("/chats/${chatDelete.id}") { header("Cookie", userAccessToken()) }
 
     assertEquals(204, response.status.value)

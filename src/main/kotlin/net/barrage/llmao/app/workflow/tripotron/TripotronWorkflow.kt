@@ -12,7 +12,6 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.model.IncomingMessageAttachment
-import net.barrage.llmao.core.repository.SpecialistRepositoryWrite
 import net.barrage.llmao.core.workflow.AgentEventHandler
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
@@ -29,7 +28,6 @@ class TripotronWorkflow(
 
   /** Output handle. */
   private val emitter: Emitter,
-  private val tripotronWrite: SpecialistRepositoryWrite,
   private val repository: TripotronRepository,
 ) : Workflow, AgentEventHandler {
   private val scope = CoroutineScope(Dispatchers.Default)
@@ -95,7 +93,7 @@ class TripotronWorkflow(
 
     val insert = listOf(userMessage.toInsert(attachments)) + listOf(assistantMessage.toInsert())
 
-    tripotronWrite.insertMessages(id, insert)
+    repository.insertMessages(id, insert)
     //    emitter.emit(TripotronOutput.ExpenseRegistered(expense))
   }
 }

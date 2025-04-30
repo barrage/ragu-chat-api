@@ -59,12 +59,11 @@ class AdminAgentControllerTests : IntegrationTest() {
       agentOneConfigurationV2 = postgres.testAgentConfiguration(agentOne.id, version = 2)
       agentTwoConfiguration = postgres.testAgentConfiguration(agentTwo.id)
 
-      agentOneChat = postgres.testChat(USER_USER, agentOne.id)
+      agentOneChat = postgres.testChat(USER_USER, agentOne.id, agentOneConfigurationV1.id)
 
       chatPositiveMessage =
         postgres.testMessagePair(
           agentOneChat.id,
-          agentOneConfigurationV1.id,
           "First Message",
           "First Response",
           evaluation = true,
@@ -73,7 +72,6 @@ class AdminAgentControllerTests : IntegrationTest() {
       chatNegativeMessage =
         postgres.testMessagePair(
           agentOneChat.id,
-          agentOneConfigurationV1.id,
           "Second Message",
           "Second Response",
           evaluation = false,

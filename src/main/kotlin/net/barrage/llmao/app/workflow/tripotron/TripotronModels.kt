@@ -2,8 +2,8 @@ package net.barrage.llmao.app.workflow.tripotron
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.tables.records.TripotronTravelExpensesRecord
-import net.barrage.llmao.tables.records.TripotronWorkflowsRecord
+import net.barrage.llmao.tables.records.BonvoyageTravelExpensesRecord
+import net.barrage.llmao.tables.records.BonvoyageWorkflowsRecord
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
@@ -113,7 +113,7 @@ data class TripotronTravelExpense(
   val updatedAt: KOffsetDateTime,
 )
 
-fun TripotronWorkflowsRecord.toTrip() =
+fun BonvoyageWorkflowsRecord.toTrip() =
   TripotronTrip(
     id = this.id!!,
     userId = this.userId,
@@ -133,7 +133,7 @@ fun TripotronWorkflowsRecord.toTrip() =
     endMileage = this.endMileage,
   )
 
-fun TripotronTravelExpensesRecord.toTravelExpense() =
+fun BonvoyageTravelExpensesRecord.toTravelExpense() =
   TripotronTravelExpense(
     id = this.id!!,
     workflowId = this.workflowId,

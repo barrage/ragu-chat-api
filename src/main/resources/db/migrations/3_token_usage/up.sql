@@ -1,17 +1,18 @@
+-- Keeps track of tokens spent.
 CREATE TABLE token_usage(
     id SERIAL PRIMARY KEY,
-    agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
-    agent_configuration_id UUID REFERENCES agent_configurations(id) ON DELETE SET NULL,
 
-    user_id TEXT,
+    -- Entity ID from which the tokens originated from.
+    workflow_id UUID NOT NULL,
 
-    username TEXT,
+    -- Type of origin.
+    workflow_type TEXT NOT NULL,
 
-    -- The originating entity which caused the usage, i.e. chat, whatsapp chat, etc.
-    origin TEXT NOT NULL,
+    -- ID of the user who caused the usage.
+    user_id TEXT NOT NULL,
 
-    -- The origin's ID.
-    origin_id UUID,
+    -- Username at the time of usage.
+    username TEXT NOT NULL,
 
     -- The amount of prompt tokens used.
     prompt_tokens_amount INTEGER,
@@ -33,3 +34,10 @@ CREATE TABLE token_usage(
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX ON token_usage (user_id);
+CREATE INDEX ON token_usage (workflow_id);
+CREATE INDEX ON token_usage (workflow_type);
+CREATE INDEX ON token_usage (usage_type);
+CREATE INDEX ON token_usage (model);
+CREATE INDEX ON token_usage (provider);

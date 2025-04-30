@@ -1,3 +1,4 @@
+-- Custom chat agents.
 CREATE TABLE agents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
@@ -23,8 +24,10 @@ CREATE TABLE agents (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Custom chat agent configurations.
 CREATE TABLE agent_configurations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4() NOT NULL,
+
     agent_id UUID REFERENCES agents(id) ON DELETE CASCADE NOT NULL,
 
     -- Current configuration version.
@@ -39,7 +42,7 @@ CREATE TABLE agent_configurations (
     -- The LLM. Has to be compatible with provider.
     model TEXT NOT NULL,
 
-    -- Maximum number of tokens the LLM is allowed to generate. Overrides global setting.
+    -- Token presence penalty. Overrides global setting.
     presence_penalty FLOAT,
 
     -- Maximum number of tokens the LLM is allowed to generate. Overrides global setting.
@@ -61,6 +64,7 @@ CREATE TABLE agent_configurations (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Assigned agent collections. An entry in this table means an agent will perform retrieval on the collection.
 CREATE TABLE agent_collections (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
@@ -106,20 +110,57 @@ CREATE TABLE agent_tools(
 -- Defines the visibility of agents in regards to user entitlements (groups).
 CREATE TABLE agent_permissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
 
     -- The name of the entitlement (group) the agent is visible to.
     "group" TEXT NOT NULL,
 
+    -- The user ID of the user that created the permission.
+    created_by TEXT NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
     CONSTRAINT agent_groups_unique_agent_group UNIQUE(agent_id, "group")
 );
+
+-- Top level wrapper around user interactions with LLMs. Holds message groups.
+CREATE TABLE chats (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+
+    -- Agent configuration at time of chat creation.
+    agent_configuration_id UUID NOT NULL REFERENCES agent_configurations(id) ON DELETE CASCADE,
+
+    -- User ID specific to the authorization server.
+    user_id TEXT NOT NULL,
+
+    -- Username at the time of chat creation.
+    username TEXT,
+
+    -- Chat title.
+    title TEXT,
+
+    -- Type of chat origin.
+    type TEXT NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+SELECT manage_message_group_parent('chats');
 
 SELECT manage_updated_at('agents');
 SELECT manage_updated_at('agent_configurations');
 SELECT manage_updated_at('agent_collections');
+SELECT manage_updated_at('chats');
 
-CREATE INDEX idx_agents_active ON agents (active);
-CREATE INDEX idx_agent_collections_agent_id ON agent_collections (agent_id);
-CREATE INDEX idx_agent_configurations_agent_id ON agent_configurations (agent_id);
-CREATE INDEX idx_agent_tools_agent_id ON agent_tools (agent_id);
-CREATE INDEX idx_agent_permissions_agent_id ON agent_permissions (agent_id);
+CREATE INDEX ON agents (active);
+CREATE INDEX ON agent_collections (agent_id);
+CREATE INDEX ON agent_configurations (agent_id);
+CREATE INDEX ON agent_tools (agent_id);
+CREATE INDEX ON agent_permissions (agent_id);
+
+CREATE INDEX ON chats (user_id);
+CREATE INDEX ON chats (agent_id);
+CREATE INDEX ON chats (type);

@@ -27,18 +27,12 @@ open class MessageGroup(
   val id: KUUID,
 
   /** The workflow ID this message group belongs to. */
-  val chatId: KUUID,
+  val parentId: KUUID,
   val createdAt: KOffsetDateTime,
-  val updatedAt: KOffsetDateTime,
 )
 
 fun MessageGroupsRecord.toMessageGroup() =
-  MessageGroup(
-    id = this.id!!,
-    chatId = this.chatId,
-    createdAt = this.createdAt!!,
-    updatedAt = this.updatedAt!!,
-  )
+  MessageGroup(id = this.id!!, parentId = this.parentId, createdAt = this.createdAt!!)
 
 /**
  * Aggregate of the message group and all the messages within it, along with the group's evaluation.
@@ -113,7 +107,6 @@ data class Message(
   /** Additional binary data sent with the message. */
   val attachments: List<MessageAttachment>? = null,
   val createdAt: KOffsetDateTime?,
-  val updatedAt: KOffsetDateTime?,
 )
 
 /**
@@ -187,7 +180,6 @@ fun MessagesRecord.toMessage(attachments: List<MessageAttachment>? = null) =
     toolCallId = this.toolCallId,
     attachments = attachments,
     createdAt = this.createdAt,
-    updatedAt = this.updatedAt,
   )
 
 fun MessageAttachmentsRecord.toMessageAttachment() =

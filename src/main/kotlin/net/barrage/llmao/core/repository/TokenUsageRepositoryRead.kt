@@ -24,7 +24,10 @@ class TokenUsageRepositoryRead(private val dslContext: DSLContext) {
     return query.awaitSingle().value1().toInt()
   }
 
-  suspend fun listUsage(userId: String? = null, agentId: KUUID? = null): CountedList<TokenUsage> {
+  suspend fun listUsage(
+    userId: String? = null,
+    workflowId: KUUID? = null,
+  ): CountedList<TokenUsage> {
     val total =
       dslContext
         .selectCount()
@@ -32,7 +35,7 @@ class TokenUsageRepositoryRead(private val dslContext: DSLContext) {
         .where(
           userId?.let { TOKEN_USAGE.USER_ID.eq(userId) }
             ?: DSL.noCondition()
-              .and(agentId?.let { TOKEN_USAGE.AGENT_ID.eq(agentId) } ?: DSL.noCondition())
+              .and(workflowId?.let { TOKEN_USAGE.WORKFLOW_ID.eq(workflowId) } ?: DSL.noCondition())
         )
         .awaitSingle()
         .value1() ?: 0
@@ -43,7 +46,7 @@ class TokenUsageRepositoryRead(private val dslContext: DSLContext) {
         .where(
           userId?.let { TOKEN_USAGE.USER_ID.eq(userId) }
             ?: DSL.noCondition()
-              .and(agentId?.let { TOKEN_USAGE.AGENT_ID.eq(agentId) } ?: DSL.noCondition())
+              .and(workflowId?.let { TOKEN_USAGE.WORKFLOW_ID.eq(workflowId) } ?: DSL.noCondition())
         )
         .asFlow()
         .map { it.toTokenUsage() }

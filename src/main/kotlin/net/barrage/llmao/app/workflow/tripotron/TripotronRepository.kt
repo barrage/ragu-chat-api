@@ -4,133 +4,139 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
-import net.barrage.llmao.core.set
-import net.barrage.llmao.tables.references.TRIPOTRON_TRAVEL_EXPENSES
-import net.barrage.llmao.tables.references.TRIPOTRON_WORKFLOWS
+import net.barrage.llmao.core.database.insertMessages
+import net.barrage.llmao.core.database.set
+import net.barrage.llmao.core.model.MessageInsert
+import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_EXPENSES
+import net.barrage.llmao.tables.references.BONVOYAGE_WORKFLOWS
 import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
+import org.jooq.kotlin.coroutines.transactionCoroutine
 
 class TripotronRepository(private val dslContext: DSLContext) {
   suspend fun insertTrip(insert: TripotronInsertTrip) {
     dslContext
-      .insertInto(TRIPOTRON_WORKFLOWS)
-      .set(TRIPOTRON_WORKFLOWS.ID, insert.id)
-      .set(TRIPOTRON_WORKFLOWS.USER_ID, insert.trip.user.id)
-      .set(TRIPOTRON_WORKFLOWS.USER_FULL_NAME, insert.trip.user.username)
-      .set(TRIPOTRON_WORKFLOWS.TRAVEL_ORDER_ID, insert.trip.travelOrderId)
-      .set(TRIPOTRON_WORKFLOWS.START_LOCATION, insert.trip.startLocation)
-      .set(TRIPOTRON_WORKFLOWS.END_LOCATION, insert.trip.endLocation)
-      .set(TRIPOTRON_WORKFLOWS.START_DATE_TIME, insert.trip.startDateTime)
-      .set(TRIPOTRON_WORKFLOWS.END_DATE_TIME, insert.trip.endDateTime)
-      .set(TRIPOTRON_WORKFLOWS.TRANSPORT_TYPE, insert.trip.transportType.name)
-      .set(TRIPOTRON_WORKFLOWS.DESCRIPTION, insert.trip.description)
-      .set(TRIPOTRON_WORKFLOWS.VEHICLE_TYPE, insert.trip.vehicleType)
-      .set(TRIPOTRON_WORKFLOWS.VEHICLE_REGISTRATION, insert.trip.vehicleRegistration)
-      .set(TRIPOTRON_WORKFLOWS.START_MILEAGE, insert.trip.startMileage)
+      .insertInto(BONVOYAGE_WORKFLOWS)
+      .set(BONVOYAGE_WORKFLOWS.ID, insert.id)
+      .set(BONVOYAGE_WORKFLOWS.USER_ID, insert.trip.user.id)
+      .set(BONVOYAGE_WORKFLOWS.USER_FULL_NAME, insert.trip.user.username)
+      .set(BONVOYAGE_WORKFLOWS.TRAVEL_ORDER_ID, insert.trip.travelOrderId)
+      .set(BONVOYAGE_WORKFLOWS.START_LOCATION, insert.trip.startLocation)
+      .set(BONVOYAGE_WORKFLOWS.END_LOCATION, insert.trip.endLocation)
+      .set(BONVOYAGE_WORKFLOWS.START_DATE_TIME, insert.trip.startDateTime)
+      .set(BONVOYAGE_WORKFLOWS.END_DATE_TIME, insert.trip.endDateTime)
+      .set(BONVOYAGE_WORKFLOWS.TRANSPORT_TYPE, insert.trip.transportType.name)
+      .set(BONVOYAGE_WORKFLOWS.DESCRIPTION, insert.trip.description)
+      .set(BONVOYAGE_WORKFLOWS.VEHICLE_TYPE, insert.trip.vehicleType)
+      .set(BONVOYAGE_WORKFLOWS.VEHICLE_REGISTRATION, insert.trip.vehicleRegistration)
+      .set(BONVOYAGE_WORKFLOWS.START_MILEAGE, insert.trip.startMileage)
       .awaitSingle()
   }
 
   suspend fun updateTrip(update: TripotronUpdateTrip) {
     dslContext
-      .update(TRIPOTRON_WORKFLOWS)
-      .set(update.trip.userFullName, TRIPOTRON_WORKFLOWS.USER_FULL_NAME)
-      .set(update.trip.startLocation, TRIPOTRON_WORKFLOWS.START_LOCATION)
-      .set(update.trip.endLocation, TRIPOTRON_WORKFLOWS.END_LOCATION)
-      .set(update.trip.startDateTime, TRIPOTRON_WORKFLOWS.START_DATE_TIME)
-      .set(update.trip.endDateTime, TRIPOTRON_WORKFLOWS.END_DATE_TIME)
-      .set(update.trip.description, TRIPOTRON_WORKFLOWS.DESCRIPTION)
-      .set(update.trip.vehicleType, TRIPOTRON_WORKFLOWS.VEHICLE_TYPE)
-      .set(update.trip.transportType, TRIPOTRON_WORKFLOWS.TRANSPORT_TYPE) { it.name }
-      .set(update.trip.vehicleRegistration, TRIPOTRON_WORKFLOWS.VEHICLE_REGISTRATION)
-      .set(update.trip.startMileage, TRIPOTRON_WORKFLOWS.START_MILEAGE)
-      .set(update.trip.endMileage, TRIPOTRON_WORKFLOWS.END_MILEAGE)
-      .where(TRIPOTRON_WORKFLOWS.ID.eq(update.id))
+      .update(BONVOYAGE_WORKFLOWS)
+      .set(update.trip.userFullName, BONVOYAGE_WORKFLOWS.USER_FULL_NAME)
+      .set(update.trip.startLocation, BONVOYAGE_WORKFLOWS.START_LOCATION)
+      .set(update.trip.endLocation, BONVOYAGE_WORKFLOWS.END_LOCATION)
+      .set(update.trip.startDateTime, BONVOYAGE_WORKFLOWS.START_DATE_TIME)
+      .set(update.trip.endDateTime, BONVOYAGE_WORKFLOWS.END_DATE_TIME)
+      .set(update.trip.description, BONVOYAGE_WORKFLOWS.DESCRIPTION)
+      .set(update.trip.vehicleType, BONVOYAGE_WORKFLOWS.VEHICLE_TYPE)
+      .set(update.trip.transportType, BONVOYAGE_WORKFLOWS.TRANSPORT_TYPE) { it.name }
+      .set(update.trip.vehicleRegistration, BONVOYAGE_WORKFLOWS.VEHICLE_REGISTRATION)
+      .set(update.trip.startMileage, BONVOYAGE_WORKFLOWS.START_MILEAGE)
+      .set(update.trip.endMileage, BONVOYAGE_WORKFLOWS.END_MILEAGE)
+      .where(BONVOYAGE_WORKFLOWS.ID.eq(update.id))
       .awaitSingle()
   }
 
   suspend fun getTrip(id: KUUID): TripotronTrip? {
     return dslContext
       .select(
-        TRIPOTRON_WORKFLOWS.ID,
-        TRIPOTRON_WORKFLOWS.USER_ID,
-        TRIPOTRON_WORKFLOWS.USER_FULL_NAME,
-        TRIPOTRON_WORKFLOWS.TRAVEL_ORDER_ID,
-        TRIPOTRON_WORKFLOWS.START_LOCATION,
-        TRIPOTRON_WORKFLOWS.END_LOCATION,
-        TRIPOTRON_WORKFLOWS.START_DATE_TIME,
-        TRIPOTRON_WORKFLOWS.END_DATE_TIME,
-        TRIPOTRON_WORKFLOWS.TRANSPORT_TYPE,
-        TRIPOTRON_WORKFLOWS.DESCRIPTION,
-        TRIPOTRON_WORKFLOWS.CREATED_AT,
-        TRIPOTRON_WORKFLOWS.UPDATED_AT,
-        TRIPOTRON_WORKFLOWS.VEHICLE_TYPE,
-        TRIPOTRON_WORKFLOWS.VEHICLE_REGISTRATION,
-        TRIPOTRON_WORKFLOWS.START_MILEAGE,
-        TRIPOTRON_WORKFLOWS.END_MILEAGE,
+        BONVOYAGE_WORKFLOWS.ID,
+        BONVOYAGE_WORKFLOWS.USER_ID,
+        BONVOYAGE_WORKFLOWS.USER_FULL_NAME,
+        BONVOYAGE_WORKFLOWS.TRAVEL_ORDER_ID,
+        BONVOYAGE_WORKFLOWS.START_LOCATION,
+        BONVOYAGE_WORKFLOWS.END_LOCATION,
+        BONVOYAGE_WORKFLOWS.START_DATE_TIME,
+        BONVOYAGE_WORKFLOWS.END_DATE_TIME,
+        BONVOYAGE_WORKFLOWS.TRANSPORT_TYPE,
+        BONVOYAGE_WORKFLOWS.DESCRIPTION,
+        BONVOYAGE_WORKFLOWS.CREATED_AT,
+        BONVOYAGE_WORKFLOWS.UPDATED_AT,
+        BONVOYAGE_WORKFLOWS.VEHICLE_TYPE,
+        BONVOYAGE_WORKFLOWS.VEHICLE_REGISTRATION,
+        BONVOYAGE_WORKFLOWS.START_MILEAGE,
+        BONVOYAGE_WORKFLOWS.END_MILEAGE,
       )
-      .where(TRIPOTRON_WORKFLOWS.ID.eq(id))
+      .where(BONVOYAGE_WORKFLOWS.ID.eq(id))
       .awaitSingle()
-      ?.into(TRIPOTRON_WORKFLOWS)
+      ?.into(BONVOYAGE_WORKFLOWS)
       ?.toTrip()
   }
 
   suspend fun listTrips(): List<TripotronTrip> {
     return dslContext
       .select(
-        TRIPOTRON_WORKFLOWS.ID,
-        TRIPOTRON_WORKFLOWS.USER_ID,
-        TRIPOTRON_WORKFLOWS.USER_FULL_NAME,
-        TRIPOTRON_WORKFLOWS.TRAVEL_ORDER_ID,
-        TRIPOTRON_WORKFLOWS.START_LOCATION,
-        TRIPOTRON_WORKFLOWS.END_LOCATION,
-        TRIPOTRON_WORKFLOWS.START_DATE_TIME,
-        TRIPOTRON_WORKFLOWS.END_DATE_TIME,
-        TRIPOTRON_WORKFLOWS.TRANSPORT_TYPE,
-        TRIPOTRON_WORKFLOWS.DESCRIPTION,
-        TRIPOTRON_WORKFLOWS.CREATED_AT,
-        TRIPOTRON_WORKFLOWS.UPDATED_AT,
-        TRIPOTRON_WORKFLOWS.VEHICLE_TYPE,
-        TRIPOTRON_WORKFLOWS.VEHICLE_REGISTRATION,
-        TRIPOTRON_WORKFLOWS.START_MILEAGE,
-        TRIPOTRON_WORKFLOWS.END_MILEAGE,
+        BONVOYAGE_WORKFLOWS.ID,
+        BONVOYAGE_WORKFLOWS.USER_ID,
+        BONVOYAGE_WORKFLOWS.USER_FULL_NAME,
+        BONVOYAGE_WORKFLOWS.TRAVEL_ORDER_ID,
+        BONVOYAGE_WORKFLOWS.START_LOCATION,
+        BONVOYAGE_WORKFLOWS.END_LOCATION,
+        BONVOYAGE_WORKFLOWS.START_DATE_TIME,
+        BONVOYAGE_WORKFLOWS.END_DATE_TIME,
+        BONVOYAGE_WORKFLOWS.TRANSPORT_TYPE,
+        BONVOYAGE_WORKFLOWS.DESCRIPTION,
+        BONVOYAGE_WORKFLOWS.CREATED_AT,
+        BONVOYAGE_WORKFLOWS.UPDATED_AT,
+        BONVOYAGE_WORKFLOWS.VEHICLE_TYPE,
+        BONVOYAGE_WORKFLOWS.VEHICLE_REGISTRATION,
+        BONVOYAGE_WORKFLOWS.START_MILEAGE,
+        BONVOYAGE_WORKFLOWS.END_MILEAGE,
       )
-      .from(TRIPOTRON_WORKFLOWS)
+      .from(BONVOYAGE_WORKFLOWS)
       .asFlow()
-      .map { it.into(TRIPOTRON_WORKFLOWS).toTrip() }
+      .map { it.into(BONVOYAGE_WORKFLOWS).toTrip() }
       .toList()
   }
 
   suspend fun insertTripExpense(tripId: KUUID, expense: TravelExpense) {
     dslContext
-      .insertInto(TRIPOTRON_TRAVEL_EXPENSES)
-      .set(TRIPOTRON_TRAVEL_EXPENSES.ID, expense.id)
-      .set(TRIPOTRON_TRAVEL_EXPENSES.WORKFLOW_ID, tripId)
-      .set(TRIPOTRON_TRAVEL_EXPENSES.AMOUNT, expense.amount)
-      .set(TRIPOTRON_TRAVEL_EXPENSES.CURRENCY, expense.currency)
-      .set(TRIPOTRON_TRAVEL_EXPENSES.IMAGE_PATH, expense.imagePath)
-      .set(TRIPOTRON_TRAVEL_EXPENSES.IMAGE_PROVIDER, expense.imageProvider)
-      .set(TRIPOTRON_TRAVEL_EXPENSES.DESCRIPTION, expense.description)
+      .insertInto(BONVOYAGE_TRAVEL_EXPENSES)
+      .set(BONVOYAGE_TRAVEL_EXPENSES.ID, expense.id)
+      .set(BONVOYAGE_TRAVEL_EXPENSES.WORKFLOW_ID, tripId)
+      .set(BONVOYAGE_TRAVEL_EXPENSES.AMOUNT, expense.amount)
+      .set(BONVOYAGE_TRAVEL_EXPENSES.CURRENCY, expense.currency)
+      .set(BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PATH, expense.imagePath)
+      .set(BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PROVIDER, expense.imageProvider)
+      .set(BONVOYAGE_TRAVEL_EXPENSES.DESCRIPTION, expense.description)
       .awaitSingle()
   }
 
   suspend fun listTripExpenses(tripId: KUUID): List<TripotronTravelExpense> {
     return dslContext
       .select(
-        TRIPOTRON_TRAVEL_EXPENSES.ID,
-        TRIPOTRON_TRAVEL_EXPENSES.WORKFLOW_ID,
-        TRIPOTRON_TRAVEL_EXPENSES.AMOUNT,
-        TRIPOTRON_TRAVEL_EXPENSES.CURRENCY,
-        TRIPOTRON_TRAVEL_EXPENSES.IMAGE_PATH,
-        TRIPOTRON_TRAVEL_EXPENSES.IMAGE_PROVIDER,
-        TRIPOTRON_TRAVEL_EXPENSES.DESCRIPTION,
-        TRIPOTRON_TRAVEL_EXPENSES.VERIFIED,
-        TRIPOTRON_TRAVEL_EXPENSES.CREATED_AT,
-        TRIPOTRON_TRAVEL_EXPENSES.UPDATED_AT,
+        BONVOYAGE_TRAVEL_EXPENSES.ID,
+        BONVOYAGE_TRAVEL_EXPENSES.WORKFLOW_ID,
+        BONVOYAGE_TRAVEL_EXPENSES.AMOUNT,
+        BONVOYAGE_TRAVEL_EXPENSES.CURRENCY,
+        BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PATH,
+        BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PROVIDER,
+        BONVOYAGE_TRAVEL_EXPENSES.DESCRIPTION,
+        BONVOYAGE_TRAVEL_EXPENSES.VERIFIED,
+        BONVOYAGE_TRAVEL_EXPENSES.CREATED_AT,
+        BONVOYAGE_TRAVEL_EXPENSES.UPDATED_AT,
       )
-      .from(TRIPOTRON_TRAVEL_EXPENSES)
-      .where(TRIPOTRON_TRAVEL_EXPENSES.WORKFLOW_ID.eq(tripId))
+      .from(BONVOYAGE_TRAVEL_EXPENSES)
+      .where(BONVOYAGE_TRAVEL_EXPENSES.WORKFLOW_ID.eq(tripId))
       .asFlow()
-      .map { it.into(TRIPOTRON_TRAVEL_EXPENSES).toTravelExpense() }
+      .map { it.into(BONVOYAGE_TRAVEL_EXPENSES).toTravelExpense() }
       .toList()
   }
+
+  suspend fun insertMessages(workflowId: KUUID, messages: List<MessageInsert>): KUUID =
+    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(workflowId, messages) }
 }

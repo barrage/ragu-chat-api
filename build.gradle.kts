@@ -246,6 +246,13 @@ tasks.withType<LiquibaseTask> {
   logging.captureStandardOutput(LogLevel.QUIET)
 }
 
+tasks.named("liquibaseRollback") {
+    doFirst {
+        // This sets the tag you're rolling back to
+        project.ext.set("liquibaseCommandValue", "0.0")
+    }
+}
+
 tasks.named("liquibaseUpdate") {
   logging.captureStandardError(LogLevel.QUIET)
   logging.captureStandardOutput(LogLevel.QUIET)

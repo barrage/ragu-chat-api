@@ -75,12 +75,7 @@ class ChatWorkflow(
         ProcessedMessageGroup(groupId, attachmentsInsert)
       }
       is ChatWorkflowState.Persisted -> {
-        val groupId =
-          repository.insertMessages(
-            chatId = id,
-            agentConfigurationId = agent.configurationId,
-            messages = messagesInsert,
-          )
+        val groupId = repository.insertMessages(chatId = id, messages = messagesInsert)
         ProcessedMessageGroup(groupId, attachmentsInsert)
       }
     }

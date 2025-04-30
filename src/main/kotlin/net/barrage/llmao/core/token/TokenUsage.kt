@@ -8,10 +8,9 @@ import net.barrage.llmao.types.KUUID
 @Serializable
 data class TokenUsage(
   val id: Int,
-  val userId: String?,
-  val agentId: KUUID?,
-  val agentConfigurationId: KUUID?,
-  val origin: TokenUsageOrigin,
+  val userId: String,
+  val workflowId: KUUID,
+  val workflowType: String,
   val amount: TokenUsageAmount,
   val usageType: TokenUsageType,
   val model: String,
@@ -21,21 +20,15 @@ data class TokenUsage(
 
 fun TokenUsageRecord.toTokenUsage() =
   TokenUsage(
-    id = this.id!!,
-    userId = this.userId,
-    agentId = this.agentId,
-    agentConfigurationId = this.agentConfigurationId,
-    origin = TokenUsageOrigin(this.origin, this.originId),
-    amount =
-      TokenUsageAmount(
-        this.promptTokensAmount,
-        this.completionTokensAmount,
-        this.totalTokensAmount,
-      ),
-    usageType = TokenUsageType.valueOf(this.usageType),
-    model = this.model,
-    provider = this.provider,
-    createdAt = this.createdAt!!,
+    id = id!!,
+    userId = userId,
+    workflowId = workflowId,
+    workflowType = workflowType,
+    amount = TokenUsageAmount(promptTokensAmount, completionTokensAmount, totalTokensAmount),
+    usageType = TokenUsageType.valueOf(usageType),
+    model = model,
+    provider = provider,
+    createdAt = createdAt!!,
   )
 
 @Serializable data class TokenUsageAmount(val prompt: Int?, val completion: Int?, val total: Int?)

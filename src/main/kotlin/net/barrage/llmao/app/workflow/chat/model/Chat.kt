@@ -19,7 +19,12 @@ data class ChatWithMessages(val chat: Chat, val messages: CountedList<MessageGro
 @Serializable
 data class Chat(
   val id: KUUID,
+
+  /** Agent ID. */
   val agentId: KUUID,
+
+  /** Agent configuration ID at time of chat creation. */
+  val agentConfigurationId: KUUID,
 
   /**
    * The ID of the user who created the chat. Used to link to the user's account on the auth server.
@@ -43,14 +48,15 @@ data class Chat(
 
 fun ChatsRecord.toChat() =
   Chat(
-    id = this.id!!,
-    userId = this.userId,
-    agentId = this.agentId,
-    username = this.username,
-    title = this.title,
-    type = this.type,
-    createdAt = this.createdAt!!,
-    updatedAt = this.updatedAt!!,
+    id = id!!,
+    userId = userId,
+    agentId = agentId,
+    agentConfigurationId = agentConfigurationId,
+    username = username,
+    title = title,
+    type = type,
+    createdAt = createdAt!!,
+    updatedAt = updatedAt!!,
   )
 
 @Serializable
