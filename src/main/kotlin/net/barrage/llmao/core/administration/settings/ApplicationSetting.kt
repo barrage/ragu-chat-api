@@ -131,18 +131,18 @@ enum class SettingKey {
   JIRA_TIME_SLOT_ATTRIBUTE_KEY,
 
   /**
-   * The LLM provider to use for Tripotron.
+   * The LLM provider to use for Bonvoyage.
    *
    * DEFAULT: -
    */
-  TRIPOTRON_LLM_PROVIDER,
+  BONVOYAGE_LLM_PROVIDER,
 
   /**
-   * Which model will be used for Tripotron. Has to be compatible with [TRIPOTRON_LLM_PROVIDER].
+   * Which model will be used for Bonvoyage. Has to be compatible with [BONVOYAGE_LLM_PROVIDER].
    *
    * DEFAULT: -
    */
-  TRIPOTRON_MODEL;
+  BONVOYAGE_MODEL;
 
   companion object {
     fun tryFromString(value: String): SettingKey {

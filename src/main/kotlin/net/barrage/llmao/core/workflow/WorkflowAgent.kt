@@ -95,7 +95,7 @@ abstract class WorkflowAgent(
    *   this is not empty, it means a manual cancel occurred. If this is empty at the end of the
    *   stream it means either the stream fully completed and the assistant response is the last
    *   message in the buffer or the assistant's final response never begun.
-   * @param streamHandler Callback that executes on each chunk received. Useful for streaming
+   * @param streamHandler Callback that executes on each chunk received. Used for streaming
    *   responses.
    */
   suspend fun stream(

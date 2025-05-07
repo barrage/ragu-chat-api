@@ -6,13 +6,11 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.workflow.WorkflowAgent
 
-class Tripotron(
+class Bonvoyage(
   user: User,
   tokenTracker: TokenUsageTracker,
   model: String,
   inferenceProvider: InferenceProvider,
-  /** The trip around which the workflow is centered. */
-  private val trip: TripDetails,
 ) :
   WorkflowAgent(
     user = user,
@@ -25,9 +23,11 @@ class Tripotron(
   ) {
   private lateinit var currentContext: String
 
-  override fun id(): String = TRIPOTRON_WORKFLOW_ID
+  override fun id(): String = BONVOYAGE_WORKFLOW_ID
 
-  override fun context(): String {
-    return currentContext
+  override fun context(): String = currentContext
+
+  fun setContext(context: String) {
+    currentContext = context
   }
 }

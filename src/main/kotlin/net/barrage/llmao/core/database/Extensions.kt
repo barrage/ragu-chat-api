@@ -19,6 +19,11 @@ import org.jooq.UpdateSetMoreStep
 import org.jooq.UpdateSetStep
 import org.jooq.impl.DSL.excluded
 
+/**
+ * Utility function for inserting a list of messages associated with the given workflow.
+ *
+ * @return The ID of the message group that was created.
+ */
 suspend fun DSLContext.insertMessages(workflowId: KUUID, messages: List<MessageInsert>): KUUID {
   val messageGroupId =
     insertInto(MESSAGE_GROUPS)
@@ -94,6 +99,11 @@ fun <I, R : Record, T> UpdateSetMoreStep<R>.set(
   }
 }
 
+/**
+ * Utility for including a SET statement in a DSLContext update statement.
+ *
+ * Semantics are defined in [PropertyUpdate].
+ */
 fun <R : Record, T> UpdateSetStep<R>.set(
   update: PropertyUpdate<T>,
   field: TableField<R, T>,
@@ -142,6 +152,35 @@ fun <R : Record, T> InsertSetMoreStep<R>.set(
     is PropertyUpdate.Null -> setNull(field)
   }
 }
+
+/**
+ * Utility for including a SET statement in a DSLContext update statement.
+ *
+ * Implementation for *required* properties.
+ *
+ * If the value is null, leaves the statement as is.
+ */
+fun <R : Record, T> UpdateSetStep<R>.set(
+  update: T?,
+  field: TableField<R, T>,
+  defaultIfNull: T? = null,
+): UpdateSetMoreStep<R> =
+  update?.let { set(field, it) }
+    ?: defaultIfNull?.let { set(field, it) }
+    ?: this as UpdateSetMoreStep<R>
+
+/**
+ * Utility for including a SET statement in a DSLContext update statement.
+ *
+ * Implementation for *required* properties.
+ *
+ * If the value is null, leaves the statement as is.
+ */
+fun <U, R : Record, T> UpdateSetStep<R>.set(
+  update: U?,
+  field: TableField<R, T>,
+  remap: (U) -> T,
+): UpdateSetMoreStep<R> = update?.let { set(field, remap(it)) } ?: this as UpdateSetMoreStep<R>
 
 /**
  * Utility for including a SET statement in a DSLContext update statement.

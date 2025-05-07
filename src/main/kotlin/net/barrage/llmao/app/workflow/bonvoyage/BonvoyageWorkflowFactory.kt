@@ -5,10 +5,13 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ApplicationState
+import net.barrage.llmao.core.Email
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
+import net.barrage.llmao.core.blob.BlobStorage
+import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.core.workflow.Emitter
@@ -16,32 +19,43 @@ import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
 import net.barrage.llmao.types.KUUID
 
-object TripotronWorkflowFactory : WorkflowFactory {
+object BonvoyageWorkflowFactory : WorkflowFactory {
   private lateinit var providers: ProviderState
   private lateinit var settings: Settings
-  private lateinit var repository: TripotronRepository
+  private lateinit var repository: BonvoyageRepository
+  private lateinit var email: Email
+  private lateinit var image: BlobStorage<Image>
 
   fun init(config: ApplicationConfig, state: ApplicationState) {
     providers = state.providers
     settings = state.settings
-    repository = TripotronRepository(state.database)
+    repository = BonvoyageRepository(state.database)
+    email = state.email
+    image = state.providers.image
   }
+
+  override fun id(): String = BONVOYAGE_WORKFLOW_ID
 
   override suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow {
     if (params == null) {
       throw AppError.api(ErrorReason.InvalidParameter, "Missing trip input parameters")
     }
+
+    if (user.email == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "User email missing")
+    }
+
     val params = Json.decodeFromJsonElement(StartTrip.serializer(), params)
     val settings = settings.getAllWithDefaults()
 
     val workflowId = KUUID.randomUUID()
     val travelOrderId = requestTravelOrder(user)
 
-    val tripotronLlmProvider = providers.llm[settings[SettingKey.TRIPOTRON_LLM_PROVIDER]]
-    val tripotronModel = settings[SettingKey.TRIPOTRON_MODEL]
+    val tripotronLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
+    val tripotronModel = settings[SettingKey.BONVOYAGE_MODEL]
 
     repository.insertTrip(
-      TripotronInsertTrip(
+      BonvoyageTripInsert(
         id = workflowId,
         trip =
           TripDetails(
@@ -56,77 +70,56 @@ object TripotronWorkflowFactory : WorkflowFactory {
             vehicleType = params.vehicleType,
             vehicleRegistration = params.vehicleRegistration,
             startMileage = params.startMileage,
+            destination = params.destination,
           ),
       )
     )
 
-    return TripotronWorkflow(
+    return BonvoyageWorkflow(
       id = workflowId,
-      state = TripotronWorkflowState.Started,
       emitter = emitter,
-      tripotron =
-        Tripotron(
+      bonvoyage =
+        Bonvoyage(
           user = user,
           tokenTracker =
-            TokenUsageTrackerFactory.newTracker(user, TRIPOTRON_WORKFLOW_ID, workflowId),
+            TokenUsageTrackerFactory.newTracker(user, BONVOYAGE_WORKFLOW_ID, workflowId),
           model = tripotronModel,
           inferenceProvider = tripotronLlmProvider,
-          trip =
-            TripDetails(
-              user = user,
-              travelOrderId = travelOrderId,
-              transportType = params.transportType,
-              startLocation = params.startLocation,
-              endLocation = params.endLocation,
-              startDateTime = params.startDateTime,
-              endDateTime = params.endDateTime,
-              description = params.description,
-              vehicleType = params.vehicleType,
-              vehicleRegistration = params.vehicleRegistration,
-              startMileage = params.startMileage,
-            ),
         ),
       repository = repository,
+      email = email,
+      image = image,
     )
   }
 
   override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
-    val trip = repository.getTrip(workflowId) ?: throw AppError.api(ErrorReason.EntityDoesNotExist)
+    if (user.email == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "User email missing")
+    }
+
+    if (!repository.tripExists(workflowId)) {
+      throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip does not exist")
+    }
+
     val settings = settings.getAllWithDefaults()
-    val tripotronLlmProvider = providers.llm[settings[SettingKey.TRIPOTRON_LLM_PROVIDER]]
-    val tripotronModel = settings[SettingKey.TRIPOTRON_MODEL]
-    return TripotronWorkflow(
+    val bonvoyageLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
+    val bonvoyageModel = settings[SettingKey.BONVOYAGE_MODEL]
+    return BonvoyageWorkflow(
       id = workflowId,
-      state = TripotronWorkflowState.Started,
       emitter = emitter,
-      tripotron =
-        Tripotron(
+      bonvoyage =
+        Bonvoyage(
           user = user,
           tokenTracker =
-            TokenUsageTrackerFactory.newTracker(user, TRIPOTRON_WORKFLOW_ID, workflowId),
-          model = tripotronModel,
-          inferenceProvider = tripotronLlmProvider,
-          trip =
-            TripDetails(
-              user = user,
-              travelOrderId = trip.travelOrderId,
-              transportType = trip.transportType,
-              startLocation = trip.startLocation,
-              endLocation = trip.endLocation,
-              startDateTime = trip.startDateTime,
-              endDateTime = trip.endDateTime,
-              description = trip.description,
-              vehicleType = trip.vehicleType,
-              vehicleRegistration = trip.vehicleRegistration,
-              startMileage = trip.startMileage,
-              endMileage = trip.endMileage,
-            ),
+            TokenUsageTrackerFactory.newTracker(user, BONVOYAGE_WORKFLOW_ID, workflowId),
+          model = bonvoyageModel,
+          inferenceProvider = bonvoyageLlmProvider,
         ),
       repository = repository,
+      email = email,
+      image = image,
     )
   }
-
-  override fun id(): String = TRIPOTRON_WORKFLOW_ID
 
   /** Returns the travel order ID. */
   suspend fun requestTravelOrder(user: User): String {

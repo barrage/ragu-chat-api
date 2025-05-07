@@ -46,10 +46,22 @@ object AuthConfiguration {
 /** Obtain the current user initiating the request. */
 fun ApplicationCall.user(): User {
   val principal = request.call.principal<JWTPrincipal>()!!
+
+  val email = principal.payload.getClaim("email").asString()
+  val username = principal.payload.getClaim("given_name").asString()
+
+  //  if (username.isNullOrBlank()) {
+  //    throw AppError.api(ErrorReason.Authentication, "Missing given_name claim")
+  //  }
+
+  if (email.isNullOrBlank()) {
+    throw AppError.api(ErrorReason.Authentication, "Missing email claim")
+  }
+
   return User(
-    id = principal.subject ?: throw AppError.api(ErrorReason.Authentication, "Missing subject"),
-    email = principal.payload.getClaim("email").asString(),
-    username = principal.payload.getClaim("given_name").asString(),
+    id = principal.subject ?: throw AppError.api(ErrorReason.Authentication, "Missing sub claim"),
+    email = email,
+    username = username,
     entitlements =
       principal.payload.getClaim(AuthConfiguration.entitlementsClaim).asList(String::class.java),
   )

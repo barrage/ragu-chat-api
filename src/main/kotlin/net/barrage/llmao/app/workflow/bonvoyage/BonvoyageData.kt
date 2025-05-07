@@ -1,9 +1,11 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
+import javax.activation.DataSource
+import javax.mail.util.ByteArrayDataSource
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.EmailAttachment
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
 
 /** DTO for starting a Tripotron workflow. */
 @Serializable
@@ -16,6 +18,9 @@ data class StartTrip(
 
   /** Where the trip is starting. */
   val startLocation: String,
+
+  /** Trip destination. */
+  val destination: String,
 
   /** Where the trip is ending. */
   val endLocation: String,
@@ -41,33 +46,6 @@ data class StartTrip(
   val startMileage: String? = null,
 )
 
-@Serializable
-data class TravelExpense(
-  /** * Expense identifier. */
-  val id: KUUID,
-
-  /** The amount of the expense in the currency specified. */
-  val amount: Double,
-
-  /** Expense currency. */
-  val currency: String,
-
-  /** Expense description. */
-  val description: String,
-
-  /** Path to the image associated with the expense. */
-  val imagePath: String,
-
-  /** Storage provider of the expense image. */
-  val imageProvider: String,
-
-  /**
-   * The date-time of the expense as indicated on the image. Not to be confused with the creation
-   * date-time of the actual expense entry.
-   */
-  val createdAt: KOffsetDateTime,
-)
-
 /** Trip parameters. */
 data class TripDetails(
   /** The tripper. */
@@ -84,6 +62,9 @@ data class TripDetails(
 
   /** Where the trip is starting. */
   val startLocation: String,
+
+  /** Destination of the trip. */
+  val destination: String,
 
   /** Where the trip is ending. */
   val endLocation: String,
@@ -104,3 +85,39 @@ data class TripDetails(
   val startMileage: String? = null,
   val endMileage: String? = null,
 )
+
+@Serializable
+enum class TransportType {
+  /** The trip is performed with public transport. */
+  Public,
+
+  /**
+   * The trip is performed with a personal vehicle. This mandates that start and end mileage be
+   * provided along with the vehicle's registration plates.
+   */
+  Personal,
+}
+
+
+/**
+ * Data obtained from the LLM when parsing receipts. Ultimately turned into a
+ * [BonvoyageTravelExpense].
+ */
+@Serializable
+data class TravelExpense(
+  val amount: Double,
+  val currency: String,
+  val description: String,
+  val createdAt: KOffsetDateTime,
+)
+
+/**
+ * Used to send PDF attachments in emails.
+ */
+data class BonvoyageTripReport(val bytes: ByteArray, val travelOrderId: String) : EmailAttachment {
+  override fun bytes(): DataSource = ByteArrayDataSource(bytes, "application/pdf")
+
+  override fun name(): String = travelOrderId
+
+  override fun description(): String = "Trip report for $travelOrderId"
+}

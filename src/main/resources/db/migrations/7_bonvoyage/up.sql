@@ -6,11 +6,13 @@ CREATE TABLE bonvoyage_workflows(
     user_full_name TEXT NOT NULL,
     travel_order_id TEXT NOT NULL,
     start_location TEXT NOT NULL,
+    destination TEXT NOT NULL,
     end_location TEXT NOT NULL,
     start_date_time TIMESTAMPTZ NOT NULL,
     end_date_time TIMESTAMPTZ NOT NULL,
     transport_type TEXT NOT NULL,
     description TEXT NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -31,10 +33,23 @@ CREATE TABLE bonvoyage_travel_expenses(
     image_path TEXT NOT NULL,
     image_provider TEXT NOT NULL,
     description TEXT NOT NULL,
+    expense_created_at TIMESTAMPTZ NOT NULL,
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX ON bonvoyage_workflows (user_id);
+CREATE INDEX ON bonvoyage_workflows (travel_order_id);
+CREATE INDEX ON bonvoyage_workflows (start_date_time);
+CREATE INDEX ON bonvoyage_workflows (end_date_time);
+CREATE INDEX ON bonvoyage_workflows (completed);
+CREATE INDEX ON bonvoyage_workflows (created_at);
+
+CREATE INDEX ON bonvoyage_travel_expenses (workflow_id);
+CREATE INDEX ON bonvoyage_travel_expenses (expense_created_at);
+CREATE INDEX ON bonvoyage_travel_expenses (verified);
+CREATE INDEX ON bonvoyage_travel_expenses (created_at);
 
 SELECT manage_updated_at('bonvoyage_workflows');
 SELECT manage_updated_at('bonvoyage_travel_expenses');

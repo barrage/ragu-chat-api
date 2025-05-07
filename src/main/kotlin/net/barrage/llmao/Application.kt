@@ -17,6 +17,7 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.app.administration.administrationBlobRouter
 import net.barrage.llmao.app.administration.administrationRouter
 import net.barrage.llmao.app.administration.settings.adminSettingsRoutes
 import net.barrage.llmao.app.http.configureErrorHandling
@@ -95,6 +96,7 @@ fun Application.module() {
 
     // Admin API routes
     authenticate("admin") {
+      administrationBlobRouter(state.providers.image)
       adminSettingsRoutes(state.settings)
       administrationRouter()
     }
