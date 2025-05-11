@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
 import io.ktor.server.config.ApplicationConfig
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ApplicationState
@@ -37,58 +36,9 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
   override fun id(): String = BONVOYAGE_WORKFLOW_ID
 
   override suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow {
-    if (params == null) {
-      throw AppError.api(ErrorReason.InvalidParameter, "Missing trip input parameters")
-    }
-
-    if (user.email == null) {
-      throw AppError.api(ErrorReason.InvalidParameter, "User email missing")
-    }
-
-    val params = Json.decodeFromJsonElement(StartTrip.serializer(), params)
-    val settings = settings.getAllWithDefaults()
-
-    val workflowId = KUUID.randomUUID()
-    val travelOrderId = requestTravelOrder(user)
-
-    val tripotronLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
-    val tripotronModel = settings[SettingKey.BONVOYAGE_MODEL]
-
-    repository.insertTrip(
-      BonvoyageTripInsert(
-        id = workflowId,
-        trip =
-          TripDetails(
-            user = user,
-            travelOrderId = travelOrderId,
-            transportType = params.transportType,
-            startLocation = params.startLocation,
-            endLocation = params.endLocation,
-            startDateTime = params.startDateTime,
-            endDateTime = params.endDateTime,
-            description = params.description,
-            vehicleType = params.vehicleType,
-            vehicleRegistration = params.vehicleRegistration,
-            startMileage = params.startMileage,
-            destination = params.destination,
-          ),
-      )
-    )
-
-    return BonvoyageWorkflow(
-      id = workflowId,
-      emitter = emitter,
-      bonvoyage =
-        Bonvoyage(
-          user = user,
-          tokenTracker =
-            TokenUsageTrackerFactory.newTracker(user, BONVOYAGE_WORKFLOW_ID, workflowId),
-          model = tripotronModel,
-          inferenceProvider = tripotronLlmProvider,
-        ),
-      repository = repository,
-      email = email,
-      image = image,
+    throw AppError.api(
+      ErrorReason.InvalidOperation,
+      "A Bonvoyage workflow can only be open from an approved travel request with `workflow.existing`.",
     )
   }
 
@@ -97,9 +47,7 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
       throw AppError.api(ErrorReason.InvalidParameter, "User email missing")
     }
 
-    if (!repository.tripExists(workflowId)) {
-      throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip does not exist")
-    }
+    val trip = repository.getTrip(workflowId)
 
     val settings = settings.getAllWithDefaults()
     val bonvoyageLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
@@ -107,23 +55,18 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
     return BonvoyageWorkflow(
       id = workflowId,
       emitter = emitter,
-      bonvoyage =
-        Bonvoyage(
+      bonvoyageExpenseAgent =
+        BonvoyageExpenseAgent(
           user = user,
           tokenTracker =
             TokenUsageTrackerFactory.newTracker(user, BONVOYAGE_WORKFLOW_ID, workflowId),
           model = bonvoyageModel,
           inferenceProvider = bonvoyageLlmProvider,
+          trip = trip,
         ),
       repository = repository,
       email = email,
       image = image,
     )
-  }
-
-  /** Returns the travel order ID. */
-  suspend fun requestTravelOrder(user: User): String {
-    // TODO: implement when we get BC
-    return KUUID.randomUUID().toString()
   }
 }

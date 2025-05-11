@@ -24,8 +24,9 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.workflow.Session
 import net.barrage.llmao.core.workflow.SessionManager
+import net.barrage.llmao.core.workflow.StreamChunk
+import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.core.workflow.WorkflowOutput
-import net.barrage.llmao.core.workflow.emit
 import net.barrage.llmao.types.KUUID
 
 private val LOG = KtorSimpleLogger("n.b.l.a.api.ws.WebsocketRouter")
@@ -38,8 +39,8 @@ fun Application.websocketServer(manager: SessionManager, plugins: Plugins) {
     classDiscriminator = "type"
     serializersModule = SerializersModule {
       polymorphic(WorkflowOutput::class) {
-        subclass(WorkflowOutput.StreamChunk::class)
-        subclass(WorkflowOutput.StreamComplete::class)
+        subclass(StreamChunk::class)
+        subclass(StreamComplete::class)
         with(plugins) { configureOutputSerialization() }
       }
     }

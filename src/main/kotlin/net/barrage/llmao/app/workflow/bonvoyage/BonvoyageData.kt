@@ -4,12 +4,48 @@ import javax.activation.DataSource
 import javax.mail.util.ByteArrayDataSource
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.EmailAttachment
-import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.SchemaValidation
+import net.barrage.llmao.core.Validation
+import net.barrage.llmao.core.ValidationError
+import net.barrage.llmao.core.addSchemaErr
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KUUID
 
-/** DTO for starting a Tripotron workflow. */
 @Serializable
-data class StartTrip(
+data class BonvoyageTravelManagerInsert(
+  val userId: String,
+  val userFullName: String,
+  val userEmail: String,
+)
+
+@Serializable
+data class BonvoyageTravelManagerUserMappingInsert(
+  val travelManagerId: String,
+  val userId: String,
+  val delivery: BonvoyageNotificationDelivery,
+)
+
+@Serializable
+data class BonvoyageTravelExpenseInsert(
+  val amount: Double,
+  val currency: String,
+  val description: String,
+  val imagePath: String,
+  val imageProvider: String?,
+  val expenseCreatedAt: KOffsetDateTime,
+)
+
+@Serializable
+data class BonvoyageTravelExpenseUpdate(
+  val expenseId: KUUID,
+  val properties: BonvoyageTravelExpenseUpdateProperties,
+)
+
+/** DTO for requesting a Bonvoyage workflow. */
+@Serializable
+@SchemaValidation("validateSchema")
+data class TravelRequest(
   /**
    * The type of transport that determines additional parameters that must be provided upon
    * finalizing the trip.
@@ -19,8 +55,12 @@ data class StartTrip(
   /** Where the trip is starting. */
   val startLocation: String,
 
-  /** Trip destination. */
-  val destination: String,
+  /**
+   * Trip stops.
+   *
+   * See [BonvoyageTrip.stops].
+   */
+  val stops: List<String>,
 
   /** Where the trip is ending. */
   val endLocation: String,
@@ -41,15 +81,56 @@ data class StartTrip(
 
   /** Vehicle license plates. */
   val vehicleRegistration: String? = null,
+) : Validation {
+  fun validateSchema(): List<ValidationError> {
+    val errors = mutableListOf<ValidationError>()
 
-  /** The start mileage of the vehicle. */
-  val startMileage: String? = null,
+    val now = KOffsetDateTime.now()
+
+    if (startDateTime > endDateTime) {
+      errors.addSchemaErr(message = "Start date and time must be before end date and time")
+    }
+
+    if (startDateTime <= now) {
+      errors.addSchemaErr(message = "Start date and time must be in the future")
+    }
+
+    if (endDateTime <= now) {
+      errors.addSchemaErr(message = "End date and time must be in the future")
+    }
+
+    if (transportType == TransportType.PERSONAL) {
+      if (vehicleType == null) {
+        errors.addSchemaErr(message = "`vehicleType` is required for trips with a personal vehicle")
+      }
+      if (vehicleRegistration == null) {
+        errors.addSchemaErr(
+          message = "`vehicleRegistration` is required for trips with a personal vehicle"
+        )
+      }
+    }
+
+    return errors
+  }
+}
+
+@Serializable
+data class BonvoyageTravelRequestStatusUpdate(
+  val id: KUUID,
+  val status: BonvoyageTravelRequestStatus,
+  val reviewComment: String? = null,
 )
 
 /** Trip parameters. */
-data class TripDetails(
-  /** The tripper. */
-  val user: User,
+data class BonvoyageTripInsert(
+  /** User ID on the auth server. */
+  val userId: String,
+
+  /** User's full name. */
+  val userFullName: String,
+
+  /** User's email. */
+  val userEmail: String,
 
   /** Travel order identifier used by accounting to link to the travel order. */
   val travelOrderId: String,
@@ -64,7 +145,7 @@ data class TripDetails(
   val startLocation: String,
 
   /** Destination of the trip. */
-  val destination: String,
+  val stops: List<String>,
 
   /** Where the trip is ending. */
   val endLocation: String,
@@ -82,22 +163,24 @@ data class TripDetails(
 
   val vehicleType: String? = null,
   val vehicleRegistration: String? = null,
-  val startMileage: String? = null,
-  val endMileage: String? = null,
 )
 
 @Serializable
-enum class TransportType {
-  /** The trip is performed with public transport. */
-  Public,
+data class BonvoyageTripUpdate(val id: KUUID, val trip: BonvoyageTripUpdateProperties)
 
-  /**
-   * The trip is performed with a personal vehicle. This mandates that start and end mileage be
-   * provided along with the vehicle's registration plates.
-   */
-  Personal,
-}
+@Serializable
+data class BonvoyageTripUpdateProperties(
+  val startDateTime: KOffsetDateTime? = null,
+  val endDateTime: KOffsetDateTime? = null,
+  val description: String? = null,
 
+  // Mandatory when personal vehicle, optional otherwise
+
+  val vehicleType: PropertyUpdate<String> = PropertyUpdate.Undefined,
+  val vehicleRegistration: PropertyUpdate<String> = PropertyUpdate.Undefined,
+  val startMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
+  val endMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
+)
 
 /**
  * Data obtained from the LLM when parsing receipts. Ultimately turned into a
@@ -111,9 +194,7 @@ data class TravelExpense(
   val createdAt: KOffsetDateTime,
 )
 
-/**
- * Used to send PDF attachments in emails.
- */
+/** Used to send PDF attachments in emails. */
 data class BonvoyageTripReport(val bytes: ByteArray, val travelOrderId: String) : EmailAttachment {
   override fun bytes(): DataSource = ByteArrayDataSource(bytes, "application/pdf")
 

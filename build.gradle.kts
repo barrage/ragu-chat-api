@@ -88,6 +88,10 @@ dependencies {
     // Email
     implementation("org.apache.commons:commons-email:1.5")
 
+    // Scheduling
+    // https://mvnrepository.com/artifact/org.quartz-scheduler/quartz
+    implementation("org.quartz-scheduler:quartz:2.5.0")
+
     // PDF
     // https://mvnrepository.com/artifact/com.itextpdf/itext-core
     implementation("com.itextpdf:itext-core:9.1.0")

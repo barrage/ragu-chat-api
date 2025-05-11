@@ -14,6 +14,8 @@ import net.barrage.llmao.core.model.common.SortOrder
 annotation class QueryParameter(val key: String = "")
 
 /**
+ * TODO: Annotation processor so we don't have to reflect in runtime.
+ *
  * Extension function for application calls that parse query parameters to a Kotlin data class.
  * Note, each parameter must be parsable from a string, and the class being populated must have a
  * null-constructor (a constructor with no parameters). Additionally, any field being populated with
@@ -55,9 +57,7 @@ fun <T : Any> ApplicationCall.query(clazz: KClass<T>): T {
 }
 
 /** Shorthand for indexing into the request's queryParameters map. */
-fun ApplicationCall.queryParam(key: String): String? {
-  return request.queryParameters[key]
-}
+fun ApplicationCall.queryParam(key: String): String? = request.queryParameters[key]
 
 // Helper function to set the field value, handling basic type conversions
 private fun setFieldValue(field: KMutableProperty<*>, instance: Any, value: String) {

@@ -23,6 +23,7 @@ import kotlinx.coroutines.reactive.awaitSingle
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
+import net.barrage.llmao.app.workflow.chat.CHAT_WORKFLOW_ID
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentCollection
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
@@ -305,6 +306,7 @@ class TestPostgres {
       dslContext
         .insertInto(MESSAGE_GROUPS)
         .set(MESSAGE_GROUPS.PARENT_ID, chatId)
+        .set(MESSAGE_GROUPS.PARENT_TYPE, CHAT_WORKFLOW_ID)
         .returning()
         .awaitSingle()
 

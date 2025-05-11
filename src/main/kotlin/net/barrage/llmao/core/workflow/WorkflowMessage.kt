@@ -11,12 +11,18 @@ import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.types.KUUID
 
-/** Basic workflow input that demands */
 @Serializable
-data class WorkflowInput(
-  val text: String?,
+@JsonClassDiscriminator("type")
+@OptIn(ExperimentalSerializationApi::class)
+abstract class WorkflowInput
+
+/** Standard input to all workflows. */
+@Serializable
+@SerialName("default")
+data class DefaultWorkflowInput(
+  val text: String? = null,
   val attachments: List<IncomingMessageAttachment>? = null,
-) {
+) : WorkflowInput() {
   fun validate() {
     if (text.isNullOrBlank() && attachments.isNullOrEmpty()) {
       throw AppError.api(
@@ -30,36 +36,34 @@ data class WorkflowInput(
 @Serializable
 @JsonClassDiscriminator("type")
 @OptIn(ExperimentalSerializationApi::class)
-abstract class WorkflowOutput {
-  /** Sent for each chunk the LLM outputs in streaming mode. */
-  @Serializable
-  @SerialName("chat.stream_chunk")
-  data class StreamChunk(val chunk: String) : WorkflowOutput()
+abstract class WorkflowOutput
 
-  /** Sent when a chats gets a complete response from an LLM stream. */
-  @Serializable
-  @SerialName("chat.stream_complete")
-  data class StreamComplete(
-    /** The streaming chat ID */
-    val chatId: KUUID,
+/** Sent for each chunk the LLM outputs in streaming mode. */
+@Serializable
+@SerialName("workflow.stream_chunk")
+data class StreamChunk(val chunk: String) : WorkflowOutput()
 
-    /** What caused the stream to finish. */
-    val reason: FinishReason,
+/** Sent when a chats gets a complete response from an LLM stream. */
+@Serializable
+@SerialName("workflow.stream_complete")
+data class StreamComplete(
+  /** The streaming chat ID */
+  val chatId: KUUID,
 
-    /**
-     * The message group ID of the interaction. Present only when the stream finishes successfully.
-     *
-     * TODO: remove serial name when clients update
-     */
-    @SerialName("messageId") val messageGroupId: KUUID? = null,
+  /** What caused the stream to finish. */
+  val reason: FinishReason,
 
-    /**
-     * Contains a list of processed attachment paths, in the order they were sent by the client, if
-     * any.
-     */
-    val attachmentPaths: List<MessageAttachment>? = null,
+  /**
+   * The message group ID of the interaction. Present only when the stream finishes successfully.
+   */
+  val messageGroupId: KUUID? = null,
 
-    /** If the response was not streamed, this will contain the output of the LLM. */
-    val content: String? = null,
-  ) : WorkflowOutput()
-}
+  /**
+   * Contains a list of processed attachment paths, in the order they were sent by the client, if
+   * any.
+   */
+  val attachmentPaths: List<MessageAttachment>? = null,
+
+  /** If the response was not streamed, this will contain the output of the LLM. */
+  val content: String? = null,
+) : WorkflowOutput()

@@ -18,6 +18,7 @@ import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.model.SearchFiltersAdminChats
 import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.app.workflow.chat.model.toChat
+import net.barrage.llmao.core.database.getMessages
 import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
@@ -27,14 +28,12 @@ import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.model.toMessage
-import net.barrage.llmao.core.model.toMessageAttachment
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
 import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
-import net.barrage.llmao.tables.references.MESSAGE_ATTACHMENTS
 import net.barrage.llmao.tables.references.MESSAGE_GROUPS
 import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import net.barrage.llmao.types.KOffsetDateTime
@@ -151,7 +150,8 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         .limit(1)
         .awaitFirstOrNull() ?: return null
 
-    val messages = getMessages(chat.into(CHATS).id!!, userId, Pagination(1, messageLimit))
+    val messages =
+      dslContext.getMessages(chat.into(CHATS).id!!, userId, Pagination(1, messageLimit))
 
     return ChatWithMessages(chat.into(CHATS).toChat(), messages)
   }
@@ -186,7 +186,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     userId: String? = null,
   ): ChatWithMessages? {
     val chat = get(id, userId) ?: return null
-    val messages = getMessages(id, userId, pagination)
+    val messages = dslContext.getMessages(id, userId, pagination)
     return ChatWithMessages(chat, messages)
   }
 
@@ -194,100 +194,9 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     chatId: KUUID,
     userId: String? = null,
     pagination: Pagination,
-  ): CountedList<MessageGroupAggregate> {
-    val (limit, offset) = pagination.limitOffset()
+  ): CountedList<MessageGroupAggregate> =
+    dslContext.getMessages(chatId, userId, pagination)
 
-    val total =
-      dslContext
-        .selectCount()
-        .from(MESSAGE_GROUPS)
-        .leftJoin(CHATS)
-        .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
-        .where(
-          MESSAGE_GROUPS.PARENT_ID.eq(chatId)
-            .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-        )
-        .awaitSingle()
-        .value1() ?: 0
-
-    val messageGroups = mutableMapOf<KUUID, MessageGroupAggregate>()
-
-    // This query acts like a window, selecting only the latest
-    // message groups
-    val subQuery =
-      dslContext
-        .select(MESSAGE_GROUPS.ID)
-        .from(MESSAGE_GROUPS)
-        .where(MESSAGE_GROUPS.PARENT_ID.eq(chatId))
-        .orderBy(MESSAGE_GROUPS.CREATED_AT.desc())
-        .limit(limit)
-        .offset(offset)
-
-    dslContext
-      .select(
-        // Group
-        MESSAGE_GROUPS.ID,
-        MESSAGE_GROUPS.PARENT_ID,
-        MESSAGE_GROUPS.CREATED_AT,
-        // Evaluation
-        MESSAGE_GROUP_EVALUATIONS.ID,
-        MESSAGE_GROUP_EVALUATIONS.EVALUATION,
-        MESSAGE_GROUP_EVALUATIONS.FEEDBACK,
-        MESSAGE_GROUP_EVALUATIONS.CREATED_AT,
-        MESSAGE_GROUP_EVALUATIONS.UPDATED_AT,
-        // Message
-        MESSAGES.ID,
-        MESSAGES.ORDER,
-        MESSAGES.MESSAGE_GROUP_ID,
-        MESSAGES.SENDER_TYPE,
-        MESSAGES.CONTENT,
-        MESSAGES.TOOL_CALLS,
-        MESSAGES.TOOL_CALL_ID,
-        MESSAGES.FINISH_REASON,
-        MESSAGES.CREATED_AT,
-      )
-      .from(MESSAGE_GROUPS)
-      .leftJoin(CHATS)
-      .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
-      .leftJoin(MESSAGE_GROUP_EVALUATIONS)
-      .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
-      .leftJoin(MESSAGES)
-      .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
-      .where(
-        MESSAGE_GROUPS.ID.`in`(subQuery)
-          .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-      )
-      .orderBy(MESSAGE_GROUPS.CREATED_AT.asc(), MESSAGES.ORDER.asc())
-      .asFlow()
-      .collect { record ->
-        val messageId = record.get(MESSAGES.ID)!!
-
-        val attachments =
-          dslContext
-            .selectFrom(MESSAGE_ATTACHMENTS)
-            .where(MESSAGE_ATTACHMENTS.MESSAGE_ID.eq(messageId))
-            .asFlow()
-            .map { it.into(MESSAGE_ATTACHMENTS).toMessageAttachment() }
-            .toList()
-
-        val message =
-          record.into(MESSAGES).toMessage(if (attachments.isEmpty()) null else attachments)
-        val group = record.into(MESSAGE_GROUPS).toMessageGroup()
-        val evaluation =
-          record.into(MESSAGE_GROUP_EVALUATIONS).let { eval ->
-            eval.id?.let { eval.toMessageGroupEvaluation() }
-          }
-
-        messageGroups
-          .computeIfAbsent(group.id) { _ ->
-            MessageGroupAggregate(group, mutableListOf(), evaluation)
-          }
-          .messages
-          .add(message)
-      }
-
-    return CountedList(total, messageGroups.values.toList())
-  }
 
   suspend fun evaluateMessageGroup(messageGroupId: KUUID, input: EvaluateMessage): Int {
     if (input.evaluation == null) {

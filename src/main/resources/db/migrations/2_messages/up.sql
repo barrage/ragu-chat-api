@@ -7,6 +7,9 @@ CREATE TABLE message_groups(
     -- The parent workflow. Origin of the interaction.
     parent_id UUID NOT NULL,
 
+    -- Parent workflow type. Used so we know which table to query for the parent.
+    parent_type TEXT NOT NULL,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

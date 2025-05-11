@@ -14,7 +14,7 @@ import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.SettingUpdate
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
 import net.barrage.llmao.core.llm.ToolEvent
-import net.barrage.llmao.core.workflow.WorkflowOutput
+import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.json
 import net.barrage.llmao.openNewChat
 import net.barrage.llmao.sendMessage
@@ -52,7 +52,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           val response = (frame as Frame.Text).readText()
 
           try {
-            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
+            val message = json.decodeFromString<StreamComplete>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             asserted = true
             break
@@ -91,7 +91,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
           } catch (_: SerializationException) {}
 
           try {
-            val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
+            val message = json.decodeFromString<StreamComplete>(response)
             assertEquals(COMPLETIONS_RESPONSE, message.content)
             assertions += 1
             break

@@ -19,7 +19,7 @@ sealed class BonvoyageInput {
     val data: IncomingImageData,
 
     /** Description of the expense. */
-    val description: String,
+    val description: String? = null,
   ) : BonvoyageInput()
 
   /** Sent to update an expense entry. */

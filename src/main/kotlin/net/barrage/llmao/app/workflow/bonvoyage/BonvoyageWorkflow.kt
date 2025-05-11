@@ -17,7 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -33,16 +32,14 @@ import net.barrage.llmao.core.llm.ResponseFormat
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.workflow.Emitter
+import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.core.workflow.Workflow
-import net.barrage.llmao.core.workflow.WorkflowOutput
-import net.barrage.llmao.core.workflow.emit
-import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
 class BonvoyageWorkflow(
   /** Unique identifier of the workflow. */
   private val id: KUUID,
-  private val bonvoyage: Bonvoyage,
+  private val bonvoyageExpenseAgent: BonvoyageExpenseAgent,
   /** Output handle. */
   private val emitter: Emitter,
   private val repository: BonvoyageRepository,
@@ -87,14 +84,22 @@ class BonvoyageWorkflow(
   }
 
   private suspend fun handleExpenseUpload(input: BonvoyageInput.ExpenseUpload) {
-    val trip = repository.getTrip(id)
-
     val attachment = listOf(IncomingMessageAttachment.Image(input.data))
-    bonvoyage.setContext(tripExpenseContext(trip))
+
+    val content = if (input.description.isNullOrBlank()) {
+      """The image is a receipt for an expense.
+        | Use the information in the receipt to clarify the expense for accounting.
+        | Use what is available on the receipt and nothing else.
+        | If the image is of a highway toll, or of a ticket for public transport, include
+        | the start and end stops in the description, if they are available."""
+        .trimMargin()
+    } else {
+      input.description
+    }
 
     val response =
-      bonvoyage.completion(
-        input.description,
+      bonvoyageExpenseAgent.completion(
+        content,
         attachment,
         ChatCompletionAgentParameters(responseFormat = EXPENSE_FORMAT),
         emitter,
@@ -142,15 +147,7 @@ class BonvoyageWorkflow(
     val (messageGroupId, travelExpense) =
       repository.insertMessagesWithExpense(id, insert, expenseInsert)
 
-    emitter.emit(
-      WorkflowOutput.StreamComplete(
-        id,
-        assistantMessage.finishReason!!,
-        messageGroupId,
-        attachments,
-      ),
-      WorkflowOutput.serializer(),
-    )
+    emitter.emit(StreamComplete(id, assistantMessage.finishReason!!, messageGroupId, attachments))
     emitter.emit(BonvoyageOutput.ExpenseUpload(travelExpense), BonvoyageOutput.serializer())
   }
 
@@ -185,9 +182,9 @@ class BonvoyageWorkflow(
     email.sendEmailWithAttachment(
       "bonvoyage@barrage.net",
       // Safe to !! because the factory always verifies this is not null
-      bonvoyage.user.email!!,
+      bonvoyageExpenseAgent.user.email!!,
       trip.trip.travelOrderId,
-      "Here is your travel report for ${trip.trip.travelOrderId}",
+      "Travel report for ${trip.trip.travelOrderId}.",
       report,
     )
 
@@ -241,7 +238,7 @@ class BonvoyageWorkflow(
     val endDate = trip.trip.endDateTime.toLocalDate().toString()
     val endTime = trip.trip.endDateTime.toLocalTime().toString()
     val startLocation = trip.trip.startLocation
-    val destination = trip.trip.destination
+    val stops = trip.trip.stops
     val endLocation = trip.trip.endLocation
 
     val travelInfoTable =
@@ -262,8 +259,8 @@ class BonvoyageWorkflow(
     travelInfoTable.addCell("Mjesto po\u010Detka puta")
     travelInfoTable.addCell(Cell().add(Paragraph(startLocation).simulateBold()))
 
-    travelInfoTable.addCell("Mjesto putovanja (odredište)")
-    travelInfoTable.addCell(Cell().add(Paragraph(destination).simulateBold()))
+    travelInfoTable.addCell("Mjesta putovanja (odredišta)")
+    travelInfoTable.addCell(Cell().add(Paragraph(stops.joinToString("-")).simulateBold()))
 
     travelInfoTable.addCell("Mjesto završetka puta")
     travelInfoTable.addCell(Cell().add(Paragraph(endLocation).simulateBold()))
@@ -281,17 +278,20 @@ class BonvoyageWorkflow(
     document.add(Paragraph("PRILOZI").setMarginTop(20f).simulateBold())
 
     val expensesTable =
-      Table(UnitValue.createPercentArray(floatArrayOf(1f, 1f, 1f, 1f)))
+      Table(UnitValue.createPercentArray(floatArrayOf(0.1f, 0.4f, 0.4f, 0.1f)))
         .useAllAvailableWidth()
         .addCell("Iznos")
-        .addCell("Valuta")
         .addCell("Opis")
+        .addCell("Vrijeme")
         .addCell("Prilog")
 
     for ((i, expense) in trip.expenses.withIndex()) {
-      expensesTable.addCell(expense.amount.toString())
-      expensesTable.addCell(expense.currency)
+      expensesTable.addCell("${expense.amount} ${expense.currency}")
       expensesTable.addCell(expense.description)
+
+      val date =
+        "${expense.expenseCreatedAt.toLocalDate()} ${expense.expenseCreatedAt.toLocalTime()}"
+      expensesTable.addCell(date)
       expensesTable.addCell((i + 1).toString())
     }
 
@@ -325,34 +325,9 @@ class BonvoyageWorkflow(
       travelOrderId = trip.trip.travelOrderId,
     )
   }
-
-  private fun tripExpenseContext(trip: BonvoyageTrip): String {
-    val username = bonvoyage.user.username
-    return """
-          You are talking to $username. 
-          $username is on a business trip from ${trip.startLocation} to ${trip.endLocation}.
-          The trip start time is ${trip.startDateTime} and the end time is ${trip.endDateTime}. 
-          The description of the trip states the following:
-          
-          "${trip.description}"
-          
-          Your job is to keep track of expenses for this trip for the purpose of creating a trip report. 
-          The user will send you pictures they took of receipts of expenses made on this trip.
-          They will also provide you a description of the expense.
-          
-          You will extract the following information from the receipt image:
-          - The amount of money spent on the expense.
-          - The currency of the expense.
-          - The description of the expense.
-          - The date-time the expense was created at.
-          
-          You will output the extracted information in JSON format, using the schema ${EXPENSE_FORMAT.name}.
-      """
-      .trimIndent()
-  }
 }
 
-private val EXPENSE_FORMAT_SCHEMA =
+internal val EXPENSE_FORMAT_SCHEMA =
   JsonObject(
     mapOf(
       "type" to JsonPrimitive("object"),
@@ -417,5 +392,5 @@ private val EXPENSE_FORMAT_SCHEMA =
     )
   )
 
-private val EXPENSE_FORMAT =
+internal val EXPENSE_FORMAT =
   ResponseFormat(name = "TravelExpenseUpload", schema = EXPENSE_FORMAT_SCHEMA)

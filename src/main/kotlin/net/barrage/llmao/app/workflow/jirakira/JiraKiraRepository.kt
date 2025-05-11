@@ -84,9 +84,9 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
         .set(JIRAKIRA_WORKFLOWS.USER_ID, userId)
         .set(JIRAKIRA_WORKFLOWS.USERNAME, username)
         .awaitSingle()
-      ctx.dsl().insertMessages(workflowId, messages)
+      ctx.dsl().insertMessages(workflowId, JIRAKIRA_WORKFLOW_ID, messages)
     }
 
   suspend fun insertMessages(workflowId: KUUID, messages: List<MessageInsert>): KUUID =
-    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(workflowId, messages) }
+    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(workflowId, JIRAKIRA_WORKFLOW_ID, messages) }
 }

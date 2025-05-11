@@ -13,10 +13,11 @@ import kotlinx.serialization.json.encodeToJsonElement
 import net.barrage.llmao.app.workflow.chat.NewChatWorkflow
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
+import net.barrage.llmao.core.workflow.DefaultWorkflowInput
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.core.workflow.WorkflowInput
-import net.barrage.llmao.core.workflow.WorkflowOutput
+import net.barrage.llmao.core.workflow.StreamChunk
+import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.types.KUUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 
@@ -51,12 +52,12 @@ suspend fun HttpClient.openSendAndCollect(
       for (frame in incoming) {
         val response = (frame as Frame.Text).readText()
         try {
-          val message = json.decodeFromString<WorkflowOutput.StreamChunk>(response)
+          val message = json.decodeFromString<StreamChunk>(response)
           buffer += message.chunk
         } catch (_: SerializationException) {}
 
         try {
-          val message = json.decodeFromString<WorkflowOutput.StreamComplete>(response)
+          val message = json.decodeFromString<StreamComplete>(response)
           assert(message.reason == FinishReason.Stop)
           break
         } catch (_: SerializationException) {}
@@ -112,7 +113,7 @@ suspend fun ClientWebSocketSession.sendMessage(
   text: String,
   block: suspend (ReceiveChannel<Frame>) -> Unit,
 ) {
-  send(Frame.Text(json.encodeToString(WorkflowInput(text))))
+  send(Frame.Text(json.encodeToString(DefaultWorkflowInput(text))))
   block(incoming)
 }
 

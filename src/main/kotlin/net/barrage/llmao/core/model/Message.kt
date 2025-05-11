@@ -28,11 +28,19 @@ open class MessageGroup(
 
   /** The workflow ID this message group belongs to. */
   val parentId: KUUID,
+
+  /** The type of workflow this message group belongs to. */
+  val parentType: String,
   val createdAt: KOffsetDateTime,
 )
 
 fun MessageGroupsRecord.toMessageGroup() =
-  MessageGroup(id = this.id!!, parentId = this.parentId, createdAt = this.createdAt!!)
+  MessageGroup(
+    id = this.id!!,
+    parentId = this.parentId,
+    parentType = this.parentType,
+    createdAt = this.createdAt!!,
+  )
 
 /**
  * Aggregate of the message group and all the messages within it, along with the group's evaluation.

@@ -2,6 +2,7 @@ package net.barrage.llmao.app.workflow.chat.repository
 
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.app.workflow.chat.CHAT_WORKFLOW_ID
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.toChat
 import net.barrage.llmao.core.AppError
@@ -41,7 +42,7 @@ class ChatRepositoryWrite(private val dslContext: DSLContext, private val type: 
           type = type,
           agentConfigurationId = agentConfigurationId,
         )
-      ctx.dsl().insertMessages(chatId, messages)
+      ctx.dsl().insertMessages(chatId, CHAT_WORKFLOW_ID, messages)
     }
 
   suspend fun insertChat(
@@ -61,7 +62,7 @@ class ChatRepositoryWrite(private val dslContext: DSLContext, private val type: 
     )
 
   suspend fun insertMessages(chatId: KUUID, messages: List<MessageInsert>): KUUID =
-    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(chatId, messages) }
+    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(chatId, CHAT_WORKFLOW_ID, messages) }
 }
 
 private suspend fun DSLContext.insertChat(

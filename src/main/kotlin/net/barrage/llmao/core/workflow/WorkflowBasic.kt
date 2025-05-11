@@ -23,7 +23,7 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KUUID
 
 /**
- * Implementation of a workflow that is for a conversation with a single agent.
+ * Implementation of a workflow for a conversation with a single agent.
  *
  * If a workflow is conversation based, i.e. does not have structured input and only accepts text
  * messages with attachments, this class can be used as the base.
@@ -56,7 +56,7 @@ abstract class WorkflowBasic(
   /** Scope in which [stream] and [onInteractionComplete] run. */
   private val scope = CoroutineScope(Dispatchers.Default)
 
-  protected open val log = KtorSimpleLogger("n.b.l.c.workflow.ChatWorkflowBase")
+  protected open val log = KtorSimpleLogger("n.b.l.c.workflow.WorkflowBasic")
 
   /**
    * Callback that runs when an interaction with an LLM is complete.
@@ -83,7 +83,8 @@ abstract class WorkflowBasic(
       throw AppError.api(ErrorReason.InvalidOperation, "Workflow is currently busy")
     }
 
-    val input = Json.decodeFromString<WorkflowInput>(input)
+    val input =
+      Json.decodeFromString<DefaultWorkflowInput>(DefaultWorkflowInput.serializer(), input)
 
     input.validate()
 
@@ -102,10 +103,7 @@ abstract class WorkflowBasic(
           if (streamingEnabled) executeStreaming(userMessage) else executeCompletion(userMessage)
 
         if (messageBuffer.isEmpty()) {
-          emitter.emit(
-            WorkflowOutput.StreamComplete(chatId = id, reason = finishReason),
-            WorkflowOutput.serializer(),
-          )
+          emitter.emit(StreamComplete(chatId = id, reason = finishReason))
           stream = null
           return@launch
         }
@@ -129,14 +127,13 @@ abstract class WorkflowBasic(
             )
 
           emitter.emit(
-            WorkflowOutput.StreamComplete(
+            StreamComplete(
               chatId = id,
               reason = finishReason,
               messageGroupId = processedMessageGroup.messageGroupId,
               attachmentPaths = processedMessageGroup.attachments,
               content = assistantMessage.content!!.text(),
-            ),
-            WorkflowOutput.serializer(),
+            )
           )
         }
 
@@ -192,10 +189,9 @@ abstract class WorkflowBasic(
     val responseBuffer = StringBuilder()
 
     suspend fun handler(chunk: ChatMessageChunk) {
-      chunk.content?.let {
-        emitter.emit(WorkflowOutput.StreamChunk(chunk.content), WorkflowOutput.serializer())
-      }
+      chunk.content?.let { emitter.emit(StreamChunk(chunk.content)) }
     }
+
     try {
       agent.stream(
         userMessage = userMessage,
@@ -212,7 +208,7 @@ abstract class WorkflowBasic(
     } catch (e: Throwable) {
       handleError(e)
     } finally {
-      // Here we have to make sure the last message in the buffer is the assistant's.
+      // Make sure the last message in the buffer is the assistant's.
       // If the stream is cancelled at any point before the last assistant message started
       // streaming all messages in the buffer are discarded.
       val lastMessage = messageBuffer.lastOrNull()

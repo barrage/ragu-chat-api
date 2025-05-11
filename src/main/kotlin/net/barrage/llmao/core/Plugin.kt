@@ -7,13 +7,28 @@ import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.WorkflowOutput
 
+/**
+ * Defines a plugin that can be registered with the application.
+ *
+ * All plugins must be classes that can be instantiated with no arguments.
+ */
 interface Plugin : Identity {
+  /**
+   * Configure the plugin's state using the config file and the application state.
+   *
+   * This is the first plugin method called and is called once on application startup, before any
+   * other configuration methods are called.
+   */
   suspend fun configureState(config: ApplicationConfig, state: ApplicationState)
 
+  /**  */
   fun Route.configureRoutes(state: ApplicationState) {}
 
   fun RequestValidationConfig.configureRequestValidation() {}
 
+  /**
+   * Register a subtype for [WorkflowOutput] for serialization to enable sending it via emitters.
+   */
   fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {}
 
   suspend fun handleEvent(manager: SessionManager, event: Event) {}
@@ -37,7 +52,7 @@ class Plugins {
   /**
    * Configure all plugins registered in this object.
    *
-   * Called once on application startup.
+   * Called once on application startup and is the first plugin configuration method called.
    */
   suspend fun configureState(config: ApplicationConfig, state: ApplicationState) {
     for (plugin in plugins) {
@@ -74,6 +89,11 @@ class Plugins {
     }
   }
 
+  /**
+   * Register subtypes of [WorkflowOutput] for all plugins.
+   *
+   * Called once on application startup.
+   */
   fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {
     for (plugin in plugins) {
       with(plugin) { configureOutputSerialization() }
