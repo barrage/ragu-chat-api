@@ -50,9 +50,9 @@ fun ApplicationCall.user(): User {
   val email = principal.payload.getClaim("email").asString()
   val username = principal.payload.getClaim("given_name").asString()
 
-  //  if (username.isNullOrBlank()) {
-  //    throw AppError.api(ErrorReason.Authentication, "Missing given_name claim")
-  //  }
+  if (username.isNullOrBlank()) {
+    throw AppError.api(ErrorReason.Authentication, "Missing given_name claim")
+  }
 
   if (email.isNullOrBlank()) {
     throw AppError.api(ErrorReason.Authentication, "Missing email claim")

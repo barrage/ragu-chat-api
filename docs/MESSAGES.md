@@ -110,23 +110,10 @@ is no longer available.
 }
 ```
 
-## Workflow
+## Default Workflow Input
 
-### Chat
-
-Chats are the most basic of workflows involving a single agent.
-Chat workflows do not have a clear indication of an end.
-
-#### Incoming
-
-- `chat`
-
-Send a message to a chat workflow. The workflow must be open for this message to be accepted.
-
-- `text` - The text contents of the message. This is the only required field.
-- `attachments` - Optional binary attachments to send with the message. If empty, no attachments will be processed.
-    - `type` - The type of attachment. See below section for more information.
-    - `data` - Depends on `type`. See below section for more information.
+The default workflow input is used by all workflows that are conversation based, i.e. do not have structured input and
+only accept text messages with attachments.
 
 ```json
 {
@@ -140,7 +127,10 @@ Send a message to a chat workflow. The workflow must be open for this message to
 }
 ```
 
-##### Attachments
+- `text` - The text contents of the message. This is the only required field.
+- `attachments` - Optional binary attachments to send with the message. If empty, no attachments will be processed.
+    - `type` - The type of attachment. See below section for more information.
+    - `data` - Depends on `type`. See below section for more information.
 
 The following `ATTACHMENT_TYPE`s are supported:
 

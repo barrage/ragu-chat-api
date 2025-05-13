@@ -14,11 +14,11 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
-import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.MessageBasedHistory
-import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
+import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
+import net.barrage.llmao.core.llm.MessageBasedHistory
+import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolFunctionDefinition
 import net.barrage.llmao.core.llm.Tools

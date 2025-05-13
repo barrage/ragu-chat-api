@@ -9,8 +9,8 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
-import net.barrage.llmao.core.chat.MessageBasedHistory
-import net.barrage.llmao.core.chat.TokenBasedHistory
+import net.barrage.llmao.core.llm.MessageBasedHistory
+import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.ToolsBuilder
@@ -115,7 +115,6 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
               )
             } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
           jiraUser = jiraUser,
-          tools = toolchain.listToolSchemas(),
         ),
     )
   }

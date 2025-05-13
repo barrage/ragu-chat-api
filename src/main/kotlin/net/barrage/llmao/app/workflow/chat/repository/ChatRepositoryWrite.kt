@@ -62,7 +62,9 @@ class ChatRepositoryWrite(private val dslContext: DSLContext, private val type: 
     )
 
   suspend fun insertMessages(chatId: KUUID, messages: List<MessageInsert>): KUUID =
-    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(chatId, CHAT_WORKFLOW_ID, messages) }
+    dslContext.transactionCoroutine { ctx ->
+      ctx.dsl().insertMessages(chatId, CHAT_WORKFLOW_ID, messages)
+    }
 }
 
 private suspend fun DSLContext.insertChat(

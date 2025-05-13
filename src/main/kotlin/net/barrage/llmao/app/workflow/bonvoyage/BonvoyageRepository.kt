@@ -82,10 +82,9 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
         val userMappingId = it.get<KUUID?>(BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.ID)
 
         if (userMappingId == null) {
-          managerMap
-            .computeIfAbsent(manager.userId) { _ ->
-              BonvoyageTravelManagerUserMappingAggregate(manager, mutableListOf())
-            }
+          managerMap.computeIfAbsent(manager.userId) { _ ->
+            BonvoyageTravelManagerUserMappingAggregate(manager, mutableListOf())
+          }
           return@collect
         }
 
@@ -93,12 +92,12 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
           BonvoyageTravelManagerUserMapping(
             id = it.get<KUUID?>(BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.ID),
             travelManagerId =
-            it.get<String>(BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.TRAVEL_MANAGER_ID),
+              it.get<String>(BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.TRAVEL_MANAGER_ID),
             userId = it.get("managed_user_id", String::class.java),
             delivery =
-            BonvoyageNotificationDelivery.valueOf(
-              it.get<String>(BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.DELIVERY)
-            ),
+              BonvoyageNotificationDelivery.valueOf(
+                it.get<String>(BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.DELIVERY)
+              ),
             createdAt = it.get("mapping_created_at", KOffsetDateTime::class.java),
           )
 
@@ -113,9 +112,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
     return managerMap.values.toList()
   }
 
-  suspend fun listTravelManagers(
-    userId: String
-  ): List<BonvoyageTravelManagerUserMappingAggregate> {
+  suspend fun listTravelManagers(userId: String): List<BonvoyageTravelManagerUserMappingAggregate> {
     val managerMap = mutableMapOf<String, BonvoyageTravelManagerUserMappingAggregate>()
 
     dslContext
@@ -137,9 +134,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
           BONVOYAGE_TRAVEL_MANAGERS.USER_ID
         )
       )
-      .where(
-         BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.USER_ID.eq(userId)
-      )
+      .where(BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS.USER_ID.eq(userId))
       .asFlow()
       .collect {
         val manager =
@@ -334,18 +329,29 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .toTrip()
   }
 
-  suspend fun updateTrip(update: BonvoyageTripUpdate) {
-    dslContext
+  suspend fun updateTrip(id: KUUID, update: BonvoyageTripUpdate): BonvoyageTrip {
+    return dslContext
       .update(BONVOYAGE_WORKFLOWS)
-      .set(update.trip.startDateTime, BONVOYAGE_WORKFLOWS.START_DATE_TIME)
-      .set(update.trip.endDateTime, BONVOYAGE_WORKFLOWS.END_DATE_TIME)
-      .set(update.trip.description, BONVOYAGE_WORKFLOWS.DESCRIPTION)
-      .set(update.trip.vehicleType, BONVOYAGE_WORKFLOWS.VEHICLE_TYPE)
-      .set(update.trip.vehicleRegistration, BONVOYAGE_WORKFLOWS.VEHICLE_REGISTRATION)
-      .set(update.trip.startMileage, BONVOYAGE_WORKFLOWS.START_MILEAGE)
-      .set(update.trip.endMileage, BONVOYAGE_WORKFLOWS.END_MILEAGE)
-      .where(BONVOYAGE_WORKFLOWS.ID.eq(update.id))
+      .set(update.startDateTime, BONVOYAGE_WORKFLOWS.START_DATE_TIME)
+      .set(update.endDateTime, BONVOYAGE_WORKFLOWS.END_DATE_TIME)
+      .set(update.description, BONVOYAGE_WORKFLOWS.DESCRIPTION)
+      .set(update.vehicleType, BONVOYAGE_WORKFLOWS.VEHICLE_TYPE)
+      .set(update.vehicleRegistration, BONVOYAGE_WORKFLOWS.VEHICLE_REGISTRATION)
+      .set(update.startMileage, BONVOYAGE_WORKFLOWS.START_MILEAGE)
+      .set(update.endMileage, BONVOYAGE_WORKFLOWS.END_MILEAGE)
+      .where(BONVOYAGE_WORKFLOWS.ID.eq(id))
+      .returning()
       .awaitSingle()
+      .into(BONVOYAGE_WORKFLOWS)
+      .toTrip()
+  }
+
+  suspend fun isTripOwner(id: KUUID, userId: String): Boolean {
+    return dslContext
+      .selectOne()
+      .from(BONVOYAGE_WORKFLOWS)
+      .where(BONVOYAGE_WORKFLOWS.ID.eq(id).and(BONVOYAGE_WORKFLOWS.USER_ID.eq(userId)))
+      .awaitFirstOrNull() != null
   }
 
   suspend fun getTrip(id: KUUID): BonvoyageTrip {
@@ -492,7 +498,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
   ): Pair<KUUID, BonvoyageTravelExpense> =
     dslContext.transactionCoroutine { ctx ->
       Pair(
-        ctx.dsl().insertMessages(workflowId,BONVOYAGE_WORKFLOW_ID, messages),
+        ctx.dsl().insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages),
         ctx.dsl().insertTravelExpense(workflowId, expense),
       )
     }

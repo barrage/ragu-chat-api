@@ -1,7 +1,6 @@
-package net.barrage.llmao.core.chat
+package net.barrage.llmao.core.llm
 
 import com.knuddels.jtokkit.api.Encoding
-import net.barrage.llmao.core.llm.ChatMessage
 
 /**
  * Represents a conversation history and handles all trimming operations based on concrete instance.

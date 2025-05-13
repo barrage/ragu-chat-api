@@ -88,5 +88,7 @@ class JiraKiraRepository(private val dslContext: DSLContext) : JiraKiraKeyStore 
     }
 
   suspend fun insertMessages(workflowId: KUUID, messages: List<MessageInsert>): KUUID =
-    dslContext.transactionCoroutine { ctx -> ctx.dsl().insertMessages(workflowId, JIRAKIRA_WORKFLOW_ID, messages) }
+    dslContext.transactionCoroutine { ctx ->
+      ctx.dsl().insertMessages(workflowId, JIRAKIRA_WORKFLOW_ID, messages)
+    }
 }

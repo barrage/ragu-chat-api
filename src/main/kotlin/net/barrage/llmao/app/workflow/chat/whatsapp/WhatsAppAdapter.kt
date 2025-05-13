@@ -32,14 +32,14 @@ import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.SettingUpdate
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
-import net.barrage.llmao.core.chat.ChatHistory
-import net.barrage.llmao.core.chat.ChatMessageProcessor
-import net.barrage.llmao.core.chat.MessageBasedHistory
-import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
+import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
+import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
+import net.barrage.llmao.core.llm.MessageBasedHistory
+import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
@@ -247,7 +247,7 @@ class WhatsAppAdapter(
             ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
       )
 
-    val user = User(id = userId, entitlements = listOf("user"), username = username, email = null)
+    val user = User(id = userId, entitlements = listOf("user"), username = username, email = "")
     val tokenTracker =
       TokenUsageTrackerFactory.newTracker(user, WHATSAPP_CHAT_TOKEN_ORIGIN, chat.id)
 

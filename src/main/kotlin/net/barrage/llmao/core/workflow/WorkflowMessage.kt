@@ -11,18 +11,13 @@ import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.types.KUUID
 
-@Serializable
-@JsonClassDiscriminator("type")
-@OptIn(ExperimentalSerializationApi::class)
-abstract class WorkflowInput
-
 /** Standard input to all workflows. */
 @Serializable
 @SerialName("default")
 data class DefaultWorkflowInput(
   val text: String? = null,
   val attachments: List<IncomingMessageAttachment>? = null,
-) : WorkflowInput() {
+) {
   fun validate() {
     if (text.isNullOrBlank() && attachments.isNullOrEmpty()) {
       throw AppError.api(

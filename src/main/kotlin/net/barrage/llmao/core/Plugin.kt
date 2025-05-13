@@ -8,7 +8,7 @@ import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.WorkflowOutput
 
 /**
- * Defines a plugin that can be registered with the application.
+ * A plugin that can be registered in the server runtime.
  *
  * All plugins must be classes that can be instantiated with no arguments.
  */
@@ -19,15 +19,28 @@ interface Plugin : Identity {
    * This is the first plugin method called and is called once on application startup, before any
    * other configuration methods are called.
    */
-  suspend fun configureState(config: ApplicationConfig, state: ApplicationState)
+  suspend fun initialize(config: ApplicationConfig, state: ApplicationState)
 
-  /**  */
+  /**
+   * Configure the plugin's routes using Ktor.
+   *
+   * Called once on application startup, after request validation ([configureRequestValidation]) has
+   * been installed.
+   */
   fun Route.configureRoutes(state: ApplicationState) {}
 
+  /**
+   * Configure request body validation for all routes in the plugin.
+   *
+   * Called once on application startup, after state initialization ([initialize]) and before
+   * configuring routes ([configureRoutes]).
+   */
   fun RequestValidationConfig.configureRequestValidation() {}
 
   /**
    * Register a subtype for [WorkflowOutput] for serialization to enable sending it via emitters.
+   *
+   * Call once on application startup when setting up websockets.
    */
   fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {}
 
@@ -54,9 +67,9 @@ class Plugins {
    *
    * Called once on application startup and is the first plugin configuration method called.
    */
-  suspend fun configureState(config: ApplicationConfig, state: ApplicationState) {
+  suspend fun initialize(config: ApplicationConfig, state: ApplicationState) {
     for (plugin in plugins) {
-      plugin.configureState(config, state)
+      plugin.initialize(config, state)
     }
   }
 

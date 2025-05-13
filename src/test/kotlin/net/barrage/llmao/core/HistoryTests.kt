@@ -1,9 +1,9 @@
 package net.barrage.llmao.core
 
 import com.knuddels.jtokkit.Encodings
-import net.barrage.llmao.core.chat.TokenBasedHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.FinishReason
+import net.barrage.llmao.core.llm.TokenBasedHistory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

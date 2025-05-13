@@ -37,7 +37,11 @@ import org.jooq.impl.DSL.excluded
  *
  * @return The ID of the message group that was created.
  */
-suspend fun DSLContext.insertMessages(workflowId: KUUID, workflowType: String, messages: List<MessageInsert>): KUUID {
+suspend fun DSLContext.insertMessages(
+  workflowId: KUUID,
+  workflowType: String,
+  messages: List<MessageInsert>,
+): KUUID {
   val messageGroupId =
     insertInto(MESSAGE_GROUPS)
       .set(MESSAGE_GROUPS.PARENT_ID, workflowId)

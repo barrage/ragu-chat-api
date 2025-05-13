@@ -1,17 +1,13 @@
-package net.barrage.llmao.core.chat
+package net.barrage.llmao.core.llm
 
 import io.ktor.util.encodeBase64
+import io.ktor.util.logging.KtorSimpleLogger
 import java.security.MessageDigest
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
-import net.barrage.llmao.core.llm.ChatMessage
-import net.barrage.llmao.core.llm.ChatMessageContentPart
-import net.barrage.llmao.core.llm.ChatMessageImage
-import net.barrage.llmao.core.llm.ContentMulti
-import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.IncomingImageData
 import net.barrage.llmao.core.model.IncomingMessageAttachment
@@ -19,7 +15,7 @@ import net.barrage.llmao.core.model.Message
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.MessageAttachmentType
 
-private val LOG = io.ktor.util.logging.KtorSimpleLogger("n.b.l.c.chat.ChatMessageProcessor")
+private val LOG = KtorSimpleLogger("n.b.l.c.chat.ChatMessageProcessor")
 
 /**
  * Responsible for converting native chat message attachments such as storage and retrieval.

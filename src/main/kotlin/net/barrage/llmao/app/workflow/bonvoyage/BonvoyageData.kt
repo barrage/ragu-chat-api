@@ -166,10 +166,7 @@ data class BonvoyageTripInsert(
 )
 
 @Serializable
-data class BonvoyageTripUpdate(val id: KUUID, val trip: BonvoyageTripUpdateProperties)
-
-@Serializable
-data class BonvoyageTripUpdateProperties(
+data class BonvoyageTripUpdate(
   val startDateTime: KOffsetDateTime? = null,
   val endDateTime: KOffsetDateTime? = null,
   val description: String? = null,

@@ -1,14 +1,9 @@
-# LLMAO Kotlin API
+# Ragu Kotlin API (Kappi)
 
 ## Table of contents
 
 - [Overview](#overview)
-    - [Rag](#rag)
-    - [Agents](#agents)
-    - [Chat messages evaluation](#chat-messages-evaluation)
 - [Authorization](#authorization)
-- [User Management](#user-management)
-    - [CSV format](#csv-format)
 - [Setup](#setup)
     - [Migrations and seeders](#migrations-and-seeders)
     - [Building and running](#building-and-running)
@@ -22,58 +17,41 @@
 
 ## Overview
 
-Kappi is an application used to create chat assistants, or `agents` for short.
-Together with [chonkit](https://git.barrage.net/llmao/chonkit), it is a fully featured application
-for creating RAG(Retrieval augmented generation) pipelines.
+Kappi is a plugin based application framework for quickly integrating with various AI models.
+It is built on top of Ktor.
 
-### Rag
+Kappi consists of two main components; 
+- Core
+  The library that provides a set of abstractions for LLM interaction and agent creation.
+- Server
+  The runtime that serves as a host for plugins and is responsible for their execution.
 
-Powerful as they are, LLM(Large language model)s are limited by the information they receive in the training data.
-Fine-tuning is one technique where one can adjust the weights and biases of the neural net of an LLM by passing
-custom data to them to make them more fit for the task in hand. The problem with fine-tuning is that these models
-are very large and have been trained on enormous data sets, so one would theoretically need a lot of fine-tuning data
-just to barely scratch the surface of an LLM's "behaviour".
+Kappi plugins are implementations of arbitrary features that are designed to run in the server runtime.
+They can range from small applets to full blown applications.
 
-By using RAG, we can provide LLMs the additional information they need to correctly respond to prompts with as
-little hallucinations as possible.
+## Workflows
 
-### Agents
+*Workflows* are the main form of interaction between a *user* and an *agent*. They are introduced to Kappi via plugins.
 
-An agent can be thought of as the combination of an LLM and its provider, its embedding model and its provider,
-and its vector collections. It also holds the context formatting configuration, which dictates how the LLM
-will be prompted.
+A workflow will usually consist of one or more message groups.
 
-An *LLM* is a neural net designed to generate text.
-An *LLM provider* is a service used for LLM inference.
-
-An *embedding model* is a neural net designed to transform text into arrays of floating point numbers or ***vectors***,
-also known as ***embeddings***.
-An *embedding provider* is a service that provides access to *embedding models*.
-
-A *vector collection* stores these vectors and associates the original content they represent with them. Every vector
-collection can only hold vectors of the same size, which is determined upon its creation.
-A *vector provider* is a services that provides access to a *vector database*.
-
-When a chat is opened, all the configuration for it is derived from the agent.
-
-Admin users can create agents, manage their configurations, their vector collections, and assign them avatars.
-
-### Chats
-
-*Chats* are the main form of interaction between a *user* and an *agent*.
-A chat consists of one or more message groups.
+## Message groups
 
 *Message groups* represent a complete interaction between a user and an
-assistant. It contains the user's message, the assistant's response, and any tool calls that were made in between.
+assistant. They **always** contains the user's message, the assistant's response,
+and any tool calls that were made in between.
 
 *Messages* are encapsulated by message groups. Each message has a `role`, indicating to the LLM how it should process
-the message. They are the smallest building blocks of *message groups*.
+it. It is guaranteed that message groups stored in the database will have a `user` message as the first one and the
+`assistant` message as the last one. Any message in a message group between these must either be an `assistant` message
+that is calling tools, or a `tool` message responding to the tool call.
 
 *Message group evaluations* are evaluations of the assistant's response. Evaluation is done on complete message groups
-in order to preserve the context of the inquiry.
+in order to preserve the context of the inquiry. They can give you insight on how well people are reacting to an agent's
+responses.
 
-*Message attachments* are one or more instances of BLOBs sent along with messages. The types of BLOBs that can be
-processed is the determined by the downstream LLM as not all LLMs support them.
+*Message attachments* are one or more instances of binary large objects (BLOB) sent along with messages.
+The types of BLOBs that can be processed is the determined by the downstream LLM as not all LLMs support them.
 
 ## Authorization
 
@@ -104,23 +82,8 @@ The following is a list of all configurable parameters for JWT authorization:
 ## Setup
 
 To set up the project run `sh setup.sh` in the root directory.
-This will set up git hooks, docker containers, and initial application and gradle properties that you will
-need to configure manually (ask your local teammate).
-Hooks will be set up to run formating and linting checks on `git push` commands,
-aborting the push if any formatting errors are found.
-
-If you work in IntelliJ IDEA, you can use the following steps to additionally set up the project:
-
-- If you don't have the `ktfmt` plugin installed, install it, and go to `Settings -> Editor -> ktfmt Settings`,
-  enabling it, and set it to `Code style: Google (internal)`, this will force Google code styling on code reformat.
-- Go to `Settings -> Editor -> Code Style -> Kotlin` and set the following:
-    - Set the `Tab Size` to 2
-    - Set the `Indent` to 2
-    - Set the `Continuation Indent` to 2
-- Setup automatic formating and linting on saving by going to `Settings -> Tools -> Actions on Save`
-  and turning on `Reformat Code` and `Optimize Imports` on any save action.
-
-This will ensure that your code is always formatted correctly, and has optimized imports.
+This will set docker containers, and initial application and gradle properties that you will
+need to configure manually.
 
 ### Migrations and seeders
 

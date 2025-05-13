@@ -117,7 +117,7 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
         workflows[session] = workflow
 
         systemSessions[session]?.emit(
-          OutgoingSystemMessage.WorkflowOpen(workflow.id()),
+          OutgoingSystemMessage.WorkflowOpen(workflow.id),
           OutgoingSystemMessage.serializer(),
         )
 
@@ -132,10 +132,10 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
         val workflow = workflows[session]
 
         // Prevent loading the same chat
-        if (workflow != null && workflow.id() == message.workflowId) {
-          LOG.debug("{} - workflow already open ({})", session.user.id, workflow.id())
+        if (workflow != null && workflow.id == message.workflowId) {
+          LOG.debug("{} - workflow already open ({})", session.user.id, workflow.id)
           systemSessions[session]?.emit(
-            OutgoingSystemMessage.WorkflowOpen(workflow.id()),
+            OutgoingSystemMessage.WorkflowOpen(workflow.id),
             OutgoingSystemMessage.serializer(),
           )
           return
@@ -157,12 +157,12 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
           OutgoingSystemMessage.serializer(),
         )
 
-        LOG.debug("{} - opened workflow {}", session.user.id, existingWorkflow.id())
+        LOG.debug("{} - opened workflow {}", session.user.id, existingWorkflow.id)
       }
       is IncomingSystemMessage.CloseWorkflow -> {
         workflows.remove(session)?.let {
           systemSessions[session]?.emit(
-            OutgoingSystemMessage.WorkflowClosed(it.id()),
+            OutgoingSystemMessage.WorkflowClosed(it.id),
             OutgoingSystemMessage.serializer(),
           )
           it.cancelStream()

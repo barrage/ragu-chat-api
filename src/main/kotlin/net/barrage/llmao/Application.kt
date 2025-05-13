@@ -56,7 +56,7 @@ fun Application.module() {
     plugins.register(TripotronPlugin())
   }
 
-  runBlocking { plugins.configureState(environment.config, state) }
+  runBlocking { plugins.initialize(environment.config, state) }
 
   val sessionManager = SessionManager(plugins, state.listener)
 
@@ -84,11 +84,6 @@ fun Application.module() {
 
   install(RequestValidation) { with(plugins) { configureRequestValidation() } }
 
-  configureErrorHandling()
-  configureCors()
-  configureOpenApi()
-
-  websocketServer(sessionManager, plugins)
   routing {
     route("/__health") { get { call.respond(HttpStatusCode.OK) } }
 
@@ -103,6 +98,12 @@ fun Application.module() {
 
     with(plugins) { configureRoutes(state) }
   }
+
+  configureErrorHandling()
+  configureCors()
+  configureOpenApi()
+
+  websocketServer(sessionManager, plugins)
 }
 
 /** Shorthand for `config.property(key).getString()` */

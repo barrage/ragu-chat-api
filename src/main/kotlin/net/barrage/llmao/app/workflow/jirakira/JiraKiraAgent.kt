@@ -5,10 +5,9 @@ import java.time.OffsetDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
+import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.InferenceProvider
-import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.workflow.Emitter
@@ -23,9 +22,9 @@ class JiraKira(
   history: ChatHistory,
   inferenceProvider: InferenceProvider,
   model: String,
-  tools: List<ToolDefinition>?,
 ) :
   WorkflowAgent(
+    id = JIRAKIRA_WORKFLOW_ID,
     user = user,
     model = model,
     inferenceProvider = inferenceProvider,
@@ -40,8 +39,6 @@ class JiraKira(
         maxTokens = null,
       ),
   ) {
-
-  override fun id(): String = JIRAKIRA_WORKFLOW_ID
 
   override fun context(): String {
     return """

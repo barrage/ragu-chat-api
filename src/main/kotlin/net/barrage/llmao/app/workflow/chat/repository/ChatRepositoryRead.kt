@@ -194,9 +194,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     chatId: KUUID,
     userId: String? = null,
     pagination: Pagination,
-  ): CountedList<MessageGroupAggregate> =
-    dslContext.getMessages(chatId, userId, pagination)
-
+  ): CountedList<MessageGroupAggregate> = dslContext.getMessages(chatId, userId, pagination)
 
   suspend fun evaluateMessageGroup(messageGroupId: KUUID, input: EvaluateMessage): Int {
     if (input.evaluation == null) {
@@ -403,6 +401,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
       .select(
         MESSAGE_GROUPS.ID,
         MESSAGE_GROUPS.PARENT_ID,
+        MESSAGE_GROUPS.PARENT_TYPE,
         MESSAGE_GROUPS.CREATED_AT,
         MESSAGES.ID,
         MESSAGES.ORDER,

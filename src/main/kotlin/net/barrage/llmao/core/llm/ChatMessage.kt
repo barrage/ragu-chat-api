@@ -7,6 +7,9 @@ import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.token.TokenUsageAmount
 import net.barrage.llmao.types.KUUID
 
+/** Top level response from the LLM whose finish reason can include a manual stop. */
+data class InferenceResponse(val finishReason: FinishReason, val messages: List<ChatMessage>)
+
 /**
  * Native chat message chunk (when streaming) used to handle potentially differing chunks from
  * downstream LLM providers.

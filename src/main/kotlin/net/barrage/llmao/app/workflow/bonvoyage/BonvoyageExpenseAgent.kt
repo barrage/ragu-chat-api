@@ -14,6 +14,7 @@ class BonvoyageExpenseAgent(
   private val trip: BonvoyageTrip,
 ) :
   WorkflowAgent(
+    id = BONVOYAGE_EXPENSE_AGENT_ID,
     user = user,
     model = model,
     inferenceProvider = inferenceProvider,
@@ -22,9 +23,6 @@ class BonvoyageExpenseAgent(
     contextEnrichment = null,
     history = null,
   ) {
-
-  override fun id(): String = BONVOYAGE_WORKFLOW_ID
-
   override fun context(): String {
     val username = user.username
     return """You are talking to $username.

@@ -1,17 +1,20 @@
 package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.core.chat.ChatHistory
-import net.barrage.llmao.core.chat.ChatMessageProcessor
+import kotlin.coroutines.cancellation.CancellationException
+import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.ChatCompletionAgentParameters
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageChunk
+import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.InferenceProvider
+import net.barrage.llmao.core.llm.InferenceResponse
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.Tools
@@ -26,6 +29,7 @@ private const val DEFAULT_MAX_TOOL_ATTEMPTS: Int = 5
 typealias StreamHandler = suspend (ChatMessageChunk) -> Unit
 
 abstract class WorkflowAgent(
+  val id: String,
   /**
    * User entitlements are used to check application permissions.
    *
@@ -68,13 +72,135 @@ abstract class WorkflowAgent(
 
   protected open val log = KtorSimpleLogger("n.b.l.c.workflow.WorkflowAgent")
 
-  /** Used to identify the agent. */
-  abstract fun id(): String
-
   /** The system message. Not included in histories, always sent to the LLM. */
   abstract fun context(): String
 
   open fun errorMessage(): String = "An error occurred. Please try again later."
+
+  /**
+   * Cancel-safe version of [completion] that guarantees a `user` and `assistant` message pair is
+   * returned. If the response is incomplete, everything is discarded.
+   *
+   * See [completion] for more details.
+   */
+  suspend fun collectCompletion(
+    userMessage: ChatMessage,
+    tools: Tools? = null,
+    emitter: Emitter,
+  ): InferenceResponse {
+    var finishReason = FinishReason.Stop
+    val messageBuffer = mutableListOf<ChatMessage>()
+
+    try {
+      completion(
+        userMessage = userMessage,
+        messageBuffer = messageBuffer,
+        params = ChatCompletionAgentParameters(tools = tools),
+        emitter = emitter,
+      )
+    } catch (_: kotlinx.coroutines.CancellationException) {
+      finishReason = FinishReason.ManualStop
+    } catch (e: Throwable) {
+      handleError(e)
+    } finally {
+      val lastMessage = messageBuffer.lastOrNull()
+      when {
+        lastMessage?.role == "tool" -> {
+          // First completion and some tools were called, but the actual answer response was not
+          // sent
+          // Discard everything
+          messageBuffer.clear()
+        }
+        lastMessage?.role == "assistant" && lastMessage.content == null -> {
+          // The captured response is a tool call
+          // Discard everything
+          messageBuffer.clear()
+        }
+      }
+    }
+
+    return InferenceResponse(finishReason, messageBuffer)
+  }
+
+  /**
+   * Cancel-safe version of [stream] that guarantees a `user` and `assistant` message pair is
+   * returned. Forwards each stream chunk to the emitter.
+   *
+   * See [stream] for more details.
+   */
+  suspend fun collectAndForwardStream(
+    userMessage: ChatMessage,
+    tools: Tools? = null,
+    emitter: Emitter,
+  ): InferenceResponse {
+    var finishReason = FinishReason.Stop
+
+    val messageBuffer = mutableListOf<ChatMessage>()
+    val responseBuffer = StringBuilder()
+
+    val forward: suspend (ChatMessageChunk) -> Unit = { chunk ->
+      chunk.content?.let { emitter.emit(StreamChunk(chunk.content)) }
+    }
+
+    try {
+      stream(
+        userMessage = userMessage,
+        messageBuffer = messageBuffer,
+        out = responseBuffer,
+        params = ChatCompletionAgentParameters(tools = tools),
+        emitter = emitter,
+        streamHandler = forward,
+      )
+    } catch (_: CancellationException) {
+      // If the stream is cancelled from outside, set to manual stop
+      finishReason = FinishReason.ManualStop
+    } catch (e: Throwable) {
+      handleError(e, emitter)
+    } finally {
+      // Make sure the last message in the buffer is the assistant's.
+      // If the stream is cancelled at any point before the last assistant message started
+      // streaming all messages in the buffer are discarded.
+      val lastMessage = messageBuffer.lastOrNull()
+
+      when {
+        lastMessage == null -> {
+          if (responseBuffer.isNotBlank()) {
+            // Completion was cancelled before it could finish
+            messageBuffer.add(
+              ChatMessage.assistant(
+                content = responseBuffer.toString(),
+                finishReason = finishReason,
+              )
+            )
+          }
+        }
+        lastMessage.role == "tool" && responseBuffer.isBlank() -> {
+          // First stream and some tools were called, but the actual answer stream did not start
+          // Discard everything
+          messageBuffer.clear()
+        }
+        lastMessage.role == "tool" && responseBuffer.isNotBlank() -> {
+          // Completion was cancelled before it could finish
+          messageBuffer.add(
+            ChatMessage.assistant(content = responseBuffer.toString(), finishReason = finishReason)
+          )
+        }
+        lastMessage.role == "assistant" && lastMessage.content == null -> {
+          // The captured response is a tool call
+          // Discard everything
+          messageBuffer.clear()
+        }
+        lastMessage.role == "assistant" -> {
+          // Completion was cancelled at a point where the LLM stream completed
+          // We are certain the response is cleared, since adding the message
+          // and clearing the buffer is done in a blocking manner
+          assert(responseBuffer.isBlank())
+        }
+      }
+    }
+
+    return InferenceResponse(finishReason, messageBuffer)
+  }
 
   /**
    * Recursively calls the chat completion stream until no tool calls or tool results are returned.
@@ -97,6 +223,9 @@ abstract class WorkflowAgent(
    *   message in the buffer or the assistant's final response never begun.
    * @param streamHandler Callback that executes on each chunk received. Used for streaming
    *   responses.
+   * @param params Additional parameters for tools and response formats.
+   * @param emitter Emitter for realtime events. In the case of this method, tool calls and results
+   *   will be forwarded. If you do not need to stream, a better option is to use [completion].
    */
   suspend fun stream(
     userMessage: ChatMessage,
@@ -104,7 +233,7 @@ abstract class WorkflowAgent(
     out: StringBuilder,
     streamHandler: StreamHandler,
     params: ChatCompletionAgentParameters? = null,
-    emitter: Emitter? = null,
+    emitter: Emitter,
   ) = streamInner(userMessage, messageBuffer, out, streamHandler, params, emitter, 0)
 
   /**
@@ -118,7 +247,7 @@ abstract class WorkflowAgent(
     out: StringBuilder,
     streamHandler: StreamHandler,
     params: ChatCompletionAgentParameters? = null,
-    emitter: Emitter? = null,
+    emitter: Emitter,
     attempt: Int = 0,
   ) {
     // Perform RAG only on the first attempt and swap the initial user message with an enriched one.
@@ -135,7 +264,7 @@ abstract class WorkflowAgent(
         userMessage.copy(content = userMessage.content!!.copyWithText(content))
       } else userMessage
 
-    log.debug("{} - starting stream (attempt: {})", id(), attempt + 1)
+    log.debug("{} - starting stream (attempt: {})", id, attempt + 1)
 
     val history = history ?: emptyList()
     val llmInput =
@@ -209,6 +338,7 @@ abstract class WorkflowAgent(
       attempt = attempt + 1,
       streamHandler = streamHandler,
       params = params,
+      emitter = emitter,
     )
   }
 
@@ -317,7 +447,7 @@ abstract class WorkflowAgent(
       assert(messageBuffer.isEmpty())
     }
 
-    log.debug("{} - starting completion (attempt: {})", id(), attempt + 1)
+    log.debug("{} - starting completion (attempt: {})", id, attempt + 1)
 
     val history = history ?: emptyList()
     val llmInput = listOf(ChatMessage.system(context())) + history + userMessage + messageBuffer
@@ -356,7 +486,7 @@ abstract class WorkflowAgent(
         attempt = attempt + 1,
       )
     } else if (message.content == null) {
-      log.warn("{} - assistant message has no content and no tools have been called", id())
+      log.warn("{} - assistant message has no content and no tools have been called", id)
     }
   }
 
@@ -382,6 +512,24 @@ abstract class WorkflowAgent(
         val result = "error: ${e.message}"
         emitter?.emit(ToolEvent.ToolResult(result), ToolEvent.serializer())
         messageBuffer.add(ChatMessage.toolResult(result, toolCall.id))
+      }
+    }
+  }
+
+  /**
+   * An API error will be emitted if it is an application error.
+   *
+   * Internal otherwise.
+   */
+  private suspend fun handleError(e: Throwable, emitter: Emitter? = null) {
+    when (e) {
+      is AppError -> {
+        log.error("{} - error in stream", id, e)
+        emitter?.emit(e.withDisplayMessage(errorMessage()))
+      }
+      else -> {
+        log.error("{} - unexpected error in stream", id, e)
+        emitter?.emit(AppError.internal().withDisplayMessage(errorMessage()))
       }
     }
   }

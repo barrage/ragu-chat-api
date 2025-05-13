@@ -1,9 +1,9 @@
 package net.barrage.llmao.app.workflow.chat
 
 import net.barrage.llmao.app.workflow.chat.model.AgentInstructions
-import net.barrage.llmao.core.chat.ChatHistory
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatCompletionParameters
+import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
@@ -45,6 +45,7 @@ class ChatAgent(
   contextEnrichment: List<ContextEnrichment>? = null,
 ) :
   WorkflowAgent(
+    id = agentId.toString(),
     user = user,
     model = model,
     inferenceProvider = inferenceProvider,
@@ -57,8 +58,6 @@ class ChatAgent(
   override fun errorMessage(): String {
     return instructions.errorMessage()
   }
-
-  override fun id(): String = agentId.toString()
 
   override fun context(): String = context
 

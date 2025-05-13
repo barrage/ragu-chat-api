@@ -56,7 +56,7 @@ class ChatPlugin : Plugin {
 
   override fun id(): String = "CHAT"
 
-  override suspend fun configureState(config: ApplicationConfig, state: ApplicationState) {
+  override suspend fun initialize(config: ApplicationConfig, state: ApplicationState) {
     val chatRead = ChatRepositoryRead(state.database, CHAT_WORKFLOW_ID)
     val agentRepository = AgentRepository(state.database)
 

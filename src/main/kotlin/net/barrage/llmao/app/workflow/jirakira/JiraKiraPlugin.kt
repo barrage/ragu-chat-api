@@ -14,7 +14,7 @@ class JiraKiraPlugin : Plugin {
 
   override fun id(): String = JIRAKIRA_WORKFLOW_ID
 
-  override suspend fun configureState(config: ApplicationConfig, state: ApplicationState) {
+  override suspend fun initialize(config: ApplicationConfig, state: ApplicationState) {
     repository = JiraKiraRepository(state.database)
     JiraKiraWorkflowFactory.init(config, state)
     WorkflowFactoryManager.register(JiraKiraWorkflowFactory)
