@@ -65,8 +65,6 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     val tempoWorklogAttributes = jiraApi.listWorklogAttributes()
     val worklogAttributes = jiraKiraRepository.listAllWorklogAttributes()
 
-    val tools = loadTools(tempoWorklogAttributes, worklogAttributes)
-
     val state =
       JiraKiraToolExecutor(
         jiraUser = jiraUser,
@@ -75,29 +73,17 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
         api = jiraApi,
       )
 
-    val builder = ToolsBuilder()
-    for (tool in tools) {
-      val fn =
-        when (tool.function.name) {
-          TOOL_LIST_USER_OPEN_ISSUES -> state::listUserOpenIssues
-          TOOL_GET_ISSUE_ID -> state::getIssueId
-          TOOL_GET_ISSUE_WORKLOG -> state::getIssueWorklog
-          TOOL_CREATE_WORKLOG_ENTRY -> state::createWorklogEntry
-          TOOL_UPDATE_WORKLOG_ENTRY -> state::updateWorklogEntry
-          else -> throw AppError.internal("Unknown tool: ${tool.function.name}")
-        }
-      builder.addTool(definition = tool, handler = fn)
-    }
-    val toolchain = builder.build()
+    val tools = state.tools(tempoWorklogAttributes, worklogAttributes)
 
     val tokenizer = Encoder.tokenizer(jiraKiraModel)
 
-    val tokenTracker = TokenUsageTrackerFactory.newTracker(user, JIRAKIRA_WORKFLOW_ID, workflowId)
+    val tokenTracker =
+      TokenUsageTrackerFactory.newTracker(user.id, user.username, JIRAKIRA_WORKFLOW_ID, workflowId)
 
     return JiraKiraWorkflow(
       id = workflowId,
       user = user,
-      tools = toolchain,
+      tools = tools,
       emitter = emitter,
       repository = jiraKiraRepository,
       agent =
@@ -105,7 +91,6 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
           inferenceProvider = providers.llm[jiraKiraLlmProvider],
           tokenTracker = tokenTracker,
           model = jiraKiraModel,
-          user = user,
           history =
             tokenizer?.let {
               TokenBasedHistory(
@@ -114,100 +99,12 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
                 maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
               )
             } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
-          jiraUser = jiraUser,
         ),
+      jiraUser = jiraUser,
     )
   }
 
   override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
     TODO("Not yet implemented")
-  }
-
-  /**
-   * Load tool JSON schema definitions based on custom worklog attributes.
-   *
-   * This method will load all custom worklog attributes from the Jira API and include them in the
-   * tool definitions.
-   *
-   * All attributes are obtained from the Jira API and are matched against the ones defined in the
-   * database. Only those that are present in the database will be included in the tool definitions.
-   */
-  private fun loadTools(
-    attributes: List<TempoWorkAttribute>,
-
-    /**
-     * A set of attributes that are allowed/required to be used in worklog entries. This is
-     * predefined in jira and will be obtained via the Jira API when instantiating JiraKira. These
-     * attributes will be included in the JSON schema for the [CreateWorklogEntrySchema] tool.
-     */
-    worklogAttributes: List<WorklogAttribute>,
-  ): List<ToolDefinition> {
-
-    // Initialize the schema for the worklog entry tool
-    // based on custom attributes from the repository
-    // and the enumeration of their values obtained from the API
-
-    val propertiesCreateWorklog =
-      CreateWorklogEntrySchema.function.parameters.properties.toMutableMap()
-    val propertiesUpdateWorklog =
-      UpdateWorklogEntrySchema.function.parameters.properties.toMutableMap()
-
-    val requiredAttributes = worklogAttributes.filter { it.required }.map { it.key }
-
-    for (attribute in attributes) {
-      val worklogAttribute = worklogAttributes.find { it.key == attribute.key }
-
-      if (worklogAttribute == null) {
-        LOG.debug("Skipping worklog attribute '{}'", attribute.name)
-        continue
-      }
-
-      if (attribute.staticListValues == null) {
-        LOG.warn(
-          "Worklog attribute '{}' ({}) has no static list values, only static list attributes are supported",
-          attribute.name,
-          attribute.key,
-        )
-        continue
-      }
-
-      val enumerations = attribute.staticListValues.map { it.value }
-      val property =
-        ToolPropertyDefinition(
-          type = "string",
-          description = worklogAttribute.description,
-          enum = enumerations,
-        )
-
-      LOG.debug("Adding worklog attribute to tool definition: {}", attribute.key)
-      propertiesCreateWorklog[attribute.key] = property
-      propertiesUpdateWorklog[attribute.key] = property
-    }
-
-    return listOf(
-      ListUserOpenIssuesSchema,
-      GetIssueIdSchema,
-      GetIssueWorklogSchema,
-      UpdateWorklogEntrySchema.copy(
-        function =
-          UpdateWorklogEntrySchema.function.copy(
-            parameters =
-              UpdateWorklogEntrySchema.function.parameters.copy(
-                properties = propertiesUpdateWorklog
-              )
-          )
-      ),
-      CreateWorklogEntrySchema.copy(
-        function =
-          CreateWorklogEntrySchema.function.copy(
-            parameters =
-              CreateWorklogEntrySchema.function.parameters.copy(
-                properties = propertiesCreateWorklog,
-                required =
-                  CreateWorklogEntrySchema.function.parameters.required + requiredAttributes,
-              )
-          )
-      ),
-    )
   }
 }

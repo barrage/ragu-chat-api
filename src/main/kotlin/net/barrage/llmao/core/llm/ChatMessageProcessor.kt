@@ -15,7 +15,7 @@ import net.barrage.llmao.core.model.Message
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.MessageAttachmentType
 
-private val LOG = KtorSimpleLogger("n.b.l.c.chat.ChatMessageProcessor")
+private val LOG = KtorSimpleLogger("n.b.l.c.llm.ChatMessageProcessor")
 
 /**
  * Responsible for converting native chat message attachments such as storage and retrieval.

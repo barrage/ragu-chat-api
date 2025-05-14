@@ -121,25 +121,22 @@ object ChatWorkflowFactory : WorkflowFactory {
 
     val settings = settings.getAllWithDefaults()
 
-    val tokenTracker = TokenUsageTrackerFactory.newTracker(user, CHAT_WORKFLOW_ID, workflowId)
+    val tokenTracker =
+      TokenUsageTrackerFactory.newTracker(user.id, user.username, CHAT_WORKFLOW_ID, workflowId)
 
     val contextEnrichment =
       ContextEnrichmentFactory.collectionEnrichment(
-        user = user,
+        userEntitlements = user.entitlements,
         tokenTracker = tokenTracker,
         collections = agent.collections,
       )
 
     return ChatAgent(
       agentId = agent.agent.id,
-      configurationId = agent.configuration.id,
+      configuration = agent.configuration,
       name = agent.agent.name,
-      instructions = agent.configuration.agentInstructions,
       titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-      user = user,
-      model = agent.configuration.model,
       inferenceProvider = providers.llm[agent.configuration.llmProvider],
-      context = agent.configuration.context,
       completionParameters =
         ChatCompletionBaseParameters(
           model = agent.configuration.model,

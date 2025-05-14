@@ -252,7 +252,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .toList()
   }
 
-  suspend fun getTravelRequest(id: KUUID): BonvoyageTravelRequest {
+  suspend fun getTravelRequest(id: KUUID, userId: String? = null): BonvoyageTravelRequest {
     return dslContext
       .select(
         BONVOYAGE_TRAVEL_REQUESTS.ID,
@@ -275,10 +275,14 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
         BONVOYAGE_TRAVEL_REQUESTS.CREATED_AT,
       )
       .from(BONVOYAGE_TRAVEL_REQUESTS)
-      .where(BONVOYAGE_TRAVEL_REQUESTS.ID.eq(id))
+      .where(
+        BONVOYAGE_TRAVEL_REQUESTS.ID.eq(id)
+          .and(userId?.let { BONVOYAGE_TRAVEL_REQUESTS.USER_ID.eq(userId) } ?: DSL.noCondition())
+      )
       .awaitFirstOrNull()
       ?.into(BONVOYAGE_TRAVEL_REQUESTS)
-      ?.toTravelRequest() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Request not found")
+      ?.toTravelRequest()
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Travel request not found")
   }
 
   suspend fun updateTravelRequestStatus(
@@ -296,7 +300,8 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .returning()
       .awaitFirstOrNull()
       ?.into(BONVOYAGE_TRAVEL_REQUESTS)
-      ?.toTravelRequest() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Request not found")
+      ?.toTravelRequest()
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Travel request not found")
   }
 
   suspend fun updateTravelRequestWorkflow(id: KUUID, workflowId: KUUID) {
@@ -420,6 +425,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
         .select(
           BONVOYAGE_TRAVEL_EXPENSES.ID,
           BONVOYAGE_TRAVEL_EXPENSES.WORKFLOW_ID,
+          BONVOYAGE_TRAVEL_EXPENSES.MESSAGE_GROUP_ID,
           BONVOYAGE_TRAVEL_EXPENSES.AMOUNT,
           BONVOYAGE_TRAVEL_EXPENSES.CURRENCY,
           BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PATH,
@@ -467,14 +473,12 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .toList()
   }
 
-  suspend fun insertTravelExpense(tripId: KUUID, expense: BonvoyageTravelExpenseInsert) =
-    dslContext.insertTravelExpense(tripId, expense)
-
   suspend fun listTripExpenses(tripId: KUUID): List<BonvoyageTravelExpense> {
     return dslContext
       .select(
         BONVOYAGE_TRAVEL_EXPENSES.ID,
         BONVOYAGE_TRAVEL_EXPENSES.WORKFLOW_ID,
+        BONVOYAGE_TRAVEL_EXPENSES.MESSAGE_GROUP_ID,
         BONVOYAGE_TRAVEL_EXPENSES.AMOUNT,
         BONVOYAGE_TRAVEL_EXPENSES.CURRENCY,
         BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PATH,
@@ -495,12 +499,10 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
     workflowId: KUUID,
     messages: List<MessageInsert>,
     expense: BonvoyageTravelExpenseInsert,
-  ): Pair<KUUID, BonvoyageTravelExpense> =
+  ): BonvoyageTravelExpense =
     dslContext.transactionCoroutine { ctx ->
-      Pair(
-        ctx.dsl().insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages),
-        ctx.dsl().insertTravelExpense(workflowId, expense),
-      )
+      val messageGroupId = ctx.dsl().insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages)
+      ctx.dsl().insertTravelExpense(workflowId, messageGroupId, expense)
     }
 
   suspend fun updateExpense(
@@ -523,10 +525,12 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
 
 private suspend fun DSLContext.insertTravelExpense(
   workflowId: KUUID,
+  messageGroupId: KUUID,
   expense: BonvoyageTravelExpenseInsert,
 ): BonvoyageTravelExpense {
   return insertInto(BONVOYAGE_TRAVEL_EXPENSES)
     .set(BONVOYAGE_TRAVEL_EXPENSES.WORKFLOW_ID, workflowId)
+    .set(BONVOYAGE_TRAVEL_EXPENSES.MESSAGE_GROUP_ID, messageGroupId)
     .set(BONVOYAGE_TRAVEL_EXPENSES.AMOUNT, expense.amount)
     .set(BONVOYAGE_TRAVEL_EXPENSES.CURRENCY, expense.currency)
     .set(BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PATH, expense.imagePath)

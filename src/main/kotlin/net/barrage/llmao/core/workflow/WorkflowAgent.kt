@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.workflow
 
+import com.aallam.openai.api.chat.systemMessage
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlin.coroutines.cancellation.CancellationException
 import net.barrage.llmao.core.AppError
@@ -20,7 +21,6 @@ import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.llm.Tools
 import net.barrage.llmao.core.llm.collectToolCalls
 import net.barrage.llmao.core.model.IncomingMessageAttachment
-import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
 
@@ -29,20 +29,6 @@ private const val DEFAULT_MAX_TOOL_ATTEMPTS: Int = 5
 typealias StreamHandler = suspend (ChatMessageChunk) -> Unit
 
 abstract class WorkflowAgent(
-  val id: String,
-  /**
-   * User entitlements are used to check application permissions.
-   *
-   * In cases of RAG when the `groups` properties in collections is present, they will be checked to
-   * see if the agent can access that collection.
-   *
-   * If the user is in a group from the groups property, the agent can access that collection.
-   */
-  val user: User,
-
-  /** The LLM. */
-  val model: String,
-
   /** LLM provider. */
   val inferenceProvider: InferenceProvider,
 
@@ -69,11 +55,7 @@ abstract class WorkflowAgent(
    */
   protected val contextEnrichment: List<ContextEnrichment>?,
 ) {
-
   protected open val log = KtorSimpleLogger("n.b.l.c.workflow.WorkflowAgent")
-
-  /** The system message. Not included in histories, always sent to the LLM. */
-  abstract fun context(): String
 
   open fun errorMessage(): String = "An error occurred. Please try again later."
 
@@ -84,6 +66,7 @@ abstract class WorkflowAgent(
    * See [completion] for more details.
    */
   suspend fun collectCompletion(
+    systemMessage: String,
     userMessage: ChatMessage,
     tools: Tools? = null,
     emitter: Emitter,
@@ -93,12 +76,13 @@ abstract class WorkflowAgent(
 
     try {
       completion(
+        systemMessage = systemMessage,
         userMessage = userMessage,
         messageBuffer = messageBuffer,
         params = ChatCompletionAgentParameters(tools = tools),
         emitter = emitter,
       )
-    } catch (_: kotlinx.coroutines.CancellationException) {
+    } catch (_: CancellationException) {
       finishReason = FinishReason.ManualStop
     } catch (e: Throwable) {
       handleError(e)
@@ -126,9 +110,12 @@ abstract class WorkflowAgent(
    * Cancel-safe version of [stream] that guarantees a `user` and `assistant` message pair is
    * returned. Forwards each stream chunk to the emitter.
    *
+   * The user message is not included in the returned list.
+   *
    * See [stream] for more details.
    */
   suspend fun collectAndForwardStream(
+    systemMessage: String,
     userMessage: ChatMessage,
     tools: Tools? = null,
     emitter: Emitter,
@@ -144,6 +131,7 @@ abstract class WorkflowAgent(
 
     try {
       stream(
+        systemMessage = systemMessage,
         userMessage = userMessage,
         messageBuffer = messageBuffer,
         out = responseBuffer,
@@ -213,6 +201,7 @@ abstract class WorkflowAgent(
    *
    * The final output of the LLM will be captured in `out`.
    *
+   * @param systemMessage The system message. Not included in histories, always sent to the LLM.
    * @param userMessage Immutable reference to the original user message.
    * @param messageBuffer A buffer that keeps track of new messages that are not yet persisted. Gets
    *   populated with all the messages that occurred during inference including the final assistant
@@ -228,13 +217,14 @@ abstract class WorkflowAgent(
    *   will be forwarded. If you do not need to stream, a better option is to use [completion].
    */
   suspend fun stream(
+    systemMessage: String,
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
     streamHandler: StreamHandler,
     params: ChatCompletionAgentParameters? = null,
     emitter: Emitter,
-  ) = streamInner(userMessage, messageBuffer, out, streamHandler, params, emitter, 0)
+  ) = streamInner(systemMessage, userMessage, messageBuffer, out, streamHandler, params, emitter, 0)
 
   /**
    * See [stream].
@@ -242,6 +232,7 @@ abstract class WorkflowAgent(
    * @param attempt Current attempt. Used to prevent infinite loops.
    */
   private suspend fun streamInner(
+    systemMessage: String,
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     out: StringBuilder,
@@ -264,11 +255,11 @@ abstract class WorkflowAgent(
         userMessage.copy(content = userMessage.content!!.copyWithText(content))
       } else userMessage
 
-    log.debug("{} - starting stream (attempt: {})", id, attempt + 1)
+    log.debug("Starting stream (attempt: {})", attempt + 1)
 
     val history = history ?: emptyList()
     val llmInput =
-      listOf<ChatMessage>(ChatMessage.system(context())) + history + userMessage + messageBuffer
+      listOf<ChatMessage>(ChatMessage.system(systemMessage)) + history + userMessage + messageBuffer
 
     val llmStream =
       inferenceProvider.completionStream(
@@ -298,7 +289,7 @@ abstract class WorkflowAgent(
         tokenTracker.store(
           amount = tokenUsage,
           usageType = TokenUsageType.COMPLETION,
-          model = model,
+          model = completionParameters.model,
           provider = inferenceProvider.id(),
         )
       }
@@ -332,6 +323,7 @@ abstract class WorkflowAgent(
     handleToolCalls(toolCalls.values.toList(), params!!.tools!!, messageBuffer, emitter)
 
     streamInner(
+      systemMessage = systemMessage,
       userMessage = userMessage,
       messageBuffer = messageBuffer,
       out = out,
@@ -360,12 +352,13 @@ abstract class WorkflowAgent(
    *   will be captured in between.
    */
   suspend fun completion(
-    text: String,
+    systemMessage: String,
+    userMessage: String,
     attachments: List<IncomingMessageAttachment>? = null,
     params: ChatCompletionAgentParameters? = null,
     emitter: Emitter? = null,
   ): List<ChatMessage> {
-    var text = text
+    var text = userMessage
     contextEnrichment?.let {
       for (enrichment in it) {
         text = enrichment.enrich(text)
@@ -378,6 +371,7 @@ abstract class WorkflowAgent(
     val messageBuffer = mutableListOf<ChatMessage>()
 
     completionInner(
+      systemMessage = systemMessage,
       userMessage = ChatMessage.user(content),
       messageBuffer = messageBuffer,
       params = params,
@@ -407,6 +401,7 @@ abstract class WorkflowAgent(
    *   will be forwarded.
    */
   suspend fun completion(
+    systemMessage: String,
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     params: ChatCompletionAgentParameters? = null,
@@ -420,9 +415,14 @@ abstract class WorkflowAgent(
       }
     }
 
-    val message = userMessage.copy(content = userMessage.content!!.copyWithText(text))
-
-    completionInner(message, messageBuffer, params, emitter, 0)
+    completionInner(
+      systemMessage,
+      userMessage.copy(content = userMessage.content!!.copyWithText(text)),
+      messageBuffer,
+      params,
+      emitter,
+      0,
+    )
   }
 
   /**
@@ -437,6 +437,7 @@ abstract class WorkflowAgent(
    *   assistant message.
    */
   private suspend fun completionInner(
+    systemMessage: String,
     userMessage: ChatMessage,
     messageBuffer: MutableList<ChatMessage>,
     params: ChatCompletionAgentParameters? = null,
@@ -447,10 +448,10 @@ abstract class WorkflowAgent(
       assert(messageBuffer.isEmpty())
     }
 
-    log.debug("{} - starting completion (attempt: {})", id, attempt + 1)
+    log.debug("Starting completion (attempt: {})", attempt + 1)
 
     val history = history ?: emptyList()
-    val llmInput = listOf(ChatMessage.system(context())) + history + userMessage + messageBuffer
+    val llmInput = listOf(ChatMessage.system(systemMessage)) + history + userMessage + messageBuffer
 
     val completion =
       inferenceProvider.chatCompletion(
@@ -466,7 +467,7 @@ abstract class WorkflowAgent(
       tokenTracker.store(
         amount = tokenUsage,
         usageType = TokenUsageType.COMPLETION,
-        model = model,
+        model = completionParameters.model,
         provider = inferenceProvider.id(),
       )
     }
@@ -479,6 +480,7 @@ abstract class WorkflowAgent(
       handleToolCalls(message.toolCalls, params!!.tools!!, messageBuffer, emitter)
 
       completionInner(
+        systemMessage = systemMessage,
         userMessage = userMessage,
         messageBuffer = messageBuffer,
         params = params,
@@ -486,7 +488,7 @@ abstract class WorkflowAgent(
         attempt = attempt + 1,
       )
     } else if (message.content == null) {
-      log.warn("{} - assistant message has no content and no tools have been called", id)
+      log.warn("Assistant message has no content and no tools have been called")
     }
   }
 
@@ -524,11 +526,11 @@ abstract class WorkflowAgent(
   private suspend fun handleError(e: Throwable, emitter: Emitter? = null) {
     when (e) {
       is AppError -> {
-        log.error("{} - error in stream", id, e)
+        log.error("Error in stream", e)
         emitter?.emit(e.withDisplayMessage(errorMessage()))
       }
       else -> {
-        log.error("{} - unexpected error in stream", id, e)
+        log.error("Unexpected error in stream", e)
         emitter?.emit(AppError.internal().withDisplayMessage(errorMessage()))
       }
     }

@@ -36,7 +36,7 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
   }
 
   override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
-    val trip = api.getTrip(workflowId, user.id)
+    api.getTrip(workflowId, user.id)
     val settings = settings.getAllWithDefaults()
     val bonvoyageLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
     val bonvoyageModel = settings[SettingKey.BONVOYAGE_MODEL]
@@ -44,15 +44,30 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
     return BonvoyageWorkflow(
       id = workflowId,
       emitter = emitter,
-      bonvoyageExpenseAgent =
+      expenseAgent =
         BonvoyageExpenseAgent(
-          user = user,
           tokenTracker =
-            TokenUsageTrackerFactory.newTracker(user, BONVOYAGE_WORKFLOW_ID, workflowId),
+            TokenUsageTrackerFactory.newTracker(
+              user.id,
+              user.username,
+              BONVOYAGE_WORKFLOW_ID,
+              workflowId,
+            ),
           model = bonvoyageModel,
           inferenceProvider = bonvoyageLlmProvider,
-          trip = trip,
         ),
+      chatAgent = BonvoyageChatAgent(
+          tokenTracker =
+          TokenUsageTrackerFactory.newTracker(
+              user.id,
+              user.username,
+              BONVOYAGE_WORKFLOW_ID,
+              workflowId,
+          ),
+          model = bonvoyageModel,
+          inferenceProvider = bonvoyageLlmProvider,
+          history = TODO(),
+      ),
       user = user,
       api = api,
     )

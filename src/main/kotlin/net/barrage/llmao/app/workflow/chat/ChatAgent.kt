@@ -1,6 +1,6 @@
 package net.barrage.llmao.app.workflow.chat
 
-import net.barrage.llmao.app.workflow.chat.model.AgentInstructions
+import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatCompletionParameters
 import net.barrage.llmao.core.llm.ChatHistory
@@ -8,7 +8,6 @@ import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichment
 import net.barrage.llmao.core.llm.InferenceProvider
-import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.core.workflow.WorkflowAgent
@@ -25,19 +24,13 @@ class ChatAgent(
   val agentId: KUUID,
 
   /** The agent configuration ID. */
-  val configurationId: KUUID,
+  val configuration: AgentConfiguration,
 
   /** Agent name. */
   val name: String,
 
-  /** Instructions for specific chat related tasks. */
-  val instructions: AgentInstructions,
-
   /** Obtained from the global settings. */
   private val titleMaxTokens: Int,
-  private val context: String,
-  user: User,
-  model: String,
   inferenceProvider: InferenceProvider,
   completionParameters: ChatCompletionBaseParameters,
   tokenTracker: TokenUsageTracker,
@@ -45,9 +38,6 @@ class ChatAgent(
   contextEnrichment: List<ContextEnrichment>? = null,
 ) :
   WorkflowAgent(
-    id = agentId.toString(),
-    user = user,
-    model = model,
     inferenceProvider = inferenceProvider,
     completionParameters = completionParameters,
     tokenTracker = tokenTracker,
@@ -55,11 +45,7 @@ class ChatAgent(
     contextEnrichment = contextEnrichment,
   ) {
 
-  override fun errorMessage(): String {
-    return instructions.errorMessage()
-  }
-
-  override fun context(): String = context
+  override fun errorMessage(): String = configuration.agentInstructions.errorMessage()
 
   /**
    * Prompt the LLM using this agent's title instruction as the system message, or the default one
@@ -69,7 +55,7 @@ class ChatAgent(
    * The response will largely depend on the system message set by the instruction.
    */
   suspend fun createTitle(prompt: String, response: String): String {
-    val titleInstruction = instructions.titleInstruction()
+    val titleInstruction = configuration.agentInstructions.titleInstruction()
     val userMessage = "USER: $prompt\nASSISTANT: $response"
     val messages = listOf(ChatMessage.system(titleInstruction), ChatMessage.user(userMessage))
 
@@ -83,7 +69,7 @@ class ChatAgent(
       tokenTracker.store(
         amount = tokenUsage,
         usageType = TokenUsageType.COMPLETION_TITLE,
-        model = model,
+        model = completionParameters.model,
         provider = inferenceProvider.id(),
       )
     }

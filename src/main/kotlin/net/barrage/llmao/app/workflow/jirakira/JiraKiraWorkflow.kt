@@ -1,5 +1,6 @@
 package net.barrage.llmao.app.workflow.jirakira
 
+import java.time.OffsetDateTime
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageProcessor
@@ -13,17 +14,14 @@ import net.barrage.llmao.core.workflow.WorkflowRealTime
 import net.barrage.llmao.types.KUUID
 
 class JiraKiraWorkflow(
-  id: KUUID,
+  override val id: KUUID,
   private val user: User,
   private val emitter: Emitter,
   private val tools: Tools,
   private val agent: JiraKira,
   private val repository: JiraKiraRepository,
-) :
-  WorkflowRealTime<DefaultWorkflowInput>(
-    id = id,
-    inputSerializer = DefaultWorkflowInput.serializer(),
-  ) {
+  private val jiraUser: JiraUser,
+) : WorkflowRealTime<DefaultWorkflowInput>(inputSerializer = DefaultWorkflowInput.serializer()) {
   private var state: JiraKiraWorkflowState = JiraKiraWorkflowState.New
 
   override suspend fun handleInput(input: DefaultWorkflowInput) {
@@ -31,9 +29,18 @@ class JiraKiraWorkflow(
       input.attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
         ?: ContentSingle(input.text!!)
 
+    val context =
+      """
+        |$JIRA_KIRA_CONTEXT
+        |The JIRA user you are talking to is called ${jiraUser.displayName} and their email is ${jiraUser.email}.
+        |The user is logged in to Jira as ${jiraUser.name} and their Jira user key is ${jiraUser.key}.
+        |The time zone of the user is ${jiraUser.timeZone}. The current time is ${OffsetDateTime.now()}.
+        """
+        .trimMargin()
+
     val userMessage = ChatMessage.user(content)
 
-    var (finishReason, messages) = agent.collectCompletion(userMessage, tools, emitter)
+    var (finishReason, messages) = agent.collectCompletion(context, userMessage, tools, emitter)
 
     if (messages.isEmpty()) {
       emitter.emit(StreamComplete(chatId = id, reason = finishReason))

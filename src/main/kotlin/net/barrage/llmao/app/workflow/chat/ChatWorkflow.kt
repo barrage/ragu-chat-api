@@ -16,7 +16,7 @@ import net.barrage.llmao.types.KUUID
 
 /** Implementation of a [WorkflowRealTime] for user-created agents. */
 class ChatWorkflow(
-  id: KUUID,
+  override val id: KUUID,
   private val user: User,
   private val emitter: Emitter,
   private val tools: Tools?,
@@ -25,11 +25,7 @@ class ChatWorkflow(
 
   /** The current state of this workflow. */
   private var state: ChatWorkflowState,
-) :
-  WorkflowRealTime<DefaultWorkflowInput>(
-    id = id,
-    inputSerializer = DefaultWorkflowInput.serializer(),
-  ) {
+) : WorkflowRealTime<DefaultWorkflowInput>(inputSerializer = DefaultWorkflowInput.serializer()) {
   fun agentId(): KUUID {
     return agent.agentId
   }
@@ -41,7 +37,8 @@ class ChatWorkflow(
 
     val userMessage = ChatMessage.user(content)
 
-    var (finishReason, messages) = agent.collectAndForwardStream(userMessage, tools, emitter)
+    var (finishReason, messages) =
+      agent.collectAndForwardStream(agent.configuration.context, userMessage, tools, emitter)
 
     if (messages.isEmpty()) {
       emitter.emit(StreamComplete(chatId = id, reason = finishReason))
@@ -80,7 +77,7 @@ class ChatWorkflow(
                 userId = user.id,
                 username = user.username,
                 agentId = agent.agentId,
-                agentConfigurationId = agent.configurationId,
+                agentConfigurationId = agent.configuration.id,
                 messages = messagesInsert,
               )
 

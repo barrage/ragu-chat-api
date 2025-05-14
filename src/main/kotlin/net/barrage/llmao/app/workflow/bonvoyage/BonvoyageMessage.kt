@@ -5,13 +5,27 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.model.IncomingImageData
+import net.barrage.llmao.core.workflow.DefaultWorkflowInput
 import net.barrage.llmao.types.KUUID
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("type")
 sealed class BonvoyageInput {
-  /** Sent to upload a business trip expense. Usually a picture of a receipt. */
+  /**
+   * Sent by travelers during trips to chat with the agent.
+   *
+   * Input to [BonvoyageChatAgent].
+   */
+  @Serializable
+  @SerialName("expense.upload")
+  data class ChatInput(val input: DefaultWorkflowInput) : BonvoyageInput()
+
+  /**
+   * Sent to upload a business trip expense. Usually a picture of a receipt.
+   *
+   * Input to [BonvoyageExpenseAgent].
+   */
   @Serializable
   @SerialName("expense.upload")
   data class ExpenseUpload(
@@ -22,7 +36,11 @@ sealed class BonvoyageInput {
     val description: String? = null,
   ) : BonvoyageInput()
 
-  /** Sent to update an expense entry. */
+  /**
+   * Sent to update an expense entry.
+   *
+   * System message; does not use agent.
+   */
   @Serializable
   @SerialName("expense.update")
   data class ExpenseUpdate(
@@ -30,13 +48,25 @@ sealed class BonvoyageInput {
     val properties: BonvoyageTravelExpenseUpdateProperties,
   ) : BonvoyageInput()
 
-  /** Sent to request an aggregate of a trip and all its expenses. */
+  /**
+   * Sent to request an aggregate of a trip and all its expenses.
+   *
+   * System message; does not use agent.
+   */
   @Serializable @SerialName("trip.summary") data object TripSummary : BonvoyageInput()
 
-  /** Sent to generate a trip report. */
+  /**
+   * Sent to generate a trip report.
+   *
+   * System message; does not use agent.
+   */
   @Serializable @SerialName("trip.report") data object TripGenerateReport : BonvoyageInput()
 
-  /** Sent to finalize the trip and make it read only. */
+  /**
+   * Sent to finalize the trip and make it read only.
+   *
+   * System message; does not use agent.
+   */
   @Serializable @SerialName("trip.finalize") data object TripFinalize : BonvoyageInput()
 }
 

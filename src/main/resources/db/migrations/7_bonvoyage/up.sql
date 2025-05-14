@@ -105,6 +105,7 @@ CREATE INDEX ON bonvoyage_travel_requests (status);
 CREATE TABLE bonvoyage_travel_expenses(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workflow_id UUID NOT NULL REFERENCES bonvoyage_workflows(id) ON DELETE CASCADE,
+    message_group_id UUID NOT NULL REFERENCES message_groups(id) ON DELETE CASCADE,
     amount FLOAT NOT NULL,
     currency TEXT NOT NULL,
     image_path TEXT NOT NULL,

@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.token
 
-import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.types.KUUID
 
@@ -8,9 +7,15 @@ import net.barrage.llmao.types.KUUID
 object TokenUsageTrackerFactory {
   private lateinit var repository: TokenUsageRepositoryWrite
 
-  fun newTracker(user: User, workflowType: String, workflowId: KUUID): TokenUsageTracker {
+  fun newTracker(
+    userId: String,
+    username: String?,
+    workflowType: String,
+    workflowId: KUUID,
+  ): TokenUsageTracker {
     return TokenUsageTracker(
-      user = user,
+      userId = userId,
+      username = username,
       workflowType = workflowType,
       workflowId = workflowId,
       repository = repository,

@@ -4,15 +4,18 @@ import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.app.workflow.chat.ChatAgentCollection
 import net.barrage.llmao.app.workflow.chat.model.AgentCollection
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.core.vector.VectorData
 
-private val LOG = KtorSimpleLogger("net.barrage.llmao.core.llm.RagContextEnrichment")
+private val LOG = KtorSimpleLogger("n.b.l.c.llm.RagContextEnrichment")
 
-/** Generic interface for enriching an LLM's context. */
+/**
+ * Generic interface for enriching an LLM's context.
+ *
+ * Context enrichment is done on the user message.
+ */
 interface ContextEnrichment {
   /**
    * Enrich the given input with additional information.
@@ -34,9 +37,18 @@ object ContextEnrichmentFactory {
     this.providers = providers
   }
 
+  /**
+   * User entitlements are used to check application permissions.
+   *
+   * In cases of RAG when the `groups` properties in collections is present, they will be checked to
+   * see if the agent can access that collection.
+   *
+   * If the user is in a group from the collection's `groups` property, the LLM will have its
+   * context enriched with the collection's data.
+   */
   fun collectionEnrichment(
     tokenTracker: TokenUsageTracker,
-    user: User,
+    userEntitlements: List<String>,
     collections: List<AgentCollection>,
   ): RagContextEnrichment? {
     val chatCollections = mutableListOf<ChatAgentCollection>()
@@ -63,7 +75,7 @@ object ContextEnrichmentFactory {
         allowed = false
 
         for (group in it) {
-          if (user.entitlements.contains(group)) {
+          if (userEntitlements.contains(group)) {
             allowed = true
             break
           }
@@ -72,11 +84,10 @@ object ContextEnrichmentFactory {
 
       if (!allowed) {
         LOG.warn(
-          "Collection '{}' is not available to user '{}'; required: {}, user: {}",
+          "Collection '{}' is not available to user; required: {}, user: {}",
           collection.collection,
-          user.id,
           collectionInfo.groups,
-          user.entitlements,
+          userEntitlements,
         )
         continue
       }
@@ -191,7 +202,6 @@ class RagContextEnrichment(
       }
     }
 
-    // TODO: enhance this prompt and the above with some proompt engineering
     val instructions =
       if (collectionInstructions.isEmpty()) ""
       else

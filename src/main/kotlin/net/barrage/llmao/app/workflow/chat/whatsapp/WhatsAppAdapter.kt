@@ -40,7 +40,6 @@ import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.llm.TokenBasedHistory
-import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
@@ -187,7 +186,7 @@ class WhatsAppAdapter(
       )
     val chatAgent = getChatAgent(whatsAppNumber.userId, whatsAppNumber.username, chat, agent)
 
-    val messages = chatAgent.completion(result.message.text)
+    val messages = chatAgent.completion(chatAgent.configuration.context, result.message.text)
 
     // TODO: Include tools in wapp conversation histories
     val response = messages.last()
@@ -247,27 +246,25 @@ class WhatsAppAdapter(
             ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
       )
 
-    val user = User(id = userId, entitlements = listOf("user"), username = username, email = "")
     val tokenTracker =
-      TokenUsageTrackerFactory.newTracker(user, WHATSAPP_CHAT_TOKEN_ORIGIN, chat.id)
+      TokenUsageTrackerFactory.newTracker(userId, username, WHATSAPP_CHAT_TOKEN_ORIGIN, chat.id)
 
     return ChatAgent(
       agentId = agent.agent.id,
-      configurationId = agent.configuration.id,
+      configuration = agent.configuration,
       name = agent.agent.name,
-      instructions = agent.configuration.agentInstructions,
       titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
-      user = user,
-      model = agent.configuration.model,
       inferenceProvider = providers.llm[agent.configuration.llmProvider],
-      context = agent.configuration.context,
       completionParameters = completionParameters,
       tokenTracker = tokenTracker,
       history = history,
       contextEnrichment =
-        ContextEnrichmentFactory.collectionEnrichment(tokenTracker, user, agent.collections)?.let {
-          listOf(it)
-        },
+        ContextEnrichmentFactory.collectionEnrichment(
+            tokenTracker,
+            listOf("user"),
+            agent.collections,
+          )
+          ?.let { listOf(it) },
     )
   }
 

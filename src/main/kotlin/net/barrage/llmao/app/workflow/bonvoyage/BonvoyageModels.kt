@@ -259,6 +259,13 @@ data class BonvoyageTravelExpense(
   /** The trip this expense belongs to. */
   val workflowId: KUUID,
 
+  /**
+   * The message group the expense is tied to. Used to filter out expenses when querying chats.
+   *
+   * If the group is deleted, the expense is deleted.
+   */
+  val messageGroupId: KUUID,
+
   /** Amount of money spent on this expense. */
   val amount: Double,
 
@@ -337,6 +344,7 @@ fun BonvoyageTravelExpensesRecord.toTravelExpense() =
   BonvoyageTravelExpense(
     id = this.id!!,
     workflowId = this.workflowId,
+    messageGroupId = this.messageGroupId,
     amount = this.amount,
     currency = this.currency,
     imagePath = this.imagePath,

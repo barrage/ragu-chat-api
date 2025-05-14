@@ -13,7 +13,6 @@ import net.barrage.llmao.types.KUUID
 
 /** Standard input to all workflows. */
 @Serializable
-@SerialName("default")
 data class DefaultWorkflowInput(
   val text: String? = null,
   val attachments: List<IncomingMessageAttachment>? = null,

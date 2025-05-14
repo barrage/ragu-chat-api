@@ -117,11 +117,17 @@ fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
         call.respond(api.listTravelRequests(call.user().id, status))
       }
 
+      get("/{id}") {
+        val id = call.pathUuid("id")
+        val request = api.getTravelRequest(id, call.user().id)
+        call.respond(request)
+      }
+
       post {
         val request = call.receive<TravelRequest>()
         val user = call.user()
-        api.requestTravelOrder(user, request)
-        call.respond(HttpStatusCode.NoContent)
+        val travelRequest = api.requestTravelOrder(user, request)
+        call.respond(travelRequest)
       }
     }
   }

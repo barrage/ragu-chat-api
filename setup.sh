@@ -1,6 +1,3 @@
-# Set up the git hooks
-# ln -f hooks/pre-push .git/hooks/
-
 # Set up the docker containers
 docker compose up -d
 

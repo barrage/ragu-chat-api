@@ -79,7 +79,7 @@ class BonvoyageAdminApi(val repository: BonvoyageRepository, val email: Email) {
           reviewerComment,
         )
 
-        val travelOrderId = requestTravelOrder(request)
+        val travelOrderId = createTravelOrder(request)
 
         val tripDetails =
           BonvoyageTripInsert(
@@ -127,7 +127,7 @@ class BonvoyageAdminApi(val repository: BonvoyageRepository, val email: Email) {
     )
 
   /** Returns the travel order ID. */
-  private suspend fun requestTravelOrder(travelRequest: BonvoyageTravelRequest): String {
+  private suspend fun createTravelOrder(travelRequest: BonvoyageTravelRequest): String {
     // TODO: implement when we get BC
     return KUUID.randomUUID().toString()
   }
@@ -177,8 +177,8 @@ class BonvoyageUserApi(
   suspend fun listTravelManagers(userId: String): List<BonvoyageTravelManagerUserMappingAggregate> =
     repository.listTravelManagers(userId)
 
-  suspend fun requestTravelOrder(user: User, request: TravelRequest) {
-    repository.transaction(::BonvoyageRepository) { repo ->
+  suspend fun requestTravelOrder(user: User, request: TravelRequest): BonvoyageTravelRequest {
+    return repository.transaction(::BonvoyageRepository) { repo ->
       val req = repo.insertTravelRequest(user, request)
       val managers = repo.listTravelManagers(user.id)
 
@@ -203,6 +203,8 @@ class BonvoyageUserApi(
           }
         }
       }
+
+      req
     }
   }
 
@@ -210,6 +212,9 @@ class BonvoyageUserApi(
     userId: String,
     status: BonvoyageTravelRequestStatus?,
   ): List<BonvoyageTravelRequest> = repository.listTravelRequests(userId, status)
+
+  suspend fun getTravelRequest(id: KUUID, userId: String): BonvoyageTravelRequest =
+    repository.getTravelRequest(id, userId)
 
   suspend fun updateExpense(
     tripId: KUUID,

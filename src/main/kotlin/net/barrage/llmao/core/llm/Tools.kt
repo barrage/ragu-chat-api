@@ -30,8 +30,8 @@ class Tools(
       ?: throw AppError.internal("No handler for tool call '${data.name}'")
   }
 
-  fun listToolSchemas(): List<ToolDefinition> {
-    return definitions
+  fun listToolSchemas(filter: List<String>? = null): List<ToolDefinition> {
+    return filter?.let { definitions.filter { it.function.name in filter } } ?: definitions
   }
 }
 

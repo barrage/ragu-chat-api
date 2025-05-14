@@ -1,8 +1,0 @@
-./gradlew ktfmtCheck >/dev/null 2>&1
-ktfmt_check_result=$?
-
-if [ $ktfmt_check_result -eq 1 ]; then
-  echo "Code style checks failed"
-  echo "Run './gradlew ktfmtFormat' to auto-fix code style issues"
-  exit 1
-fi

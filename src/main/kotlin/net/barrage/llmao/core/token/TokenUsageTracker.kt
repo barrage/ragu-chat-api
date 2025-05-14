@@ -4,7 +4,6 @@ import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
 import net.barrage.llmao.types.KUUID
 
@@ -12,7 +11,8 @@ internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.tokens.TokenUsageTra
 
 /** Used for tracking token usage when embedding and performing inference. */
 class TokenUsageTracker(
-  private val user: User,
+  private val userId: String,
+  private val username: String?,
   private val workflowId: KUUID,
   private val workflowType: String,
   private val repository: TokenUsageRepositoryWrite,
@@ -23,8 +23,8 @@ class TokenUsageTracker(
     try {
       scope.launch {
         repository.insert(
-          userId = user.id,
-          username = user.username,
+          userId = userId,
+          username = username,
           workflowId = workflowId,
           workflowType = workflowType,
           amountPrompt = amount.prompt,
