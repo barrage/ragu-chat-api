@@ -8,19 +8,19 @@ import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 
 /**
- * Data class to update **nullable** properties. Should be used only on primitives.
+ * Wrapper for updating **nullable (optional)** properties. Should be used only on primitives.
  *
  * If you need to update **required** properties, use a nullable primitive directly. For example, if
  * you need to update a required string property, define the payload as
  *
- * ```json
+ * ```
  * data class Update(val foo: String? = null)
  * ```
  *
  * If this class is being used as a type, it should never be nullable and the default value should
  * be [Undefined].
  *
- * ```json
+ * ```
  * data class Update(val update: PropertyUpdate<String> = PropertyUpdate.Undefined)
  * ```
  *
@@ -32,8 +32,8 @@ import kotlinx.serialization.json.JsonNull
  *
  * The semantics of the update payload are as follows:
  * - update == Null -> Set property to null
- * - update is Undefined -> Leave property as is
- * - update is Value -> Set property to value
+ * - update == Undefined -> Leave property as is
+ * - update == Value -> Set property to value
  *
  * **Serialization caveat**
  *
@@ -43,7 +43,11 @@ import kotlinx.serialization.json.JsonNull
  */
 @Serializable(with = PropertyUpdateSerializer::class)
 sealed class PropertyUpdate<out T> {
-  /** All PropertyUpdate fields should be instantiated to this. */
+  /**
+   * An *optional* property completely omitted from JSON that should remain as is.
+   *
+   * All PropertyUpdate fields should be instantiated to this by default.
+   */
   data object Undefined : PropertyUpdate<Nothing>()
 
   /** If the clients send explicit nulls, this will be the instance. */

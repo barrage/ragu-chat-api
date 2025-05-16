@@ -1,14 +1,10 @@
 package net.barrage.llmao.app.workflow.jirakira
 
 import io.ktor.util.logging.KtorSimpleLogger
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.token.TokenUsageTracker
-import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.WorkflowAgent
 
 internal val LOG = KtorSimpleLogger("n.b.l.a.workflow.jirakira.JiraKiraAgent")

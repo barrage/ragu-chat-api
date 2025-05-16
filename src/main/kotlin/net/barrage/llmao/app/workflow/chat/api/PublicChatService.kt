@@ -73,7 +73,9 @@ class PublicChatService(
     userId: String,
     pagination: Pagination,
   ): CountedList<MessageGroupAggregate> {
-    val messages = chats.getMessages(chatId = id, userId = userId, pagination = pagination)
+    chats.get(id, userId) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+
+    val messages = chats.getMessages(chatId = id, pagination = pagination)
 
     if (messages.total == 0) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")

@@ -85,12 +85,12 @@ data class BonvoyageTravelRequest(
   val description: String,
 
   /**
-   * If the transport type is [TransportType.Personal], this is the vehicle type (brand and model).
+   * If the transport type is [TransportType.PERSONAL], this is the vehicle type (brand and model).
    */
   val vehicleType: String?,
 
   /**
-   * If the transport type is [TransportType.Personal], this is the vehicle's registration plates.
+   * If the transport type is [TransportType.PERSONAL], this is the vehicle's registration plates.
    */
   val vehicleRegistration: String?,
 
@@ -183,7 +183,23 @@ enum class TransportType {
   PERSONAL,
 }
 
-/** A workflow entry with Bonvoyage. A Bonvoyage workflow is a wrapper around a business trip. */
+/**
+ * A workflow entry with Bonvoyage. A Bonvoyage workflow is a wrapper around a business trip.
+ *
+ * An *active* trip is a trip whose `actualStartDatetime` has been set, and whose
+ * `actualEndDateTime` is not yet set. Only one instance of an active trip can be present in
+ * Bonvoyage. When starting a trip the API enforces that no more than one active trip can be present
+ * at any time. The API also enforces that `startMileage` is entered when starting if the trip is
+ * with a personal vehicle.
+ *
+ * A *finished* trip is a trip whose `actualEndDateTime` has been set. At that point, the only
+ * mutable parameters that remain are the description and the trip's expenses for the purpose of
+ * generating a correct report.
+ *
+ * We always assume these trips are best effort, meaning the correctness of the reported times is
+ * not guaranteed and largely depends on the user. We allow users to set these at any time, but have
+ * notifications in place to remind them to do so.
+ */
 @Serializable
 data class BonvoyageTrip(
   /** Unique identifier for this workflow. */
@@ -194,6 +210,9 @@ data class BonvoyageTrip(
 
   /** The full name (first + last) of the user who initiated the trip. */
   val userFullName: String,
+
+  /** The email of the user who initiated the trip. */
+  val userEmail: String,
 
   /** The travel order ID. Without this, trips cannot exist. */
   val travelOrderId: String,
@@ -210,7 +229,7 @@ data class BonvoyageTrip(
    * In cases of return trips to a single destination, this contains the destination, and
    * `endLocation == startLocation`.
    *
-   * In any trips with multiple destinations, this contains all the stops in the order they are
+   * In any trip with multiple destinations, this contains all the stops in the order they are
    * visited.
    */
   val stops: List<String>,
@@ -218,18 +237,41 @@ data class BonvoyageTrip(
   /** Where the trip ends. */
   val endLocation: String,
 
-  /** When the trip started. */
+  /** The anticipated time when the trip starts. */
   val startDateTime: KOffsetDateTime,
 
-  /** When the trip ends. */
+  /** The actual time when the trip starts, entered by the user. */
+  val actualStartDateTime: KOffsetDateTime?,
+
+  /** The anticipated time when the trip ends. */
   val endDateTime: KOffsetDateTime,
 
-  /** Transportation type, public or personal. */
+  /**
+   * The actual time when the trip ended, entered by the user.
+   *
+   * Mutable at any time during the trip.
+   */
+  val actualEndDateTime: KOffsetDateTime?,
+
+  /**
+   * Transportation type, public or personal.
+   *
+   * Immutable.
+   */
   val transportType: TransportType,
 
-  /** The purpose of the business trip. */
+  /**
+   * The purpose of the business trip.
+   *
+   * Mutable at any time during the trip.
+   */
   val description: String,
+  val completed: Boolean,
+
+  /** When the database entry was created. */
   val createdAt: KOffsetDateTime,
+
+  /** When the database entry was last updated. */
   val updatedAt: KOffsetDateTime,
 
   // Optional fields for personal vehicle
@@ -245,7 +287,9 @@ data class BonvoyageTrip(
 
   /** The mileage of the vehicle when the trip ended. */
   val endMileage: String?,
-)
+) {
+  fun isActive(): Boolean = actualStartDateTime != null && actualEndDateTime == null
+}
 
 /**
  * A single expense on a business trip. These are aggregated at the end and presented to the user
@@ -324,12 +368,16 @@ fun BonvoyageWorkflowsRecord.toTrip() =
     id = this.id!!,
     userId = this.userId,
     userFullName = this.userFullName,
+    userEmail = this.userEmail,
     travelOrderId = this.travelOrderId,
     startLocation = this.startLocation,
     stops = this.stops.split(","),
     endLocation = this.endLocation,
     startDateTime = this.startDateTime,
+    actualStartDateTime = this.actualStartDateTime,
+    completed = this.completed!!,
     endDateTime = this.endDateTime,
+    actualEndDateTime = this.actualEndDateTime,
     transportType = TransportType.valueOf(this.transportType),
     description = this.description,
     createdAt = this.createdAt!!,

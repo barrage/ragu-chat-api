@@ -1,8 +1,12 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
+import io.ktor.server.plugins.requestvalidation.ValidationResult
 import javax.activation.DataSource
 import javax.mail.util.ByteArrayDataSource
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.EmailAttachment
 import net.barrage.llmao.core.SchemaValidation
 import net.barrage.llmao.core.Validation
@@ -166,18 +170,67 @@ data class BonvoyageTripInsert(
 )
 
 @Serializable
-data class BonvoyageTripUpdate(
-  val startDateTime: KOffsetDateTime? = null,
-  val endDateTime: KOffsetDateTime? = null,
-  val description: String? = null,
+@OptIn(ExperimentalSerializationApi::class)
+@JsonClassDiscriminator("type")
+sealed class BonvoyageTripUpdate : Validation {
+  override fun validate(): ValidationResult {
+    return super.validate()
+  }
+}
 
+/** DTO for users starting a trip. */
+@Serializable
+@SerialName("start")
+@SchemaValidation("validateSchema")
+data class BonvoyageStartTrip(
+  val actualStartDateTime: KOffsetDateTime,
   // Mandatory when personal vehicle, optional otherwise
-
+  val startingMileage: String? = null,
+  // Optional fields, this is the final chance to correct the vehicle details
   val vehicleType: PropertyUpdate<String> = PropertyUpdate.Undefined,
   val vehicleRegistration: PropertyUpdate<String> = PropertyUpdate.Undefined,
+) : Validation, BonvoyageTripUpdate() {
+  fun validateSchema(): List<ValidationError> {
+    val errors = mutableListOf<ValidationError>()
+
+    if (
+      vehicleType != PropertyUpdate.Undefined && vehicleRegistration == PropertyUpdate.Undefined
+    ) {
+      errors.addSchemaErr(
+        message = "`vehicleRegistration` is required when `vehicleType` is provided"
+      )
+    }
+
+    if (
+      vehicleType == PropertyUpdate.Undefined && vehicleRegistration != PropertyUpdate.Undefined
+    ) {
+      errors.addSchemaErr(
+        message = "`vehicleType` is required when `vehicleRegistration` is provided"
+      )
+    }
+
+    return errors
+  }
+}
+
+/** DTO for users updating a trip's description. */
+@Serializable
+@SerialName("update")
+data class BonvoyageTripPropertiesUpdate(
+  val actualStartDateTime: PropertyUpdate<KOffsetDateTime> = PropertyUpdate.Undefined,
+  val actualEndDateTime: PropertyUpdate<KOffsetDateTime> = PropertyUpdate.Undefined,
   val startMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
   val endMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
-)
+  val description: String? = null,
+) : BonvoyageTripUpdate()
+
+/** DTO for users ending a trip. */
+@Serializable
+@SerialName("end")
+data class BonvoyageEndTrip(
+  val actualEndDateTime: KOffsetDateTime,
+  val endMileage: String? = null,
+) : BonvoyageTripUpdate()
 
 /**
  * Data obtained from the LLM when parsing receipts. Ultimately turned into a

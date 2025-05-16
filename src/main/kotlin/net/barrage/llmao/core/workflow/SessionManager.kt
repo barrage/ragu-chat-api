@@ -91,8 +91,6 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
 
   /** Handle a system event from the [EventListener]. */
   private suspend fun handleEvent(event: Event) {
-    // TODO: Make it so plugins can directly modify the session manager by registering an onEvent
-    // handler on it.
     plugins.emitEvent(this, event)
   }
 

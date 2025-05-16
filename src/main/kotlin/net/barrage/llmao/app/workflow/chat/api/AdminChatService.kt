@@ -61,8 +61,7 @@ class AdminChatService(
   }
 
   suspend fun getMessages(id: KUUID, pagination: Pagination): CountedList<MessageGroupAggregate> {
-    val messages =
-      chatRepositoryRead.getMessages(chatId = id, userId = null, pagination = pagination)
+    val messages = chatRepositoryRead.getMessages(chatId = id, pagination = pagination)
 
     if (messages.total == 0) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")

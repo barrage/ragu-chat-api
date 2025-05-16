@@ -45,7 +45,11 @@ CREATE TABLE bonvoyage_workflows(
     description TEXT NOT NULL,
 
     start_date_time TIMESTAMPTZ NOT NULL,
+    actual_start_date_time TIMESTAMPTZ,
     end_date_time TIMESTAMPTZ NOT NULL,
+    actual_end_date_time TIMESTAMPTZ,
+
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

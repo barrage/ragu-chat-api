@@ -212,11 +212,7 @@ class WhatsAppAdapter(
     agent: AgentFull,
   ): ChatAgent {
     val chatMessages =
-      chatRepositoryRead.getMessages(
-        chatId = chat.id,
-        userId = userId,
-        Pagination(1, MAX_HISTORY_MESSAGES),
-      )
+      chatRepositoryRead.getMessages(chatId = chat.id, Pagination(1, MAX_HISTORY_MESSAGES))
 
     val messages =
       chatMessages.items

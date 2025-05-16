@@ -9,7 +9,6 @@ import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 
 internal const val BONVOYAGE_WORKFLOW_ID = "BONVOYAGE"
-internal const val BONVOYAGE_EXPENSE_AGENT_ID = "${BONVOYAGE_WORKFLOW_ID}_EXPENSE"
 
 class TripotronPlugin() : Plugin {
   private lateinit var admin: BonvoyageAdminApi
@@ -18,8 +17,24 @@ class TripotronPlugin() : Plugin {
   override fun id(): String = BONVOYAGE_WORKFLOW_ID
 
   override suspend fun initialize(config: ApplicationConfig, state: ApplicationState) {
-    admin = BonvoyageAdminApi(BonvoyageRepository(state.database), state.email)
-    user = BonvoyageUserApi(BonvoyageRepository(state.database), state.email, state.providers.image)
+    val repository = BonvoyageRepository(state.database)
+    val scheduler = BonvoyageNotificationScheduler(state.email)
+
+    val trips = repository.listTrips(pending = true)
+
+    for (trip in trips) {
+      scheduler.scheduleEmail(
+        trip.userEmail,
+        trip.startLocation,
+        trip.endLocation,
+        trip.startDateTime,
+      )
+    }
+
+    scheduler.start()
+
+    admin = BonvoyageAdminApi(repository, state.email, scheduler)
+    user = BonvoyageUserApi(repository, state.email, state.providers.image)
     BonvoyageWorkflowFactory.init(config, state)
     WorkflowFactoryManager.register(BonvoyageWorkflowFactory)
   }
@@ -31,5 +46,6 @@ class TripotronPlugin() : Plugin {
 
   override fun RequestValidationConfig.configureRequestValidation() {
     validate<TravelRequest>(TravelRequest::validate)
+    validate<BonvoyageStartTrip>(BonvoyageStartTrip::validate)
   }
 }

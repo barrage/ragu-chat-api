@@ -44,6 +44,7 @@ interface Plugin : Identity {
    */
   fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {}
 
+  /** Handle an event emitted by the server. All events are broadcast to all plugins. */
   suspend fun handleEvent(manager: SessionManager, event: Event) {}
 }
 

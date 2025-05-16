@@ -23,9 +23,14 @@ import net.barrage.llmao.core.blob.BlobStorage
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.types.KUUID
 
-class BonvoyageAdminApi(val repository: BonvoyageRepository, val email: Email) {
+class BonvoyageAdminApi(
+  val repository: BonvoyageRepository,
+  val email: Email,
+  val scheduler: BonvoyageNotificationScheduler,
+) {
   suspend fun listTrips(): List<BonvoyageTrip> = repository.listTrips()
 
   suspend fun getTripAggregate(id: KUUID): BonvoyageTripAggregate = repository.getTripAggregate(id)
@@ -105,6 +110,13 @@ class BonvoyageAdminApi(val repository: BonvoyageRepository, val email: Email) {
         trip
       }
 
+    scheduler.scheduleEmail(
+      request.userEmail,
+      request.startLocation,
+      request.endLocation,
+      request.startDateTime,
+    )
+
     email.sendEmail(
       "bonvoyage@barrage.net",
       request.userEmail,
@@ -138,38 +150,106 @@ class BonvoyageUserApi(
   val email: Email,
   val image: BlobStorage<Image>,
 ) {
-  suspend fun insertMessagesWithExpense(
+  suspend fun getTripChatMessages(id: KUUID) = repository.getTripChatMessages(id)
+
+  suspend fun insertMessages(id: KUUID, messages: List<MessageInsert>): KUUID =
+    repository.insertMessages(id, messages)
+
+  suspend fun insertExpenseMessages(
     id: KUUID,
-    userId: String,
     messages: List<MessageInsert>,
     expense: BonvoyageTravelExpenseInsert,
-  ): Pair<KUUID, BonvoyageTravelExpense> {
-    if (!repository.isTripOwner(id, userId)) {
-      throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip not found")
-    }
-
-    return repository.insertMessagesWithExpense(id, messages, expense)
-  }
+  ): BonvoyageTravelExpense = repository.insertMessagesWithExpense(id, messages, expense)
 
   suspend fun listTrips(userId: String): List<BonvoyageTrip> = repository.listTrips(userId)
 
+  suspend fun getActiveTrip(userId: String): BonvoyageTrip =
+    repository.getActiveTrip(userId)
+      ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "No active trip found")
+
+  /**
+   * Set the start parameters for a trip. If there is already an existing active trip for the user,
+   * an exception is thrown.
+   *
+   * See [BonvoyageTrip].
+   */
+  suspend fun startTrip(id: KUUID, userId: String, startParams: BonvoyageStartTrip): BonvoyageTrip {
+    if (repository.hasActiveTrip(userId)) {
+      throw AppError.api(ErrorReason.InvalidOperation, "User already has an active trip")
+    }
+
+    val trip = repository.getTrip(id, userId)
+
+    if (trip.completed) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Cannot start; trip is completed")
+    }
+
+    if (trip.transportType == TransportType.PERSONAL && startParams.startingMileage == null) {
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "Starting mileage is required when starting personal vehicle trips",
+      )
+    }
+
+    return repository.updateTripStartParameters(id, startParams)
+  }
+
+  /** Update the active trip's properties. */
   suspend fun updateTripProperties(
     id: KUUID,
     userId: String,
-    update: BonvoyageTripUpdate,
+    update: BonvoyageTripPropertiesUpdate,
   ): BonvoyageTrip {
-    if (!repository.isTripOwner(id, userId)) {
-      throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip not found")
+    val trip = repository.getTrip(id, userId)
+
+    if (trip.completed) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Cannot update; trip is completed")
     }
-    return repository.updateTrip(id, update)
+
+    if (
+      update.startMileage != PropertyUpdate.Undefined &&
+        trip.transportType != TransportType.PERSONAL
+    ) {
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "Start mileage is not applicable for trips with public transport",
+      )
+    }
+
+    if (
+      update.endMileage != PropertyUpdate.Undefined && trip.transportType != TransportType.PERSONAL
+    ) {
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "End mileage is not applicable for trips with public transport",
+      )
+    }
+
+    return repository.updateTrip(trip.id, update)
   }
 
-  suspend fun getTrip(id: KUUID, userId: String): BonvoyageTrip {
-    if (!repository.isTripOwner(id, userId)) {
-      throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip not found")
+  suspend fun endTrip(id: KUUID, userId: String, endParams: BonvoyageEndTrip): BonvoyageTrip {
+    val trip = repository.getTrip(id, userId)
+
+    if (trip.completed) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Cannot end; trip is completed")
     }
-    return repository.getTrip(id)
+
+    if (!trip.isActive()) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Cannot end; trip is not active")
+    }
+
+    if (trip.transportType == TransportType.PERSONAL && endParams.endMileage == null) {
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "Ending mileage is required when ending personal vehicle trips",
+      )
+    }
+
+    return repository.updateTripEndParameters(trip.id, endParams)
   }
+
+  suspend fun getTrip(id: KUUID, userId: String): BonvoyageTrip = repository.getTrip(id, userId)
 
   suspend fun getTripAggregate(id: KUUID, userId: String): BonvoyageTripAggregate =
     repository.getTripAggregate(id, userId)
@@ -255,6 +335,10 @@ class BonvoyageUserApi(
   }
 
   private fun generateReportPdf(trip: BonvoyageTripAggregate): BonvoyageTripReport {
+    if (trip.trip.actualStartDateTime == null || trip.trip.actualEndDateTime == null) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Trip is missing start or end time")
+    }
+
     val documentBytes = ByteArrayOutputStream()
     val pdf = PdfDocument(PdfWriter(documentBytes))
     val document =
@@ -296,10 +380,10 @@ class BonvoyageUserApi(
 
     // Travel info
 
-    val startDate = trip.trip.startDateTime.toLocalDate().toString()
-    val startTime = trip.trip.startDateTime.toLocalTime().toString()
-    val endDate = trip.trip.endDateTime.toLocalDate().toString()
-    val endTime = trip.trip.endDateTime.toLocalTime().toString()
+    val startDate = trip.trip.actualStartDateTime.toLocalDate().toString()
+    val startTime = trip.trip.actualStartDateTime.toLocalTime().toString()
+    val endDate = trip.trip.actualEndDateTime.toLocalDate().toString()
+    val endTime = trip.trip.actualEndDateTime.toLocalTime().toString()
     val startLocation = trip.trip.startLocation
     val stops = trip.trip.stops
     val endLocation = trip.trip.endLocation

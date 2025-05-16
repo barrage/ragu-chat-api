@@ -476,7 +476,7 @@ abstract class WorkflowAgent(
 
     messageBuffer.add(message)
 
-    if (message.toolCalls != null) {
+    if (message.toolCalls != null && message.toolCalls.isNotEmpty()) {
       handleToolCalls(message.toolCalls, params!!.tools!!, messageBuffer, emitter)
 
       completionInner(

@@ -16,7 +16,6 @@ import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageAttachment
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
-import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_ATTACHMENTS
 import net.barrage.llmao.tables.references.MESSAGE_GROUPS
@@ -29,7 +28,6 @@ import org.jooq.Record
 import org.jooq.TableField
 import org.jooq.UpdateSetMoreStep
 import org.jooq.UpdateSetStep
-import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
 
 /**
@@ -78,26 +76,18 @@ suspend fun DSLContext.insertMessages(
   return messageGroupId as KUUID
 }
 
-suspend fun DSLContext.getMessages(
+suspend fun DSLContext.getWorkflowMessages(
   workflowId: KUUID,
-  userId: String? = null,
-  pagination: Pagination,
+  pagination: Pagination? = null,
 ): CountedList<MessageGroupAggregate> {
-  val (limit, offset) = pagination.limitOffset()
+  val messageGroups = mutableMapOf<KUUID, MessageGroupAggregate>()
 
   val total =
     selectCount()
       .from(MESSAGE_GROUPS)
-      .leftJoin(CHATS)
-      .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
-      .where(
-        MESSAGE_GROUPS.PARENT_ID.eq(workflowId)
-          .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-      )
+      .where(MESSAGE_GROUPS.PARENT_ID.eq(workflowId))
       .awaitSingle()
       .value1() ?: 0
-
-  val messageGroups = mutableMapOf<KUUID, MessageGroupAggregate>()
 
   // This query acts like a window, selecting only the latest
   // message groups
@@ -106,8 +96,12 @@ suspend fun DSLContext.getMessages(
       .from(MESSAGE_GROUPS)
       .where(MESSAGE_GROUPS.PARENT_ID.eq(workflowId))
       .orderBy(MESSAGE_GROUPS.CREATED_AT.desc())
-      .limit(limit)
-      .offset(offset)
+
+  val paginatedSubQuery =
+    pagination?.let { p ->
+      val (limit, offset) = p.limitOffset()
+      subQuery.limit(limit).offset(offset)
+    } ?: subQuery
 
   select(
       // Group
@@ -133,16 +127,11 @@ suspend fun DSLContext.getMessages(
       MESSAGES.CREATED_AT,
     )
     .from(MESSAGE_GROUPS)
-    .leftJoin(CHATS)
-    .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
     .leftJoin(MESSAGE_GROUP_EVALUATIONS)
     .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
     .leftJoin(MESSAGES)
     .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
-    .where(
-      MESSAGE_GROUPS.ID.`in`(subQuery)
-        .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-    )
+    .where(MESSAGE_GROUPS.ID.`in`(paginatedSubQuery))
     .orderBy(MESSAGE_GROUPS.CREATED_AT.asc(), MESSAGES.ORDER.asc())
     .asFlow()
     .collect { record ->

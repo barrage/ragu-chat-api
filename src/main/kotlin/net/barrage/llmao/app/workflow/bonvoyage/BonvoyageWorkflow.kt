@@ -17,10 +17,11 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.core.workflow.WorkflowRealTime
+import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
 class BonvoyageWorkflow(
-  /** Unique identifier of the workflow. */
+  /** Unique identifier of the trip. */
   override val id: KUUID,
   private val user: User,
   private val expenseAgent: BonvoyageExpenseAgent,
@@ -28,7 +29,7 @@ class BonvoyageWorkflow(
   /** Output handle. */
   private val emitter: Emitter,
   private val api: BonvoyageUserApi,
-    private val tools: Tools,
+  private val tools: Tools,
 ) : WorkflowRealTime<BonvoyageInput>(BonvoyageInput.serializer()) {
   override suspend fun handleInput(input: BonvoyageInput) = execute(input)
 
@@ -37,46 +38,65 @@ class BonvoyageWorkflow(
       is BonvoyageInput.ChatInput -> handleChatInput(input)
       is BonvoyageInput.ExpenseUpload -> handleExpenseUpload(input)
       is BonvoyageInput.ExpenseUpdate -> handleExpenseUpdate(input)
-      is BonvoyageInput.TripSummary -> handleTripSummary()
-      is BonvoyageInput.TripFinalize -> handleTripFinalize()
-      is BonvoyageInput.TripGenerateReport -> handleTripGenerateReport()
     }
   }
 
   private suspend fun handleChatInput(input: BonvoyageInput.ChatInput) {
-      val trip = api.getTrip(id, user.id)
+    val trip = api.getTrip(id, user.id)
     val message =
       input.input.attachments?.let { ChatMessageProcessor.toContentMulti(input.input.text, it) }
         ?: ContentSingle(input.input.text!!)
 
-      val context =
-      """You are a travel manager who is helping ${user.username} on his business trip
+    val context =
+      """You are a travel chat assistant who is helping ${user.username} on his business trip
           | from ${trip.startLocation} to ${trip.endLocation}.
           | The following are the trip's stops:
           | 
           |${trip.stops.joinToString(" -\n")}
           |
-          | The trip start time is ${trip.startDateTime} and the end time is ${trip.endDateTime}.
+          | The anticipated trip start time is ${trip.startDateTime} and the end time is ${trip.endDateTime}.
           | The description of the trip states the following:
           |
           | "${trip.description}"
           |
-          | You provide the user with helpful information about the locations in the trip.
+          | You are one part of a trip management system with the following capabilities:
+          |   - Expense management; Users can upload images of receipts from expenses they incur on the trip 
+          |     for the purposes of reimbursement.
+          |   - Start and end time verification; It is of utmost importance users correctly report the start and end
+          |     times of the trip because incorrect reporting adversely affect the reimbursement process and damage
+          |     both the employee and the company.
+          |   - Trip reporting; Users can request a report of the trip which will be sent to them via email.
+          |
+          | You provide the user with helpful information about their trip, especially if it relates to any of the 
+          | trip locations. You direct the user to the appropriate capabilities of the system.
+          | 
+          | The user can use the system to edit the actual start and end times of when they have departed and arrived.
+          | The departure time is the exact time the user exits their residence at the start location.
+          | The arrival time is the exact time the user arrives to the residence of the end location.
+          | Note the key word here is residence. 
+          | The user is considered to partake in the trip even if they are still at the start location, but have left
+          | their current residence in it. The same applies to end locations for when they have not yet arrived to the
+          | residence, but have entered the end location.
+          | The user entered the departure time of ${trip.actualStartDateTime}.
+          | The user entered the arrival time of ${trip.actualEndDateTime}.
+          | The current time is ${KOffsetDateTime.now()}.
+          | If the trip has started and the user has not entered the departure time, remind them to do so.
+          | If the trip has ended and the user has not entered the arrival time, remind them to do so.
           """
         .trimMargin()
 
     val userMessage = ChatMessage.user(message)
 
-    val (finishReason, messages) = chatAgent.collectAndForwardStream(context, userMessage, tools, emitter)
+    val (finishReason, messages) =
+      chatAgent.collectAndForwardStream(context, userMessage, tools, emitter)
 
-    if (messages.isEmpty()) {
-      emitter.emit(StreamComplete(id, finishReason))
-      return
-    }
+    val attachmentsInsert =
+      input.input.attachments?.let { ChatMessageProcessor.storeMessageAttachments(it) }
+    val userMessageInsert = userMessage.toInsert(attachmentsInsert)
+    val messageGroupId =
+      api.insertMessages(id, listOf(userMessageInsert) + messages.map { it.toInsert() })
 
-    val assistantMessage = messages.last()
-
-    assert(assistantMessage.role == "assistant")
+    emitter.emit(StreamComplete(id, finishReason, messageGroupId, attachmentsInsert))
   }
 
   private suspend fun handleExpenseUpload(input: BonvoyageInput.ExpenseUpload) {
@@ -92,16 +112,21 @@ class BonvoyageWorkflow(
         | If any locations are visible in receipt, be sure to include them in the description."""
           .trimMargin()
       } else {
-        input.description
+        """The image is a receipt for an expense.
+        | The user provided the following description:
+        |
+        | ${input.description}
+        |
+        | If the user provided the purpose of the expense and the location it was made,
+        | do not modify it and use it directly.
+        | Otherwise use the information in the receipt to enrich the description with the location.
+        | """
+          .trimMargin()
       }
 
     val context =
       """You are talking to ${user.username}.
           | ${user.username} is on a business trip from ${trip.startLocation} to ${trip.endLocation}.
-          | The trip start time is ${trip.startDateTime} and the end time is ${trip.endDateTime}.
-          | The description of the trip states the following:
-          |
-          | "${trip.description}"
           |
           | You keep track of expenses for this trip for the purpose of creating a trip report.
           | The user will send you pictures they took of receipts of expenses made on this trip.
@@ -109,8 +134,14 @@ class BonvoyageWorkflow(
           |
           | You will extract the following information from the receipt image:
           | - The amount of money spent on the expense.
+          | 
           | - The currency of the expense.
-          | - The description of the expense. If the user provides a description, use it. Otherwise, attempt to describe it based on the image of the receipt.
+          | 
+          | - The description of the expense. 
+          |   If the user provides a description, use it and enrich it with any information from the receipt,
+          |   such as specifying the locations on it.
+          |   If they do not provide the description, attempt to describe it based on the image of the receipt.
+          |   
           | - The date-time the expense was created at.
           |
           | You will output the extracted information in JSON format, using the schema ${EXPENSE_FORMAT.name}."""
@@ -165,40 +196,17 @@ class BonvoyageWorkflow(
         expenseCreatedAt = expense.createdAt,
       )
 
-    val (messageGroupId, travelExpense) =
-      api.insertMessagesWithExpense(id, user.id, messageInsert, expenseInsert)
+    val travelExpense = api.insertExpenseMessages(id, messageInsert, expenseInsert)
 
     emitter.emit(BonvoyageOutput.ExpenseUpload(travelExpense), BonvoyageOutput.serializer())
-    emitter.emit(StreamComplete(id, assistantMessage.finishReason!!, messageGroupId, attachments))
+    emitter.emit(
+      StreamComplete(id, assistantMessage.finishReason!!, travelExpense.messageGroupId, attachments)
+    )
   }
 
   private suspend fun handleExpenseUpdate(input: BonvoyageInput.ExpenseUpdate) {
     val updatedExpense = api.updateExpense(id, user.id, input.expenseId, input.properties)
     emitter.emit(BonvoyageOutput.ExpenseUpdate(updatedExpense), BonvoyageOutput.serializer())
-  }
-
-  private suspend fun handleTripSummary() {
-    val trip = api.getTripAggregate(id, user.id)
-    emitter.emit(BonvoyageOutput.TripSummary(trip), BonvoyageOutput.serializer())
-  }
-
-  private suspend fun handleTripFinalize() {
-    val expenses = api.listTripExpenses(id, user.id)
-
-    val unverifiedExpenses = expenses.filter { !it.verified }
-
-    if (unverifiedExpenses.isNotEmpty()) {
-      emitter.emit(
-        BonvoyageOutput.FinalizeTripExpensesUnverified(unverifiedExpenses),
-        BonvoyageOutput.serializer(),
-      )
-      return
-    }
-  }
-
-  private suspend fun handleTripGenerateReport() {
-    api.generateAndSendReport(id, user.id, user.email)
-    emitter.emit(BonvoyageOutput.TripReport, BonvoyageOutput.serializer())
   }
 }
 

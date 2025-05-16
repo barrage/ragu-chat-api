@@ -18,7 +18,7 @@ import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.model.SearchFiltersAdminChats
 import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.app.workflow.chat.model.toChat
-import net.barrage.llmao.core.database.getMessages
+import net.barrage.llmao.core.database.getWorkflowMessages
 import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
@@ -148,10 +148,10 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         .where(CHATS.TYPE.eq(type).and(CHATS.USER_ID.eq(userId)))
         .orderBy(CHATS.CREATED_AT.desc())
         .limit(1)
-        .awaitFirstOrNull() ?: return null
+        .awaitFirstOrNull()
+        ?.into(CHATS) ?: return null
 
-    val messages =
-      dslContext.getMessages(chat.into(CHATS).id!!, userId, Pagination(1, messageLimit))
+    val messages = dslContext.getWorkflowMessages(chat.id!!, Pagination(1, messageLimit))
 
     return ChatWithMessages(chat.into(CHATS).toChat(), messages)
   }
@@ -186,15 +186,14 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     userId: String? = null,
   ): ChatWithMessages? {
     val chat = get(id, userId) ?: return null
-    val messages = dslContext.getMessages(id, userId, pagination)
+    val messages = dslContext.getWorkflowMessages(id, pagination)
     return ChatWithMessages(chat, messages)
   }
 
   suspend fun getMessages(
     chatId: KUUID,
-    userId: String? = null,
     pagination: Pagination,
-  ): CountedList<MessageGroupAggregate> = dslContext.getMessages(chatId, userId, pagination)
+  ): CountedList<MessageGroupAggregate> = dslContext.getWorkflowMessages(chatId, pagination)
 
   suspend fun evaluateMessageGroup(messageGroupId: KUUID, input: EvaluateMessage): Int {
     if (input.evaluation == null) {

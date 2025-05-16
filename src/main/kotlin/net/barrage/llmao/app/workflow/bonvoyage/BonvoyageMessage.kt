@@ -18,7 +18,7 @@ sealed class BonvoyageInput {
    * Input to [BonvoyageChatAgent].
    */
   @Serializable
-  @SerialName("expense.upload")
+  @SerialName("bonvoyage.chat")
   data class ChatInput(val input: DefaultWorkflowInput) : BonvoyageInput()
 
   /**
@@ -27,7 +27,7 @@ sealed class BonvoyageInput {
    * Input to [BonvoyageExpenseAgent].
    */
   @Serializable
-  @SerialName("expense.upload")
+  @SerialName("bonvoyage.expense.upload")
   data class ExpenseUpload(
     /** Base64 encoded image data. */
     val data: IncomingImageData,
@@ -42,32 +42,11 @@ sealed class BonvoyageInput {
    * System message; does not use agent.
    */
   @Serializable
-  @SerialName("expense.update")
+  @SerialName("bonvoyage.expense.update")
   data class ExpenseUpdate(
     val expenseId: KUUID,
     val properties: BonvoyageTravelExpenseUpdateProperties,
   ) : BonvoyageInput()
-
-  /**
-   * Sent to request an aggregate of a trip and all its expenses.
-   *
-   * System message; does not use agent.
-   */
-  @Serializable @SerialName("trip.summary") data object TripSummary : BonvoyageInput()
-
-  /**
-   * Sent to generate a trip report.
-   *
-   * System message; does not use agent.
-   */
-  @Serializable @SerialName("trip.report") data object TripGenerateReport : BonvoyageInput()
-
-  /**
-   * Sent to finalize the trip and make it read only.
-   *
-   * System message; does not use agent.
-   */
-  @Serializable @SerialName("trip.finalize") data object TripFinalize : BonvoyageInput()
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -80,13 +59,8 @@ sealed class BonvoyageOutput {
    * Response to: [BonvoyageInput.ExpenseUpload]
    */
   @Serializable
-  @SerialName("expense.upload")
+  @SerialName("bonvoyage.expense.upload")
   data class ExpenseUpload(val data: BonvoyageTravelExpense) : BonvoyageOutput()
-
-  /** Response to: [BonvoyageInput.TripSummary] */
-  @Serializable
-  @SerialName("trip.summary")
-  data class TripSummary(val data: BonvoyageTripAggregate) : BonvoyageOutput()
 
   /**
    * Sent upon successfully updating an expense entry.
@@ -94,23 +68,6 @@ sealed class BonvoyageOutput {
    * Response to: [BonvoyageInput.ExpenseUpdate]
    */
   @Serializable
-  @SerialName("expense.update")
+  @SerialName("bonvoyage.expense.update")
   data class ExpenseUpdate(val expense: BonvoyageTravelExpense) : BonvoyageOutput()
-
-  /**
-   * Sent upon successful report generation.
-   *
-   * Response to: [BonvoyageInput.TripGenerateReport]
-   */
-  @Serializable @SerialName("trip.report") data object TripReport : BonvoyageOutput()
-
-  /**
-   * Sent upon receiving a request to finalize the trip when there are unverified expenses.
-   *
-   * Response to: [BonvoyageInput.TripFinalize]
-   */
-  @Serializable
-  @SerialName("trip.finalize.expenses_unverified")
-  data class FinalizeTripExpensesUnverified(val expenses: List<BonvoyageTravelExpense>) :
-    BonvoyageOutput()
 }

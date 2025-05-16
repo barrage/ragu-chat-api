@@ -1,8 +1,8 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
 import io.github.smiley4.ktoropenapi.delete
+import io.github.smiley4.ktoropenapi.patch
 import io.github.smiley4.ktoropenapi.post
-import io.github.smiley4.ktoropenapi.put
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -98,17 +98,47 @@ fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
   route("/bonvoyage/trips") {
     get { call.respond(api.listTrips(call.user().id)) }
 
-    get("/{id}") {
-      val id = call.pathUuid("id")
-      val trip = api.getTripAggregate(id, call.user().id)
-      call.respond(trip)
-    }
+    get("/active") { call.respond(api.getActiveTrip(call.user().id)) }
 
-    put("/{id}") {
-      val id = call.pathUuid("id")
-      val update = call.receive<BonvoyageTripUpdate>()
-      val updated = api.updateTripProperties(id, call.user().id, update)
-      call.respond(updated)
+    route("/{id}") {
+      get {
+        val id = call.pathUuid("id")
+        val trip = api.getTripAggregate(id, call.user().id)
+        call.respond(trip)
+      }
+
+      patch {
+        val tripId = call.pathUuid("id")
+        val update = call.receive<BonvoyageTripUpdate>()
+        when (update) {
+          is BonvoyageStartTrip -> {
+            val id = call.pathUuid("id")
+            val start = call.receive<BonvoyageStartTrip>()
+            val trip = api.startTrip(id, call.user().id, start)
+            call.respond(trip)
+          }
+          is BonvoyageTripPropertiesUpdate -> {
+            val trip = api.updateTripProperties(tripId, call.user().id, update)
+            call.respond(trip)
+          }
+          is BonvoyageEndTrip -> {
+            val trip = api.endTrip(tripId, call.user().id, update)
+            call.respond(trip)
+          }
+        }
+      }
+
+      get("/expenses") {
+        val tripId = call.pathUuid("id")
+        val expenses = api.listTripExpenses(tripId, call.user().id)
+        call.respond(expenses)
+      }
+
+      post("/report") {
+        val tripId = call.pathUuid("id")
+        api.generateAndSendReport(tripId, call.user().id, call.user().email)
+        call.respond(HttpStatusCode.NoContent)
+      }
     }
 
     route("/requests") {
