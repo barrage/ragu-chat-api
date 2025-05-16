@@ -1,4 +1,4 @@
-# vLLM Multi-Model Deployment on a Single Machine
+## vLLM Multi-Model Deployment on a Single Machine
 
 This guide walks you through deploying multiple vLLM instances on a single Linux machine, each serving a different model on dedicated GPUs, behind a reverse proxy (nginx).
 
@@ -10,26 +10,26 @@ This guide walks you through deploying multiple vLLM instances on a single Linux
 
 ---
 
-## 📦 Installation
+###  Installation
 
-### 1. Install Python venv
+#### 1. Install Python venv
 
 ```bash
 apt install python3.12-venv -y
 ```
 
-### 2. Create and activate the virtual environment
+#### 2. Create and activate the virtual environment
 
 ```bash
 python3 -m venv /opt/vllm/venv
 source /opt/vllm/venv/bin/activate
 ```
-### 3. Install vLLM
+#### 3. Install vLLM
 ```bash
 pip install vllm
 ```
 
-## 👤 Create a Dedicated User
+### Create a Dedicated User
 
 Create a non-login system user to run vLLM:
 ```bash
@@ -37,14 +37,14 @@ adduser vllm --shell=/bin/false --disabled-password
 ```
 
 
-## 🧪 Sample Model Setup: Qwen 72B
+### Sample Model Setup: Qwen 72B
 
-### 1. Create model scripts folder
+#### 1. Create model scripts folder
 ```bash
 mkdir -p /opt/vllm/scripts
 ```
 
-### 2. Create model launch script
+#### 2. Create model launch script
 ```bash
 cat << 'EOF' > /opt/vllm/scripts/vllm_qwen.sh
 #!/bin/bash
@@ -67,7 +67,7 @@ huggingface-cli login
 ```
 
 
-## 🛠️ Create Systemd Service
+### Create Systemd Service
 
 Create the service file for the model:
 ```bash
@@ -99,14 +99,14 @@ systemctl enable vllm-qwen.service
 systemctl restart vllm-qwen.service
 ```
 
-## 🌐 Reverse Proxy with Nginx
+### Reverse Proxy with Nginx
 
-### 1. Install nginx
+#### 1. Install nginx
 ```bash
 apt install nginx -y
 ```
 
-### 2. Configure Virtual Host
+#### 2. Configure Virtual Host
 
 Create a new nginx config:
 ```bash
@@ -132,23 +132,23 @@ Test and restart:
 nginx -t && systemctl restart nginx
 ```
 
-## 🔐 HTTPS with Let's Encrypt
+###  HTTPS with Let's Encrypt
 
-### 1. Add A record to point your domain to the machine.
+#### 1. Add A record to point your domain to the machine.
 
-### 2. Install Certbot
+#### 2. Install Certbot
 ```bash
 apt install certbot python3-certbot-nginx -y
 ```
 
-### 3. Generate certificates
+#### 3. Generate certificates
 ```bash
 certbot --nginx
 ```
 
 
 
-## 🔄 Multiple Models: Example Setup
+### Multiple Models: Example Setup
 
 You can run additional vLLM processes on different ports and GPUs:
 
@@ -191,7 +191,7 @@ Reload nginx:
 nginx -t && systemctl restart nginx
 ```
 
-## ⚠️ Important Notes
+### Important Notes
 vLLM can only serve one model per instance.
 
 Reverse proxy paths (e.g., /qwen) must be mapped manually to the correct model version.
@@ -200,7 +200,7 @@ Most OpenAI-compatible clients require the model ID in the request body. Ensure 
 
 You can omit the model parameter in requests only if the client allows it.
 
-## 🔗 Helpful Links
+### Helpful Links
 [vLLM Docs – Distributed Serving](https://docs.vllm.ai/en/latest/serving/distributed_serving.html)
 
 [vLLM Docs – FAQ](https://docs.vllm.ai/en/latest/getting_started/faq.html)
