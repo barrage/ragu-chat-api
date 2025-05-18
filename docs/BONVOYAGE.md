@@ -7,16 +7,15 @@ of travel orders and travel expense reports.
 
 Bonvoyage consists of the following entities:
 
-### **Bonvoyage users (travelers)**
-
-In order to use Bonvoyage, Ragu users must be registered as Bonvoyage users. This must be done by an administrator.
-Bonvoyage users issue *travel order requests* to *travel managers*. In further text, these may also be referred to as
-*travelers*.
- 
 ### **Travel managers**
 
-A subset of *Bonvoyage users* who can approve *travel order requests*. These are also assigned by administrators.
-A *Bonvoyage user* cannot be created if there are no available *travel managers*.
+A subset of Ragu users who can approve *travel order requests*. Created by administrators.
+Any travel manager can accept or reject any travel request.
+
+### **Traveler to travel manager mappings**
+
+Notification mappings that represent which manager should be notified of travel requests from a specific user.
+There can be multiple mappings for a single user-manager pair, e.g. one for email and one for push notifications.
 
 ### **Travel requests**
 
@@ -42,11 +41,10 @@ Represent any expenses made on *trips* that are eligible for reimbursement. Expe
 Since this is mostly an automatic process, expenses must be verified by users who uploaded them and their 
 database entries can be updated if necessary.
 
-### **Traveler events**
+### **Traveler notifications**
 
-Immutable entities that get created whenever there is some interaction between a user and their *trip*. They represent specific events during the
-time the trip is active. For example, the time when the traveler was notified that their trip was created, the time when they confirmed
-their departure time, etc.
+Traveler notifications are sent to users at various points in the trip lifecycle. They are used to remind users
+of upcoming trips, to notify them when their trip has started, and to notify them when their trip has ended.
 
 Note, travel orders are not a part of this plugin and are handled externally by a 3rd party. The only connection is
 the travel order ID which is used to link the *trip* to the external system.
@@ -64,5 +62,11 @@ the travel order ID which is used to link the *trip* to the external system.
    is starting and ending. At this point the trip is read-only, meaning the user can chat with their
    assistant about it, but cannot make any changes to the trip's properties until they start it.
 4. The traveler starts the trip and, if using a personal vehicle, provides the start mileage.
-5. The traveler uploads expenses and optionally chats with their assistant about the trip.
+5. The traveler uploads receipts of expenses made on the trip.
 6. The traveler ends the trip and, if using a personal vehicle, provides the end mileage.
+7. The traveler verifies, i.e. makes sure all the expenses made on the trip have the correct amount, currency, 
+   and description. They then generate the trip report which gets delivered to them via email, which they can then
+   submit to their company accounting department for reimbursement.
+
+Travel managers can create a trip directly without going through the process of issuing a travel request, skipping
+steps 1 and 2.

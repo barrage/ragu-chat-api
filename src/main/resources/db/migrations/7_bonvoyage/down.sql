@@ -1,5 +1,7 @@
 DROP TABLE bonvoyage_travel_expenses;
 DROP TABLE bonvoyage_travel_requests;
-DROP TABLE bonvoyage_workflows;
+DROP TABLE bonvoyage_trip_welcome_messages;
+DROP TABLE bonvoyage_trip_notifications;
+DROP TABLE bonvoyage_trips;
 DROP TABLE bonvoyage_travel_manager_user_mappings;
 DROP TABLE bonvoyage_travel_managers;

@@ -19,7 +19,13 @@ class TokenUsageTracker(
 ) {
   private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 
-  fun store(amount: TokenUsageAmount, usageType: TokenUsageType, model: String, provider: String, note: String? = null) {
+  fun store(
+    amount: TokenUsageAmount,
+    usageType: TokenUsageType,
+    model: String,
+    provider: String,
+    note: String? = null,
+  ) {
     try {
       scope.launch {
         repository.insert(
@@ -33,7 +39,7 @@ class TokenUsageTracker(
           usageType = usageType,
           model = model,
           provider = provider,
-          note=  note,
+          note = note,
         )
       }
     } catch (e: Exception) {

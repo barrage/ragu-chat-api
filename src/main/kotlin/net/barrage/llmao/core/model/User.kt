@@ -6,7 +6,7 @@ package net.barrage.llmao.core.model
  */
 data class User(
   val id: String,
-  val username: String?,
+  val username: String,
   val email: String,
   val entitlements: List<String>,
 ) {

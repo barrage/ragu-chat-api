@@ -6,7 +6,9 @@ import net.barrage.llmao.tables.records.BonvoyageTravelExpensesRecord
 import net.barrage.llmao.tables.records.BonvoyageTravelManagerUserMappingsRecord
 import net.barrage.llmao.tables.records.BonvoyageTravelManagersRecord
 import net.barrage.llmao.tables.records.BonvoyageTravelRequestsRecord
-import net.barrage.llmao.tables.records.BonvoyageWorkflowsRecord
+import net.barrage.llmao.tables.records.BonvoyageTripNotificationsRecord
+import net.barrage.llmao.tables.records.BonvoyageTripWelcomeMessagesRecord
+import net.barrage.llmao.tables.records.BonvoyageTripsRecord
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
@@ -112,14 +114,14 @@ data class BonvoyageTravelRequest(
    * Current status of the request.
    *
    * If [BonvoyageTravelRequestStatus.PENDING], the request is pending review and [reviewerId],
-   * [reviewComment] and [workflowId] are null.
+   * [reviewComment] and [tripId] are null.
    *
    * If [BonvoyageTravelRequestStatus.APPROVED], a corresponding trip entry will be created and
-   * [workflowId] will point to it. In this case [reviewerId] is certain to be non-null and
-   * indicates which user approved the request.
+   * [tripId] will point to it. In this case [reviewerId] is certain to be non-null and indicates
+   * which user approved the request.
    *
-   * If [BonvoyageTravelRequestStatus.REJECTED], no trip entry will be created and [workflowId] will
-   * be null.
+   * If [BonvoyageTravelRequestStatus.REJECTED], no trip entry will be created and [tripId] will be
+   * null.
    *
    * None of the cases above guarantee that [reviewComment] is non-null, however managers are
    * advised to provide a comment when rejecting a request.
@@ -137,7 +139,7 @@ data class BonvoyageTravelRequest(
    *
    * Points to the corresponding trip entry.
    */
-  val workflowId: KUUID?,
+  val tripId: KUUID?,
 
   /** When the request was created. */
   val createdAt: KOffsetDateTime,
@@ -261,12 +263,18 @@ data class BonvoyageTrip(
   val transportType: TransportType,
 
   /**
-   * The purpose of the business trip.
+   * The purpose of the business trip and any additional information about the trip entered by the
+   * user during.
    *
-   * Mutable at any time during the trip.
+   * Modifiable at any time by the user during the trip.
    */
   val description: String,
+
+  /** When the user finalizes the trip, this is set to true. Mostly for display purposes. */
   val completed: Boolean,
+
+  /** Auto-calculated by the database. A trip is active if it has a start time, but no end time. */
+  val active: Boolean,
 
   /** When the database entry was created. */
   val createdAt: KOffsetDateTime,
@@ -274,7 +282,7 @@ data class BonvoyageTrip(
   /** When the database entry was last updated. */
   val updatedAt: KOffsetDateTime,
 
-  // Optional fields for personal vehicle
+  // Fields for personal vehicle
 
   /** The brand of the vehicle used, e.g. Ford Focus MK2, a.k.a. The Gentleman's Vehicle. */
   val vehicleType: String?,
@@ -287,9 +295,35 @@ data class BonvoyageTrip(
 
   /** The mileage of the vehicle when the trip ended. */
   val endMileage: String?,
-) {
-  fun isActive(): Boolean = actualStartDateTime != null && actualEndDateTime == null
+)
+
+/**
+ * Created when a travel request is approved and its corresponding trip is created. Used by the
+ * scheduler along with trips to determine when to send notifications.
+ */
+@Serializable
+data class BonvoyageTripNotification(
+  val id: KUUID,
+  val tripId: KUUID,
+  /** Whether it is the start or end of the trip. */
+  val notificationType: BonvoyageTripNotificationType,
+
+  /** Whether this notification was sent. */
+  val sentAt: KOffsetDateTime?,
+)
+
+@Serializable
+enum class BonvoyageTripNotificationType {
+  START_OF_TRIP,
+  END_OF_TRIP,
 }
+
+/**
+ * Sent when a travel request is approved and its corresponding trip is created. A friendly welcome
+ * message that contains the trip summary. Used for display purposes.
+ */
+@Serializable
+data class BonvoyageTripWelcomeMessage(val id: KUUID, val tripId: KUUID, val content: String)
 
 /**
  * A single expense on a business trip. These are aggregated at the end and presented to the user
@@ -301,7 +335,7 @@ data class BonvoyageTravelExpense(
   val id: KUUID,
 
   /** The trip this expense belongs to. */
-  val workflowId: KUUID,
+  val tripId: KUUID,
 
   /**
    * The message group the expense is tied to. Used to filter out expenses when querying chats.
@@ -363,7 +397,7 @@ fun BonvoyageTravelManagerUserMappingsRecord.toTravelManagerUserMapping() =
     createdAt = this.createdAt!!,
   )
 
-fun BonvoyageWorkflowsRecord.toTrip() =
+fun BonvoyageTripsRecord.toTrip() =
   BonvoyageTrip(
     id = this.id!!,
     userId = this.userId,
@@ -376,6 +410,7 @@ fun BonvoyageWorkflowsRecord.toTrip() =
     startDateTime = this.startDateTime,
     actualStartDateTime = this.actualStartDateTime,
     completed = this.completed!!,
+    active = this.active!!,
     endDateTime = this.endDateTime,
     actualEndDateTime = this.actualEndDateTime,
     transportType = TransportType.valueOf(this.transportType),
@@ -388,10 +423,21 @@ fun BonvoyageWorkflowsRecord.toTrip() =
     endMileage = this.endMileage,
   )
 
+fun BonvoyageTripNotificationsRecord.toTripNotification() =
+  BonvoyageTripNotification(
+    id = this.id!!,
+    tripId = this.tripId,
+    notificationType = BonvoyageTripNotificationType.valueOf(this.notificationType),
+    sentAt = this.sentAt,
+  )
+
+fun BonvoyageTripWelcomeMessagesRecord.toTripWelcomeMessage() =
+  BonvoyageTripWelcomeMessage(id = this.id!!, tripId = this.tripId, content = this.content)
+
 fun BonvoyageTravelExpensesRecord.toTravelExpense() =
   BonvoyageTravelExpense(
     id = this.id!!,
-    workflowId = this.workflowId,
+    tripId = this.tripId,
     messageGroupId = this.messageGroupId,
     amount = this.amount,
     currency = this.currency,
@@ -422,6 +468,6 @@ fun BonvoyageTravelRequestsRecord.toTravelRequest() =
     status = BonvoyageTravelRequestStatus.valueOf(this.status),
     reviewerId = this.reviewerId,
     reviewComment = this.reviewComment,
-    workflowId = this.workflowId,
+    tripId = this.tripId,
     createdAt = this.createdAt!!,
   )

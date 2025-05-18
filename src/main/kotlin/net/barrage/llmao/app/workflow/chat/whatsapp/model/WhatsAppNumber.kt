@@ -11,7 +11,7 @@ import net.barrage.llmao.types.KUUID
 data class WhatsAppNumber(
   val id: KUUID,
   val userId: String,
-  val username: String?,
+  val username: String,
   val phoneNumber: String,
   val createdAt: KOffsetDateTime,
   val updatedAt: KOffsetDateTime,

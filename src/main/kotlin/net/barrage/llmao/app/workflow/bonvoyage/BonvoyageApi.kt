@@ -14,23 +14,31 @@ import com.itextpdf.layout.element.LineSeparator
 import com.itextpdf.layout.element.Paragraph
 import com.itextpdf.layout.element.Table
 import com.itextpdf.layout.properties.UnitValue
+import io.ktor.util.logging.KtorSimpleLogger
 import java.io.ByteArrayOutputStream
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.Email
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.administration.settings.SettingKey
+import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
 import net.barrage.llmao.core.blob.BlobStorage
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.PropertyUpdate
+import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.types.KUUID
 
 class BonvoyageAdminApi(
-  val repository: BonvoyageRepository,
-  val email: Email,
-  val scheduler: BonvoyageNotificationScheduler,
+  private val repository: BonvoyageRepository,
+  private val email: Email,
+  private val settings: Settings,
+  private val providers: ProviderState,
 ) {
+  private val log = KtorSimpleLogger("n.b.l.a.workflow.bonvoyage.BonvoyageAdminApi")
+
   suspend fun listTrips(): List<BonvoyageTrip> = repository.listTrips()
 
   suspend fun getTripAggregate(id: KUUID): BonvoyageTripAggregate = repository.getTripAggregate(id)
@@ -107,15 +115,11 @@ class BonvoyageAdminApi(
 
         repo.updateTravelRequestWorkflow(requestId, trip.id)
 
+        repo.insertTripNotification(trip.id, BonvoyageTripNotificationType.START_OF_TRIP)
+        repo.insertTripNotification(trip.id, BonvoyageTripNotificationType.END_OF_TRIP)
+
         trip
       }
-
-    scheduler.scheduleEmail(
-      request.userEmail,
-      request.startLocation,
-      request.endLocation,
-      request.startDateTime,
-    )
 
     email.sendEmail(
       "bonvoyage@barrage.net",
@@ -127,7 +131,58 @@ class BonvoyageAdminApi(
         .trimMargin(),
     )
 
+    val welcomeMessage = getWelcomeMessage(trip)
+    repository.insertTripWelcomeMessage(trip.id, welcomeMessage)
+
     return trip
+  }
+
+  private suspend fun getWelcomeMessage(trip: BonvoyageTrip): String {
+    val bonvoyageModel = settings.get(SettingKey.BONVOYAGE_MODEL)
+    val bonvoyageLlmProvider = settings.get(SettingKey.BONVOYAGE_LLM_PROVIDER)
+
+    val defaultWelcomeMessage = defaultWelcomeMessage(trip)
+
+    if (bonvoyageModel == null) {
+      log.warn("No Bonvoyage model configured, using default welcome message")
+      return defaultWelcomeMessage
+    }
+
+    if (bonvoyageLlmProvider == null) {
+      log.warn("No Bonvoyage LLM provider configured, using default welcome message")
+      return defaultWelcomeMessage
+    }
+
+    val provider = providers.llm.getOptional(bonvoyageLlmProvider)
+
+    if (provider == null) {
+      log.warn(
+        "Bonvoyage LLM provider '$bonvoyageLlmProvider' not found, using default welcome message"
+      )
+      return defaultWelcomeMessage
+    }
+
+    if (!provider.supportsModel(bonvoyageModel)) {
+      log.warn(
+        "Bonvoyage LLM provider '$bonvoyageLlmProvider' does not support model '$bonvoyageModel', using default welcome message"
+      )
+      return defaultWelcomeMessage
+    }
+
+    val agent =
+      BonvoyageWelcomeAgent(
+        tokenTracker =
+          TokenUsageTrackerFactory.newTracker(
+            trip.userId,
+            trip.userFullName,
+            BONVOYAGE_WORKFLOW_ID,
+            trip.id,
+          ),
+        model = bonvoyageModel,
+        inferenceProvider = provider,
+      )
+
+    return agent.welcomeMessage(trip, defaultWelcomeMessage)
   }
 
   suspend fun rejectTravelRequest(requestId: KUUID, reviewerId: String, reviewerComment: String?) =
@@ -143,6 +198,12 @@ class BonvoyageAdminApi(
     // TODO: implement when we get BC
     return KUUID.randomUUID().toString()
   }
+
+  private fun defaultWelcomeMessage(trip: BonvoyageTrip): String {
+    return """Hello ${trip.userFullName}, a trip from ${trip.startLocation} to ${trip.endLocation} has been created.
+          |The anticipated start time is ${trip.startDateTime} and the end time is ${trip.endDateTime}."""
+      .trimMargin()
+  }
 }
 
 class BonvoyageUserApi(
@@ -150,6 +211,9 @@ class BonvoyageUserApi(
   val email: Email,
   val image: BlobStorage<Image>,
 ) {
+  suspend fun getTripWelcomeMessage(id: KUUID): BonvoyageTripWelcomeMessage? =
+    repository.getTripWelcomeMessage(id)
+
   suspend fun getTripChatMessages(id: KUUID) = repository.getTripChatMessages(id)
 
   suspend fun insertMessages(id: KUUID, messages: List<MessageInsert>): KUUID =
@@ -229,14 +293,19 @@ class BonvoyageUserApi(
   }
 
   suspend fun endTrip(id: KUUID, userId: String, endParams: BonvoyageEndTrip): BonvoyageTrip {
-    val trip = repository.getTrip(id, userId)
+    val trip =
+      repository.getActiveTrip(userId)
+        ?: throw AppError.api(ErrorReason.InvalidOperation, "No active trip found")
+
+    if (trip.id != id) {
+      throw AppError.api(
+        ErrorReason.InvalidOperation,
+        "Cannot end; Trip $id is not active. Currently active trip is ${trip.id}.",
+      )
+    }
 
     if (trip.completed) {
       throw AppError.api(ErrorReason.InvalidOperation, "Cannot end; trip is completed")
-    }
-
-    if (!trip.isActive()) {
-      throw AppError.api(ErrorReason.InvalidOperation, "Cannot end; trip is not active")
     }
 
     if (trip.transportType == TransportType.PERSONAL && endParams.endMileage == null) {

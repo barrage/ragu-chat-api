@@ -207,7 +207,7 @@ class WhatsAppAdapter(
 
   private suspend fun getChatAgent(
     userId: String,
-    username: String?,
+    username: String,
     chat: Chat,
     agent: AgentFull,
   ): ChatAgent {
