@@ -9,7 +9,7 @@ object TokenUsageTrackerFactory {
 
   fun newTracker(
     userId: String,
-    username: String?,
+    username: String,
     workflowType: String,
     workflowId: KUUID,
   ): TokenUsageTracker {

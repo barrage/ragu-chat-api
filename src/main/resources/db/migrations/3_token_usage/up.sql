@@ -3,10 +3,10 @@ CREATE TABLE token_usage(
     id SERIAL PRIMARY KEY,
 
     -- Entity ID from which the tokens originated from.
-    workflow_id UUID NOT NULL,
+    workflow_id UUID,
 
     -- Type of origin.
-    workflow_type TEXT NOT NULL,
+    workflow_type TEXT,
 
     -- ID of the user who caused the usage.
     user_id TEXT NOT NULL,
@@ -31,6 +31,9 @@ CREATE TABLE token_usage(
 
     -- The provider of the model.
     provider TEXT NOT NULL,
+
+    -- Optional note, used by plugins to add context to usage.
+    note TEXT,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

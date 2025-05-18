@@ -9,12 +9,14 @@ import net.barrage.llmao.types.KUUID
 data class TokenUsage(
   val id: Int,
   val userId: String,
-  val workflowId: KUUID,
-  val workflowType: String,
+  val username: String,
+  val workflowId: KUUID?,
+  val workflowType: String?,
   val amount: TokenUsageAmount,
   val usageType: TokenUsageType,
   val model: String,
   val provider: String,
+  val note: String?,
   val createdAt: KOffsetDateTime,
 )
 
@@ -22,26 +24,18 @@ fun TokenUsageRecord.toTokenUsage() =
   TokenUsage(
     id = id!!,
     userId = userId,
+    username = username,
     workflowId = workflowId,
     workflowType = workflowType,
     amount = TokenUsageAmount(promptTokensAmount, completionTokensAmount, totalTokensAmount),
     usageType = TokenUsageType.valueOf(usageType),
     model = model,
+    note = note,
     provider = provider,
     createdAt = createdAt!!,
   )
 
 @Serializable data class TokenUsageAmount(val prompt: Int?, val completion: Int?, val total: Int?)
-
-/** Origin of token usage. */
-@Serializable
-data class TokenUsageOrigin(
-  /** The origin type, i.e. the type of workflow that caused the usage. */
-  val type: String,
-
-  /** The workflow ID. */
-  val id: KUUID?,
-)
 
 @Serializable
 enum class TokenUsageType {
