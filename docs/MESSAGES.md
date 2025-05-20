@@ -2,22 +2,17 @@
 
 Table of contents:
 
-- [System](#system)
+- [Session messages](#session-messages)
     - [Incoming](#incoming)
     - [Outgoing](#outgoing)
-        - [System Events](#system-events)
-- [Workflow](#workflow)
-    - [Chat](#chat)
-        - [Incoming](#incoming-1)
-        - [Outgoing](#outgoing-1)
-    - [JiraKira](#jirakira)
+- [Default workflow input](#default-workflow-input)
+    - [Attachments](#attachments)
 - [Tools](#tools)
 - [Error](#error)
 
-## System
+## Session messages
 
-Generic messages used to control sessions and broadcast system related events.
-These messages indicate events outside workflows and are mainly used to control them.
+Messages that open and close workflows, and send inputs to them.
 
 ### Incoming
 
@@ -26,14 +21,14 @@ These messages indicate events outside workflows and are mainly used to control 
 Start a new workflow with the given configuration. The configuration must be provided depending on the type of workflow.
 The server will respond with a `system.workflow.open` message, depending on the type of workflow opened.
 
-`workflowType` is required. If given and not `CHAT`, the agentId has to be a specialist ID.
-`agentId` is optional and is only necessary when instantiating `CHAT` workflows.
+`workflowType` is required. Supported workflow types depend on plugins installed.
+`params` depends on the `workflowType`. More info can be found in the workflow's documentation.
 
 ```json
 {
   "type": "workflow.new",
-  "agentId": "agent_uuid",
-  "workflowType": "CHAT | JIRAKIRA"
+  "workflowType": "CHAT | JIRAKIRA | BONVOYAGE | ...",
+  "params": "T?"
 }
 ```
 
@@ -45,7 +40,7 @@ Open an existing workflow. The workflow ID must be provided in the payload. The 
 ```json
 {
   "type": "workflow.existing",
-  "workflowType": "CHAT | JIRAKIRA",
+  "workflowType": "CHAT | JIRAKIRA | BONVOYAGE | ...",
   "workflowId": "workflow_uuid"
 }
 ```
@@ -94,26 +89,47 @@ Sent when a workflow is closed manually by the client.
 }
 ```
 
-#### System Events
+### Outgoing
 
-System events are sent to all connected clients regardless of whether they are participating in a workflow.
+- `workflow.stream_chunk`
 
-- `system.event.agent_deactivated`
-
-Sent when an administrator deactivates an agent via the service and is used to indicate that any workflow using it
-is no longer available.
+Sent when a workflow is streaming a response. The response is sent in chunks.
 
 ```json
 {
-  "type": "system.event.agent_deactivated",
-  "agentId": "agent_uuid"
+  "type": "workflow.stream_chunk",
+  "chunk": "chunk_text"
+}
+```
+
+- `workflow.stream_complete`
+
+Sent when a workflow has finished streaming a response. If a workflow is not streaming, then the `content` field will
+contain the final response.
+
+```json
+{
+  "type": "workflow.stream_complete",
+  "workflowId": "workflow_uuid",
+  "reason": "FinishReason",
+  "messageGroupId": "message_uuid",
+  "attachmentPaths": [
+    {
+      "type": "ATTACHMENT_TYPE",
+      "provider": "minio | url",
+      "order": 0,
+      "url": "attachment_url"
+    }
+  ],
+  "content": "Response content if not streaming, null otherwise."
 }
 ```
 
 ## Default Workflow Input
 
-The default workflow input is used by all workflows that are conversation based, i.e. do not have structured input and
-only accept text messages with attachments.
+The default workflow input can be used by workflows that are conversation based, i.e. do not have structured input and
+only accept text messages with attachments. Note, if workflows use it directly, then it can be sent as the below
+structure. Some workflows may wrap it in a custom payload and might need additional type discriminators.
 
 ```json
 {
@@ -132,13 +148,15 @@ only accept text messages with attachments.
     - `type` - The type of attachment. See below section for more information.
     - `data` - Depends on `type`. See below section for more information.
 
+### Attachments
+
 The following `ATTACHMENT_TYPE`s are supported:
 
 - `image` - An image attachment.
 
 The following are data structures associated with attachment types:
 
-###### Image URL (`ATTACHMENT_TYPE == image`)
+#### Image URL (`ATTACHMENT_TYPE == image`)
 
 When attaching public URLs, only the image URL is required.
 
@@ -149,97 +167,14 @@ When attaching public URLs, only the image URL is required.
 }
 ```
 
-###### Image raw (`ATTACHMENT_TYPE == image`)
+#### Image raw (`ATTACHMENT_TYPE == image`)
 
 When attaching raw image data, the data should be a base64 data URI.
 
 ```json
 {
   "type": "raw",
-  "data": "data:image/<IMAGE_TYPE>;base64,<BASE_64_ENCODED_IMAGE_DATA>"
-}
-```
-
-#### Outgoing
-
-- `chat.stream_chunk`
-
-Sent when a chat workflow is streaming a response. The response is sent in chunks.
-
-```json
-{
-  "type": "chat.stream_chunk",
-  "chunk": "chunk_text"
-}
-```
-
-- `chat.stream_complete`
-
-Sent when a chat workflow has finished streaming a response. The response is sent in chunks.
-
-```json
-{
-  "type": "chat.stream_complete",
-  "chatId": "chat_uuid",
-  "reason": "FinishReason",
-  "messageId": "message_uuid"
-}
-```
-
-- `chat.title`
-
-Sent when a chat workflow has generated a title for the chat.
-
-```json
-{
-  "type": "chat.title",
-  "chatId": "chat_uuid",
-  "title": "chat_title"
-}
-```
-
-### JiraKira
-
-Jira Kira conversations are not streaming.
-
-#### Incoming
-
-Jira Kira incoming messages are the same as [Chat](#chat), without the attachments.
-
-#### Outgoing
-
-- `jirakira.response`
-
-Obtained as the final response from the LLM.
-
-```json
-{
-  "type": "jirakira.response",
-  "content": "response_content"
-}
-```
-
-- `jirakira.worklog_created`
-
-Sent when a worklog entry is created for a Jira issue.
-The worklog field is the original Jira worklog entry model.
-
-```json
-{
-  "type": "jirakira.worklog_created",
-  "worklog": "JIRA_WORKLOG_ENTRY_MODEL"
-}
-```
-
-- `jirakira.worklog_updated`
-
-Sent when a worklog entry is updated for a Jira issue.
-The worklog field is the original Jira worklog entry model.
-
-```json
-{
-  "type": "jirakira.worklog_updated",
-  "worklog": "JIRA_WORKLOG_ENTRY_MODEL"
+  "data": "data:<MIME_TYPE>;base64,<BASE_64_ENCODED_IMAGE_DATA>"
 }
 ```
 
@@ -289,6 +224,6 @@ It contains the type of error, the reason it occurred, and an optional descripti
   "errorType": "API | Internal",
   "errorReason": "reason",
   "errorDescription": "description",
-  "displayMessage": "Optional error display message (instruction) of the agent."
+  "displayMessage": "Optional error display message of the agent."
 }
 ```

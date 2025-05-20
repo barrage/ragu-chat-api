@@ -32,3 +32,7 @@ object OffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
     return OffsetDateTime.parse(normalized)
   }
 }
+
+fun KOffsetDateTime(localDate: KLocalDate, offsetTime: KOffsetTime): KOffsetDateTime {
+  return KOffsetDateTime.of(localDate, offsetTime.toLocalTime(), offsetTime.offset)
+}

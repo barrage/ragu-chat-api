@@ -41,7 +41,7 @@ class ChatWorkflow(
       agent.collectAndForwardStream(agent.configuration.context, userMessage, tools, emitter)
 
     if (messages.isEmpty()) {
-      emitter.emit(StreamComplete(chatId = id, reason = finishReason))
+      emitter.emit(StreamComplete(workflowId = id, reason = finishReason))
       return
     }
 
@@ -84,7 +84,7 @@ class ChatWorkflow(
             val title = agent.createTitle(originalPrompt, assistantMessage.content!!.text())
 
             repository.updateTitle(id, user.id, title)
-            emitter.emit(ChatTitleUpdated(id, title), WorkflowOutput.serializer())
+            emitter.emit(ChatTitleUpdated(id, title))
             state = ChatWorkflowState.Persisted(title)
 
             groupId
@@ -96,7 +96,7 @@ class ChatWorkflow(
 
       emitter.emit(
         StreamComplete(
-          chatId = id,
+          workflowId = id,
           reason = finishReason,
           messageGroupId = groupId,
           attachmentPaths = attachmentsInsert,

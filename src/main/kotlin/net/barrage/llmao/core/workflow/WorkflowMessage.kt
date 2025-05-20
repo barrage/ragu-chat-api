@@ -42,7 +42,7 @@ data class StreamChunk(val chunk: String) : WorkflowOutput()
 @SerialName("workflow.stream_complete")
 data class StreamComplete(
   /** The streaming chat ID */
-  val chatId: KUUID,
+  val workflowId: KUUID,
 
   /** What caused the stream to finish. */
   val reason: FinishReason,

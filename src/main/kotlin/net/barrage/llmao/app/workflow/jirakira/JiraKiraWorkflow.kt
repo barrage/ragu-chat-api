@@ -43,7 +43,7 @@ class JiraKiraWorkflow(
     var (finishReason, messages) = agent.collectCompletion(context, userMessage, tools, emitter)
 
     if (messages.isEmpty()) {
-      emitter.emit(StreamComplete(chatId = id, reason = finishReason))
+      emitter.emit(StreamComplete(workflowId = id, reason = finishReason))
       return
     }
 
@@ -94,7 +94,7 @@ class JiraKiraWorkflow(
 
       emitter.emit(
         StreamComplete(
-          chatId = id,
+          workflowId = id,
           reason = finishReason,
           messageGroupId = groupId,
           attachmentPaths = attachmentsInsert,
