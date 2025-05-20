@@ -17,6 +17,9 @@ data class WhatsAppNumber(
   val updatedAt: KOffsetDateTime,
 )
 
+@Serializable
+data class AddNumber(@Number val phoneNumber: String, val username: String) : Validation
+
 @Serializable data class UpdateNumber(@Number val phoneNumber: String) : Validation
 
 fun WhatsAppNumbersRecord.toWhatsAppNumber() =

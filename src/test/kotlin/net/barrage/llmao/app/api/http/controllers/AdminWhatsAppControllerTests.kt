@@ -156,7 +156,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
       client.post("/admin/whatsapp/numbers/${USER_USER.id}") {
         header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
-        setBody(mapOf("phoneNumber" to "385981234566"))
+        setBody(mapOf("phoneNumber" to "385981234566", "username" to USER_USER.username))
       }
 
     assertEquals(200, response.status.value)
@@ -173,7 +173,7 @@ class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableW
       client.post("/admin/whatsapp/numbers/${USER_USER.id}") {
         header("Cookie", adminAccessToken())
         header("Content-Type", "application/json")
-        setBody(mapOf("phoneNumber" to "385981234567"))
+        setBody(mapOf("phoneNumber" to "385981234567", "username" to USER_USER.username))
       }
 
     assertEquals(409, response.status.value)

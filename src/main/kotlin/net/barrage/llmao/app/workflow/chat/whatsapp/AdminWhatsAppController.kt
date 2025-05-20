@@ -14,6 +14,7 @@ import net.barrage.llmao.app.http.query
 import net.barrage.llmao.app.http.queryPaginationSort
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.AddNumber
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppAgentUpdate
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
@@ -50,8 +51,8 @@ fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 
     post("/{userId}", adminAddWhatsAppNumberForUser()) {
       val userId = call.parameters["userId"]!!
-      val number = call.receive<UpdateNumber>()
-      val user = whatsAppAdapter.addNumber(userId, null, number)
+      val add = call.receive<AddNumber>()
+      val user = whatsAppAdapter.addNumber(userId, add.username, add.phoneNumber)
       call.respond(user)
     }
 

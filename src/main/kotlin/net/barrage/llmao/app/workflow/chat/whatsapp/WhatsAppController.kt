@@ -12,6 +12,7 @@ import io.ktor.server.routing.*
 import net.barrage.llmao.app.http.pathUuid
 import net.barrage.llmao.app.http.user
 import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.types.KUUID
 
@@ -33,16 +34,15 @@ fun Route.whatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
 
     post(createWhatsAppNumberForUser()) {
       val user = call.user()
-      val number = call.receive<net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber>()
-      val created = whatsAppAdapter.addNumber(user.id, user.username, number)
+      val number = call.receive<UpdateNumber>()
+      val created = whatsAppAdapter.addNumber(user.id, user.username, number.phoneNumber)
       call.respond(created)
     }
 
     put("/{numberId}", updateWhatsAppNumberForUser()) {
       val loggedInUser = call.user()
       val numberId = call.pathUuid("numberId")
-      val updatedNumber =
-        call.receive<net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber>()
+      val updatedNumber = call.receive<UpdateNumber>()
       val updatedUser = whatsAppAdapter.updateNumber(loggedInUser.id, numberId, updatedNumber)
       call.respond(updatedUser)
     }

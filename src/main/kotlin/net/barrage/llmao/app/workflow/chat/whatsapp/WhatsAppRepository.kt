@@ -37,25 +37,25 @@ class WhatsAppRepository(private val dslContext: DSLContext) {
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp number not found")
   }
 
-  suspend fun addNumber(userId: String, username: String?, number: UpdateNumber): WhatsAppNumber {
+  suspend fun addNumber(userId: String, username: String, number: String): WhatsAppNumber {
     try {
       return dslContext
         .insertInto(WHATS_APP_NUMBERS)
         .set(WHATS_APP_NUMBERS.USER_ID, userId)
         .set(WHATS_APP_NUMBERS.USERNAME, username)
-        .set(WHATS_APP_NUMBERS.PHONE_NUMBER, number.phoneNumber)
+        .set(WHATS_APP_NUMBERS.PHONE_NUMBER, number)
         .returning()
         .awaitSingle()
-        ?.toWhatsAppNumber()
-        ?: throw AppError.api(ErrorReason.Internal, "Failed to insert WhatsApp number")
+        .toWhatsAppNumber()
     } catch (e: DataAccessException) {
       if (e.message?.contains("whats_app_numbers_phone_number_key") == true) {
         throw AppError.api(
           ErrorReason.EntityAlreadyExists,
-          "Phone number '${number.phoneNumber}' is already in use",
+          "Phone number '${number}' is already in use",
+          original = e,
         )
       }
-      throw AppError.api(ErrorReason.Internal, "Failed to insert WhatsApp number")
+      throw AppError.api(ErrorReason.Internal, "Failed to insert WhatsApp number", original = e)
     }
   }
 

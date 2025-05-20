@@ -102,9 +102,9 @@ class WhatsAppAdapter(
     return whatsAppRepository.getNumbersByUserId(userId)
   }
 
-  suspend fun addNumber(userId: String, username: String?, number: UpdateNumber): WhatsAppNumber {
+  suspend fun addNumber(userId: String, username: String, number: String): WhatsAppNumber {
     val response = whatsAppRepository.addNumber(userId, username, number)
-    sendWelcomeMessage(number.phoneNumber)
+    sendWelcomeMessage(number)
     return response
   }
 
