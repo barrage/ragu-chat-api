@@ -41,11 +41,7 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
   }
 
   override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
-    val trip = api.getTrip(workflowId, user.id)
-
-    if (trip.completed) {
-      throw AppError.api(ErrorReason.InvalidOperation, "Trip is already completed")
-    }
+    api.getTrip(workflowId, user.id)
 
     val settings = settings.getAllWithDefaults()
     val bonvoyageLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]

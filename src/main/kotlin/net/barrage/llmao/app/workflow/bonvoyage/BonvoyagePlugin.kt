@@ -4,9 +4,11 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
+import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
+import net.barrage.llmao.core.workflow.WorkflowOutput
 
 internal const val BONVOYAGE_WORKFLOW_ID = "BONVOYAGE"
 
@@ -34,6 +36,10 @@ class BonvoyagePlugin() : Plugin {
 
   override fun RequestValidationConfig.configureRequestValidation() {
     validate<TravelRequest>(TravelRequest::validate)
-    validate<BonvoyageStartTrip>(BonvoyageStartTrip::validate)
+  }
+
+  override fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {
+    subclass(ExpenseUpload::class, ExpenseUpload.serializer())
+    subclass(ExpenseUpdate::class, ExpenseUpdate.serializer())
   }
 }

@@ -10,7 +10,6 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.workflow.DefaultWorkflowInput
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.StreamComplete
-import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.core.workflow.WorkflowRealTime
 import net.barrage.llmao.types.KUUID
 

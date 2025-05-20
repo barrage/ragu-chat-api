@@ -31,9 +31,6 @@ system. Through this entity users can upload expenses and generate trip reports.
 
 When a travel request is approved, a trip is created. Multiple trips can exist for a single user at any given time.
 
-An **active trip** is a trip whose `actualStartDatetime` property has been set, and whose `actualEndDateTime` is not
-yet set. Only a single active trip can exist at a time per user.
-
 ### **Travel expenses**
 
 Represent any expenses made on *trips* that are eligible for reimbursement. Expense receipt images are uploaded by 
@@ -54,19 +51,61 @@ the travel order ID which is used to link the *trip* to the external system.
 1. A *Bonvoyage user* issues a *travel request* to a *travel manager*.
    Multiple travel requests can exist for the same user at the same time.
 2. The *travel manager* is notified of the request and either:
-     - approves the request in which case a *trip* is created upon 
-       successfully creating a travel order via some 3rd party.
-     - rejects the request in which case the flow ends here.
+     - approves the request, in which case a *trip* is created upon 
+       successfully creating a travel order. 
+     - rejects the request, in which case the flow ends here.
 3. The traveler is notified of the approved request and the newly created *trip*.
-   In this step, the system will set up notification handlers which will aptly remind the traveler that their trip
-   is starting and ending. At this point the trip is read-only, meaning the user can chat with their
-   assistant about it, but cannot make any changes to the trip's properties until they start it.
-4. The traveler starts the trip and, if using a personal vehicle, provides the start mileage.
-5. The traveler uploads receipts of expenses made on the trip.
-6. The traveler ends the trip and, if using a personal vehicle, provides the end mileage.
-7. The traveler verifies, i.e. makes sure all the expenses made on the trip have the correct amount, currency, 
+4. The traveler edits the start and end times of the trip and uploads receipts of expenses made on the trip.
+5. The traveler verifies, i.e. makes sure all the expenses made on the trip have the correct amount, currency, 
    and description. They then generate the trip report which gets delivered to them via email, which they can then
    submit to their company accounting department for reimbursement.
 
+### Step 1 
+
+Since a travel order is ultimately created from a travel request, the request's parameters should be 1:1 with the travel
+order being issued, as a travel order is an official and legally required document.
+
+In the request creation flow, travelers can enter an _expected_ start and end time that will enable start and end
+reminders, respectively.
+
+### Step 2
+
+Travel managers get notified via [mappings](#traveler-to-travel-manager-mappings).
+
+Travel managers should be mapped to travelers with which they have a close work relationship.
+In other words, they know the context of the trip and can make informed decisions about whether to approve it or not.
+It is the manager's responsibility to verify the correctness of the request's parameters.
+
+When approved, a request to a 3rd party is sent to create a travel order using the request's parameters.
+Travel orders do not contain times, only dates of when the trip is starting/ending.
+Travelers can enter an _expected_ start and end time when creating the request that will enable start and end reminders,
+respectively.
+
+In this step, managers can override the _expected_ start and end time that will enable start and end
+reminders, respectively.
+
+### Step 3
+
+The traveler is notified of the approval or rejection via email and push notifications. These notifications should link
+the traveler to the trip overview screen (if approved).
+
 Travel managers can create a trip directly without going through the process of issuing a travel request, skipping
 steps 1 and 2.
+
+### Step 4
+
+If the trip has a _reminder start time, a reminder is sent at that time to the traveler via push notification.
+This reminder has a link for the traveler to go the trip overview screen.
+
+Since the idea is to streamline the process of creating a report, travelers can update the trip's parameters at any 
+time. They can edit expenses and their descriptions.
+
+PDF previews of the report can be generated to get an overview of how it will eventually be sent to accounting.
+
+### Step 5
+
+Once the trip has ended, the traveler verifies the start time, end time, and expenses.
+If they are traveling with a personal vehicle and haven't provided the mileage yet, they
+must do so in order to send the report to accounting.
+
+Once everything is verified, they can send the report to accounting and their trip is considered complete.

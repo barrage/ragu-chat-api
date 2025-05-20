@@ -19,9 +19,10 @@ import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_MANAGERS
 import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS
 import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_REQUESTS
 import net.barrage.llmao.tables.references.BONVOYAGE_TRIPS
-import net.barrage.llmao.tables.references.BONVOYAGE_TRIP_NOTIFICATIONS
 import net.barrage.llmao.tables.references.BONVOYAGE_TRIP_WELCOME_MESSAGES
+import net.barrage.llmao.types.KLocalDate
 import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KOffsetTime
 import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
@@ -207,10 +208,13 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .set(BONVOYAGE_TRAVEL_REQUESTS.END_LOCATION, request.endLocation)
       .set(BONVOYAGE_TRAVEL_REQUESTS.TRANSPORT_TYPE, request.transportType.name)
       .set(BONVOYAGE_TRAVEL_REQUESTS.DESCRIPTION, request.description)
-      .set(BONVOYAGE_TRAVEL_REQUESTS.START_DATE_TIME, request.startDateTime)
-      .set(BONVOYAGE_TRAVEL_REQUESTS.END_DATE_TIME, request.endDateTime)
+      .set(BONVOYAGE_TRAVEL_REQUESTS.START_DATE, request.startDate)
+      .set(BONVOYAGE_TRAVEL_REQUESTS.END_DATE, request.endDate)
+      .set(BONVOYAGE_TRAVEL_REQUESTS.EXPECTED_START_TIME, request.expectedStartTime)
+      .set(BONVOYAGE_TRAVEL_REQUESTS.EXPECTED_END_TIME, request.expectedEndTime)
       .set(BONVOYAGE_TRAVEL_REQUESTS.VEHICLE_TYPE, request.vehicleType)
       .set(BONVOYAGE_TRAVEL_REQUESTS.VEHICLE_REGISTRATION, request.vehicleRegistration)
+      .set(BONVOYAGE_TRAVEL_REQUESTS.IS_DRIVER, request.isDriver)
       .set(BONVOYAGE_TRAVEL_REQUESTS.STATUS, BonvoyageTravelRequestStatus.PENDING.name)
       .returning()
       .awaitSingle()
@@ -223,27 +227,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
     status: BonvoyageTravelRequestStatus? = null,
   ): List<BonvoyageTravelRequest> {
     return dslContext
-      .select(
-        BONVOYAGE_TRAVEL_REQUESTS.ID,
-        BONVOYAGE_TRAVEL_REQUESTS.USER_ID,
-        BONVOYAGE_TRAVEL_REQUESTS.USER_FULL_NAME,
-        BONVOYAGE_TRAVEL_REQUESTS.USER_EMAIL,
-        BONVOYAGE_TRAVEL_REQUESTS.START_LOCATION,
-        BONVOYAGE_TRAVEL_REQUESTS.STOPS,
-        BONVOYAGE_TRAVEL_REQUESTS.END_LOCATION,
-        BONVOYAGE_TRAVEL_REQUESTS.TRANSPORT_TYPE,
-        BONVOYAGE_TRAVEL_REQUESTS.DESCRIPTION,
-        BONVOYAGE_TRAVEL_REQUESTS.VEHICLE_TYPE,
-        BONVOYAGE_TRAVEL_REQUESTS.VEHICLE_REGISTRATION,
-        BONVOYAGE_TRAVEL_REQUESTS.START_DATE_TIME,
-        BONVOYAGE_TRAVEL_REQUESTS.END_DATE_TIME,
-        BONVOYAGE_TRAVEL_REQUESTS.STATUS,
-        BONVOYAGE_TRAVEL_REQUESTS.REVIEWER_ID,
-        BONVOYAGE_TRAVEL_REQUESTS.REVIEW_COMMENT,
-        BONVOYAGE_TRAVEL_REQUESTS.TRIP_ID,
-        BONVOYAGE_TRAVEL_REQUESTS.CREATED_AT,
-      )
-      .from(BONVOYAGE_TRAVEL_REQUESTS)
+      .selectFrom(BONVOYAGE_TRAVEL_REQUESTS)
       .where(
         userId?.let { BONVOYAGE_TRAVEL_REQUESTS.USER_ID.eq(userId) }
           ?: DSL.noCondition()
@@ -258,27 +242,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
 
   suspend fun getTravelRequest(id: KUUID, userId: String? = null): BonvoyageTravelRequest {
     return dslContext
-      .select(
-        BONVOYAGE_TRAVEL_REQUESTS.ID,
-        BONVOYAGE_TRAVEL_REQUESTS.USER_ID,
-        BONVOYAGE_TRAVEL_REQUESTS.USER_FULL_NAME,
-        BONVOYAGE_TRAVEL_REQUESTS.USER_EMAIL,
-        BONVOYAGE_TRAVEL_REQUESTS.START_LOCATION,
-        BONVOYAGE_TRAVEL_REQUESTS.STOPS,
-        BONVOYAGE_TRAVEL_REQUESTS.END_LOCATION,
-        BONVOYAGE_TRAVEL_REQUESTS.TRANSPORT_TYPE,
-        BONVOYAGE_TRAVEL_REQUESTS.DESCRIPTION,
-        BONVOYAGE_TRAVEL_REQUESTS.VEHICLE_TYPE,
-        BONVOYAGE_TRAVEL_REQUESTS.VEHICLE_REGISTRATION,
-        BONVOYAGE_TRAVEL_REQUESTS.START_DATE_TIME,
-        BONVOYAGE_TRAVEL_REQUESTS.END_DATE_TIME,
-        BONVOYAGE_TRAVEL_REQUESTS.STATUS,
-        BONVOYAGE_TRAVEL_REQUESTS.REVIEWER_ID,
-        BONVOYAGE_TRAVEL_REQUESTS.REVIEW_COMMENT,
-        BONVOYAGE_TRAVEL_REQUESTS.TRIP_ID,
-        BONVOYAGE_TRAVEL_REQUESTS.CREATED_AT,
-      )
-      .from(BONVOYAGE_TRAVEL_REQUESTS)
+      .selectFrom(BONVOYAGE_TRAVEL_REQUESTS)
       .where(
         BONVOYAGE_TRAVEL_REQUESTS.ID.eq(id)
           .and(userId?.let { BONVOYAGE_TRAVEL_REQUESTS.USER_ID.eq(userId) } ?: DSL.noCondition())
@@ -340,56 +304,164 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .set(BONVOYAGE_TRIPS.START_LOCATION, trip.startLocation)
       .set(BONVOYAGE_TRIPS.STOPS, trip.stops.joinToString(","))
       .set(BONVOYAGE_TRIPS.END_LOCATION, trip.endLocation)
-      .set(BONVOYAGE_TRIPS.START_DATE_TIME, trip.startDateTime)
-      .set(BONVOYAGE_TRIPS.END_DATE_TIME, trip.endDateTime)
+      .set(BONVOYAGE_TRIPS.START_DATE, trip.startDate)
+      .set(BONVOYAGE_TRIPS.END_DATE, trip.endDate)
       .set(BONVOYAGE_TRIPS.TRANSPORT_TYPE, trip.transportType.name)
       .set(BONVOYAGE_TRIPS.DESCRIPTION, trip.description)
+      .set(BONVOYAGE_TRIPS.START_REMINDER_TIME, trip.expectedStartTime)
+      .set(BONVOYAGE_TRIPS.END_REMINDER_TIME, trip.expectedEndTime)
       .set(BONVOYAGE_TRIPS.VEHICLE_TYPE, trip.vehicleType)
       .set(BONVOYAGE_TRIPS.VEHICLE_REGISTRATION, trip.vehicleRegistration)
+      .set(BONVOYAGE_TRIPS.IS_DRIVER, trip.isDriver)
       .returning()
       .awaitSingle()
       .into(BONVOYAGE_TRIPS)
       .toTrip()
   }
 
-  suspend fun insertTripNotification(
-    tripId: KUUID,
-    notificationType: BonvoyageTripNotificationType,
-  ): BonvoyageTripNotification {
-    return dslContext
-      .insertInto(BONVOYAGE_TRIP_NOTIFICATIONS)
-      .set(BONVOYAGE_TRIP_NOTIFICATIONS.TRIP_ID, tripId)
-      .set(BONVOYAGE_TRIP_NOTIFICATIONS.NOTIFICATION_TYPE, notificationType.name)
-      .returning()
+  suspend fun markTripNotificationAsSent(tripId: KUUID, type: BonvoyageTripNotificationType) {
+    val field =
+      when (type) {
+        BonvoyageTripNotificationType.START_OF_TRIP -> BONVOYAGE_TRIPS.START_REMINDER_SENT_AT
+        BonvoyageTripNotificationType.END_OF_TRIP -> BONVOYAGE_TRIPS.END_REMINDER_SENT_AT
+      }
+    dslContext
+      .update(BONVOYAGE_TRIPS)
+      .set(field, KOffsetDateTime.now())
+      .where(BONVOYAGE_TRIPS.ID.eq(tripId))
       .awaitSingle()
-      .into(BONVOYAGE_TRIP_NOTIFICATIONS)
-      .toTripNotification()
   }
 
-  suspend fun listPendingTripNotifications(
-    notIn: List<KUUID>? = null
+  suspend fun listPendingStartNotifications(
+    tripId: KUUID? = null
   ): List<BonvoyageTripNotification> {
     return dslContext
       .select(
-        BONVOYAGE_TRIP_NOTIFICATIONS.ID,
-        BONVOYAGE_TRIP_NOTIFICATIONS.TRIP_ID,
-        BONVOYAGE_TRIP_NOTIFICATIONS.NOTIFICATION_TYPE,
-        BONVOYAGE_TRIP_NOTIFICATIONS.SENT_AT,
+        BONVOYAGE_TRIPS.ID,
+        BONVOYAGE_TRIPS.USER_EMAIL,
+        BONVOYAGE_TRIPS.START_LOCATION,
+        BONVOYAGE_TRIPS.END_LOCATION,
+        BONVOYAGE_TRIPS.START_DATE,
+        BONVOYAGE_TRIPS.START_REMINDER_TIME,
       )
-      .from(BONVOYAGE_TRIP_NOTIFICATIONS)
-      .where(BONVOYAGE_TRIP_NOTIFICATIONS.SENT_AT.isNull)
-      .and(notIn?.let { BONVOYAGE_TRIP_NOTIFICATIONS.ID.notIn(it) } ?: DSL.noCondition())
+      .from(BONVOYAGE_TRIPS)
+      .where(
+        BONVOYAGE_TRIPS.START_TIME.isNull
+          .and(BONVOYAGE_TRIPS.START_REMINDER_SENT_AT.isNull)
+          .and(BONVOYAGE_TRIPS.START_REMINDER_TIME.isNotNull)
+          // Exclude anything in the past
+          .and(BONVOYAGE_TRIPS.START_DATE.lessOrEqual(KLocalDate.now()))
+          .and(BONVOYAGE_TRIPS.START_REMINDER_TIME.lessOrEqual(KOffsetTime.now()))
+          .and(tripId?.let { BONVOYAGE_TRIPS.ID.eq(tripId) } ?: DSL.noCondition())
+      )
       .asFlow()
-      .map { it.into(BONVOYAGE_TRIP_NOTIFICATIONS).toTripNotification() }
+      .map {
+        val scheduledTime =
+          KOffsetDateTime(
+            it.get<KLocalDate>(BONVOYAGE_TRIPS.START_DATE),
+            it.get<KOffsetTime>(BONVOYAGE_TRIPS.START_REMINDER_TIME),
+          )
+        BonvoyageTripNotification(
+          userEmail = it.get<String>(BONVOYAGE_TRIPS.USER_EMAIL),
+          tripId = it.get<KUUID>(BONVOYAGE_TRIPS.ID),
+          notificationType = BonvoyageTripNotificationType.START_OF_TRIP,
+          scheduledTime = scheduledTime,
+          startLocation = it.get<String>(BONVOYAGE_TRIPS.START_LOCATION),
+          endLocation = it.get<String>(BONVOYAGE_TRIPS.END_LOCATION),
+          sentAt = null,
+        )
+      }
       .toList()
   }
 
-  suspend fun markTripNotificationAsSent(id: KUUID) {
-    dslContext
-      .update(BONVOYAGE_TRIP_NOTIFICATIONS)
-      .set(BONVOYAGE_TRIP_NOTIFICATIONS.SENT_AT, KOffsetDateTime.now())
-      .where(BONVOYAGE_TRIP_NOTIFICATIONS.ID.eq(id))
-      .awaitSingle()
+  suspend fun listPendingEndNotifications(tripId: KUUID? = null): List<BonvoyageTripNotification> {
+    return dslContext
+      .select(
+        BONVOYAGE_TRIPS.USER_EMAIL,
+        BONVOYAGE_TRIPS.ID,
+        BONVOYAGE_TRIPS.START_LOCATION,
+        BONVOYAGE_TRIPS.END_LOCATION,
+        BONVOYAGE_TRIPS.END_DATE,
+        BONVOYAGE_TRIPS.END_REMINDER_TIME,
+      )
+      .from(BONVOYAGE_TRIPS)
+      .where(
+        BONVOYAGE_TRIPS.END_TIME.isNull
+          .and(BONVOYAGE_TRIPS.END_REMINDER_SENT_AT.isNull)
+          .and(BONVOYAGE_TRIPS.END_REMINDER_TIME.isNotNull)
+          // Exclude anything in the past
+          .and(BONVOYAGE_TRIPS.END_DATE.lessOrEqual(KLocalDate.now()))
+          .and(BONVOYAGE_TRIPS.END_REMINDER_TIME.lessOrEqual(KOffsetTime.now()))
+          .and(tripId?.let { BONVOYAGE_TRIPS.ID.eq(tripId) } ?: DSL.noCondition())
+      )
+      .asFlow()
+      .map {
+        val scheduledTime =
+          KOffsetDateTime(
+            it.get<KLocalDate>(BONVOYAGE_TRIPS.END_DATE),
+            it.get<KOffsetTime>(BONVOYAGE_TRIPS.END_REMINDER_TIME),
+          )
+        BonvoyageTripNotification(
+          userEmail = it.get<String>(BONVOYAGE_TRIPS.USER_EMAIL),
+          tripId = it.get<KUUID>(BONVOYAGE_TRIPS.ID),
+          notificationType = BonvoyageTripNotificationType.END_OF_TRIP,
+          scheduledTime = scheduledTime,
+          startLocation = it.get<String>(BONVOYAGE_TRIPS.START_LOCATION),
+          endLocation = it.get<String>(BONVOYAGE_TRIPS.END_LOCATION),
+          sentAt = null,
+        )
+      }
+      .toList()
+  }
+
+  suspend fun getStartAndEndTripReminders(
+    tripId: KUUID
+  ): Pair<BonvoyageTripNotification?, BonvoyageTripNotification?> {
+    return dslContext
+      .select(
+        BONVOYAGE_TRIPS.ID,
+        BONVOYAGE_TRIPS.USER_EMAIL,
+        BONVOYAGE_TRIPS.START_LOCATION,
+        BONVOYAGE_TRIPS.END_LOCATION,
+        BONVOYAGE_TRIPS.START_DATE,
+        BONVOYAGE_TRIPS.START_REMINDER_TIME,
+        BONVOYAGE_TRIPS.START_REMINDER_SENT_AT,
+        BONVOYAGE_TRIPS.END_DATE,
+        BONVOYAGE_TRIPS.END_REMINDER_TIME,
+        BONVOYAGE_TRIPS.END_REMINDER_SENT_AT,
+      )
+      .from(BONVOYAGE_TRIPS)
+      .where(BONVOYAGE_TRIPS.ID.eq(tripId))
+      .awaitFirstOrNull()
+      ?.let {
+        val startNotification =
+          it.get<KOffsetTime?>(BONVOYAGE_TRIPS.START_REMINDER_TIME)?.let { expectedTime ->
+            BonvoyageTripNotification(
+              userEmail = it.get<String>(BONVOYAGE_TRIPS.USER_EMAIL),
+              tripId = it.get<KUUID>(BONVOYAGE_TRIPS.ID),
+              notificationType = BonvoyageTripNotificationType.START_OF_TRIP,
+              scheduledTime =
+                KOffsetDateTime(it.get<KLocalDate>(BONVOYAGE_TRIPS.START_DATE), expectedTime),
+              startLocation = it.get<String>(BONVOYAGE_TRIPS.START_LOCATION),
+              endLocation = it.get<String>(BONVOYAGE_TRIPS.END_LOCATION),
+              sentAt = it.get<KOffsetDateTime?>(BONVOYAGE_TRIPS.START_REMINDER_SENT_AT),
+            )
+          }
+        val endNotification =
+          it.get<KOffsetTime?>(BONVOYAGE_TRIPS.END_REMINDER_TIME)?.let { expectedTime ->
+            BonvoyageTripNotification(
+              userEmail = it.get<String>(BONVOYAGE_TRIPS.USER_EMAIL),
+              tripId = it.get<KUUID>(BONVOYAGE_TRIPS.ID),
+              notificationType = BonvoyageTripNotificationType.END_OF_TRIP,
+              scheduledTime =
+                KOffsetDateTime(it.get<KLocalDate>(BONVOYAGE_TRIPS.END_DATE), expectedTime),
+              startLocation = it.get<String>(BONVOYAGE_TRIPS.END_LOCATION),
+              endLocation = it.get<String>(BONVOYAGE_TRIPS.END_LOCATION),
+              sentAt = it.get<KOffsetDateTime?>(BONVOYAGE_TRIPS.END_REMINDER_SENT_AT),
+            )
+          }
+        Pair(startNotification, endNotification)
+      } ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip not found")
   }
 
   suspend fun insertTripWelcomeMessage(
@@ -420,67 +492,16 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       ?.toTripWelcomeMessage()
   }
 
-  suspend fun getActiveTrip(userId: String): BonvoyageTrip? {
-    return dslContext
-      .select(
-        BONVOYAGE_TRIPS.ID,
-        BONVOYAGE_TRIPS.USER_ID,
-        BONVOYAGE_TRIPS.USER_FULL_NAME,
-        BONVOYAGE_TRIPS.TRAVEL_ORDER_ID,
-        BONVOYAGE_TRIPS.START_LOCATION,
-        BONVOYAGE_TRIPS.STOPS,
-        BONVOYAGE_TRIPS.END_LOCATION,
-        BONVOYAGE_TRIPS.START_DATE_TIME,
-        BONVOYAGE_TRIPS.ACTUAL_START_DATE_TIME,
-        BONVOYAGE_TRIPS.END_DATE_TIME,
-        BONVOYAGE_TRIPS.ACTUAL_END_DATE_TIME,
-        BONVOYAGE_TRIPS.TRANSPORT_TYPE,
-        BONVOYAGE_TRIPS.DESCRIPTION,
-        BONVOYAGE_TRIPS.COMPLETED,
-        BONVOYAGE_TRIPS.ACTIVE,
-        BONVOYAGE_TRIPS.CREATED_AT,
-        BONVOYAGE_TRIPS.UPDATED_AT,
-        BONVOYAGE_TRIPS.VEHICLE_TYPE,
-        BONVOYAGE_TRIPS.VEHICLE_REGISTRATION,
-        BONVOYAGE_TRIPS.START_MILEAGE,
-        BONVOYAGE_TRIPS.END_MILEAGE,
-      )
-      .from(BONVOYAGE_TRIPS)
-      .where(BONVOYAGE_TRIPS.USER_ID.eq(userId).and(BONVOYAGE_TRIPS.ACTIVE.isTrue))
-      .awaitFirstOrNull()
-      ?.into(BONVOYAGE_TRIPS)
-      ?.toTrip()
-  }
-
-  suspend fun hasActiveTrip(userId: String): Boolean {
-    return dslContext
-      .select(BONVOYAGE_TRIPS.ID)
-      .from(BONVOYAGE_TRIPS)
-      .where(BONVOYAGE_TRIPS.USER_ID.eq(userId).and(BONVOYAGE_TRIPS.ACTIVE.isTrue))
-      .awaitFirstOrNull() != null
-  }
-
-  suspend fun updateTripStartParameters(id: KUUID, update: BonvoyageStartTrip): BonvoyageTrip {
-    return dslContext
-      .update(BONVOYAGE_TRIPS)
-      .set(update.actualStartDateTime, BONVOYAGE_TRIPS.ACTUAL_START_DATE_TIME)
-      .set(update.startingMileage, BONVOYAGE_TRIPS.START_MILEAGE)
-      .set(update.vehicleType, BONVOYAGE_TRIPS.VEHICLE_TYPE)
-      .set(update.vehicleRegistration, BONVOYAGE_TRIPS.VEHICLE_REGISTRATION)
-      .where(BONVOYAGE_TRIPS.ID.eq(id))
-      .returning()
-      .awaitSingle()
-      .into(BONVOYAGE_TRIPS)
-      .toTrip()
-  }
-
   suspend fun updateTrip(id: KUUID, update: BonvoyageTripPropertiesUpdate): BonvoyageTrip {
     return dslContext
       .update(BONVOYAGE_TRIPS)
-      .set(update.actualStartDateTime, BONVOYAGE_TRIPS.ACTUAL_START_DATE_TIME)
-      .set(update.actualEndDateTime, BONVOYAGE_TRIPS.ACTUAL_END_DATE_TIME)
+      .set(update.startTime, BONVOYAGE_TRIPS.START_TIME)
+      .set(update.endDate, BONVOYAGE_TRIPS.END_DATE)
+      .set(update.endTime, BONVOYAGE_TRIPS.END_TIME)
       .set(update.startMileage, BONVOYAGE_TRIPS.START_MILEAGE)
       .set(update.endMileage, BONVOYAGE_TRIPS.END_MILEAGE)
+      .set(update.vehicleType, BONVOYAGE_TRIPS.VEHICLE_TYPE)
+      .set(update.vehicleRegistration, BONVOYAGE_TRIPS.VEHICLE_REGISTRATION)
       .set(update.description, BONVOYAGE_TRIPS.DESCRIPTION)
       .where(BONVOYAGE_TRIPS.ID.eq(id))
       .returning()
@@ -489,16 +510,13 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .toTrip()
   }
 
-  suspend fun updateTripEndParameters(id: KUUID, update: BonvoyageEndTrip): BonvoyageTrip {
-    return dslContext
+  suspend fun updateTripReminders(id: KUUID, update: BonvoyageTripUpdateReminders) {
+    dslContext
       .update(BONVOYAGE_TRIPS)
-      .set(update.actualEndDateTime, BONVOYAGE_TRIPS.ACTUAL_END_DATE_TIME)
-      .set(update.endMileage, BONVOYAGE_TRIPS.END_MILEAGE)
+      .set(update.expectedStartTime, BONVOYAGE_TRIPS.START_REMINDER_TIME)
+      .set(update.expectedEndTime, BONVOYAGE_TRIPS.END_REMINDER_TIME)
       .where(BONVOYAGE_TRIPS.ID.eq(id))
-      .returning()
       .awaitSingle()
-      .into(BONVOYAGE_TRIPS)
-      .toTrip()
   }
 
   suspend fun isTripOwner(id: KUUID, userId: String): Boolean {
@@ -509,35 +527,10 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .awaitFirstOrNull() != null
   }
 
-  suspend fun listTrips(userId: String? = null, completed: Boolean? = null): List<BonvoyageTrip> {
+  suspend fun listTrips(userId: String? = null): List<BonvoyageTrip> {
     return dslContext
-      .select(
-        BONVOYAGE_TRIPS.ID,
-        BONVOYAGE_TRIPS.USER_ID,
-        BONVOYAGE_TRIPS.USER_FULL_NAME,
-        BONVOYAGE_TRIPS.USER_EMAIL,
-        BONVOYAGE_TRIPS.TRAVEL_ORDER_ID,
-        BONVOYAGE_TRIPS.START_LOCATION,
-        BONVOYAGE_TRIPS.STOPS,
-        BONVOYAGE_TRIPS.END_LOCATION,
-        BONVOYAGE_TRIPS.START_DATE_TIME,
-        BONVOYAGE_TRIPS.ACTUAL_START_DATE_TIME,
-        BONVOYAGE_TRIPS.END_DATE_TIME,
-        BONVOYAGE_TRIPS.ACTUAL_END_DATE_TIME,
-        BONVOYAGE_TRIPS.TRANSPORT_TYPE,
-        BONVOYAGE_TRIPS.DESCRIPTION,
-        BONVOYAGE_TRIPS.COMPLETED,
-        BONVOYAGE_TRIPS.ACTIVE,
-        BONVOYAGE_TRIPS.CREATED_AT,
-        BONVOYAGE_TRIPS.UPDATED_AT,
-        BONVOYAGE_TRIPS.VEHICLE_TYPE,
-        BONVOYAGE_TRIPS.VEHICLE_REGISTRATION,
-        BONVOYAGE_TRIPS.START_MILEAGE,
-        BONVOYAGE_TRIPS.END_MILEAGE,
-      )
-      .from(BONVOYAGE_TRIPS)
+      .selectFrom(BONVOYAGE_TRIPS)
       .where((userId?.let { BONVOYAGE_TRIPS.USER_ID.eq(userId) } ?: DSL.noCondition()))
-      .and(completed?.let { BONVOYAGE_TRIPS.COMPLETED.eq(completed) } ?: DSL.noCondition())
       .asFlow()
       .map { it.into(BONVOYAGE_TRIPS).toTrip() }
       .toList()
@@ -545,31 +538,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
 
   suspend fun getTrip(id: KUUID, userId: String? = null): BonvoyageTrip {
     return dslContext
-      .select(
-        BONVOYAGE_TRIPS.ID,
-        BONVOYAGE_TRIPS.USER_ID,
-        BONVOYAGE_TRIPS.USER_FULL_NAME,
-        BONVOYAGE_TRIPS.USER_EMAIL,
-        BONVOYAGE_TRIPS.TRAVEL_ORDER_ID,
-        BONVOYAGE_TRIPS.START_LOCATION,
-        BONVOYAGE_TRIPS.STOPS,
-        BONVOYAGE_TRIPS.END_LOCATION,
-        BONVOYAGE_TRIPS.START_DATE_TIME,
-        BONVOYAGE_TRIPS.ACTUAL_START_DATE_TIME,
-        BONVOYAGE_TRIPS.END_DATE_TIME,
-        BONVOYAGE_TRIPS.ACTUAL_END_DATE_TIME,
-        BONVOYAGE_TRIPS.TRANSPORT_TYPE,
-        BONVOYAGE_TRIPS.DESCRIPTION,
-        BONVOYAGE_TRIPS.COMPLETED,
-        BONVOYAGE_TRIPS.ACTIVE,
-        BONVOYAGE_TRIPS.CREATED_AT,
-        BONVOYAGE_TRIPS.UPDATED_AT,
-        BONVOYAGE_TRIPS.VEHICLE_TYPE,
-        BONVOYAGE_TRIPS.VEHICLE_REGISTRATION,
-        BONVOYAGE_TRIPS.START_MILEAGE,
-        BONVOYAGE_TRIPS.END_MILEAGE,
-      )
-      .from(BONVOYAGE_TRIPS)
+      .selectFrom(BONVOYAGE_TRIPS)
       .where(
         BONVOYAGE_TRIPS.ID.eq(id)
           .and(userId?.let { BONVOYAGE_TRIPS.USER_ID.eq(userId) } ?: DSL.noCondition())
@@ -579,34 +548,10 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       ?.toTrip() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip not found")
   }
 
-  suspend fun getTripAggregate(id: KUUID, userId: String? = null): BonvoyageTripAggregate {
+  suspend fun getTripAggregate(id: KUUID, userId: String? = null): BonvoyageTripExpenseAggregate {
     val trip =
       dslContext
-        .select(
-          BONVOYAGE_TRIPS.ID,
-          BONVOYAGE_TRIPS.USER_ID,
-          BONVOYAGE_TRIPS.USER_FULL_NAME,
-          BONVOYAGE_TRIPS.USER_EMAIL,
-          BONVOYAGE_TRIPS.TRAVEL_ORDER_ID,
-          BONVOYAGE_TRIPS.START_LOCATION,
-          BONVOYAGE_TRIPS.STOPS,
-          BONVOYAGE_TRIPS.END_LOCATION,
-          BONVOYAGE_TRIPS.START_DATE_TIME,
-          BONVOYAGE_TRIPS.ACTUAL_START_DATE_TIME,
-          BONVOYAGE_TRIPS.END_DATE_TIME,
-          BONVOYAGE_TRIPS.ACTUAL_END_DATE_TIME,
-          BONVOYAGE_TRIPS.TRANSPORT_TYPE,
-          BONVOYAGE_TRIPS.DESCRIPTION,
-          BONVOYAGE_TRIPS.COMPLETED,
-          BONVOYAGE_TRIPS.ACTIVE,
-          BONVOYAGE_TRIPS.CREATED_AT,
-          BONVOYAGE_TRIPS.UPDATED_AT,
-          BONVOYAGE_TRIPS.VEHICLE_TYPE,
-          BONVOYAGE_TRIPS.VEHICLE_REGISTRATION,
-          BONVOYAGE_TRIPS.START_MILEAGE,
-          BONVOYAGE_TRIPS.END_MILEAGE,
-        )
-        .from(BONVOYAGE_TRIPS)
+        .selectFrom(BONVOYAGE_TRIPS)
         .where(
           BONVOYAGE_TRIPS.ID.eq(id)
             .and(userId?.let { BONVOYAGE_TRIPS.USER_ID.eq(userId) } ?: DSL.noCondition())
@@ -626,7 +571,6 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
           BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PATH,
           BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PROVIDER,
           BONVOYAGE_TRAVEL_EXPENSES.DESCRIPTION,
-          BONVOYAGE_TRAVEL_EXPENSES.VERIFIED,
           BONVOYAGE_TRAVEL_EXPENSES.EXPENSE_CREATED_AT,
           BONVOYAGE_TRAVEL_EXPENSES.CREATED_AT,
           BONVOYAGE_TRAVEL_EXPENSES.UPDATED_AT,
@@ -637,7 +581,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
         .map { it.into(BONVOYAGE_TRAVEL_EXPENSES).toTravelExpense() }
         .toList()
 
-    return BonvoyageTripAggregate(trip, expenses)
+    return BonvoyageTripExpenseAggregate(trip, expenses)
   }
 
   suspend fun listTripExpenses(tripId: KUUID): List<BonvoyageTravelExpense> {
@@ -651,7 +595,6 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
         BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PATH,
         BONVOYAGE_TRAVEL_EXPENSES.IMAGE_PROVIDER,
         BONVOYAGE_TRAVEL_EXPENSES.DESCRIPTION,
-        BONVOYAGE_TRAVEL_EXPENSES.VERIFIED,
         BONVOYAGE_TRAVEL_EXPENSES.CREATED_AT,
         BONVOYAGE_TRAVEL_EXPENSES.UPDATED_AT,
       )
@@ -684,12 +627,18 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
       .set(update.amount, BONVOYAGE_TRAVEL_EXPENSES.AMOUNT)
       .set(update.currency, BONVOYAGE_TRAVEL_EXPENSES.CURRENCY)
       .set(update.description, BONVOYAGE_TRAVEL_EXPENSES.DESCRIPTION)
-      .set(update.verified, BONVOYAGE_TRAVEL_EXPENSES.VERIFIED)
       .set(update.expenseCreatedAt, BONVOYAGE_TRAVEL_EXPENSES.EXPENSE_CREATED_AT)
       .where(BONVOYAGE_TRAVEL_EXPENSES.ID.eq(expenseId))
       .returning()
       .awaitFirstOrNull()
       ?.toTravelExpense() ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Expense not found")
+  }
+
+  suspend fun deleteTripExpense(expenseId: KUUID) {
+    dslContext
+      .deleteFrom(BONVOYAGE_TRAVEL_EXPENSES)
+      .where(BONVOYAGE_TRAVEL_EXPENSES.ID.eq(expenseId))
+      .awaitFirstOrNull()
   }
 }
 

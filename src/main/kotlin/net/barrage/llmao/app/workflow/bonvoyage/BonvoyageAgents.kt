@@ -49,13 +49,14 @@ class BonvoyageWelcomeAgent(
     try {
       completion(
           "You are a travel chat assistant who is helping ${trip.userFullName} on his business trip from ${trip.startLocation} to ${trip.endLocation}.",
-          """Create a short and friendly welcome message that summarizes the following trip:
-          |Trip start location: ${trip.startLocation}
-          |Trip end location: ${trip.endLocation}
-          |Trip stops: ${trip.stops.joinToString(" -\n")}
-          |Trip anticipated start time: ${trip.startDateTime}
-          |Trip anticipated end time: ${trip.endDateTime}
-          |Trip description: ${trip.description}
+          """Do not use any emojis. Create a short and friendly welcome message that summarizes the following trip:
+          |Start location: ${trip.startLocation}
+          |End location: ${trip.endLocation}
+          |Stops: ${trip.stops.joinToString(" -\n")}
+          |Start date: ${trip.startDate}
+          |End date: ${trip.endDate}
+          |Time start - end: ${trip.expectedStartTime} - ${trip.expectedEndTime}
+          |Description: ${trip.description}
         """
             .trimMargin(),
         )

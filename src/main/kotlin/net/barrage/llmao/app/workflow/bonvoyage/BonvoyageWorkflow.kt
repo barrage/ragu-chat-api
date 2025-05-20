@@ -20,6 +20,7 @@ import net.barrage.llmao.core.workflow.WorkflowRealTime
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
+/** Real time workflow used for chatting and for uploading/editing expenses. */
 class BonvoyageWorkflow(
   /** Unique identifier of the trip. */
   override val id: KUUID,
@@ -31,9 +32,7 @@ class BonvoyageWorkflow(
   private val api: BonvoyageUserApi,
   private val tools: Tools,
 ) : WorkflowRealTime<BonvoyageInput>(BonvoyageInput.serializer()) {
-  override suspend fun handleInput(input: BonvoyageInput) = execute(input)
-
-  private suspend fun execute(input: BonvoyageInput) {
+  override suspend fun handleInput(input: BonvoyageInput) {
     when (input) {
       is BonvoyageInput.ChatInput -> handleChatInput(input)
       is BonvoyageInput.ExpenseUpload -> handleExpenseUpload(input)
@@ -54,7 +53,7 @@ class BonvoyageWorkflow(
           | 
           |${trip.stops.joinToString(" -\n")}
           |
-          | The anticipated trip start time is ${trip.startDateTime} and the end time is ${trip.endDateTime}.
+          | The trip start date is ${trip.startDate} and the end date is ${trip.endDate}.
           | The description of the trip states the following:
           |
           | "${trip.description}"
@@ -77,8 +76,8 @@ class BonvoyageWorkflow(
           | The user is considered to partake in the trip even if they are still at the start location, but have left
           | their current residence in it. The same applies to end locations for when they have not yet arrived to the
           | residence, but have entered the end location.
-          | The user entered the departure time of ${trip.actualStartDateTime}.
-          | The user entered the arrival time of ${trip.actualEndDateTime}.
+          | The user entered the departure time of ${trip.startTime}.
+          | The user entered the arrival time of ${trip.endTime}.
           | The current time is ${KOffsetDateTime.now()}.
           | If the trip has started and the user has not entered the departure time, remind them to do so.
           | If the trip has ended and the user has not entered the arrival time, remind them to do so.
@@ -172,7 +171,7 @@ class BonvoyageWorkflow(
       try {
         Json.decodeFromString<TravelExpense>(assistantMessage.content!!.text())
       } catch (e: SerializationException) {
-        throw AppError.internal("Failed to parse expense from Bonvoyage response", original = e)
+        throw AppError.internal("Failed to parse expense from agent response", original = e)
       }
 
     val attachments =
@@ -198,7 +197,7 @@ class BonvoyageWorkflow(
 
     val travelExpense = api.insertExpenseMessages(id, messageInsert, expenseInsert)
 
-    emitter.emit(BonvoyageOutput.ExpenseUpload(travelExpense), BonvoyageOutput.serializer())
+    emitter.emit(ExpenseUpload(travelExpense))
     emitter.emit(
       StreamComplete(id, assistantMessage.finishReason!!, travelExpense.messageGroupId, attachments)
     )
@@ -206,7 +205,7 @@ class BonvoyageWorkflow(
 
   private suspend fun handleExpenseUpdate(input: BonvoyageInput.ExpenseUpdate) {
     val updatedExpense = api.updateExpense(id, user.id, input.expenseId, input.properties)
-    emitter.emit(BonvoyageOutput.ExpenseUpdate(updatedExpense), BonvoyageOutput.serializer())
+    emitter.emit(ExpenseUpdate(updatedExpense))
   }
 }
 

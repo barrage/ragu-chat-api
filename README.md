@@ -29,6 +29,30 @@ Kappi consists of two main components;
 Kappi plugins are implementations of arbitrary features that are designed to run in the server runtime.
 They can range from small applets to full blown applications.
 
+## Core concepts
+
+### Providers
+
+Providers allow us to define business logic without worrying about their implementation details.
+The idea behind this is to make switching providers very flexible when creating agents.
+
+A *large language model* (LLM) is a neural net designed to generate text.
+
+An *inference provider* is a service used for LLM inference.
+
+An *embedding model* is a neural net designed to transform text into arrays of floating point numbers or ***vectors***,
+also known as ***embeddings***.
+
+An *embedding provider* is a service that provides access to *embedding models*.
+
+A *vector collection* stores these vectors and associates the original content they represent with them. Every vector
+collection can only hold vectors of the same size, which is determined upon its creation.
+
+A *vector provider* is a services that provides access to *vector collections* in a *vector database*.
+
+A *blob storage* is a service that provides access to binary large objects (BLOBs). Currently, only image storage is
+supported and only one image storage can be used per Kappi instance.
+
 ## Workflows
 
 *Workflows* are the main form of interaction between a *user* and an *agent*. They are introduced to Kappi via plugins.

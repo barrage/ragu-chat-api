@@ -1,19 +1,30 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.tables.records.BonvoyageTravelExpensesRecord
 import net.barrage.llmao.tables.records.BonvoyageTravelManagerUserMappingsRecord
 import net.barrage.llmao.tables.records.BonvoyageTravelManagersRecord
 import net.barrage.llmao.tables.records.BonvoyageTravelRequestsRecord
-import net.barrage.llmao.tables.records.BonvoyageTripNotificationsRecord
 import net.barrage.llmao.tables.records.BonvoyageTripWelcomeMessagesRecord
 import net.barrage.llmao.tables.records.BonvoyageTripsRecord
+import net.barrage.llmao.types.KLocalDate
 import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KOffsetTime
 import net.barrage.llmao.types.KUUID
 
 @Serializable
-data class BonvoyageTripAggregate(
+data class BonvoyageTripFullAggregate(
+  val trip: BonvoyageTrip,
+  val expenses: List<BonvoyageTravelExpense>,
+  val welcomeMessage: BonvoyageTripWelcomeMessage?,
+  val chatMessages: List<MessageGroupAggregate>,
+  val reminders: Pair<BonvoyageTripNotification?, BonvoyageTripNotification?>,
+)
+
+@Serializable
+data class BonvoyageTripExpenseAggregate(
   val trip: BonvoyageTrip,
   val expenses: List<BonvoyageTravelExpense>,
 )
@@ -86,29 +97,15 @@ data class BonvoyageTravelRequest(
   /** The reason for the travel request. */
   val description: String,
 
-  /**
-   * If the transport type is [TransportType.PERSONAL], this is the vehicle type (brand and model).
-   */
-  val vehicleType: String?,
+  /** The start date of the trip. */
+  val startDate: KLocalDate,
 
   /**
-   * If the transport type is [TransportType.PERSONAL], this is the vehicle's registration plates.
-   */
-  val vehicleRegistration: String?,
-
-  /**
-   * The anticipated start of the trip.
-   *
-   * This may differ from the trip entry's start time due to unforeseen circumstances.
-   */
-  val startDateTime: KOffsetDateTime,
-
-  /**
-   * The anticipated end of the trip.
+   * The end date of the trip.
    *
    * This may differ from the trip entry's end time due to unforeseen circumstances.
    */
-  val endDateTime: KOffsetDateTime,
+  val endDate: KLocalDate,
 
   /**
    * Current status of the request.
@@ -143,6 +140,29 @@ data class BonvoyageTravelRequest(
 
   /** When the request was created. */
   val createdAt: KOffsetDateTime,
+
+  // Reminder fields
+
+  /** Expected start time of trip, used for reminders. */
+  val expectedStartTime: KOffsetTime?,
+
+  /** Expected end time of trip, used for reminders. */
+  val expectedEndTime: KOffsetTime?,
+
+  // Personal vehicle fields
+
+  /**
+   * If the transport type is [TransportType.PERSONAL], this is the vehicle type (brand and model).
+   */
+  val vehicleType: String?,
+
+  /**
+   * If the transport type is [TransportType.PERSONAL], this is the vehicle's registration plates.
+   */
+  val vehicleRegistration: String?,
+
+  /** Enables additional field inputs when working with the trip. */
+  val isDriver: Boolean,
 )
 
 /** The status of a travel request. */
@@ -239,27 +259,27 @@ data class BonvoyageTrip(
   /** Where the trip ends. */
   val endLocation: String,
 
-  /** The anticipated time when the trip starts. */
-  val startDateTime: KOffsetDateTime,
+  /** Trip start date. */
+  val startDate: KLocalDate,
 
-  /** The actual time when the trip starts, entered by the user. */
-  val actualStartDateTime: KOffsetDateTime?,
+  /** Trip end date. */
+  val endDate: KLocalDate,
 
-  /** The anticipated time when the trip ends. */
-  val endDateTime: KOffsetDateTime,
+  /**
+   * The actual time when the trip starts, entered by the user.
+   *
+   * Modifiable at any time by the user during the trip.
+   */
+  val startTime: KOffsetTime?,
 
   /**
    * The actual time when the trip ended, entered by the user.
    *
-   * Mutable at any time during the trip.
+   * Modifiable at any time by the user during the trip.
    */
-  val actualEndDateTime: KOffsetDateTime?,
+  val endTime: KOffsetTime?,
 
-  /**
-   * Transportation type, public or personal.
-   *
-   * Immutable.
-   */
+  /** Transportation type, public or personal. */
   val transportType: TransportType,
 
   /**
@@ -270,17 +290,44 @@ data class BonvoyageTrip(
    */
   val description: String,
 
-  /** When the user finalizes the trip, this is set to true. Mostly for display purposes. */
-  val completed: Boolean,
+  /**
+   * When the user finalizes the trip, this is set to the version of the trip that was sent to
+   * accounting at that time.
+   */
+  val versionSent: Int?,
 
-  /** Auto-calculated by the database. A trip is active if it has a start time, but no end time. */
-  val active: Boolean,
+  /** Updated every time a trip's properties are. */
+  val version: Int,
 
   /** When the database entry was created. */
   val createdAt: KOffsetDateTime,
 
   /** When the database entry was last updated. */
   val updatedAt: KOffsetDateTime,
+
+  // Fields for reminders
+
+  /** Expected start time of trip, used for reminders. */
+  val expectedStartTime: KOffsetTime?,
+
+  /** Expected end time of trip, used for reminders. */
+  val expectedEndTime: KOffsetTime?,
+
+  /**
+   * Only non-null if the expected start time is not null, has been reached, and the reminder has
+   * been sent successfully.
+   *
+   * Managed by the system and never the user.
+   */
+  val startReminderSentAt: KOffsetDateTime?,
+
+  /**
+   * Only non-null if the expected end time is not null, has been reached, and the reminder has been
+   * sent successfully.
+   *
+   * Managed by the system and never the user.
+   */
+  val endReminderSentAt: KOffsetDateTime?,
 
   // Fields for personal vehicle
 
@@ -290,25 +337,31 @@ data class BonvoyageTrip(
   /** Personal vehicle licence plate identifier. */
   val vehicleRegistration: String?,
 
-  /** The mileage of the vehicle when the trip started. */
+  /**
+   * The mileage of the vehicle when the trip started. Has to be filled in only by drivers.
+   * Passengers can always leave this null.
+   */
   val startMileage: String?,
 
-  /** The mileage of the vehicle when the trip ended. */
+  /**
+   * The mileage of the vehicle when the trip ended. Has to be filled in only by drivers. Passengers
+   * can always leave this null.
+   */
   val endMileage: String?,
+  val isDriver: Boolean,
 )
 
-/**
- * Created when a travel request is approved and its corresponding trip is created. Used by the
- * scheduler along with trips to determine when to send notifications.
- */
+/** A pending notification aggregated from a trip. */
 @Serializable
 data class BonvoyageTripNotification(
-  val id: KUUID,
+  val userEmail: String,
   val tripId: KUUID,
-  /** Whether it is the start or end of the trip. */
   val notificationType: BonvoyageTripNotificationType,
+  val scheduledTime: KOffsetDateTime,
+  val startLocation: String,
+  val endLocation: String,
 
-  /** Whether this notification was sent. */
+  /** If this is null, the notification is pending. */
   val sentAt: KOffsetDateTime?,
 )
 
@@ -359,12 +412,6 @@ data class BonvoyageTravelExpense(
   /** Expense description. */
   val description: String,
 
-  /**
-   * Verification status. All expenses must be verified by the end user who sent them since the
-   * expense data is auto-generated by LLMs.
-   */
-  val verified: Boolean,
-
   /** Date time of the expense, as indicated by the receipt. */
   val expenseCreatedAt: KOffsetDateTime,
   val createdAt: KOffsetDateTime,
@@ -407,28 +454,27 @@ fun BonvoyageTripsRecord.toTrip() =
     startLocation = this.startLocation,
     stops = this.stops.split(","),
     endLocation = this.endLocation,
-    startDateTime = this.startDateTime,
-    actualStartDateTime = this.actualStartDateTime,
-    completed = this.completed!!,
-    active = this.active!!,
-    endDateTime = this.endDateTime,
-    actualEndDateTime = this.actualEndDateTime,
+    startDate = this.startDate,
+    startTime = this.startTime,
+    endDate = this.endDate,
+    endTime = this.endTime,
     transportType = TransportType.valueOf(this.transportType),
     description = this.description,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
+    // Reminders
+    expectedStartTime = this.startReminderTime,
+    expectedEndTime = this.endReminderTime,
+    startReminderSentAt = this.startReminderSentAt,
+    endReminderSentAt = this.endReminderSentAt,
+    version = this.version!!,
+    versionSent = this.versionSent,
+    // Personal vehicle
     vehicleType = this.vehicleType,
     vehicleRegistration = this.vehicleRegistration,
     startMileage = this.startMileage,
     endMileage = this.endMileage,
-  )
-
-fun BonvoyageTripNotificationsRecord.toTripNotification() =
-  BonvoyageTripNotification(
-    id = this.id!!,
-    tripId = this.tripId,
-    notificationType = BonvoyageTripNotificationType.valueOf(this.notificationType),
-    sentAt = this.sentAt,
+    isDriver = this.isDriver!!,
   )
 
 fun BonvoyageTripWelcomeMessagesRecord.toTripWelcomeMessage() =
@@ -445,7 +491,6 @@ fun BonvoyageTravelExpensesRecord.toTravelExpense() =
     imageProvider = this.imageProvider,
     description = this.description,
     expenseCreatedAt = this.expenseCreatedAt,
-    verified = this.verified == true,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
   )
@@ -461,13 +506,16 @@ fun BonvoyageTravelRequestsRecord.toTravelRequest() =
     endLocation = this.endLocation,
     transportType = TransportType.valueOf(this.transportType),
     description = this.description,
-    vehicleType = this.vehicleType,
-    vehicleRegistration = this.vehicleRegistration,
-    startDateTime = this.startDateTime,
-    endDateTime = this.endDateTime,
+    startDate = this.startDate,
+    endDate = this.endDate,
+    expectedStartTime = this.expectedStartTime,
+    expectedEndTime = this.expectedEndTime,
     status = BonvoyageTravelRequestStatus.valueOf(this.status),
     reviewerId = this.reviewerId,
     reviewComment = this.reviewComment,
     tripId = this.tripId,
     createdAt = this.createdAt!!,
+    vehicleType = this.vehicleType,
+    vehicleRegistration = this.vehicleRegistration,
+    isDriver = this.isDriver!!,
   )

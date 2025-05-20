@@ -38,7 +38,15 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
 
           when (request.status) {
             BonvoyageTravelRequestStatus.APPROVED -> {
-              val trip = api.approveTravelRequest(request.id, user.id, request.reviewComment)
+              val approval =
+                ApproveTravelRequest(
+                  requestId = request.id,
+                  reviewerId = user.id,
+                  reviewerComment = request.reviewComment,
+                  expectedStartTime = request.expectedStartTime,
+                  expectedEndTime = request.expectedEndTime,
+                )
+              val trip = api.approveTravelRequest(approval)
               call.respond(trip)
             }
 
@@ -98,8 +106,6 @@ fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
   route("/bonvoyage/trips") {
     get { call.respond(api.listTrips(call.user().id)) }
 
-    get("/active") { call.respond(api.getActiveTrip(call.user().id)) }
-
     route("/{id}") {
       get {
         val id = call.pathUuid("id")
@@ -107,31 +113,54 @@ fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
         call.respond(trip)
       }
 
-      patch {
-        val tripId = call.pathUuid("id")
-        val update = call.receive<BonvoyageTripUpdate>()
-        when (update) {
-          is BonvoyageStartTrip -> {
-            val id = call.pathUuid("id")
-            val start = call.receive<BonvoyageStartTrip>()
-            val trip = api.startTrip(id, call.user().id, start)
-            call.respond(trip)
-          }
-          is BonvoyageTripPropertiesUpdate -> {
-            val trip = api.updateTripProperties(tripId, call.user().id, update)
-            call.respond(trip)
-          }
-          is BonvoyageEndTrip -> {
-            val trip = api.endTrip(tripId, call.user().id, update)
-            call.respond(trip)
-          }
-        }
+      get("/welcome-message") {
+        val id = call.pathUuid("id")
+        val welcomeMessage =
+          api.getTripWelcomeMessage(id)
+            ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip welcome message not found")
+        call.respond(welcomeMessage)
       }
 
-      get("/expenses") {
+      patch {
         val tripId = call.pathUuid("id")
-        val expenses = api.listTripExpenses(tripId, call.user().id)
-        call.respond(expenses)
+        val update = call.receive<BonvoyageTripPropertiesUpdate>()
+        val trip = api.updateTrip(tripId, call.user().id, update)
+        call.respond(trip)
+      }
+
+      patch("/reminders") {
+        val tripId = call.pathUuid("id")
+        val update = call.receive<BonvoyageTripUpdateReminders>()
+        val trip = api.updateTripReminders(tripId, call.user().id, update)
+        call.respond(trip)
+      }
+
+      route("/expenses") {
+        get {
+          val tripId = call.pathUuid("id")
+          val expenses = api.listTripExpenses(tripId, call.user().id)
+          call.respond(expenses)
+        }
+
+        post {
+          val tripId = call.pathUuid("id")
+          // TODO
+        }
+
+        patch("/{expenseId}") {
+          val tripId = call.pathUuid("id")
+          val expenseId = call.pathUuid("expenseId")
+          val update = call.receive<BonvoyageTravelExpenseUpdateProperties>()
+          val expense = api.updateExpense(tripId, call.user().id, expenseId, update)
+          call.respond(expense)
+        }
+
+        delete("/{expenseId}") {
+          val tripId = call.pathUuid("id")
+          val expenseId = call.pathUuid("expenseId")
+          api.deleteTripExpense(tripId, call.user().id, expenseId)
+          call.respond(HttpStatusCode.NoContent)
+        }
       }
 
       post("/report") {

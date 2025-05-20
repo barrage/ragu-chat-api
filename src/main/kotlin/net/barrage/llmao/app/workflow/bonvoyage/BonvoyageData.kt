@@ -1,19 +1,18 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
-import io.ktor.server.plugins.requestvalidation.ValidationResult
 import javax.activation.DataSource
 import javax.mail.util.ByteArrayDataSource
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.EmailAttachment
 import net.barrage.llmao.core.SchemaValidation
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.addSchemaErr
 import net.barrage.llmao.core.model.common.PropertyUpdate
+import net.barrage.llmao.types.KLocalDate
 import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.types.KOffsetTime
 import net.barrage.llmao.types.KUUID
 
 @Serializable
@@ -40,10 +39,26 @@ data class BonvoyageTravelExpenseInsert(
   val expenseCreatedAt: KOffsetDateTime,
 )
 
+/**
+ * Optional expected times can be entered in case there is more information on the exact start/end
+ * times. Can be used to set up reminders for the user on when their trip start or ends.
+ */
 @Serializable
-data class BonvoyageTravelExpenseUpdate(
-  val expenseId: KUUID,
-  val properties: BonvoyageTravelExpenseUpdateProperties,
+data class ApproveTravelRequest(
+  /** Travel request ID. */
+  val requestId: KUUID,
+
+  /** Travel manager user ID. */
+  val reviewerId: String,
+
+  /** Optional explanation. */
+  val reviewerComment: String?,
+
+  /** Overrides the expected start time of the request. */
+  val expectedStartTime: KOffsetTime? = null,
+
+  /** Overrides the expected end time of the request. */
+  val expectedEndTime: KOffsetTime? = null,
 )
 
 /** DTO for requesting a Bonvoyage workflow. */
@@ -69,41 +84,55 @@ data class TravelRequest(
   /** Where the trip is ending. */
   val endLocation: String,
 
-  /** UTC start date and time of the trip. */
-  val startDateTime: KOffsetDateTime,
+  /** Start date of the trip. */
+  val startDate: KLocalDate,
 
-  /** UTC end date and time of the trip. */
-  val endDateTime: KOffsetDateTime,
+  /** End date of the trip. */
+  val endDate: KLocalDate,
 
   /** Description of the trip's purpose. */
   val description: String,
 
+  // Optional fields for reminders
+
+  /** Anticipated start time of the trip, used for reminders. */
+  val expectedStartTime: KOffsetTime? = null,
+
+  /** Anticipated end time of the trip, used for reminders. */
+  val expectedEndTime: KOffsetTime? = null,
+
   // Optional fields for personal vehicle
 
-  /** Vehicle brand and model. */
+  /** Vehicle brand and model. Only necessary if the transport type is [TransportType.PERSONAL]. */
   val vehicleType: String? = null,
 
   /** Vehicle license plates. */
   val vehicleRegistration: String? = null,
+
+  /**
+   * A flag enabling additional assertions upon creating the travel request, and prompts when
+   * starting the trip. Ignored if the transport type is not [TransportType.PERSONAL].
+   */
+  val isDriver: Boolean,
 ) : Validation {
   fun validateSchema(): List<ValidationError> {
     val errors = mutableListOf<ValidationError>()
 
-    val now = KOffsetDateTime.now()
+    val now = KLocalDate.now()
 
-    if (startDateTime > endDateTime) {
-      errors.addSchemaErr(message = "Start date and time must be before end date and time")
+    if (startDate > endDate) {
+      errors.addSchemaErr(message = "Start date must be before end date")
     }
 
-    if (startDateTime <= now) {
-      errors.addSchemaErr(message = "Start date and time must be in the future")
+    if (startDate < now) {
+      errors.addSchemaErr(message = "Start date must be today or in the future")
     }
 
-    if (endDateTime <= now) {
-      errors.addSchemaErr(message = "End date and time must be in the future")
+    if (endDate < now) {
+      errors.addSchemaErr(message = "End date must be today or in the future")
     }
 
-    if (transportType == TransportType.PERSONAL) {
+    if (transportType == TransportType.PERSONAL && isDriver) {
       if (vehicleType == null) {
         errors.addSchemaErr(message = "`vehicleType` is required for trips with a personal vehicle")
       }
@@ -118,11 +147,18 @@ data class TravelRequest(
   }
 }
 
+/**
+ * Optional expected times can be entered in case there is more information on the exact start/end
+ * times. Can be used to set up reminders for the user on when their trip start or ends. These are
+ * ignored if the request is rejected.
+ */
 @Serializable
 data class BonvoyageTravelRequestStatusUpdate(
   val id: KUUID,
   val status: BonvoyageTravelRequestStatus,
   val reviewComment: String? = null,
+  val expectedStartTime: KOffsetTime? = null,
+  val expectedEndTime: KOffsetTime? = null,
 )
 
 /** Trip parameters. */
@@ -155,82 +191,63 @@ data class BonvoyageTripInsert(
   val endLocation: String,
 
   /** The official start date and time of the trip. */
-  val startDateTime: KOffsetDateTime,
+  val startDate: KLocalDate,
 
   /** The official end date and time of the trip. */
-  val endDateTime: KOffsetDateTime,
+  val endDate: KLocalDate,
 
   /** The trip's description that should contain the purpose of the trip. */
   val description: String,
+
+  // Optional reminders
+
+  val expectedStartTime: KOffsetTime? = null,
+  val expectedEndTime: KOffsetTime? = null,
 
   // Optional fields for personal vehicle
 
   val vehicleType: String? = null,
   val vehicleRegistration: String? = null,
+  val isDriver: Boolean,
 )
 
 @Serializable
-@OptIn(ExperimentalSerializationApi::class)
-@JsonClassDiscriminator("type")
-sealed class BonvoyageTripUpdate : Validation {
-  override fun validate(): ValidationResult {
-    return super.validate()
-  }
-}
+@SerialName("reminders")
+data class BonvoyageTripUpdateReminders(
+  val expectedStartTime: PropertyUpdate<KOffsetTime> = PropertyUpdate.Undefined,
+  val expectedEndTime: PropertyUpdate<KOffsetTime> = PropertyUpdate.Undefined,
+)
 
-/** DTO for users starting a trip. */
+/** Structure for updating any of the trip's properties. */
 @Serializable
-@SerialName("start")
-@SchemaValidation("validateSchema")
-data class BonvoyageStartTrip(
-  val actualStartDateTime: KOffsetDateTime,
-  // Mandatory when personal vehicle, optional otherwise
-  val startingMileage: String? = null,
-  // Optional fields, this is the final chance to correct the vehicle details
-  val vehicleType: PropertyUpdate<String> = PropertyUpdate.Undefined,
-  val vehicleRegistration: PropertyUpdate<String> = PropertyUpdate.Undefined,
-) : Validation, BonvoyageTripUpdate() {
-  fun validateSchema(): List<ValidationError> {
-    val errors = mutableListOf<ValidationError>()
-
-    if (
-      vehicleType != PropertyUpdate.Undefined && vehicleRegistration == PropertyUpdate.Undefined
-    ) {
-      errors.addSchemaErr(
-        message = "`vehicleRegistration` is required when `vehicleType` is provided"
-      )
-    }
-
-    if (
-      vehicleType == PropertyUpdate.Undefined && vehicleRegistration != PropertyUpdate.Undefined
-    ) {
-      errors.addSchemaErr(
-        message = "`vehicleType` is required when `vehicleRegistration` is provided"
-      )
-    }
-
-    return errors
-  }
-}
-
-/** DTO for users updating a trip's description. */
-@Serializable
-@SerialName("update")
 data class BonvoyageTripPropertiesUpdate(
-  val actualStartDateTime: PropertyUpdate<KOffsetDateTime> = PropertyUpdate.Undefined,
-  val actualEndDateTime: PropertyUpdate<KOffsetDateTime> = PropertyUpdate.Undefined,
-  val startMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
-  val endMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
-  val description: String? = null,
-) : BonvoyageTripUpdate()
+  /** Once a start time has been set, it cannot be changed to null */
+  val startTime: KOffsetTime? = null,
 
-/** DTO for users ending a trip. */
-@Serializable
-@SerialName("end")
-data class BonvoyageEndTrip(
-  val actualEndDateTime: KOffsetDateTime,
-  val endMileage: String? = null,
-) : BonvoyageTripUpdate()
+  /** The end date can also be modified by the user, in case of unforeseen circumstances. */
+  val endDate: KLocalDate? = null,
+
+  /** Once the end time has been set, it cannot be changed to null. */
+  val endTime: KOffsetTime? = null,
+
+  /** Required if the transport type is [TransportType.PERSONAL] and the user is the driver. */
+  val startMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
+
+  /** Required if the transport type is [TransportType.PERSONAL] and the user is the driver. */
+  val endMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
+
+  /** Updates the vehicle type, in case of changes in the trip. */
+  val vehicleType: PropertyUpdate<String> = PropertyUpdate.Undefined,
+
+  /** Updates the vehicle registration, in case of changes in the trip. */
+  val vehicleRegistration: PropertyUpdate<String> = PropertyUpdate.Undefined,
+
+  /**
+   * Updates the trip's description. Clients should prefill this to current and send in case of
+   * updates.
+   */
+  val description: String? = null,
+)
 
 /**
  * Data obtained from the LLM when parsing receipts. Ultimately turned into a

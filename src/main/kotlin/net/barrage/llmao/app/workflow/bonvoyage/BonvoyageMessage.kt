@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.model.IncomingImageData
 import net.barrage.llmao.core.workflow.DefaultWorkflowInput
+import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.types.KUUID
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -49,25 +50,20 @@ sealed class BonvoyageInput {
   ) : BonvoyageInput()
 }
 
-@OptIn(ExperimentalSerializationApi::class)
+/**
+ * Sent upon successfully registering an expense for the trip.
+ *
+ * Response to: [BonvoyageInput.ExpenseUpload]
+ */
 @Serializable
-@JsonClassDiscriminator("type")
-sealed class BonvoyageOutput {
-  /**
-   * Sent upon successfully registering an expense for the trip.
-   *
-   * Response to: [BonvoyageInput.ExpenseUpload]
-   */
-  @Serializable
-  @SerialName("bonvoyage.expense.upload")
-  data class ExpenseUpload(val data: BonvoyageTravelExpense) : BonvoyageOutput()
+@SerialName("bonvoyage.expense.upload")
+data class ExpenseUpload(val data: BonvoyageTravelExpense) : WorkflowOutput()
 
-  /**
-   * Sent upon successfully updating an expense entry.
-   *
-   * Response to: [BonvoyageInput.ExpenseUpdate]
-   */
-  @Serializable
-  @SerialName("bonvoyage.expense.update")
-  data class ExpenseUpdate(val expense: BonvoyageTravelExpense) : BonvoyageOutput()
-}
+/**
+ * Sent upon successfully updating an expense entry.
+ *
+ * Response to: [BonvoyageInput.ExpenseUpdate]
+ */
+@Serializable
+@SerialName("bonvoyage.expense.update")
+data class ExpenseUpdate(val expense: BonvoyageTravelExpense) : WorkflowOutput()

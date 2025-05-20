@@ -73,3 +73,38 @@ as possible to cause less confusion for the LLM.
 When attribute keys are matched with the keys from the database, the attribute will be included in the JSON schema
 describing the tool. The LLM will then be able to call the tool and pass the attribute value as an argument when
 creating worklog entries.
+
+## JiraKira messages
+
+Jira Kira conversations are not streaming.
+
+### Incoming
+
+JiraKira uses the [default workflow input](./MESSAGES.md#default-workflow-input).
+
+### Outgoing
+
+- `jirakira.worklog_created`
+
+Sent when a worklog entry is created for a Jira issue.
+The worklog field is the original Jira worklog entry model.
+
+```json
+{
+  "type": "jirakira.worklog_created",
+  "worklog": "JIRA_WORKLOG_ENTRY_MODEL"
+}
+```
+
+- `jirakira.worklog_updated`
+
+Sent when a worklog entry is updated for a Jira issue.
+The worklog field is the original Jira worklog entry model.
+
+```json
+{
+  "type": "jirakira.worklog_updated",
+  "worklog": "JIRA_WORKLOG_ENTRY_MODEL"
+}
+```
+

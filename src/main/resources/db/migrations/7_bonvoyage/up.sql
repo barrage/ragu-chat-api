@@ -44,13 +44,23 @@ CREATE TABLE bonvoyage_trips(
     transport_type TEXT NOT NULL,
     description TEXT NOT NULL,
 
-    start_date_time TIMESTAMPTZ NOT NULL,
-    actual_start_date_time TIMESTAMPTZ,
-    end_date_time TIMESTAMPTZ NOT NULL,
-    actual_end_date_time TIMESTAMPTZ,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
 
-    completed BOOLEAN NOT NULL DEFAULT FALSE,
-    active BOOLEAN GENERATED ALWAYS AS (actual_start_date_time IS NOT NULL AND actual_end_date_time IS NULL) STORED,
+    -- Parameters for reminder
+    start_reminder_time TIMETZ,
+    end_reminder_time TIMETZ,
+
+    start_reminder_sent_at TIMESTAMPTZ,
+    end_reminder_sent_at TIMESTAMPTZ,
+
+    -- Actual trip parameters used for the report
+    start_time TIMETZ,
+    end_time TIMETZ,
+
+    -- Which version of this trip was sent to accounting.
+    version_sent INT,
+    version INT NOT NULL DEFAULT 0,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -59,18 +69,20 @@ CREATE TABLE bonvoyage_trips(
     vehicle_type TEXT,
     vehicle_registration TEXT,
     start_mileage TEXT,
-    end_mileage TEXT
+    end_mileage TEXT,
+    is_driver BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 SELECT manage_message_group_parent('bonvoyage_trips');
+SELECT manage_version('bonvoyage_trips');
 SELECT manage_updated_at('bonvoyage_trips');
+
 CREATE INDEX ON bonvoyage_trips (user_id);
 CREATE INDEX ON bonvoyage_trips (travel_order_id);
-CREATE INDEX ON bonvoyage_trips (start_date_time);
-CREATE INDEX ON bonvoyage_trips (end_date_time);
-CREATE INDEX ON bonvoyage_trips (completed);
-CREATE INDEX ON bonvoyage_trips (active);
-CREATE INDEX ON bonvoyage_trips (created_at);
+CREATE INDEX ON bonvoyage_trips (start_date);
+CREATE INDEX ON bonvoyage_trips (end_date);
+CREATE INDEX ON bonvoyage_trips (start_reminder_sent_at);
+CREATE INDEX ON bonvoyage_trips (end_reminder_sent_at);
 
 -- When a travel request is approved and a trip is created, this message is created.
 CREATE TABLE bonvoyage_trip_welcome_messages(
@@ -80,18 +92,6 @@ CREATE TABLE bonvoyage_trip_welcome_messages(
 );
 
 CREATE INDEX ON bonvoyage_trip_welcome_messages (trip_id);
-
--- Notifications for a particular stage of a workflow, e.g. trip is starting or ending.
-CREATE TABLE bonvoyage_trip_notifications(
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    trip_id UUID NOT NULL REFERENCES bonvoyage_trips(id) ON DELETE CASCADE,
-    -- The type of notification, e.g. trip is starting or ending.
-    notification_type TEXT NOT NULL,
-    sent_at TIMESTAMPTZ
-);
-
-CREATE INDEX ON bonvoyage_trip_notifications (trip_id);
-CREATE INDEX ON bonvoyage_trip_notifications (sent_at);
 
 -- A travel request is issued by a traveler to a travel manager.
 CREATE TABLE bonvoyage_travel_requests(
@@ -109,18 +109,24 @@ CREATE TABLE bonvoyage_travel_requests(
     transport_type TEXT NOT NULL,
     description TEXT NOT NULL,
 
-    -- Mandatory fields when the trip is with a personal vehicle
+    -- Personal vehicle fields
     vehicle_type TEXT,
     vehicle_registration TEXT,
+    is_driver BOOLEAN NOT NULL DEFAULT FALSE,
 
-    -- Best guess, can differ from actual trip report
-    start_date_time TIMESTAMPTZ NOT NULL,
-    end_date_time TIMESTAMPTZ NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+
+    -- Best guess, can differ from actual trip report, used for reminders
+    expected_start_time TIMETZ,
+    expected_end_time TIMETZ,
 
     -- Review parameters
     status TEXT NOT NULL,
     reviewer_id TEXT,
     review_comment TEXT,
+
+    -- Only non-null if the status is APPROVED
     trip_id UUID REFERENCES bonvoyage_trips(id) ON DELETE SET NULL,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -140,7 +146,6 @@ CREATE TABLE bonvoyage_travel_expenses(
     image_provider TEXT NOT NULL,
     description TEXT NOT NULL,
     expense_created_at TIMESTAMPTZ NOT NULL,
-    verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -148,5 +153,4 @@ CREATE TABLE bonvoyage_travel_expenses(
 SELECT manage_updated_at('bonvoyage_travel_expenses');
 CREATE INDEX ON bonvoyage_travel_expenses (trip_id);
 CREATE INDEX ON bonvoyage_travel_expenses (expense_created_at);
-CREATE INDEX ON bonvoyage_travel_expenses (verified);
 CREATE INDEX ON bonvoyage_travel_expenses (created_at);
