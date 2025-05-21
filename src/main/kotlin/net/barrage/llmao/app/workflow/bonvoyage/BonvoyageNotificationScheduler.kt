@@ -57,7 +57,7 @@ class BonvoyageNotificationScheduler(
         repository.transaction(::BonvoyageRepository) {
           it.markTripNotificationAsSent(notification.tripId, notification.notificationType)
           email.sendEmail(
-            "bonvoyage@barrage.net",
+            BonvoyageConfig.emailSender,
             notification.userEmail,
             "Trip reminder ${notification.startLocation}-${notification.endLocation}",
             message,

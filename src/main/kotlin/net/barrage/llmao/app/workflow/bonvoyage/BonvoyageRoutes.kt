@@ -4,16 +4,26 @@ import io.github.smiley4.ktoropenapi.delete
 import io.github.smiley4.ktoropenapi.patch
 import io.github.smiley4.ktoropenapi.post
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
+import io.ktor.util.encodeBase64
+import io.ktor.utils.io.InternalAPI
+import io.ktor.utils.io.readByteArray
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
 import net.barrage.llmao.app.http.pathUuid
 import net.barrage.llmao.app.http.queryParam
 import net.barrage.llmao.app.http.user
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.model.IncomingImageData
+import net.barrage.llmao.core.model.IncomingMessageAttachment
 
 fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
   route("/bonvoyage/admin") {
@@ -95,6 +105,7 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
   }
 }
 
+@OptIn(InternalAPI::class)
 fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
   route("/bonvoyage/managers") {
     get {
@@ -144,7 +155,41 @@ fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
 
         post {
           val tripId = call.pathUuid("id")
-          // TODO
+          val form = call.receiveMultipart()
+
+          var image: ByteArray? = null
+          var description: String? = null
+
+          form.forEachPart { part ->
+            when (part.name) {
+              "image" -> {
+                val part =
+                  part as? PartData.FileItem
+                    ?: throw AppError.api(ErrorReason.InvalidParameter, "Invalid image")
+                image = part.provider().readRemaining().readByteArray()
+              }
+              "description" -> {
+                val part =
+                  part as? PartData.FormItem
+                    ?: throw AppError.api(ErrorReason.InvalidParameter, "Invalid description")
+                description = part.value
+              }
+              else ->
+                throw AppError.api(ErrorReason.InvalidParameter, "Invalid form field ${part.name}")
+            }
+          }
+
+          if (image == null) {
+            throw AppError.api(ErrorReason.InvalidParameter, "Missing image")
+          }
+
+          val attachment =
+            IncomingMessageAttachment.Image(
+              IncomingImageData.Raw("data:image/jpeg;base64,${image.encodeBase64()}")
+            )
+          val expense = api.uploadExpense(tripId, call.user(), attachment, description)
+
+          call.respond(expense)
         }
 
         patch("/{expenseId}") {

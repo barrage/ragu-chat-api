@@ -23,7 +23,7 @@ import net.barrage.llmao.types.KUUID
  * This also ensures consistency when fetching the messages.
  */
 @Serializable
-open class MessageGroup(
+data class MessageGroup(
   val id: KUUID,
 
   /** The workflow ID this message group belongs to. */
@@ -44,6 +44,7 @@ fun MessageGroupsRecord.toMessageGroup() =
 
 /**
  * Aggregate of the message group and all the messages within it, along with the group's evaluation.
+ * Represents a full interaction between a user and an LLM.
  */
 @Serializable
 data class MessageGroupAggregate(

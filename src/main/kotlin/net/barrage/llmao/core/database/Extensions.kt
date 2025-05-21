@@ -163,6 +163,56 @@ suspend fun DSLContext.getWorkflowMessages(
   return CountedList(total, messageGroups.values.toList())
 }
 
+suspend fun DSLContext.getMessageGroupAggregate(id: KUUID): MessageGroupAggregate? {
+  return select(
+      MESSAGE_GROUPS.ID,
+      MESSAGE_GROUPS.PARENT_ID,
+      MESSAGE_GROUPS.PARENT_TYPE,
+      MESSAGE_GROUPS.CREATED_AT,
+      MESSAGE_GROUP_EVALUATIONS.ID,
+      MESSAGE_GROUP_EVALUATIONS.EVALUATION,
+      MESSAGE_GROUP_EVALUATIONS.FEEDBACK,
+      MESSAGE_GROUP_EVALUATIONS.CREATED_AT,
+      MESSAGE_GROUP_EVALUATIONS.UPDATED_AT,
+      MESSAGES.ID,
+      MESSAGES.ORDER,
+      MESSAGES.MESSAGE_GROUP_ID,
+      MESSAGES.SENDER_TYPE,
+      MESSAGES.CONTENT,
+      MESSAGES.TOOL_CALLS,
+      MESSAGES.TOOL_CALL_ID,
+      MESSAGES.FINISH_REASON,
+      MESSAGES.CREATED_AT,
+    )
+    .from(MESSAGE_GROUPS)
+    .leftJoin(MESSAGE_GROUP_EVALUATIONS)
+    .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
+    .leftJoin(MESSAGES)
+    .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
+    .where(MESSAGE_GROUPS.ID.eq(id))
+    .orderBy(MESSAGES.ORDER.asc())
+    .awaitFirstOrNull()
+    ?.let { record ->
+      val messageId = record.get(MESSAGES.ID)!!
+
+      val attachments =
+        selectFrom(MESSAGE_ATTACHMENTS)
+          .where(MESSAGE_ATTACHMENTS.MESSAGE_ID.eq(messageId))
+          .asFlow()
+          .map { it.into(MESSAGE_ATTACHMENTS).toMessageAttachment() }
+          .toList()
+
+      val message = record.into(MESSAGES).toMessage(attachments)
+      val group = record.into(MESSAGE_GROUPS).toMessageGroup()
+      val evaluation =
+        record.into(MESSAGE_GROUP_EVALUATIONS).let { eval ->
+          eval.id?.let { eval.toMessageGroupEvaluation() }
+        }
+
+      MessageGroupAggregate(group, mutableListOf(message), evaluation)
+    }
+}
+
 /**
  * Utility for including a SET statement in a DSLContext update statement.
  *

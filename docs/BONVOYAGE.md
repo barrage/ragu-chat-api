@@ -3,6 +3,30 @@
 The Bonvoyage plugin is a business trip management solution for streamlining the creation
 of travel orders and travel expense reports.
 
+## Configuration
+
+The plugin mandates the existence of the `email` and `given_name` fields in the access token.
+The `email` field is used to send travel reports to users and the `given_name` field is used to address users
+in official documents (travel orders and reports).
+
+The following entry needs to exist in the `application.conf` file.
+
+```conf
+bonvoyage = {
+    # Email address from which travel reports and notifications are sent
+    emailSender = "my@email.sender"
+    # Path to the logo used in travel reports
+    logoPath = "path-to-logo.png"
+    # Path to the font used in travel reports
+    fontPath = "path-to-font.ttf"
+}
+```
+
+The following application settings must be set:
+
+- `BONVOYAGE_LLM_PROVIDER` - the provider used for all agents
+- `BONVOYAGE_MODEL` - the model used for all agents, must be compatible with the provider
+
 ## Entities
 
 Bonvoyage consists of the following entities:
@@ -109,3 +133,6 @@ If they are traveling with a personal vehicle and haven't provided the mileage y
 must do so in order to send the report to accounting.
 
 Once everything is verified, they can send the report to accounting and their trip is considered complete.
+
+If for some reason accounting rejects the report and asks for changes, the traveler can make them and
+regenerate the report at any time.

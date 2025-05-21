@@ -1,6 +1,5 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
-import io.ktor.server.config.ApplicationConfig
 import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ApplicationState
@@ -25,7 +24,7 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
   private lateinit var settings: Settings
   private lateinit var api: BonvoyageUserApi
 
-  fun init(config: ApplicationConfig, state: ApplicationState) {
+  fun init(state: ApplicationState) {
     providers = state.providers
     settings = state.settings
     api = BonvoyageUserApi(BonvoyageRepository(state.database), state.email, state.providers.image)
@@ -65,18 +64,6 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
     return BonvoyageWorkflow(
       id = workflowId,
       emitter = emitter,
-      expenseAgent =
-        BonvoyageExpenseAgent(
-          tokenTracker =
-            TokenUsageTrackerFactory.newTracker(
-              user.id,
-              user.username,
-              BONVOYAGE_WORKFLOW_ID,
-              workflowId,
-            ),
-          model = bonvoyageModel,
-          inferenceProvider = bonvoyageLlmProvider,
-        ),
       chatAgent =
         BonvoyageChatAgent(
           tokenTracker =
@@ -93,6 +80,18 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
       user = user,
       api = api,
       tools = ToolsBuilder().build(),
+    )
+  }
+
+  suspend fun expenseAgent(user: User, tripId: KUUID): BonvoyageExpenseAgent {
+    val settings = settings.getAllWithDefaults()
+    val bonvoyageLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
+    val bonvoyageModel = settings[SettingKey.BONVOYAGE_MODEL]
+    return BonvoyageExpenseAgent(
+      tokenTracker =
+        TokenUsageTrackerFactory.newTracker(user.id, user.username, BONVOYAGE_WORKFLOW_ID, tripId),
+      model = bonvoyageModel,
+      inferenceProvider = bonvoyageLlmProvider,
     )
   }
 }

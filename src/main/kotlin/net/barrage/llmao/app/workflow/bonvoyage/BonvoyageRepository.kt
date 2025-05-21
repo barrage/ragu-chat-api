@@ -8,6 +8,7 @@ import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.database.Atomic
+import net.barrage.llmao.core.database.getMessageGroupAggregate
 import net.barrage.llmao.core.database.getWorkflowMessages
 import net.barrage.llmao.core.database.insertMessages
 import net.barrage.llmao.core.database.set
@@ -349,7 +350,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
         BONVOYAGE_TRIPS.START_TIME.isNull
           .and(BONVOYAGE_TRIPS.START_REMINDER_SENT_AT.isNull)
           .and(BONVOYAGE_TRIPS.START_REMINDER_TIME.isNotNull)
-          // Exclude anything in the past
+          // Exclude everything in the future from the query
           .and(BONVOYAGE_TRIPS.START_DATE.lessOrEqual(KLocalDate.now()))
           .and(BONVOYAGE_TRIPS.START_REMINDER_TIME.lessOrEqual(KOffsetTime.now()))
           .and(tripId?.let { BONVOYAGE_TRIPS.ID.eq(tripId) } ?: DSL.noCondition())
@@ -389,7 +390,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
         BONVOYAGE_TRIPS.END_TIME.isNull
           .and(BONVOYAGE_TRIPS.END_REMINDER_SENT_AT.isNull)
           .and(BONVOYAGE_TRIPS.END_REMINDER_TIME.isNotNull)
-          // Exclude anything in the past
+          // Exclude everything in the future from the query
           .and(BONVOYAGE_TRIPS.END_DATE.lessOrEqual(KLocalDate.now()))
           .and(BONVOYAGE_TRIPS.END_REMINDER_TIME.lessOrEqual(KOffsetTime.now()))
           .and(tripId?.let { BONVOYAGE_TRIPS.ID.eq(tripId) } ?: DSL.noCondition())
@@ -609,11 +610,16 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
     workflowId: KUUID,
     messages: List<MessageInsert>,
     expense: BonvoyageTravelExpenseInsert,
-  ): BonvoyageTravelExpense =
-    dslContext.transactionCoroutine { ctx ->
-      val messageGroupId = ctx.dsl().insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages)
-      ctx.dsl().insertTravelExpense(workflowId, messageGroupId, expense)
-    }
+  ): Pair<MessageGroupAggregate, BonvoyageTravelExpense> {
+    val (id, travelExpense) =
+      dslContext.transactionCoroutine { ctx ->
+        val id = ctx.dsl().insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages)
+        val e = ctx.dsl().insertTravelExpense(workflowId, id, expense)
+        Pair(id, e)
+      }
+    val messageGroup = dslContext.getMessageGroupAggregate(id)!!
+    return Pair(messageGroup, travelExpense)
+  }
 
   suspend fun insertMessages(workflowId: KUUID, messages: List<MessageInsert>) =
     dslContext.insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages)

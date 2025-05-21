@@ -16,6 +16,8 @@ import com.itextpdf.layout.element.Table
 import com.itextpdf.layout.properties.UnitValue
 import io.ktor.util.logging.KtorSimpleLogger
 import java.io.ByteArrayOutputStream
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.Email
 import net.barrage.llmao.core.ErrorReason
@@ -24,7 +26,11 @@ import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
 import net.barrage.llmao.core.blob.BlobStorage
+import net.barrage.llmao.core.llm.ChatCompletionAgentParameters
+import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.model.Image
+import net.barrage.llmao.core.model.IncomingMessageAttachment
+import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.PropertyUpdate
@@ -133,7 +139,7 @@ class BonvoyageAdminApi(
       }
 
     email.sendEmail(
-      "bonvoyage@barrage.net",
+      BonvoyageConfig.emailSender,
       request.userEmail,
       "Travel request approved",
       """Your travel request has been approved.
@@ -218,10 +224,12 @@ class BonvoyageAdminApi(
 }
 
 class BonvoyageUserApi(
-  val repository: BonvoyageRepository,
-  val email: Email,
-  val image: BlobStorage<Image>,
+  private val repository: BonvoyageRepository,
+  private val email: Email,
+  private val image: BlobStorage<Image>,
 ) {
+  private val log = KtorSimpleLogger("n.b.l.a.workflow.bonvoyage.BonvoyageUserApi")
+
   suspend fun getTripWelcomeMessage(id: KUUID): BonvoyageTripWelcomeMessage? =
     repository.getTripWelcomeMessage(id)
 
@@ -229,12 +237,6 @@ class BonvoyageUserApi(
 
   suspend fun insertMessages(id: KUUID, messages: List<MessageInsert>): KUUID =
     repository.insertMessages(id, messages)
-
-  suspend fun insertExpenseMessages(
-    id: KUUID,
-    messages: List<MessageInsert>,
-    expense: BonvoyageTravelExpenseInsert,
-  ): BonvoyageTravelExpense = repository.insertMessagesWithExpense(id, messages, expense)
 
   suspend fun listTrips(userId: String): List<BonvoyageTrip> = repository.listTrips(userId)
 
@@ -338,7 +340,7 @@ class BonvoyageUserApi(
             BonvoyageNotificationDelivery.EMAIL -> {
               // TODO: Use CC instead of sending email to each manager.
               email.sendEmail(
-                "bonvoyage@barrage.net",
+                BonvoyageConfig.emailSender,
                 manager.manager.userEmail,
                 "Travel request from ${user.username}",
                 """A new travel request has been submitted by ${user.username}.
@@ -365,6 +367,110 @@ class BonvoyageUserApi(
 
   suspend fun getTravelRequest(id: KUUID, userId: String): BonvoyageTravelRequest =
     repository.getTravelRequest(id, userId)
+
+  suspend fun uploadExpense(
+    id: KUUID,
+    user: User,
+    image: IncomingMessageAttachment.Image,
+    description: String?,
+  ): Pair<MessageGroupAggregate, BonvoyageTravelExpense> {
+    val trip = getTrip(id, user.id)
+    val expenseAgent = BonvoyageWorkflowFactory.expenseAgent(user, id)
+    val attachment = listOf(image)
+
+    val content =
+      if (description.isNullOrBlank()) {
+        """The image is a receipt for an expense.
+        | Use the information in the receipt to clarify the expense for accounting.
+        | Use what is available on the receipt and nothing else.
+        | If any locations are visible in receipt, be sure to include them in the description."""
+          .trimMargin()
+      } else {
+        """The image is a receipt for an expense.
+        | The user provided the following description:
+        |
+        | $description
+        |
+        | If the user provided the purpose of the expense and the location it was made,
+        | do not modify it and use it directly.
+        | Otherwise use the information in the receipt to enrich the description with the location.
+        | """
+          .trimMargin()
+      }
+
+    val context =
+      """You are talking to ${user.username}.
+          | ${user.username} is on a business trip from ${trip.startLocation} to ${trip.endLocation}.
+          |
+          | You keep track of expenses for this trip for the purpose of creating a trip report.
+          | The user will send you pictures they took of receipts of expenses made on this trip.
+          | They will also optionally provide you a concise description of the expense.
+          |
+          | You will extract the following information from the receipt image:
+          | - The amount of money spent on the expense.
+          | 
+          | - The currency of the expense.
+          | 
+          | - The description of the expense. 
+          |   If the user provides a description, use it and enrich it with any information from the receipt,
+          |   such as specifying the locations on it.
+          |   If they do not provide the description, attempt to describe it based on the image of the receipt.
+          |   
+          | - The date-time the expense was created at.
+          |
+          | You will output the extracted information in JSON format, using the schema ${EXPENSE_FORMAT.name}."""
+        .trimMargin()
+
+    val response =
+      expenseAgent.completion(
+        context,
+        content,
+        attachment,
+        ChatCompletionAgentParameters(responseFormat = EXPENSE_FORMAT),
+      )
+
+    val userMessage = response.first()
+    val assistantMessage = response.last()
+
+    assert(userMessage.role == "user")
+    assert(assistantMessage.role == "assistant")
+
+    if (assistantMessage.content == null) {
+      throw AppError.internal("Bonvoyage received message without content")
+    }
+
+    val responseText = assistantMessage.content!!.text()
+    val expense =
+      try {
+        Json.decodeFromString<TravelExpense>(responseText)
+      } catch (e: SerializationException) {
+        log.error("Failed to parse expense from agent response: $responseText", e)
+        throw AppError.internal("Failed to parse expense from agent response", original = e)
+      }
+
+    val attachments =
+      try {
+        ChatMessageProcessor.storeMessageAttachments(attachment)
+      } catch (e: Exception) {
+        throw AppError.internal("Failed to store message attachments", original = e)
+      }
+
+    val expenseImage = attachments.first()
+
+    val messageInsert =
+      listOf(userMessage.toInsert(attachments)) + listOf(assistantMessage.toInsert())
+    val expenseInsert =
+      BonvoyageTravelExpenseInsert(
+        amount = expense.amount,
+        currency = expense.currency,
+        description = expense.description,
+        imagePath = expenseImage.url,
+        imageProvider = expenseImage.provider,
+        expenseCreatedAt = expense.createdAt,
+      )
+
+    return repository.insertMessagesWithExpense(id, messageInsert, expenseInsert)
+  }
 
   suspend fun updateExpense(
     tripId: KUUID,
@@ -402,8 +508,7 @@ class BonvoyageUserApi(
     val report = generateReportPdf(trip)
 
     email.sendEmailWithAttachment(
-      "bonvoyage@barrage.net",
-      // Safe to !! because the factory always verifies this is not null
+      BonvoyageConfig.emailSender,
       userEmail,
       trip.trip.travelOrderId,
       "Travel report for ${trip.trip.travelOrderId}.",
@@ -416,11 +521,15 @@ class BonvoyageUserApi(
       throw AppError.api(ErrorReason.InvalidOperation, "Trip is missing start or end time")
     }
 
+    if (trip.trip.isDriver && (trip.trip.startMileage == null || trip.trip.endMileage == null)) {
+      throw AppError.api(ErrorReason.InvalidOperation, "Trip is missing start or end mileage")
+    }
+
     val documentBytes = ByteArrayOutputStream()
     val pdf = PdfDocument(PdfWriter(documentBytes))
     val document =
       Document(pdf, PageSize.A4)
-        .setFont(PdfFontFactory.createFont("./src/main/resources/bonvoyage/DejaVuSans.ttf"))
+        .setFont(PdfFontFactory.createFont(BonvoyageConfig.fontPath))
     document.setMargins(20f, 20f, 20f, 20f)
 
     // Title
@@ -428,7 +537,7 @@ class BonvoyageUserApi(
     val title = Paragraph("IZVJEŠTAJ SA SLUŽBENOG PUTA").simulateBold().setFontSize(12f)
 
     title.add(
-      PdfImage(ImageDataFactory.create("./src/main/resources/bonvoyage/logo.png"))
+      PdfImage(ImageDataFactory.create(BonvoyageConfig.logoPath))
         .setWidth(60f)
         .setHeight(25f)
         .setMarginLeft(300f)

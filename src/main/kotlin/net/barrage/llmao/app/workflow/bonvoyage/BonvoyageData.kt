@@ -5,6 +5,7 @@ import javax.mail.util.ByteArrayDataSource
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.EmailAttachment
+import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.SchemaValidation
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
@@ -91,6 +92,7 @@ data class TravelRequest(
   val endDate: KLocalDate,
 
   /** Description of the trip's purpose. */
+  @NotBlank
   val description: String,
 
   // Optional fields for reminders
@@ -104,9 +106,11 @@ data class TravelRequest(
   // Optional fields for personal vehicle
 
   /** Vehicle brand and model. Only necessary if the transport type is [TransportType.PERSONAL]. */
+  @NotBlank
   val vehicleType: String? = null,
 
   /** Vehicle license plates. */
+  @NotBlank
   val vehicleRegistration: String? = null,
 
   /**
@@ -231,23 +235,28 @@ data class BonvoyageTripPropertiesUpdate(
   val endTime: KOffsetTime? = null,
 
   /** Required if the transport type is [TransportType.PERSONAL] and the user is the driver. */
+  @NotBlank
   val startMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
 
   /** Required if the transport type is [TransportType.PERSONAL] and the user is the driver. */
+  @NotBlank
   val endMileage: PropertyUpdate<String> = PropertyUpdate.Undefined,
 
   /** Updates the vehicle type, in case of changes in the trip. */
+  @NotBlank
   val vehicleType: PropertyUpdate<String> = PropertyUpdate.Undefined,
 
   /** Updates the vehicle registration, in case of changes in the trip. */
+  @NotBlank
   val vehicleRegistration: PropertyUpdate<String> = PropertyUpdate.Undefined,
 
   /**
    * Updates the trip's description. Clients should prefill this to current and send in case of
    * updates.
    */
+  @NotBlank
   val description: String? = null,
-)
+): Validation
 
 /**
  * Data obtained from the LLM when parsing receipts. Ultimately turned into a

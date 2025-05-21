@@ -1,12 +1,8 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import net.barrage.llmao.core.AppError
-import net.barrage.llmao.core.llm.ChatCompletionAgentParameters
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ContentSingle
@@ -25,7 +21,6 @@ class BonvoyageWorkflow(
   /** Unique identifier of the trip. */
   override val id: KUUID,
   private val user: User,
-  private val expenseAgent: BonvoyageExpenseAgent,
   private val chatAgent: BonvoyageChatAgent,
   /** Output handle. */
   private val emitter: Emitter,
@@ -99,107 +94,18 @@ class BonvoyageWorkflow(
   }
 
   private suspend fun handleExpenseUpload(input: BonvoyageInput.ExpenseUpload) {
-    val attachment = listOf(IncomingMessageAttachment.Image(input.data))
-
-    val trip = api.getTrip(id, user.id)
-
-    val content =
-      if (input.description.isNullOrBlank()) {
-        """The image is a receipt for an expense.
-        | Use the information in the receipt to clarify the expense for accounting.
-        | Use what is available on the receipt and nothing else.
-        | If any locations are visible in receipt, be sure to include them in the description."""
-          .trimMargin()
-      } else {
-        """The image is a receipt for an expense.
-        | The user provided the following description:
-        |
-        | ${input.description}
-        |
-        | If the user provided the purpose of the expense and the location it was made,
-        | do not modify it and use it directly.
-        | Otherwise use the information in the receipt to enrich the description with the location.
-        | """
-          .trimMargin()
-      }
-
-    val context =
-      """You are talking to ${user.username}.
-          | ${user.username} is on a business trip from ${trip.startLocation} to ${trip.endLocation}.
-          |
-          | You keep track of expenses for this trip for the purpose of creating a trip report.
-          | The user will send you pictures they took of receipts of expenses made on this trip.
-          | They will also optionally provide you a concise description of the expense.
-          |
-          | You will extract the following information from the receipt image:
-          | - The amount of money spent on the expense.
-          | 
-          | - The currency of the expense.
-          | 
-          | - The description of the expense. 
-          |   If the user provides a description, use it and enrich it with any information from the receipt,
-          |   such as specifying the locations on it.
-          |   If they do not provide the description, attempt to describe it based on the image of the receipt.
-          |   
-          | - The date-time the expense was created at.
-          |
-          | You will output the extracted information in JSON format, using the schema ${EXPENSE_FORMAT.name}."""
-        .trimMargin()
-
-    val response =
-      expenseAgent.completion(
-        context,
-        content,
-        attachment,
-        ChatCompletionAgentParameters(responseFormat = EXPENSE_FORMAT),
-        emitter,
-      )
-
-    val userMessage = response.first()
-    val assistantMessage = response.last()
-
-    println(assistantMessage)
-
-    assert(userMessage.role == "user")
-    assert(assistantMessage.role == "assistant")
-
-    if (assistantMessage.content == null) {
-      throw AppError.internal("Bonvoyage received message without content")
-    }
-
-    val expense =
-      try {
-        Json.decodeFromString<TravelExpense>(assistantMessage.content!!.text())
-      } catch (e: SerializationException) {
-        throw AppError.internal("Failed to parse expense from agent response", original = e)
-      }
-
-    val attachments =
-      try {
-        ChatMessageProcessor.storeMessageAttachments(attachment)
-      } catch (e: Exception) {
-        throw AppError.internal("Failed to store message attachments", original = e)
-      }
-
-    val expenseImage = attachments.first()
-
-    val messageInsert =
-      listOf(userMessage.toInsert(attachments)) + listOf(assistantMessage.toInsert())
-    val expenseInsert =
-      BonvoyageTravelExpenseInsert(
-        amount = expense.amount,
-        currency = expense.currency,
-        description = expense.description,
-        imagePath = expenseImage.url,
-        imageProvider = expenseImage.provider,
-        expenseCreatedAt = expense.createdAt,
-      )
-
-    val travelExpense = api.insertExpenseMessages(id, messageInsert, expenseInsert)
-
+    val (group, travelExpense) =
+      api.uploadExpense(id, user, IncomingMessageAttachment.Image(input.data), input.description)
+    val userMessage = group.messages.first()
+    val assistantMessage = group.messages.last()
     emitter.emit(ExpenseUpload(travelExpense))
     emitter.emit(
-      StreamComplete(id, assistantMessage.finishReason!!, travelExpense.messageGroupId, attachments)
+      StreamComplete(
+        id,
+        assistantMessage.finishReason!!,
+        travelExpense.messageGroupId,
+        userMessage.attachments,
+      )
     )
   }
 
