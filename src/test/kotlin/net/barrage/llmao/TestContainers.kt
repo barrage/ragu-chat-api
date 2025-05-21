@@ -34,8 +34,8 @@ import net.barrage.llmao.app.workflow.chat.model.toAgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.toChat
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.toWhatsAppNumber
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
+import net.barrage.llmao.core.administration.settings.WhatsappAgentId
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.User
@@ -369,7 +369,7 @@ class TestPostgres {
   suspend fun setWhatsAppAgent(agentId: KUUID) {
     dslContext
       .insertInto(APPLICATION_SETTINGS)
-      .set(APPLICATION_SETTINGS.NAME, SettingKey.WHATSAPP_AGENT_ID.name)
+      .set(APPLICATION_SETTINGS.NAME, WhatsappAgentId.KEY)
       .set(APPLICATION_SETTINGS.VALUE, agentId.toString())
       .onConflict(APPLICATION_SETTINGS.NAME)
       .doUpdate()
@@ -380,7 +380,7 @@ class TestPostgres {
   suspend fun deleteWhatsAppAgent() {
     dslContext
       .deleteFrom(APPLICATION_SETTINGS)
-      .where(APPLICATION_SETTINGS.NAME.eq(SettingKey.WHATSAPP_AGENT_ID.name))
+      .where(APPLICATION_SETTINGS.NAME.eq(WhatsappAgentId.KEY))
       .awaitSingle()
   }
 
@@ -405,14 +405,14 @@ class TestPostgres {
     settings.removals?.forEach { key ->
       dslContext
         .deleteFrom(APPLICATION_SETTINGS)
-        .where(APPLICATION_SETTINGS.NAME.eq(key.name))
+        .where(APPLICATION_SETTINGS.NAME.eq(key))
         .awaitSingle()
     }
 
     settings.updates?.let { updates ->
       dslContext
         .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
-        .apply { updates.forEach { setting -> values(setting.key.name, setting.value) } }
+        .apply { updates.forEach { setting -> values(setting.key, setting.value) } }
         .onConflict(APPLICATION_SETTINGS.NAME)
         .doUpdate()
         .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))

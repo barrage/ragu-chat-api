@@ -162,3 +162,26 @@ class ChatPlugin : Plugin {
     subclass(ChatTitleUpdated::class, ChatTitleUpdated.serializer())
   }
 }
+
+/**
+ * Maximum number of tokens to keep in chat histories. Used to prevent context windows from growing
+ * too large. Always applies to all chats.
+ */
+internal data object MaxHistoryTokens {
+  const val KEY = "CHAT_MAX_HISTORY_TOKENS"
+  const val DEFAULT = 100_000
+}
+
+/**
+ * Used to penalize tokens that are already present in the context window. The global value applies
+ * to all agents, unless overridden by their configuration.
+ */
+internal data object AgentPresencePenalty {
+  const val KEY = "CHAT_AGENT_PRESENCE_PENALTY"
+}
+
+/** The maximum amount of tokens for title generation. Applied to all agents. */
+internal data object AgentTitleMaxCompletionTokens {
+  const val KEY = "CHAT_AGENT_TITLE_MAX_COMPLETION_TOKENS"
+  const val DEFAULT = 100
+}

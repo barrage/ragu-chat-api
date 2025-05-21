@@ -12,7 +12,6 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatMessageProcessor
@@ -119,7 +118,7 @@ object ChatWorkflowFactory : WorkflowFactory {
   suspend fun createChatAgent(workflowId: KUUID, user: User, agent: AgentFull): ChatAgent {
     val tokenizer = Encoder.tokenizer(agent.configuration.model)
 
-    val settings = settings.getAllWithDefaults()
+    val settings = settings.getAll()
 
     val tokenTracker =
       TokenUsageTrackerFactory.newTracker(user.id, user.username, CHAT_WORKFLOW_ID, workflowId)
@@ -135,7 +134,9 @@ object ChatWorkflowFactory : WorkflowFactory {
       agentId = agent.agent.id,
       configuration = agent.configuration,
       name = agent.agent.name,
-      titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+      titleMaxTokens =
+        settings.getOptional(AgentTitleMaxCompletionTokens.KEY)?.toInt()
+          ?: AgentTitleMaxCompletionTokens.DEFAULT,
       inferenceProvider = providers.llm[agent.configuration.llmProvider],
       completionParameters =
         ChatCompletionBaseParameters(
@@ -143,10 +144,8 @@ object ChatWorkflowFactory : WorkflowFactory {
           temperature = agent.configuration.temperature,
           presencePenalty =
             agent.configuration.presencePenalty
-              ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
-          maxTokens =
-            agent.configuration.maxCompletionTokens
-              ?: settings.getOptional(SettingKey.AGENT_MAX_COMPLETION_TOKENS)?.toInt(),
+              ?: settings.getOptional(AgentPresencePenalty.KEY)?.toDouble(),
+          maxTokens = agent.configuration.maxCompletionTokens,
         ),
       tokenTracker = tokenTracker,
       history =
@@ -154,7 +153,8 @@ object ChatWorkflowFactory : WorkflowFactory {
           TokenBasedHistory(
             messages = mutableListOf(),
             tokenizer = it,
-            maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+            maxTokens =
+              settings.getOptional(MaxHistoryTokens.KEY)?.toInt() ?: MaxHistoryTokens.DEFAULT,
           )
         } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
       contextEnrichment = contextEnrichment?.let { listOf(it) },

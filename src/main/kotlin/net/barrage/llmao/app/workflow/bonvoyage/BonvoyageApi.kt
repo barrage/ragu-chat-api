@@ -22,7 +22,6 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.Email
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
 import net.barrage.llmao.core.blob.BlobStorage
@@ -155,8 +154,8 @@ class BonvoyageAdminApi(
   }
 
   private suspend fun getWelcomeMessage(trip: BonvoyageTrip): String {
-    val bonvoyageModel = settings.get(SettingKey.BONVOYAGE_MODEL)
-    val bonvoyageLlmProvider = settings.get(SettingKey.BONVOYAGE_LLM_PROVIDER)
+    val bonvoyageModel = settings.get(BonvoyageModel.KEY)
+    val bonvoyageLlmProvider = settings.get(BonvoyageLlmProvider.KEY)
 
     val defaultWelcomeMessage = defaultWelcomeMessage(trip)
 
@@ -528,8 +527,7 @@ class BonvoyageUserApi(
     val documentBytes = ByteArrayOutputStream()
     val pdf = PdfDocument(PdfWriter(documentBytes))
     val document =
-      Document(pdf, PageSize.A4)
-        .setFont(PdfFontFactory.createFont(BonvoyageConfig.fontPath))
+      Document(pdf, PageSize.A4).setFont(PdfFontFactory.createFont(BonvoyageConfig.fontPath))
     document.setMargins(20f, 20f, 20f, 20f)
 
     // Title

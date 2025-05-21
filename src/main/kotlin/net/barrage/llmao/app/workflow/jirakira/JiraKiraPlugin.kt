@@ -25,3 +25,26 @@ class JiraKiraPlugin : Plugin {
     authenticate("user") { jiraKiraUserRoutes(repository) }
   }
 }
+
+/** The LLM provider to use for JiraKira. */
+internal data object JiraKiraLlmProvider {
+  const val KEY = "JIRAKIRA_LLM_PROVIDER"
+}
+
+/** Which model will be used for JiraKira. Has to be compatible with [JiraKiraLlmProvider]. */
+internal data object JiraKiraModel {
+  const val KEY = "JIRAKIRA_MODEL"
+}
+
+/**
+ * The attribute to use as the time slot attribute when creating worklog entries with the Jira API.
+ * Defined in Jira.
+ */
+internal data object JiraKiraTimeSlotAttributeKey {
+  const val KEY = "JIRAKIRA_TIME_SLOT_ATTRIBUTE_KEY"
+}
+
+internal data object JiraKiraMaxHistoryTokens {
+  const val KEY = "JIRAKIRA_MAX_HISTORY_TOKENS"
+  const val DEFAULT = 100_000
+}

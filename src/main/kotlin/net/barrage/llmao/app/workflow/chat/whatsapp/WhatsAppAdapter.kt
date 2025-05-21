@@ -14,7 +14,10 @@ import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
 import io.ktor.util.logging.KtorSimpleLogger
+import net.barrage.llmao.app.workflow.chat.AgentPresencePenalty
+import net.barrage.llmao.app.workflow.chat.AgentTitleMaxCompletionTokens
 import net.barrage.llmao.app.workflow.chat.ChatAgent
+import net.barrage.llmao.app.workflow.chat.MaxHistoryTokens
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
@@ -28,10 +31,11 @@ import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.SettingUpdate
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
+import net.barrage.llmao.core.administration.settings.WhatsappAgentId
+import net.barrage.llmao.core.administration.settings.WhatsappMaxCompletionTokens
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
@@ -74,7 +78,7 @@ class WhatsAppAdapter(
 
   suspend fun getAgent(): AgentFull {
     val agentId =
-      settings.get(SettingKey.WHATSAPP_AGENT_ID)
+      settings.get(WhatsappAgentId.KEY)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not configured")
 
     return agentRepository.get(tryUuid(agentId))
@@ -86,15 +90,13 @@ class WhatsAppAdapter(
       ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Agent not found")
 
     val update =
-      SettingsUpdate(
-        updates = listOf(SettingUpdate(SettingKey.WHATSAPP_AGENT_ID, agentId.toString()))
-      )
+      SettingsUpdate(updates = listOf(SettingUpdate(WhatsappAgentId.KEY, agentId.toString())))
 
     settings.update(update)
   }
 
   suspend fun unsetAgent() {
-    val update = SettingsUpdate(removals = listOf(SettingKey.WHATSAPP_AGENT_ID))
+    val update = SettingsUpdate(removals = listOf(WhatsappAgentId.KEY))
     settings.update(update)
   }
 
@@ -154,7 +156,7 @@ class WhatsAppAdapter(
 
   suspend fun handleIncomingMessage(input: InfobipResponse) {
     val agentId =
-      settings.get(SettingKey.WHATSAPP_AGENT_ID)
+      settings.get(WhatsappAgentId.KEY)
         ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "WhatsApp agent not configured")
 
     val agent =
@@ -219,14 +221,15 @@ class WhatsAppAdapter(
         .flatMap { it.messages.map(ChatMessageProcessor::loadToChatMessage) }
         .toMutableList()
 
-    val settings = settings.getAllWithDefaults()
+    val settings = settings.getAll()
     val tokenizer = Encoder.tokenizer(agent.configuration.model)
     val history: ChatHistory =
       tokenizer?.let {
         TokenBasedHistory(
           messages = messages,
           tokenizer = it,
-          maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+          maxTokens =
+            settings.getOptional(MaxHistoryTokens.KEY)?.toInt() ?: MaxHistoryTokens.DEFAULT,
         )
       } ?: MessageBasedHistory(messages = messages, maxMessages = MAX_HISTORY_MESSAGES)
 
@@ -235,11 +238,11 @@ class WhatsAppAdapter(
         model = agent.configuration.model,
         temperature = agent.configuration.temperature,
         presencePenalty =
-          agent.configuration.presencePenalty
-            ?: settings[SettingKey.AGENT_PRESENCE_PENALTY].toDouble(),
+          agent.configuration.presencePenalty ?: settings[AgentPresencePenalty.KEY].toDouble(),
         maxTokens =
           agent.configuration.maxCompletionTokens
-            ?: settings[SettingKey.WHATSAPP_AGENT_MAX_COMPLETION_TOKENS].toInt(),
+            ?: settings.getOptional(WhatsappMaxCompletionTokens.KEY)?.toInt()
+            ?: WhatsappMaxCompletionTokens.DEFAULT,
       )
 
     val tokenTracker =
@@ -249,7 +252,9 @@ class WhatsAppAdapter(
       agentId = agent.agent.id,
       configuration = agent.configuration,
       name = agent.agent.name,
-      titleMaxTokens = settings[SettingKey.AGENT_TITLE_MAX_COMPLETION_TOKENS].toInt(),
+      titleMaxTokens =
+        settings.getOptional(AgentTitleMaxCompletionTokens.KEY)?.toInt()
+          ?: AgentTitleMaxCompletionTokens.DEFAULT,
       inferenceProvider = providers.llm[agent.configuration.llmProvider],
       completionParameters = completionParameters,
       tokenTracker = tokenTracker,

@@ -7,7 +7,6 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.administration.settings.ApplicationSetting
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.SettingsRepository
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
 import net.barrage.llmao.core.administration.settings.toModel
@@ -18,11 +17,11 @@ import org.jooq.impl.DSL.excluded
 class SettingsRepositoryPostgres(private val dslContext: DSLContext) : SettingsRepository {
   private val log = KtorSimpleLogger("n.b.l.c.settings.SettingsRepository")
 
-  override suspend fun getValue(key: SettingKey): String? {
+  override suspend fun getValue(key: String): String? {
     return dslContext
       .select(APPLICATION_SETTINGS.VALUE)
       .from(APPLICATION_SETTINGS)
-      .where(APPLICATION_SETTINGS.NAME.eq(key.name))
+      .where(APPLICATION_SETTINGS.NAME.eq(key))
       .awaitFirstOrNull()
       ?.into(APPLICATION_SETTINGS)
       ?.value
@@ -77,14 +76,14 @@ class SettingsRepositoryPostgres(private val dslContext: DSLContext) : SettingsR
     update.removals?.forEach { key ->
       dslContext
         .deleteFrom(APPLICATION_SETTINGS)
-        .where(APPLICATION_SETTINGS.NAME.eq(key.name))
+        .where(APPLICATION_SETTINGS.NAME.eq(key))
         .awaitFirstOrNull()
     }
 
     update.updates?.let { updates ->
       dslContext
         .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
-        .apply { updates.forEach { setting -> values(setting.key.name, setting.value) } }
+        .apply { updates.forEach { setting -> values(setting.key, setting.value) } }
         .onConflict(APPLICATION_SETTINGS.NAME)
         .doUpdate()
         .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))

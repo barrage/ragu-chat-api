@@ -46,8 +46,8 @@ import net.barrage.llmao.app.workflow.chat.model.UpdateCollections
 import net.barrage.llmao.app.workflow.chat.model.UpdateCollectionsResult
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
+import net.barrage.llmao.core.administration.settings.WhatsappAgentId
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.model.Message
@@ -65,7 +65,7 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings)
     get(adminGetAllAgents()) {
       val pagination = call.query(PaginationSort::class)
       val filters = call.query(SearchFiltersAdminAgentsQuery::class).toSearchFiltersAdminAgents()
-      val activeWappAgentId = settings.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
+      val activeWappAgentId = settings.get(WhatsappAgentId.KEY)?.let { tryUuid(it) }
       val agents =
         agentService.listAgents(pagination, filters).map { it.toAgentDisplay(activeWappAgentId) }
       call.respond(HttpStatusCode.OK, agents)
@@ -80,7 +80,7 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings)
     route("/{id}") {
       get(adminGetAgent()) {
         val id = call.pathUuid("id")
-        val activeWappAgentId = settings.get(SettingKey.WHATSAPP_AGENT_ID)?.let { tryUuid(it) }
+        val activeWappAgentId = settings.get(WhatsappAgentId.KEY)?.let { tryUuid(it) }
         val agent = agentService.getFull(id)
         call.respond(HttpStatusCode.OK, agent.toAgentDisplay(activeWappAgentId))
       }

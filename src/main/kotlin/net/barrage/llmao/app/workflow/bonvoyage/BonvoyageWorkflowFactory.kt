@@ -5,7 +5,6 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.MessageBasedHistory
@@ -42,9 +41,10 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
   override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
     api.getTrip(workflowId, user.id)
 
-    val settings = settings.getAllWithDefaults()
-    val bonvoyageLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
-    val bonvoyageModel = settings[SettingKey.BONVOYAGE_MODEL]
+    val settings = settings.getAll()
+
+    val bonvoyageLlmProvider = providers.llm[settings[BonvoyageLlmProvider.KEY]]
+    val bonvoyageModel = settings[BonvoyageModel.KEY]
 
     val tokenizer = Encoder.tokenizer(bonvoyageModel)
     val messages =
@@ -57,7 +57,9 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
         TokenBasedHistory(
           messages = messages,
           tokenizer = it,
-          maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+          maxTokens =
+            settings.getOptional(BonvoyageMaxHistoryTokens.KEY)?.toInt()
+              ?: BonvoyageMaxHistoryTokens.DEFAULT,
         )
       } ?: MessageBasedHistory(messages = messages, maxMessages = 20)
 
@@ -84,9 +86,10 @@ object BonvoyageWorkflowFactory : WorkflowFactory {
   }
 
   suspend fun expenseAgent(user: User, tripId: KUUID): BonvoyageExpenseAgent {
-    val settings = settings.getAllWithDefaults()
-    val bonvoyageLlmProvider = providers.llm[settings[SettingKey.BONVOYAGE_LLM_PROVIDER]]
-    val bonvoyageModel = settings[SettingKey.BONVOYAGE_MODEL]
+    val settings = settings.getAll()
+    val bonvoyageLlmProvider = providers.llm[settings[BonvoyageLlmProvider.KEY]]
+    val bonvoyageModel = settings[BonvoyageModel.KEY]
+
     return BonvoyageExpenseAgent(
       tokenTracker =
         TokenUsageTrackerFactory.newTracker(user.id, user.username, BONVOYAGE_WORKFLOW_ID, tripId),

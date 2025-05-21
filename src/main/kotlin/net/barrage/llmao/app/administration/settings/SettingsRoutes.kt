@@ -21,7 +21,7 @@ fun Route.adminSettingsRoutes(settingsService: Settings) {
     }
 
     get(getSettings()) {
-      val settings = settingsService.getAllWithDefaults()
+      val settings = settingsService.getAll()
       call.respond(HttpStatusCode.OK, settings)
     }
   }

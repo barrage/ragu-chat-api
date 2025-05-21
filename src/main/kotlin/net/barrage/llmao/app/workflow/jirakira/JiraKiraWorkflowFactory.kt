@@ -7,7 +7,6 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.llm.MessageBasedHistory
 import net.barrage.llmao.core.llm.TokenBasedHistory
@@ -43,12 +42,11 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
       jiraKiraRepository.getUserApiKey(user.id)
         ?: throw AppError.api(ErrorReason.InvalidOperation, "No Jira API key found for user")
 
-    val settings = settings.getAllWithDefaults()
+    val settings = settings.getAll()
 
-    val jiraTimeSlotAttributeKey = settings.getOptional(SettingKey.JIRA_TIME_SLOT_ATTRIBUTE_KEY)
-
-    val jiraKiraLlmProvider = settings[SettingKey.JIRA_KIRA_LLM_PROVIDER]
-    val jiraKiraModel = settings[SettingKey.JIRA_KIRA_MODEL]
+    val jiraTimeSlotAttributeKey = settings.getOptional(JiraKiraTimeSlotAttributeKey.KEY)
+    val jiraKiraLlmProvider = settings[JiraKiraLlmProvider.KEY]
+    val jiraKiraModel = settings[JiraKiraModel.KEY]
 
     if (!providers.llm[jiraKiraLlmProvider].supportsModel(jiraKiraModel)) {
       throw AppError.api(
@@ -93,7 +91,9 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
               TokenBasedHistory(
                 messages = mutableListOf(),
                 tokenizer = it,
-                maxTokens = settings[SettingKey.CHAT_MAX_HISTORY_TOKENS].toInt(),
+                maxTokens =
+                  settings.getOptional(JiraKiraMaxHistoryTokens.KEY)?.toInt()
+                    ?: JiraKiraMaxHistoryTokens.DEFAULT,
               )
             } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
         ),

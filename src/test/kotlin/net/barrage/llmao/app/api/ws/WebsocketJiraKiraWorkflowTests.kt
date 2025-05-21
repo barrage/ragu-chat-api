@@ -9,8 +9,10 @@ import net.barrage.llmao.ADMIN_USER
 import net.barrage.llmao.COMPLETIONS_RESPONSE
 import net.barrage.llmao.IntegrationTest
 import net.barrage.llmao.adminWsSession
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraLlmProvider
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraModel
+import net.barrage.llmao.app.workflow.jirakira.JiraKiraTimeSlotAttributeKey
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraWorkflowOutput
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.administration.settings.SettingUpdate
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
 import net.barrage.llmao.core.llm.ToolEvent
@@ -28,7 +30,13 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
     runBlocking {
       postgres.testJiraApiKey(ADMIN_USER.id, "JIRA_API_KEY")
       postgres.testSettings(
-        SettingsUpdate(listOf(SettingUpdate(SettingKey.JIRA_TIME_SLOT_ATTRIBUTE_KEY, "_Customer_")))
+        SettingsUpdate(
+          listOf(
+            SettingUpdate(JiraKiraTimeSlotAttributeKey.KEY, "_Customer_"),
+            SettingUpdate(JiraKiraLlmProvider.KEY, "openai"),
+            SettingUpdate(JiraKiraModel.KEY, "gpt-4o-mini"),
+          )
+        )
       )
       postgres.testJiraWorklogAttribute(
         "_WorkCategory_",

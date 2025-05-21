@@ -6,25 +6,14 @@
  */
 package net.barrage.llmao.core.administration.settings
 
-/**
- * The main API for managing application settings.
- *
- * TODO: Remove SettingKey in favor of arbitrary keys.
- * TODO: Namespace settings and instantiate this per namespace.
- */
+/** The main API for managing application settings. */
 class Settings(private val repository: SettingsRepository) {
-  /** Return all application settings, populating the list with any missing values with defaults. */
-  suspend fun getAllWithDefaults(): ApplicationSettings {
+  /** Return all registered application settings. */
+  suspend fun getAll(): ApplicationSettings {
     val settings = repository.listAll().toMutableList()
 
-    DefaultSetting.entries.forEach { default ->
-      if (settings.none { it.name == default.setting.name }) {
-        settings.add(default.setting)
-      }
-    }
-
     val appSettings =
-      settings.fold(mutableMapOf<SettingKey, ApplicationSetting>()) { acc, setting ->
+      settings.fold(mutableMapOf<String, ApplicationSetting>()) { acc, setting ->
         acc[setting.name] = setting
         acc
       }
@@ -32,7 +21,7 @@ class Settings(private val repository: SettingsRepository) {
     return ApplicationSettings(appSettings)
   }
 
-  suspend fun get(key: SettingKey): String? {
+  suspend fun get(key: String): String? {
     return repository.getValue(key)
   }
 

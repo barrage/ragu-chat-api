@@ -236,7 +236,7 @@ ktfmt { googleStyle() }
 
 tasks.test {
     useJUnitPlatform() // This is essential for JUnit 5
-    testLogging { showStandardStreams = true }
+    testLogging { showStandardStreams = env == "local" }
 }
 
 tasks.named("build") { dependsOn("generateJooq") }

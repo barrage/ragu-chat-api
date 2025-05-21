@@ -8,7 +8,6 @@ import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
-import net.barrage.llmao.core.administration.settings.SettingKey
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.string
@@ -31,17 +30,17 @@ class BonvoyagePlugin() : Plugin {
     val scheduler = BonvoyageNotificationScheduler(state.email, repository)
     scheduler.start()
 
-    val settings = state.settings.getAllWithDefaults()
+    val settings = state.settings.getAll()
 
-    if (settings.getOptional(SettingKey.BONVOYAGE_LLM_PROVIDER) == null) {
+    if (settings.getOptional(BonvoyageLlmProvider.KEY) == null) {
       log.warn(
-        "No Bonvoyage LLM provider configured. Expense upload and chatting is disabled. Set `BONVOYAGE_LLM_PROVIDER` in the application settings to enable."
+        "No Bonvoyage LLM provider configured. Expense upload and chatting is disabled. Set `${BonvoyageLlmProvider.KEY}` in the application settings to enable."
       )
     }
 
-    if (settings.getOptional(SettingKey.BONVOYAGE_MODEL) == null) {
+    if (settings.getOptional(BonvoyageModel.KEY) == null) {
       log.warn(
-        "No Bonvoyage model configured. Expense upload and chatting is disabled. Set `BONVOYAGE_MODEL` in the application settings to enable. The model must be supported by the provider."
+        "No Bonvoyage model configured. Expense upload and chatting is disabled. Set `${BonvoyageModel.KEY}` in the application settings to enable. The model must be supported by the provider."
       )
     }
 
@@ -75,4 +74,20 @@ object BonvoyageConfig {
     logoPath = config.string("bonvoyage.logoPath")
     fontPath = config.string("bonvoyage.fontPath")
   }
+}
+
+/** The LLM provider to use for Bonvoyage. */
+internal data object BonvoyageLlmProvider {
+  const val KEY = "BONVOYAGE_LLM_PROVIDER"
+}
+
+/** Which model will be used for Bonvoyage. Has to be compatible with [BonvoyageLlmProvider]. */
+internal data object BonvoyageModel {
+  const val KEY = "BONVOYAGE_MODEL"
+}
+
+/** The maximum amount of tokens to keep in trip chat histories. */
+internal data object BonvoyageMaxHistoryTokens {
+  const val KEY = "BONVOYAGE_MAX_HISTORY_TOKENS"
+  const val DEFAULT = 100_000
 }
