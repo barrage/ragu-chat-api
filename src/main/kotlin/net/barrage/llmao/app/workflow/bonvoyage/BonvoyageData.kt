@@ -1,12 +1,11 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
-import javax.activation.DataSource
-import javax.mail.util.ByteArrayDataSource
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.EmailAttachment
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.SchemaValidation
+import net.barrage.llmao.core.ValidEmail
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.addSchemaErr
@@ -15,23 +14,21 @@ import net.barrage.llmao.types.KLocalDate
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KOffsetTime
 import net.barrage.llmao.types.KUUID
+import javax.activation.DataSource
+import javax.mail.util.ByteArrayDataSource
 
 @Serializable
-data class BonvoyageTravelManagerInsert(
-  val userId: String,
-  val userFullName: String,
-  val userEmail: String,
-)
+data class TravelManagerInsert(val userId: String, val userFullName: String, val userEmail: String)
 
 @Serializable
-data class BonvoyageTravelManagerUserMappingInsert(
+data class TravelManagerUserMappingInsert(
   val travelManagerId: String,
   val userId: String,
   val delivery: BonvoyageNotificationDelivery,
 )
 
 @Serializable
-data class BonvoyageTravelExpenseInsert(
+data class TravelExpenseInsert(
   val amount: Double,
   val currency: String,
   val description: String,
@@ -62,13 +59,13 @@ data class ApproveTravelRequest(
   val expectedEndTime: KOffsetTime? = null,
 )
 
-/** DTO for requesting a Bonvoyage workflow. */
+/** A subset of trip parameters necessary for creating a trip. */
 @Serializable
 @SchemaValidation("validateSchema")
-data class TravelRequest(
+data class TravelRequestParameters(
   /**
-   * The type of transport that determines additional parameters that must be provided upon
-   * finalizing the trip.
+   * The type of transport on the trip. Determines additional parameters that must be provided upon
+   * finalizing the trip, e.g. if a personal vehicle is used as a transport method.
    */
   val transportType: TransportType,
 
@@ -121,6 +118,10 @@ data class TravelRequest(
 
     val now = KLocalDate.now()
 
+    if (stops.any { it.isBlank() }) {
+      errors.addSchemaErr(message = "Stops cannot contain empty strings")
+    }
+
     if (startDate > endDate) {
       errors.addSchemaErr(message = "Start date must be before end date")
     }
@@ -154,7 +155,7 @@ data class TravelRequest(
  * ignored if the request is rejected.
  */
 @Serializable
-data class BonvoyageTravelRequestStatusUpdate(
+data class TravelRequestStatusUpdate(
   val id: KUUID,
   val status: BonvoyageTravelRequestStatus,
   val reviewComment: String? = null,
@@ -163,65 +164,39 @@ data class BonvoyageTravelRequestStatusUpdate(
 )
 
 /** Trip parameters. */
-data class BonvoyageTripInsert(
+@Serializable
+data class TripInsert(
   /** User ID on the auth server. */
-  val userId: String,
+  @NotBlank val userId: String,
 
   /** User's full name. */
-  val userFullName: String,
+  @NotBlank val userFullName: String,
 
   /** User's email. */
-  val userEmail: String,
-
-  /** Travel order identifier used by accounting to link to the travel order. */
-  val travelOrderId: String,
+  @ValidEmail val userEmail: String,
 
   /**
-   * The type of transport on the trip. Determines additional parameters that must be provided upon
-   * finalizing the trip, e.g. if a personal vehicle is used as a transport method.
+   * Travel order identifier used by accounting to link to the travel order.
+   *
+   * If provided during admin trip creation, it will be used. Otherwise, a new one will be generated
+   * using the downstream travel order provider.
    */
-  val transportType: TransportType,
+  @NotBlank var travelOrderId: String? = null,
 
-  /** Where the trip is starting. */
-  val startLocation: String,
-
-  /** Destination of the trip. */
-  val stops: List<String>,
-
-  /** Where the trip is ending. */
-  val endLocation: String,
-
-  /** The official start date and time of the trip. */
-  val startDate: KLocalDate,
-
-  /** The official end date and time of the trip. */
-  val endDate: KLocalDate,
-
-  /** The trip's description that should contain the purpose of the trip. */
-  val description: String,
-
-  // Optional reminders
-
-  val expectedStartTime: KOffsetTime? = null,
-  val expectedEndTime: KOffsetTime? = null,
-
-  // Optional fields for personal vehicle
-
-  val vehicleType: String? = null,
-  val vehicleRegistration: String? = null,
-  val isDriver: Boolean,
-)
+  /** We only need a subset of actual trip parameters when creating it. */
+  val params: TravelRequestParameters,
+) : Validation
 
 @Serializable
 @SerialName("reminders")
-data class BonvoyageTripUpdateReminders(
+data class TripUpdateReminders(
   val expectedStartTime: PropertyUpdate<KOffsetTime> = PropertyUpdate.Undefined,
   val expectedEndTime: PropertyUpdate<KOffsetTime> = PropertyUpdate.Undefined,
 )
 
 /** Structure for updating any of the trip's properties. */
 @Serializable
-data class BonvoyageTripPropertiesUpdate(
+data class TripPropertiesUpdate(
   /** Once a start time has been set, it cannot be changed to null */
   val startTime: KOffsetTime? = null,
 

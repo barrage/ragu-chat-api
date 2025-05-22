@@ -72,6 +72,24 @@ data class BonvoyageTravelRequest(
   val userEmail: String,
 
   /**
+   * Current status of the request.
+   *
+   * If [BonvoyageTravelRequestStatus.PENDING], the request is pending review and [reviewerId],
+   * [reviewComment] and [tripId] are null.
+   *
+   * If [BonvoyageTravelRequestStatus.APPROVED], a corresponding trip entry will be created and
+   * [tripId] will point to it. In this case [reviewerId] is certain to be non-null and indicates
+   * which user approved the request.
+   *
+   * If [BonvoyageTravelRequestStatus.REJECTED], no trip entry will be created and [tripId] will be
+   * null.
+   *
+   * None of the cases above guarantee that [reviewComment] is non-null, however managers are
+   * advised to provide a comment when rejecting a request.
+   */
+  val status: BonvoyageTravelRequestStatus,
+
+  /**
    * Starting location that will be indicated on the travel order if approved. It is guaranteed that
    * this will be the same on the corresponding trip entry.
    */
@@ -106,24 +124,6 @@ data class BonvoyageTravelRequest(
    * This may differ from the trip entry's end time due to unforeseen circumstances.
    */
   val endDate: KLocalDate,
-
-  /**
-   * Current status of the request.
-   *
-   * If [BonvoyageTravelRequestStatus.PENDING], the request is pending review and [reviewerId],
-   * [reviewComment] and [tripId] are null.
-   *
-   * If [BonvoyageTravelRequestStatus.APPROVED], a corresponding trip entry will be created and
-   * [tripId] will point to it. In this case [reviewerId] is certain to be non-null and indicates
-   * which user approved the request.
-   *
-   * If [BonvoyageTravelRequestStatus.REJECTED], no trip entry will be created and [tripId] will be
-   * null.
-   *
-   * None of the cases above guarantee that [reviewComment] is non-null, however managers are
-   * advised to provide a comment when rejecting a request.
-   */
-  val status: BonvoyageTravelRequestStatus,
 
   /** User ID of the reviewer (as per the auth server). */
   val reviewerId: String?,
@@ -207,16 +207,6 @@ enum class TransportType {
 
 /**
  * A workflow entry with Bonvoyage. A Bonvoyage workflow is a wrapper around a business trip.
- *
- * An *active* trip is a trip whose `actualStartDatetime` has been set, and whose
- * `actualEndDateTime` is not yet set. Only one instance of an active trip can be present in
- * Bonvoyage. When starting a trip the API enforces that no more than one active trip can be present
- * at any time. The API also enforces that `startMileage` is entered when starting if the trip is
- * with a personal vehicle.
- *
- * A *finished* trip is a trip whose `actualEndDateTime` has been set. At that point, the only
- * mutable parameters that remain are the description and the trip's expenses for the purpose of
- * generating a correct report.
  *
  * We always assume these trips are best effort, meaning the correctness of the reported times is
  * not guaranteed and largely depends on the user. We allow users to set these at any time, but have
@@ -452,7 +442,7 @@ fun BonvoyageTripsRecord.toTrip() =
     userEmail = this.userEmail,
     travelOrderId = this.travelOrderId,
     startLocation = this.startLocation,
-    stops = this.stops.split(","),
+    stops = this.stops.split("|").filter { it.isNotBlank() },
     endLocation = this.endLocation,
     startDate = this.startDate,
     startTime = this.startTime,
@@ -502,7 +492,7 @@ fun BonvoyageTravelRequestsRecord.toTravelRequest() =
     userFullName = this.userFullName,
     userEmail = this.userEmail,
     startLocation = this.startLocation,
-    stops = this.stops.split(","),
+    stops = this.stops.split("|").filter { it.isNotBlank() },
     endLocation = this.endLocation,
     transportType = TransportType.valueOf(this.transportType),
     description = this.description,

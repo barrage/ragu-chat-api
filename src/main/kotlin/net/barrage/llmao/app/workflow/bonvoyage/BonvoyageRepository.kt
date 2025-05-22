@@ -196,14 +196,17 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, Message
       .awaitSingle()
   }
 
-  suspend fun insertTravelRequest(user: User, request: TravelRequest): BonvoyageTravelRequest {
+  suspend fun insertTravelRequest(
+    user: User,
+    request: TravelRequestParameters,
+  ): BonvoyageTravelRequest {
     return dslContext
       .insertInto(BONVOYAGE_TRAVEL_REQUESTS)
       .set(BONVOYAGE_TRAVEL_REQUESTS.USER_ID, user.id)
       .set(BONVOYAGE_TRAVEL_REQUESTS.USER_FULL_NAME, user.username)
       .set(BONVOYAGE_TRAVEL_REQUESTS.USER_EMAIL, user.email)
       .set(BONVOYAGE_TRAVEL_REQUESTS.START_LOCATION, request.startLocation)
-      .set(BONVOYAGE_TRAVEL_REQUESTS.STOPS, request.stops.joinToString(","))
+      .set(BONVOYAGE_TRAVEL_REQUESTS.STOPS, request.stops.joinToString("|"))
       .set(BONVOYAGE_TRAVEL_REQUESTS.END_LOCATION, request.endLocation)
       .set(BONVOYAGE_TRAVEL_REQUESTS.TRANSPORT_TYPE, request.transportType.name)
       .set(BONVOYAGE_TRAVEL_REQUESTS.DESCRIPTION, request.description)
@@ -293,25 +296,25 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, Message
     return messages.items.filter { it.group.id !in expenseMessageIds }
   }
 
-  suspend fun insertTrip(trip: BonvoyageTripInsert): BonvoyageTrip {
+  suspend fun insertTrip(trip: TripInsert): BonvoyageTrip {
     return dslContext
       .insertInto(BONVOYAGE_TRIPS)
       .set(BONVOYAGE_TRIPS.USER_ID, trip.userId)
       .set(BONVOYAGE_TRIPS.USER_FULL_NAME, trip.userFullName)
       .set(BONVOYAGE_TRIPS.USER_EMAIL, trip.userEmail)
       .set(BONVOYAGE_TRIPS.TRAVEL_ORDER_ID, trip.travelOrderId)
-      .set(BONVOYAGE_TRIPS.START_LOCATION, trip.startLocation)
-      .set(BONVOYAGE_TRIPS.STOPS, trip.stops.joinToString(","))
-      .set(BONVOYAGE_TRIPS.END_LOCATION, trip.endLocation)
-      .set(BONVOYAGE_TRIPS.START_DATE, trip.startDate)
-      .set(BONVOYAGE_TRIPS.END_DATE, trip.endDate)
-      .set(BONVOYAGE_TRIPS.TRANSPORT_TYPE, trip.transportType.name)
-      .set(BONVOYAGE_TRIPS.DESCRIPTION, trip.description)
-      .set(BONVOYAGE_TRIPS.START_REMINDER_TIME, trip.expectedStartTime)
-      .set(BONVOYAGE_TRIPS.END_REMINDER_TIME, trip.expectedEndTime)
-      .set(BONVOYAGE_TRIPS.VEHICLE_TYPE, trip.vehicleType)
-      .set(BONVOYAGE_TRIPS.VEHICLE_REGISTRATION, trip.vehicleRegistration)
-      .set(BONVOYAGE_TRIPS.IS_DRIVER, trip.isDriver)
+      .set(BONVOYAGE_TRIPS.START_LOCATION, trip.params.startLocation)
+      .set(BONVOYAGE_TRIPS.STOPS, trip.params.stops.joinToString("|"))
+      .set(BONVOYAGE_TRIPS.END_LOCATION, trip.params.endLocation)
+      .set(BONVOYAGE_TRIPS.START_DATE, trip.params.startDate)
+      .set(BONVOYAGE_TRIPS.END_DATE, trip.params.endDate)
+      .set(BONVOYAGE_TRIPS.TRANSPORT_TYPE, trip.params.transportType.name)
+      .set(BONVOYAGE_TRIPS.DESCRIPTION, trip.params.description)
+      .set(BONVOYAGE_TRIPS.START_REMINDER_TIME, trip.params.expectedStartTime)
+      .set(BONVOYAGE_TRIPS.END_REMINDER_TIME, trip.params.expectedEndTime)
+      .set(BONVOYAGE_TRIPS.VEHICLE_TYPE, trip.params.vehicleType)
+      .set(BONVOYAGE_TRIPS.VEHICLE_REGISTRATION, trip.params.vehicleRegistration)
+      .set(BONVOYAGE_TRIPS.IS_DRIVER, trip.params.isDriver)
       .returning()
       .awaitSingle()
       .into(BONVOYAGE_TRIPS)
@@ -491,7 +494,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, Message
       ?.toTripWelcomeMessage()
   }
 
-  suspend fun updateTrip(id: KUUID, update: BonvoyageTripPropertiesUpdate): BonvoyageTrip {
+  suspend fun updateTrip(id: KUUID, update: TripPropertiesUpdate): BonvoyageTrip {
     return dslContext
       .update(BONVOYAGE_TRIPS)
       .set(update.startTime, BONVOYAGE_TRIPS.START_TIME)
@@ -509,7 +512,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, Message
       .toTrip()
   }
 
-  suspend fun updateTripReminders(id: KUUID, update: BonvoyageTripUpdateReminders) {
+  suspend fun updateTripReminders(id: KUUID, update: TripUpdateReminders) {
     dslContext
       .update(BONVOYAGE_TRIPS)
       .set(update.expectedStartTime, BONVOYAGE_TRIPS.START_REMINDER_TIME)
@@ -607,7 +610,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, Message
   suspend fun insertMessagesWithExpense(
     workflowId: KUUID,
     messages: List<MessageInsert>,
-    expense: BonvoyageTravelExpenseInsert,
+    expense: TravelExpenseInsert,
   ): Pair<MessageGroupAggregate, BonvoyageTravelExpense> {
     val (id, travelExpense) =
       dslContext.transactionCoroutine { ctx ->
@@ -647,7 +650,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, Message
 private suspend fun DSLContext.insertTravelExpense(
   workflowId: KUUID,
   messageGroupId: KUUID,
-  expense: BonvoyageTravelExpenseInsert,
+  expense: TravelExpenseInsert,
 ): BonvoyageTravelExpense {
   return insertInto(BONVOYAGE_TRAVEL_EXPENSES)
     .set(BONVOYAGE_TRAVEL_EXPENSES.TRIP_ID, workflowId)

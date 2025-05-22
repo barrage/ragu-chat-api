@@ -1,7 +1,6 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
 import com.itextpdf.io.image.ImageDataFactory
-import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.kernel.geom.PageSize
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
@@ -14,6 +13,9 @@ import com.itextpdf.layout.element.Paragraph
 import com.itextpdf.layout.element.Table
 import com.itextpdf.layout.properties.UnitValue
 import io.ktor.util.logging.KtorSimpleLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
@@ -43,6 +45,9 @@ class BonvoyageAdminApi(
   private val providers: ProviderState,
 ) {
   private val log = KtorSimpleLogger("n.b.l.a.workflow.bonvoyage.BonvoyageAdminApi")
+
+  private val emailScope = CoroutineScope(Dispatchers.IO)
+  private val welcomeMessageScope = CoroutineScope(Dispatchers.Unconfined)
 
   suspend fun listTrips(): List<BonvoyageTrip> = repository.listTrips()
 
@@ -74,7 +79,7 @@ class BonvoyageAdminApi(
     userId?.let { repository.listTravelManagers(userId) } ?: repository.listTravelManagers()
 
   suspend fun addTravelManagerUserMapping(
-    insert: BonvoyageTravelManagerUserMappingInsert
+    insert: TravelManagerUserMappingInsert
   ): BonvoyageTravelManagerUserMapping =
     repository.insertTravelManagerUserMapping(
       insert.travelManagerId,
@@ -105,17 +110,11 @@ class BonvoyageAdminApi(
           approval.reviewerComment,
         )
 
-        val travelOrderId = createTravelOrder(request)
-
         val expectedStartTime = approval.expectedStartTime ?: request.expectedStartTime
         val expectedEndTime = approval.expectedEndTime ?: request.expectedEndTime
 
-        val tripDetails =
-          BonvoyageTripInsert(
-            userId = request.userId,
-            userFullName = request.userFullName,
-            userEmail = request.userEmail,
-            travelOrderId = travelOrderId,
+        val params =
+          TravelRequestParameters(
             transportType = request.transportType,
             startLocation = request.startLocation,
             stops = request.stops,
@@ -130,6 +129,17 @@ class BonvoyageAdminApi(
             isDriver = request.isDriver,
           )
 
+        val travelOrderId = createTravelOrder(request.userFullName, params)
+
+        val tripDetails =
+          TripInsert(
+            userId = request.userId,
+            userFullName = request.userFullName,
+            userEmail = request.userEmail,
+            travelOrderId = travelOrderId,
+            params = params,
+          )
+
         val trip = repo.insertTrip(tripDetails)
 
         repo.updateTravelRequestWorkflow(approval.requestId, trip.id)
@@ -137,18 +147,50 @@ class BonvoyageAdminApi(
         trip
       }
 
-    email.sendEmail(
-      BonvoyageConfig.emailSender,
-      request.userEmail,
-      "Travel request approved",
-      """Your travel request has been approved.
+    emailScope.launch {
+      email.sendEmail(
+        BonvoyageConfig.emailSender,
+        request.userEmail,
+        "Travel request approved",
+        """Your travel request has been approved.
             |Travel order ID: ${trip.travelOrderId}
             |Trip ID: ${trip.id}"""
-        .trimMargin(),
-    )
+          .trimMargin(),
+      )
+    }
 
-    val welcomeMessage = getWelcomeMessage(trip)
-    repository.insertTripWelcomeMessage(trip.id, welcomeMessage)
+    welcomeMessageScope.launch {
+      val welcomeMessage = getWelcomeMessage(trip)
+      repository.insertTripWelcomeMessage(trip.id, welcomeMessage)
+    }
+
+    return trip
+  }
+
+  suspend fun createTrip(creatingUserId: String, insert: TripInsert): BonvoyageTrip {
+    if (insert.travelOrderId == null) {
+      insert.travelOrderId = createTravelOrder(insert.userFullName, insert.params)
+    }
+    val trip = repository.insertTrip(insert)
+
+    if (creatingUserId != trip.userId) {
+      emailScope.launch {
+        email.sendEmail(
+          BonvoyageConfig.emailSender,
+          trip.userEmail,
+          "Travel request created",
+          """A new travel request has been created for you.
+            |Travel order ID: ${trip.travelOrderId}
+            |Trip ID: ${trip.id}"""
+            .trimMargin(),
+        )
+      }
+    }
+
+    welcomeMessageScope.launch {
+      val welcomeMessage = getWelcomeMessage(trip)
+      repository.insertTripWelcomeMessage(trip.id, welcomeMessage)
+    }
 
     return trip
   }
@@ -210,7 +252,10 @@ class BonvoyageAdminApi(
     )
 
   /** Returns the travel order ID. */
-  private suspend fun createTravelOrder(travelRequest: BonvoyageTravelRequest): String {
+  private suspend fun createTravelOrder(
+    userFullName: String,
+    params: TravelRequestParameters,
+  ): String {
     // TODO: implement when we get BC
     return KUUID.randomUUID().toString()
   }
@@ -242,7 +287,7 @@ class BonvoyageUserApi(
   suspend fun updateTripReminders(
     id: KUUID,
     userId: String,
-    update: BonvoyageTripUpdateReminders,
+    update: TripUpdateReminders,
   ): Pair<BonvoyageTripNotification?, BonvoyageTripNotification?> {
     if (!repository.isTripOwner(id, userId)) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip not found")
@@ -294,11 +339,7 @@ class BonvoyageUserApi(
     return Pair(startReminder, endReminder)
   }
 
-  suspend fun updateTrip(
-    id: KUUID,
-    userId: String,
-    update: BonvoyageTripPropertiesUpdate,
-  ): BonvoyageTrip {
+  suspend fun updateTrip(id: KUUID, userId: String, update: TripPropertiesUpdate): BonvoyageTrip {
     if (!repository.isTripOwner(id, userId)) {
       throw AppError.api(ErrorReason.EntityDoesNotExist, "Trip not found")
     }
@@ -328,7 +369,10 @@ class BonvoyageUserApi(
   suspend fun listTravelManagers(userId: String): List<BonvoyageTravelManagerUserMappingAggregate> =
     repository.listTravelManagers(userId)
 
-  suspend fun requestTravelOrder(user: User, request: TravelRequest): BonvoyageTravelRequest {
+  suspend fun requestTravelOrder(
+    user: User,
+    request: TravelRequestParameters,
+  ): BonvoyageTravelRequest {
     return repository.transaction(::BonvoyageRepository) { repo ->
       val req = repo.insertTravelRequest(user, request)
       val managers = repo.listTravelManagers(user.id)
@@ -459,7 +503,7 @@ class BonvoyageUserApi(
     val messageInsert =
       listOf(userMessage.toInsert(attachments)) + listOf(assistantMessage.toInsert())
     val expenseInsert =
-      BonvoyageTravelExpenseInsert(
+      TravelExpenseInsert(
         amount = expense.amount,
         currency = expense.currency,
         description = expense.description,
@@ -526,8 +570,7 @@ class BonvoyageUserApi(
 
     val documentBytes = ByteArrayOutputStream()
     val pdf = PdfDocument(PdfWriter(documentBytes))
-    val document =
-      Document(pdf, PageSize.A4).setFont(PdfFontFactory.createFont(BonvoyageConfig.fontPath))
+    val document = Document(pdf, PageSize.A4).setFont(BonvoyageConfig.font)
     document.setMargins(20f, 20f, 20f, 20f)
 
     // Title
@@ -535,7 +578,7 @@ class BonvoyageUserApi(
     val title = Paragraph("IZVJEŠTAJ SA SLUŽBENOG PUTA").simulateBold().setFontSize(12f)
 
     title.add(
-      PdfImage(ImageDataFactory.create(BonvoyageConfig.logoPath))
+      PdfImage(BonvoyageConfig.logo)
         .setWidth(60f)
         .setHeight(25f)
         .setMarginLeft(300f)

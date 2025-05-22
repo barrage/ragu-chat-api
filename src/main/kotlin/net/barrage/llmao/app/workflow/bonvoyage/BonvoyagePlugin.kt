@@ -1,5 +1,9 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
+import com.itextpdf.io.image.ImageData
+import com.itextpdf.io.image.ImageDataFactory
+import com.itextpdf.kernel.font.PdfFont
+import com.itextpdf.kernel.font.PdfFontFactory
 import io.ktor.server.auth.authenticate
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
@@ -54,8 +58,8 @@ class BonvoyagePlugin() : Plugin {
   }
 
   override fun RequestValidationConfig.configureRequestValidation() {
-    validate<TravelRequest>(TravelRequest::validate)
-    validate<BonvoyageTripPropertiesUpdate>(BonvoyageTripPropertiesUpdate::validate)
+    validate<TravelRequestParameters>(TravelRequestParameters::validate)
+    validate<TripPropertiesUpdate>(TripPropertiesUpdate::validate)
   }
 
   override fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {
@@ -66,13 +70,13 @@ class BonvoyagePlugin() : Plugin {
 
 object BonvoyageConfig {
   lateinit var emailSender: String
-  lateinit var logoPath: String
-  lateinit var fontPath: String
+  lateinit var logo: ImageData
+  lateinit var font: PdfFont
 
   fun init(config: ApplicationConfig) {
     emailSender = config.string("bonvoyage.emailSender")
-    logoPath = config.string("bonvoyage.logoPath")
-    fontPath = config.string("bonvoyage.fontPath")
+    logo = ImageDataFactory.create(config.string("bonvoyage.logoPath"))
+    font = PdfFontFactory.createFont(config.string("bonvoyage.fontPath"))
   }
 }
 

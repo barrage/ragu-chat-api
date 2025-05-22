@@ -147,7 +147,9 @@ interface MessageRepository {
   }
 
   suspend fun getMessageGroupAggregate(id: KUUID): MessageGroupAggregate? {
-    return dslContext
+    var messageGroup: MessageGroupAggregate? = null
+
+    dslContext
       .select(
         MESSAGE_GROUPS.ID,
         MESSAGE_GROUPS.PARENT_ID,
@@ -175,8 +177,8 @@ interface MessageRepository {
       .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
       .where(MESSAGE_GROUPS.ID.eq(id))
       .orderBy(MESSAGES.ORDER.asc())
-      .awaitFirstOrNull()
-      ?.let { record ->
+      .asFlow()
+      .collect { record ->
         val messageId = record.get(MESSAGES.ID)!!
 
         val attachments =
@@ -187,15 +189,22 @@ interface MessageRepository {
             .map { it.into(MESSAGE_ATTACHMENTS).toMessageAttachment() }
             .toList()
 
-        val message = record.into(MESSAGES).toMessage(attachments)
+        val message =
+          record.into(MESSAGES).toMessage(if (attachments.isEmpty()) null else attachments)
         val group = record.into(MESSAGE_GROUPS).toMessageGroup()
         val evaluation =
           record.into(MESSAGE_GROUP_EVALUATIONS).let { eval ->
             eval.id?.let { eval.toMessageGroupEvaluation() }
           }
 
-        MessageGroupAggregate(group, mutableListOf(message), evaluation)
+        if (messageGroup == null) {
+          messageGroup = MessageGroupAggregate(group, mutableListOf(), evaluation)
+        }
+
+        messageGroup.messages.add(message)
       }
+
+    return messageGroup
   }
 }
 

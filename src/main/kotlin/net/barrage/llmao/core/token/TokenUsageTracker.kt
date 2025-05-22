@@ -17,7 +17,7 @@ class TokenUsageTracker(
   private val workflowType: String,
   private val repository: TokenUsageRepositoryWrite,
 ) {
-  private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+  private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
   fun store(
     amount: TokenUsageAmount,

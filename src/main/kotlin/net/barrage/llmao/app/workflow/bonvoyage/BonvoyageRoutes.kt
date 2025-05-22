@@ -28,6 +28,12 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
     route("/trips") {
       get { call.respond(api.listTrips()) }
 
+      post {
+        val insert = call.receive<TripInsert>()
+        val trip = api.createTrip(call.user().id, insert)
+        call.respond(trip)
+      }
+
       get("/{id}") {
         val id = call.pathUuid("id")
         val trip = api.getTripAggregate(id)
@@ -41,7 +47,7 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
         }
 
         post {
-          val request = call.receive<BonvoyageTravelRequestStatusUpdate>()
+          val request = call.receive<TravelRequestStatusUpdate>()
           val user = call.user()
 
           when (request.status) {
@@ -76,7 +82,7 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
       }
 
       post {
-        val add = call.receive<BonvoyageTravelManagerInsert>()
+        val add = call.receive<TravelManagerInsert>()
         val manager = api.addTravelManager(add.userId, add.userFullName, add.userEmail)
         call.respond(manager)
       }
@@ -90,7 +96,7 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
 
     route("/mappings") {
       post {
-        val mapping = call.receive<BonvoyageTravelManagerUserMappingInsert>()
+        val mapping = call.receive<TravelManagerUserMappingInsert>()
         call.respond(api.addTravelManagerUserMapping(mapping))
       }
 
@@ -131,14 +137,14 @@ fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
 
       patch {
         val tripId = call.pathUuid("id")
-        val update = call.receive<BonvoyageTripPropertiesUpdate>()
+        val update = call.receive<TripPropertiesUpdate>()
         val trip = api.updateTrip(tripId, call.user().id, update)
         call.respond(trip)
       }
 
       patch("/reminders") {
         val tripId = call.pathUuid("id")
-        val update = call.receive<BonvoyageTripUpdateReminders>()
+        val update = call.receive<TripUpdateReminders>()
         val trip = api.updateTripReminders(tripId, call.user().id, update)
         call.respond(trip)
       }
@@ -225,7 +231,7 @@ fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
       }
 
       post {
-        val request = call.receive<TravelRequest>()
+        val request = call.receive<TravelRequestParameters>()
         val user = call.user()
         val travelRequest = api.requestTravelOrder(user, request)
         call.respond(travelRequest)

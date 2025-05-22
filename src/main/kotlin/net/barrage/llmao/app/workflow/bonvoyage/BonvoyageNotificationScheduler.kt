@@ -17,7 +17,8 @@ class BonvoyageNotificationScheduler(
   private val checkInterval: Long = 60_000,
 ) {
   private var job: Job? = null
-  private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+  private val jobScope = CoroutineScope(Dispatchers.Default)
+  private val emailScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
   private val log = KtorSimpleLogger("n.b.l.a.workflow.bonvoyage.BonvoyageNotificationScheduler")
 
   fun start() {
@@ -27,7 +28,7 @@ class BonvoyageNotificationScheduler(
 
     log.info("Starting Bonvoyage notification scheduler")
 
-    job = scope.launch { loop() }
+    job = jobScope.launch { loop() }
   }
 
   private suspend fun loop() {
@@ -54,14 +55,14 @@ class BonvoyageNotificationScheduler(
               "Your trip ${notification.startLocation}-${notification.endLocation} is ending."
           }
 
-        repository.transaction(::BonvoyageRepository) {
-          it.markTripNotificationAsSent(notification.tripId, notification.notificationType)
+        emailScope.launch {
           email.sendEmail(
             BonvoyageConfig.emailSender,
             notification.userEmail,
             "Trip reminder ${notification.startLocation}-${notification.endLocation}",
             message,
           )
+          repository.markTripNotificationAsSent(notification.tripId, notification.notificationType)
         }
 
         sent += 1
