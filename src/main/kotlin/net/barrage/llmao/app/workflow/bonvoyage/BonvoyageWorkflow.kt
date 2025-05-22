@@ -29,19 +29,19 @@ class BonvoyageWorkflow(
 ) : WorkflowRealTime<BonvoyageInput>(BonvoyageInput.serializer()) {
   override suspend fun handleInput(input: BonvoyageInput) {
     when (input) {
-      is BonvoyageInput.ChatInput -> handleChatInput(input)
+      is BonvoyageInput.Chat -> handleChatInput(input)
       is BonvoyageInput.ExpenseUpload -> handleExpenseUpload(input)
       is BonvoyageInput.ExpenseUpdate -> handleExpenseUpdate(input)
     }
   }
 
-  private suspend fun handleChatInput(input: BonvoyageInput.ChatInput) {
-    input.input.validate()
+  private suspend fun handleChatInput(input: BonvoyageInput.Chat) {
+    input.message.validate()
 
     val trip = api.getTrip(id, user.id)
     val message =
-      input.input.attachments?.let { ChatMessageProcessor.toContentMulti(input.input.text, it) }
-        ?: ContentSingle(input.input.text!!)
+      input.message.attachments?.let { ChatMessageProcessor.toContentMulti(input.message.text, it) }
+        ?: ContentSingle(input.message.text!!)
 
     val context =
       """You are a travel chat assistant who is helping ${user.username} on his business trip
@@ -87,7 +87,7 @@ class BonvoyageWorkflow(
       chatAgent.collectAndForwardStream(context, userMessage, tools, emitter)
 
     val attachmentsInsert =
-      input.input.attachments?.let { ChatMessageProcessor.storeMessageAttachments(it) }
+      input.message.attachments?.let { ChatMessageProcessor.storeMessageAttachments(it) }
     val userMessageInsert = userMessage.toInsert(attachmentsInsert)
     val messageGroupId =
       api.insertMessages(id, listOf(userMessageInsert) + messages.map { it.toInsert() })

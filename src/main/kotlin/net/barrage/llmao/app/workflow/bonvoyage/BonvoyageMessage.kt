@@ -20,7 +20,7 @@ sealed class BonvoyageInput {
    */
   @Serializable
   @SerialName("bonvoyage.chat")
-  data class ChatInput(val input: DefaultWorkflowInput) : BonvoyageInput()
+  data class Chat(val message: DefaultWorkflowInput) : BonvoyageInput()
 
   /**
    * Sent to upload a business trip expense. Usually a picture of a receipt.
