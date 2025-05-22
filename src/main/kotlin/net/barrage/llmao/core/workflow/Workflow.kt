@@ -1,5 +1,6 @@
 package net.barrage.llmao.core.workflow
 
+import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.types.KUUID
 
 /** A workflow represents a real-time session between a user and an agent (or multiple). */
@@ -12,7 +13,7 @@ interface Workflow {
    *
    * @param input The input data for this workflow.
    */
-  fun execute(input: String)
+  fun execute(input: JsonElement)
 
   /** Cancel the current stream. */
   fun cancelStream()

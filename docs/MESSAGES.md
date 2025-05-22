@@ -19,7 +19,7 @@ Messages that open and close workflows, and send inputs to them.
 #### `workflow.new`
 
 Start a new workflow with the given configuration. The configuration must be provided depending on the type of workflow.
-The server will respond with a `system.workflow.open` message, depending on the type of workflow opened.
+The server will respond with a `workflow.open` message, depending on the type of workflow opened.
 
 `workflowType` is required. Supported workflow types depend on plugins installed.
 `params` depends on the `workflowType`. More info can be found in the workflow's documentation.
@@ -35,7 +35,7 @@ The server will respond with a `system.workflow.open` message, depending on the 
 #### `workflow.existing`
 
 Open an existing workflow. The workflow ID must be provided in the payload. The server will respond with a
-`system.workflow.open` message, depending on the type of workflow opened.
+`workflow.open` message, depending on the type of workflow opened.
 
 ```json
 {
@@ -62,6 +62,18 @@ Cancel the current workflow stream. The message handling and response will be wo
 ```json
 {
   "type": "workflow.cancel_stream"
+}
+```
+
+#### `workflow.input`
+
+Send input to the currently active workflow. The type `T` depends on the workflow.
+This is the only way to send inputs to real time workflows.
+
+```json
+{
+  "type": "workflow.input",
+  "input": "T"
 }
 ```
 

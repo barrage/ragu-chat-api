@@ -113,7 +113,15 @@ suspend fun ClientWebSocketSession.sendMessage(
   text: String,
   block: suspend (ReceiveChannel<Frame>) -> Unit,
 ) {
-  send(Frame.Text(json.encodeToString(DefaultWorkflowInput(text))))
+  val input = Json.encodeToJsonElement(DefaultWorkflowInput(text))
+  send(
+    Frame.Text(
+      json.encodeToString(
+        IncomingSystemMessage.serializer(),
+        IncomingSystemMessage.WorkflowInput(input),
+      )
+    )
+  )
   block(incoming)
 }
 

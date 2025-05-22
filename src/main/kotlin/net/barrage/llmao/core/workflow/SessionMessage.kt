@@ -27,6 +27,10 @@ sealed class IncomingSystemMessage {
   @Serializable
   @SerialName("workflow.cancel_stream")
   data object CancelWorkflowStream : IncomingSystemMessage()
+
+  @Serializable
+  @SerialName("workflow.input")
+  data class WorkflowInput(val input: JsonElement) : IncomingSystemMessage()
 }
 
 /** Outgoing session messages. */

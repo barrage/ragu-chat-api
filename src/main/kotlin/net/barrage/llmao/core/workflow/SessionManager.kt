@@ -1,7 +1,6 @@
 package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.KtorSimpleLogger
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -11,6 +10,8 @@ import net.barrage.llmao.core.Event
 import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.workflow.OutgoingSystemMessage.*
+import java.util.concurrent.ConcurrentHashMap
 
 private val LOG = KtorSimpleLogger("n.b.l.c.workflow.SessionManager")
 
@@ -59,25 +60,9 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
   suspend fun handleMessage(session: Session, message: String, emitter: Emitter) {
     try {
       val message = Json.decodeFromString<IncomingSystemMessage>(message)
-      handleSystemMessage(session, message, emitter)
+      handleMessage(session, message, emitter)
     } catch (e: SerializationException) {
-      try {
-        val workflow =
-          workflows[session]
-            ?: throw AppError.api(
-              ErrorReason.InvalidOperation,
-              """Failed to deserialize message as a system message and no workflow is open.
-                | If you are attempting to send a system message check its schema, otherwise open a workflow first with `workflow.new`.
-                | Original error: ${e.message}"""
-                .trimMargin(),
-            )
-        workflow.execute(message)
-      } catch (e: SerializationException) {
-        throw AppError.api(ErrorReason.InvalidParameter, "Message format malformed", original = e)
-      } catch (e: Throwable) {
-        throw if (e is AppError) e
-        else AppError.internal("Unexpected error in workflow", original = e)
-      }
+      throw AppError.api(ErrorReason.InvalidParameter, "Message format malformed", original = e)
     } catch (e: Throwable) {
       throw if (e is AppError) e else AppError.internal("Error in workflow", original = e)
     }
@@ -94,7 +79,7 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
     plugins.emitEvent(this, event)
   }
 
-  private suspend fun handleSystemMessage(
+  private suspend fun handleMessage(
     session: Session,
     message: IncomingSystemMessage,
     emitter: Emitter,
@@ -114,10 +99,7 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
 
         workflows[session] = workflow
 
-        systemSessions[session]?.emit(
-          OutgoingSystemMessage.WorkflowOpen(workflow.id),
-          OutgoingSystemMessage.serializer(),
-        )
+        systemSessions[session]?.emit(WorkflowOpen(workflow.id), OutgoingSystemMessage.serializer())
 
         LOG.debug(
           "{} - started workflow ({}); total workflows in manager: {}",
@@ -133,7 +115,7 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
         if (workflow != null && workflow.id == message.workflowId) {
           LOG.debug("{} - workflow already open ({})", session.user.id, workflow.id)
           systemSessions[session]?.emit(
-            OutgoingSystemMessage.WorkflowOpen(workflow.id),
+            WorkflowOpen(workflow.id),
             OutgoingSystemMessage.serializer(),
           )
           return
@@ -151,7 +133,7 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
 
         workflows[session] = existingWorkflow
         systemSessions[session]?.emit(
-          OutgoingSystemMessage.WorkflowOpen(message.workflowId),
+          WorkflowOpen(message.workflowId),
           OutgoingSystemMessage.serializer(),
         )
 
@@ -159,10 +141,7 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
       }
       is IncomingSystemMessage.CloseWorkflow -> {
         workflows.remove(session)?.let {
-          systemSessions[session]?.emit(
-            OutgoingSystemMessage.WorkflowClosed(it.id),
-            OutgoingSystemMessage.serializer(),
-          )
+          systemSessions[session]?.emit(WorkflowClosed(it.id), OutgoingSystemMessage.serializer())
           it.cancelStream()
           LOG.debug(
             "{} - closed workflow; total workflows in manager: {}",
@@ -174,6 +153,23 @@ class SessionManager(private val plugins: Plugins, listener: EventListener) {
       is IncomingSystemMessage.CancelWorkflowStream -> {
         workflows[session]?.cancelStream()
       }
+
+      is IncomingSystemMessage.WorkflowInput ->
+        try {
+          val workflow =
+            workflows[session]
+              ?: throw AppError.api(
+                ErrorReason.InvalidOperation,
+                "Cannot accept input; no workflow open",
+              )
+
+          workflow.execute(message.input)
+        } catch (e: SerializationException) {
+          throw AppError.api(ErrorReason.InvalidParameter, "Message format malformed", original = e)
+        } catch (e: Throwable) {
+          throw if (e is AppError) e
+          else AppError.internal("Unexpected error in workflow", original = e)
+        }
     }
   }
 }

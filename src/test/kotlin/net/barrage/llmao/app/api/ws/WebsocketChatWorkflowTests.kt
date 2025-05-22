@@ -9,7 +9,6 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.coroutines.Job
@@ -33,6 +32,7 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.workflow.DefaultWorkflowInput
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.StreamChunk
@@ -45,6 +45,7 @@ import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import kotlin.random.Random
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 
@@ -292,9 +293,19 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
 
       assertEquals(404, error.status.value)
 
-      val msg = "{ \"text\": \"Will this trigger a stream response?\" }"
-
-      send(Frame.Text(msg))
+      send(
+        Frame.Text(
+          json.encodeToString(
+            IncomingSystemMessage.serializer(),
+            IncomingSystemMessage.WorkflowInput(
+              json.encodeToJsonElement<DefaultWorkflowInput>(
+                DefaultWorkflowInput.serializer(),
+                DefaultWorkflowInput("Will this trigger a stream response?"),
+              )
+            ),
+          )
+        )
+      )
 
       var cancelSent = false
 

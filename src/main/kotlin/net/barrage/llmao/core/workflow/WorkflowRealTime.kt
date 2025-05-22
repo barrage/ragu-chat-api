@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 
@@ -29,12 +30,12 @@ abstract class WorkflowRealTime<T>(protected val inputSerializer: KSerializer<T>
   /** Process the input. */
   protected abstract suspend fun handleInput(input: T)
 
-  override fun execute(input: String) {
+  override fun execute(input: JsonElement) {
     if (stream != null) {
       throw AppError.api(ErrorReason.InvalidOperation, "Workflow is currently busy")
     }
 
-    val input: T = Json.decodeFromString(inputSerializer, input)
+    val input: T = Json.decodeFromJsonElement(inputSerializer, input)
 
     stream =
       scope.launch {

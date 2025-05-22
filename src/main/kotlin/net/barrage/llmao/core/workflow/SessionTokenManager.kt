@@ -1,6 +1,5 @@
 package net.barrage.llmao.core.workflow
 
-import kotlin.time.ExperimentalTime
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.types.KUUID
 
@@ -12,7 +11,6 @@ class SessionTokenManager(private val maxTokensPerUser: Int = 100) {
   private val tokens: MutableMap<String, User> = mutableMapOf()
 
   /** Register a token and map it to the authenticating user's ID. */
-  @OptIn(ExperimentalStdlibApi::class, ExperimentalTime::class)
   fun registerToken(user: User): String {
     val tokenAmount = tokensPending.getOrDefault(user.id, 0)
 
