@@ -35,12 +35,12 @@ sealed class IncomingSystemMessage {
 @OptIn(ExperimentalSerializationApi::class)
 sealed class OutgoingSystemMessage {
   /** Sent when a workflow is opened manually by the client. */
-  @SerialName("system.workflow.open")
+  @SerialName("workflow.open")
   @Serializable
   data class WorkflowOpen(val id: KUUID) : OutgoingSystemMessage()
 
   /** Sent when a workflow is closed manually by the client. */
-  @SerialName("system.workflow.closed")
+  @SerialName("workflow.closed")
   @Serializable
   data class WorkflowClosed(val id: KUUID) : OutgoingSystemMessage()
 
