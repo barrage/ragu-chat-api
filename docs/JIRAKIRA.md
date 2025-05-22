@@ -4,15 +4,28 @@ JiraKira is a specialist agent that is used to interact with Jira. It can be use
 JiraKira can be enabled by setting the `features.specialists.jirakira` property to `true` in the `application.conf`
 file.
 
-A few things must be configured in order for JiraKira to work.
+## Configuration
 
-## Users
+The following entry needs to exist in the `application.conf` file.
+
+```conf
+jirakira = {
+    endpoint = "my.jira.endpoint"
+}
+```
+
+The following application settings must be set:
+
+- `JIRAKIRA_LLM_PROVIDER` - the LLM provider for JiraKira
+- `JIRAKIRA_MODEL` - the model used for JiraKira
+
+### Users
 
 Users must register their Jira API keys in Kappi. These can be generated on the `Profile` page of Jira. On the side will
 be a tab called Personal Access Tokens. The token can then be set via the `POST /jirakira/key` endpoint and can also be
 deleted via the `DELETE /jirakira/key` endpoint.
 
-## Administrators
+### Administrators
 
 The Jira endpoint _must_ be configured in the `application.conf` file. The endpoint can be set with the
 `jirakira.endpoint` property.
@@ -74,9 +87,13 @@ When attribute keys are matched with the keys from the database, the attribute w
 describing the tool. The LLM will then be able to call the tool and pass the attribute value as an argument when
 creating worklog entries.
 
+## Workflow
+
+JiraKira does not need any params to open a workflow with `workflow.new`.
+
 ## JiraKira messages
 
-Jira Kira conversations are not streaming.
+Jira Kira conversations are not streaming, instead their response is obtained in the `workflow.stream_complete` message.
 
 ### Incoming
 

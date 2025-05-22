@@ -8,17 +8,25 @@
     - [Migrations and seeders](#migrations-and-seeders)
     - [Building and running](#building-and-running)
 - [WebSocket](#websocket)
-- [Specialists](#specialists)
 - [WhatsApp](#whatsapp)
     - [Configuration](#configuration)
     - [Infobip setup](#infobip-setup)
+
+Documentation:
+
+- [Kappi plugins](docs/PLUGINS.md)
+- [Chat plugin](docs/CHAT.md)
+- [JiraKira plugin](docs/JIRAKIRA.md)
+- [Bonvoyage plugin](docs/BONVOYAGE.md)
+- [vLLM deployment](docs/VLLM.md)
 
 ## Overview
 
 Kappi is a plugin based application framework for quickly integrating with various AI models.
 It is built on top of Ktor.
 
-Kappi consists of two main components; 
+Kappi consists of two main components;
+
 - Core
   The library that provides a set of abstractions for LLM interaction and agent creation.
 - Server
@@ -26,54 +34,6 @@ Kappi consists of two main components;
 
 Kappi plugins are implementations of arbitrary features that are designed to run in the server runtime.
 They can range from small applets to full blown applications.
-
-## Core concepts
-
-### Providers
-
-Providers allow us to define business logic without worrying about their implementation details.
-The idea behind this is to make switching providers very flexible when creating agents.
-
-A *large language model* (LLM) is a neural net designed to generate text.
-
-An *inference provider* is a service used for LLM inference.
-
-An *embedding model* is a neural net designed to transform text into arrays of floating point numbers or ***vectors***,
-also known as ***embeddings***.
-
-An *embedding provider* is a service that provides access to *embedding models*.
-
-A *vector collection* stores these vectors and associates the original content they represent with them. Every vector
-collection can only hold vectors of the same size, which is determined upon its creation.
-
-A *vector provider* is a services that provides access to *vector collections* in a *vector database*.
-
-A *blob storage* is a service that provides access to binary large objects (BLOBs). Currently, only image storage is
-supported and only one image storage can be used per Kappi instance.
-
-## Workflows
-
-*Workflows* are the main form of interaction between a *user* and an *agent*. They are introduced to Kappi via plugins.
-
-A workflow will usually consist of one or more message groups.
-
-## Message groups
-
-*Message groups* represent a complete interaction between a user and an
-assistant. They **always** contains the user's message, the assistant's response,
-and any tool calls that were made in between.
-
-*Messages* are encapsulated by message groups. Each message has a `role`, indicating to the LLM how it should process
-it. It is guaranteed that message groups stored in the database will have a `user` message as the first one and the
-`assistant` message as the last one. Any message in a message group between these must either be an `assistant` message
-that is calling tools, or a `tool` message responding to the tool call.
-
-*Message group evaluations* are evaluations of the assistant's response. Evaluation is done on complete message groups
-in order to preserve the context of the inquiry. They can give you insight on how well people are reacting to an agent's
-responses.
-
-*Message attachments* are one or more instances of binary large objects (BLOB) sent along with messages.
-The types of BLOBs that can be processed is the determined by the downstream LLM as not all LLMs support them.
 
 ## Authorization
 
@@ -140,16 +100,16 @@ Updated `changelog.yaml` should look like this:
         splitStatements: false
 ```
 
-To rollback migrations to the tag, run the following command:
+To rollback all migrations
 
 ```bash
-./gradlew liquibaseRollback -PliquibaseCommandValue={version_tag}
+./gradlew liquibaseRollback 
 ```
 
 To seed the database with the initial agent, run
 
 ```bash
-psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/initial.sql 
+psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/<FILE>.sql 
 ```
 
 ### Building and running
@@ -181,13 +141,6 @@ to authorize the client and establish a connection with the server. Otherwise, d
 connection will be instantly closed with the reason: `Policy Violation`.
 
 For a full list of session messages and their formats, see [MESSAGES.md](docs/MESSAGES.md).
-
-## Specialists
-
-Specialists are agents that are configured for particular integrations. They are not customizable in the same sense
-chat agents are. These agents perform specific workflows with downstream applications by utilising predefined tools (
-agent functions). Specialists can be enabled by setting the corresponding feature flag in the `application.conf` file
-via the `features.specialists` properties. See [JIRAKIRA.md](docs/JIRAKIRA.md) for an example of a specialist.
 
 ## WhatsApp
 

@@ -1,4 +1,4 @@
-# Kappi Session Messages
+# Kappi session messages
 
 Table of contents:
 
@@ -16,7 +16,7 @@ Messages that open and close workflows, and send inputs to them.
 
 ### Incoming
 
-- `workflow.new`
+#### `workflow.new`
 
 Start a new workflow with the given configuration. The configuration must be provided depending on the type of workflow.
 The server will respond with a `system.workflow.open` message, depending on the type of workflow opened.
@@ -32,7 +32,7 @@ The server will respond with a `system.workflow.open` message, depending on the 
 }
 ```
 
-- `workflow.existing`
+#### `workflow.existing`
 
 Open an existing workflow. The workflow ID must be provided in the payload. The server will respond with a
 `system.workflow.open` message, depending on the type of workflow opened.
@@ -45,7 +45,7 @@ Open an existing workflow. The workflow ID must be provided in the payload. The 
 }
 ```
 
-- `workflow.close`
+#### `workflow.close`
 
 Close the current workflow. The server will respond with a `system.workflow.closed` message.
 
@@ -55,7 +55,7 @@ Close the current workflow. The server will respond with a `system.workflow.clos
 }
 ```
 
-- `workflow.cancel_stream`
+#### `workflow.cancel_stream`
 
 Cancel the current workflow stream. The message handling and response will be workflow specific.
 
@@ -67,31 +67,29 @@ Cancel the current workflow stream. The message handling and response will be wo
 
 ### Outgoing
 
-- `system.workflow.open`
+#### `workflow.open`
 
 Sent when a workflow is opened manually by the client.
 
 ```json
 {
-  "type": "system.workflow.open",
+  "type": "workflow.open",
   "id": "workflow_uuid"
 }
 ```
 
-- `system.workflow.closed`
+#### `workflow.closed`
 
 Sent when a workflow is closed manually by the client.
 
 ```json
 {
-  "type": "system.workflow.closed",
+  "type": "workflow.closed",
   "id": "workflow_uuid"
 }
 ```
 
-### Outgoing
-
-- `workflow.stream_chunk`
+#### `workflow.stream_chunk`
 
 Sent when a workflow is streaming a response. The response is sent in chunks.
 
@@ -102,7 +100,7 @@ Sent when a workflow is streaming a response. The response is sent in chunks.
 }
 ```
 
-- `workflow.stream_complete`
+#### `workflow.stream_complete`
 
 Sent when a workflow has finished streaming a response. If a workflow is not streaming, then the `content` field will
 contain the final response.

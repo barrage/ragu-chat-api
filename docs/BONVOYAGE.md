@@ -27,6 +27,11 @@ The following application settings must be set:
 - `BONVOYAGE_LLM_PROVIDER` - the provider used for all agents
 - `BONVOYAGE_MODEL` - the model used for all agents, must be compatible with the provider
 
+## Workflow
+
+A Bonvoyage workflow is created from an approved travel request, therefore it cannot be created with `workflow.new`,
+only with `workflow.existing` by providing the trip ID as the `workflowId`.
+
 ## Entities
 
 Bonvoyage consists of the following entities:
@@ -49,7 +54,7 @@ way which is why it is important to not let users create travel orders on their 
 
 ### **Trips**
 
-A Bonvoyage workflow - termed trip - is the main stage of the flow. It is an approved *travel request* for which 
+A Bonvoyage workflow - termed trip - is the main stage of the flow. It is an approved *travel request* for which
 a corresponding *travel order* has been created. This is the main entity with which *Bonvoyage users* interact in the
 system. Through this entity users can upload expenses and generate trip reports.
 
@@ -57,9 +62,9 @@ When a travel request is approved, a trip is created. Multiple trips can exist f
 
 ### **Travel expenses**
 
-Represent any expenses made on *trips* that are eligible for reimbursement. Expense receipt images are uploaded by 
-*Bonvoyage users* and are processed by multi-modal LLMs to create database entries. 
-Since this is mostly an automatic process, expenses must be verified by users who uploaded them and their 
+Represent any expenses made on *trips* that are eligible for reimbursement. Expense receipt images are uploaded by
+*Bonvoyage users* and are processed by multi-modal LLMs to create database entries.
+Since this is mostly an automatic process, expenses must be verified by users who uploaded them and their
 database entries can be updated if necessary.
 
 ### **Traveler notifications**
@@ -75,16 +80,16 @@ the travel order ID which is used to link the *trip* to the external system.
 1. A *Bonvoyage user* issues a *travel request* to a *travel manager*.
    Multiple travel requests can exist for the same user at the same time.
 2. The *travel manager* is notified of the request and either:
-     - approves the request, in which case a *trip* is created upon 
-       successfully creating a travel order. 
-     - rejects the request, in which case the flow ends here.
+    - approves the request, in which case a *trip* is created upon
+      successfully creating a travel order.
+    - rejects the request, in which case the flow ends here.
 3. The traveler is notified of the approved request and the newly created *trip*.
 4. The traveler edits the start and end times of the trip and uploads receipts of expenses made on the trip.
-5. The traveler verifies, i.e. makes sure all the expenses made on the trip have the correct amount, currency, 
+5. The traveler verifies, i.e. makes sure all the expenses made on the trip have the correct amount, currency,
    and description. They then generate the trip report which gets delivered to them via email, which they can then
    submit to their company accounting department for reimbursement.
 
-### Step 1 
+### Step 1
 
 Since a travel order is ultimately created from a travel request, the request's parameters should be 1:1 with the travel
 order being issued, as a travel order is an official and legally required document.
@@ -121,7 +126,7 @@ steps 1 and 2.
 If the trip has a _reminder start time, a reminder is sent at that time to the traveler via push notification.
 This reminder has a link for the traveler to go the trip overview screen.
 
-Since the idea is to streamline the process of creating a report, travelers can update the trip's parameters at any 
+Since the idea is to streamline the process of creating a report, travelers can update the trip's parameters at any
 time. They can edit expenses and their descriptions.
 
 PDF previews of the report can be generated to get an overview of how it will eventually be sent to accounting.
