@@ -1,7 +1,5 @@
 package net.barrage.llmao.app.workflow.chat.repository
 
-import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
@@ -18,7 +16,6 @@ import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.model.SearchFiltersAdminChats
 import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.app.workflow.chat.model.toChat
-import net.barrage.llmao.core.database.getWorkflowMessages
 import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
@@ -30,6 +27,7 @@ import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
+import net.barrage.llmao.core.repository.MessageRepository
 import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
 import net.barrage.llmao.tables.references.AGENTS
 import net.barrage.llmao.tables.references.CHATS
@@ -43,8 +41,11 @@ import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep
 import org.jooq.SortField
 import org.jooq.impl.DSL
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
-class ChatRepositoryRead(private val dslContext: DSLContext, private val type: String) {
+class ChatRepositoryRead(override val dslContext: DSLContext, private val type: String) :
+  MessageRepository {
   suspend fun getAll(pagination: PaginationSort, userId: String? = null): CountedList<Chat> {
     val order = getSortOrder(pagination)
     val (limit, offset) = pagination.limitOffset()
@@ -151,7 +152,7 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
         .awaitFirstOrNull()
         ?.into(CHATS) ?: return null
 
-    val messages = dslContext.getWorkflowMessages(chat.id!!, Pagination(1, messageLimit))
+    val messages = getWorkflowMessages(chat.id!!, Pagination(1, messageLimit))
 
     return ChatWithMessages(chat.into(CHATS).toChat(), messages)
   }
@@ -186,14 +187,9 @@ class ChatRepositoryRead(private val dslContext: DSLContext, private val type: S
     userId: String? = null,
   ): ChatWithMessages? {
     val chat = get(id, userId) ?: return null
-    val messages = dslContext.getWorkflowMessages(id, pagination)
+    val messages = getWorkflowMessages(id, pagination)
     return ChatWithMessages(chat, messages)
   }
-
-  suspend fun getMessages(
-    chatId: KUUID,
-    pagination: Pagination,
-  ): CountedList<MessageGroupAggregate> = dslContext.getWorkflowMessages(chatId, pagination)
 
   suspend fun evaluateMessageGroup(messageGroupId: KUUID, input: EvaluateMessage): Int {
     if (input.evaluation == null) {

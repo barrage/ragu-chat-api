@@ -8,13 +8,11 @@ import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.database.Atomic
-import net.barrage.llmao.core.database.getMessageGroupAggregate
-import net.barrage.llmao.core.database.getWorkflowMessages
-import net.barrage.llmao.core.database.insertMessages
 import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.repository.MessageRepository
 import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_EXPENSES
 import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_MANAGERS
 import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS
@@ -29,7 +27,7 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.kotlin.coroutines.transactionCoroutine
 
-class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
+class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, MessageRepository {
   suspend fun insertTravelManager(
     userId: String,
     username: String,
@@ -283,7 +281,7 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
 
   suspend fun getTripChatMessages(tripId: KUUID): List<MessageGroupAggregate> {
     val trip = getTrip(tripId)
-    val messages = dslContext.getWorkflowMessages(trip.id)
+    val messages = getWorkflowMessages(trip.id)
     val expenseMessageIds =
       dslContext
         .select(BONVOYAGE_TRAVEL_EXPENSES.MESSAGE_GROUP_ID)
@@ -613,16 +611,14 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic {
   ): Pair<MessageGroupAggregate, BonvoyageTravelExpense> {
     val (id, travelExpense) =
       dslContext.transactionCoroutine { ctx ->
-        val id = ctx.dsl().insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages)
-        val e = ctx.dsl().insertTravelExpense(workflowId, id, expense)
+        val dsl = ctx.dsl()
+        val id = insertWorkflowMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages, dsl)
+        val e = dsl.insertTravelExpense(workflowId, id, expense)
         Pair(id, e)
       }
-    val messageGroup = dslContext.getMessageGroupAggregate(id)!!
+    val messageGroup = getMessageGroupAggregate(id)!!
     return Pair(messageGroup, travelExpense)
   }
-
-  suspend fun insertMessages(workflowId: KUUID, messages: List<MessageInsert>) =
-    dslContext.insertMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages)
 
   suspend fun updateExpense(
     expenseId: KUUID,

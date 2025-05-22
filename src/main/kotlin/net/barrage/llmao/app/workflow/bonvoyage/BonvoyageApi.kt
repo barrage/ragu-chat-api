@@ -9,13 +9,11 @@ import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.AreaBreak
 import com.itextpdf.layout.element.Cell
-import com.itextpdf.layout.element.Image as PdfImage
 import com.itextpdf.layout.element.LineSeparator
 import com.itextpdf.layout.element.Paragraph
 import com.itextpdf.layout.element.Table
 import com.itextpdf.layout.properties.UnitValue
 import io.ktor.util.logging.KtorSimpleLogger
-import java.io.ByteArrayOutputStream
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.AppError
@@ -35,6 +33,8 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.types.KUUID
+import java.io.ByteArrayOutputStream
+import com.itextpdf.layout.element.Image as PdfImage
 
 class BonvoyageAdminApi(
   private val repository: BonvoyageRepository,
@@ -235,7 +235,7 @@ class BonvoyageUserApi(
   suspend fun getTripChatMessages(id: KUUID) = repository.getTripChatMessages(id)
 
   suspend fun insertMessages(id: KUUID, messages: List<MessageInsert>): KUUID =
-    repository.insertMessages(id, messages)
+    repository.insertWorkflowMessages(id, BONVOYAGE_WORKFLOW_ID, messages)
 
   suspend fun listTrips(userId: String): List<BonvoyageTrip> = repository.listTrips(userId)
 

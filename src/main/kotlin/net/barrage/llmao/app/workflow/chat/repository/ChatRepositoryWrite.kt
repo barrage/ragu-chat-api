@@ -7,14 +7,15 @@ import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.toChat
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.database.insertMessages
 import net.barrage.llmao.core.model.MessageInsert
+import net.barrage.llmao.core.repository.MessageRepository
 import net.barrage.llmao.tables.references.CHATS
 import net.barrage.llmao.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 
-class ChatRepositoryWrite(private val dslContext: DSLContext, private val type: String) {
+class ChatRepositoryWrite(override val dslContext: DSLContext, private val type: String) :
+  MessageRepository {
   suspend fun updateTitle(id: KUUID, userId: String, title: String) {
     dslContext
       .update(CHATS)
@@ -42,7 +43,7 @@ class ChatRepositoryWrite(private val dslContext: DSLContext, private val type: 
           type = type,
           agentConfigurationId = agentConfigurationId,
         )
-      ctx.dsl().insertMessages(chatId, CHAT_WORKFLOW_ID, messages)
+      insertWorkflowMessages(chatId, CHAT_WORKFLOW_ID, messages, ctx.dsl())
     }
 
   suspend fun insertChat(
@@ -60,11 +61,6 @@ class ChatRepositoryWrite(private val dslContext: DSLContext, private val type: 
       type = type,
       agentConfigurationId = agentConfigurationId,
     )
-
-  suspend fun insertMessages(chatId: KUUID, messages: List<MessageInsert>): KUUID =
-    dslContext.transactionCoroutine { ctx ->
-      ctx.dsl().insertMessages(chatId, CHAT_WORKFLOW_ID, messages)
-    }
 }
 
 private suspend fun DSLContext.insertChat(

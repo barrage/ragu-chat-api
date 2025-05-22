@@ -13,8 +13,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.util.encodeBase64
-import io.ktor.utils.io.InternalAPI
-import io.ktor.utils.io.readByteArray
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
 import net.barrage.llmao.app.http.pathUuid
@@ -105,7 +103,6 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
   }
 }
 
-@OptIn(InternalAPI::class)
 fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
   route("/bonvoyage/managers") {
     get {

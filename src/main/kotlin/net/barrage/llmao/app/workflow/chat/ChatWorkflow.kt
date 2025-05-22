@@ -89,7 +89,11 @@ class ChatWorkflow(
             groupId
           }
           is ChatWorkflowState.Persisted -> {
-            repository.insertMessages(chatId = id, messages = messagesInsert)
+            repository.insertWorkflowMessages(
+              workflowId = id,
+              workflowType = CHAT_WORKFLOW_ID,
+              messages = messagesInsert,
+            )
           }
         }
 

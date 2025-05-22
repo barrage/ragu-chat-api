@@ -6,7 +6,6 @@ import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -14,10 +13,9 @@ import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.app.workflow.chat.AgentPresencePenalty
-import net.barrage.llmao.app.workflow.chat.AgentTitleMaxCompletionTokens
+import net.barrage.llmao.app.workflow.chat.CHAT_WORKFLOW_ID
 import net.barrage.llmao.app.workflow.chat.ChatAgent
-import net.barrage.llmao.app.workflow.chat.MaxHistoryTokens
+import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
@@ -30,36 +28,25 @@ import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.administration.settings.SettingUpdate
 import net.barrage.llmao.core.administration.settings.Settings
 import net.barrage.llmao.core.administration.settings.SettingsUpdate
 import net.barrage.llmao.core.administration.settings.WhatsappAgentId
-import net.barrage.llmao.core.administration.settings.WhatsappMaxCompletionTokens
-import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
-import net.barrage.llmao.core.llm.ChatHistory
-import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ContentSingle
-import net.barrage.llmao.core.llm.ContextEnrichmentFactory
-import net.barrage.llmao.core.llm.MessageBasedHistory
-import net.barrage.llmao.core.llm.TokenBasedHistory
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.core.token.Encoder
-import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KUUID
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 
-private const val WHATSAPP_CHAT_TOKEN_ORIGIN = "workflow.whatsapp"
-private const val MAX_HISTORY_MESSAGES = 50
+private const val MAX_HISTORY_MESSAGES = 10
 
 class WhatsAppAdapter(
   apiKey: String,
   endpoint: String,
   private val config: WhatsAppSenderConfig,
-  private val providers: ProviderState,
   private val agentRepository: AgentRepository,
   private val whatsAppRepository: WhatsAppRepository,
   private val chatRepositoryRead: ChatRepositoryRead,
@@ -186,7 +173,8 @@ class WhatsAppAdapter(
         agentId = agent.agent.id,
         agentConfigurationId = agent.configuration.id,
       )
-    val chatAgent = getChatAgent(whatsAppNumber.userId, whatsAppNumber.username, chat, agent)
+
+    val chatAgent = getChatAgent(whatsAppNumber.userId, whatsAppNumber.username, chat.id, agent)
 
     val messages = chatAgent.completion(chatAgent.configuration.context, result.message.text)
 
@@ -198,7 +186,11 @@ class WhatsAppAdapter(
 
     val messageInfo = sendWhatsAppMessage(whatsAppMessage)
 
-    storeMessages(chatId = chat.id, messages)
+    chatRepositoryWrite.insertWorkflowMessages(
+      workflowId = chat.id,
+      CHAT_WORKFLOW_ID,
+      messages.map { it.toInsert() },
+    )
 
     log.debug(
       "WhatsApp message sent to: {}, status: {}",
@@ -210,63 +202,25 @@ class WhatsAppAdapter(
   private suspend fun getChatAgent(
     userId: String,
     username: String,
-    chat: Chat,
+    chatId: KUUID,
     agent: AgentFull,
   ): ChatAgent {
     val chatMessages =
-      chatRepositoryRead.getMessages(chatId = chat.id, Pagination(1, MAX_HISTORY_MESSAGES))
+      chatRepositoryRead.getWorkflowMessages(
+        workflowId = chatId,
+        Pagination(1, MAX_HISTORY_MESSAGES),
+      )
+
+    val agent = ChatWorkflowFactory.createChatAgent(chatId, userId, username, listOf("user"), agent)
 
     val messages =
       chatMessages.items
         .flatMap { it.messages.map(ChatMessageProcessor::loadToChatMessage) }
         .toMutableList()
 
-    val settings = settings.getAll()
-    val tokenizer = Encoder.tokenizer(agent.configuration.model)
-    val history: ChatHistory =
-      tokenizer?.let {
-        TokenBasedHistory(
-          messages = messages,
-          tokenizer = it,
-          maxTokens =
-            settings.getOptional(MaxHistoryTokens.KEY)?.toInt() ?: MaxHistoryTokens.DEFAULT,
-        )
-      } ?: MessageBasedHistory(messages = messages, maxMessages = MAX_HISTORY_MESSAGES)
+    agent.addToHistory(messages)
 
-    val completionParameters =
-      ChatCompletionBaseParameters(
-        model = agent.configuration.model,
-        temperature = agent.configuration.temperature,
-        presencePenalty =
-          agent.configuration.presencePenalty ?: settings[AgentPresencePenalty.KEY].toDouble(),
-        maxTokens =
-          agent.configuration.maxCompletionTokens
-            ?: settings.getOptional(WhatsappMaxCompletionTokens.KEY)?.toInt()
-            ?: WhatsappMaxCompletionTokens.DEFAULT,
-      )
-
-    val tokenTracker =
-      TokenUsageTrackerFactory.newTracker(userId, username, WHATSAPP_CHAT_TOKEN_ORIGIN, chat.id)
-
-    return ChatAgent(
-      agentId = agent.agent.id,
-      configuration = agent.configuration,
-      name = agent.agent.name,
-      titleMaxTokens =
-        settings.getOptional(AgentTitleMaxCompletionTokens.KEY)?.toInt()
-          ?: AgentTitleMaxCompletionTokens.DEFAULT,
-      inferenceProvider = providers.llm[agent.configuration.llmProvider],
-      completionParameters = completionParameters,
-      tokenTracker = tokenTracker,
-      history = history,
-      contextEnrichment =
-        ContextEnrichmentFactory.collectionEnrichment(
-            tokenTracker,
-            listOf("user"),
-            agent.collections,
-          )
-          ?.let { listOf(it) },
-    )
+    return agent
   }
 
   private fun createWhatsAppMessage(
@@ -338,10 +292,6 @@ class WhatsAppAdapter(
     }
 
     return chat.chat
-  }
-
-  private suspend fun storeMessages(chatId: KUUID, messages: List<ChatMessage>) {
-    chatRepositoryWrite.insertMessages(chatId, messages.map { it.toInsert() })
   }
 }
 

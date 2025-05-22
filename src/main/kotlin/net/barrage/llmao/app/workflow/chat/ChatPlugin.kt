@@ -94,7 +94,6 @@ class ChatPlugin : Plugin {
               config.string("infobip.template"),
               config.string("infobip.appName"),
             ),
-          providers = state.providers,
           agentRepository = agentRepository,
           chatRepositoryRead = wappChatRead,
           chatRepositoryWrite = wappChatWrite,

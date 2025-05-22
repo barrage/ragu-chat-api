@@ -70,7 +70,7 @@ object ChatWorkflowFactory : WorkflowFactory {
         api.user.agent.getFull(agentId, user.entitlements)
       }
 
-    val chatAgent = createChatAgent(id, user, agent)
+    val chatAgent = createChatAgent(id, user.id, user.username, user.entitlements, agent)
 
     return ChatWorkflow(
       id = id,
@@ -98,7 +98,7 @@ object ChatWorkflowFactory : WorkflowFactory {
         api.user.agent.getFull(chat.chat.agentId, user.entitlements)
       }
 
-    val chatAgent = createChatAgent(workflowId, user, agent)
+    val chatAgent = createChatAgent(workflowId, user.id, user.username, user.entitlements, agent)
 
     chatAgent.addToHistory(
       chat.messages.items.flatMap { it.messages }.map(ChatMessageProcessor::loadToChatMessage)
@@ -115,17 +115,23 @@ object ChatWorkflowFactory : WorkflowFactory {
     )
   }
 
-  suspend fun createChatAgent(workflowId: KUUID, user: User, agent: AgentFull): ChatAgent {
+  suspend fun createChatAgent(
+    workflowId: KUUID,
+    userId: String,
+    username: String,
+    entitlements: List<String>,
+    agent: AgentFull,
+  ): ChatAgent {
     val tokenizer = Encoder.tokenizer(agent.configuration.model)
 
     val settings = settings.getAll()
 
     val tokenTracker =
-      TokenUsageTrackerFactory.newTracker(user.id, user.username, CHAT_WORKFLOW_ID, workflowId)
+      TokenUsageTrackerFactory.newTracker(userId, username, CHAT_WORKFLOW_ID, workflowId)
 
     val contextEnrichment =
       ContextEnrichmentFactory.collectionEnrichment(
-        userEntitlements = user.entitlements,
+        userEntitlements = entitlements,
         tokenTracker = tokenTracker,
         collections = agent.collections,
       )

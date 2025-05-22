@@ -36,6 +36,8 @@ class BonvoyageWorkflow(
   }
 
   private suspend fun handleChatInput(input: BonvoyageInput.ChatInput) {
+    input.input.validate()
+
     val trip = api.getTrip(id, user.id)
     val message =
       input.input.attachments?.let { ChatMessageProcessor.toContentMulti(input.input.text, it) }
