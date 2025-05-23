@@ -220,4 +220,12 @@ class AdminAgentService(
   suspend fun updateGroups(agentId: KUUID, update: AgentGroupUpdate) {
     agentRepository.updateGroups(agentId, update)
   }
+
+  suspend fun exportAll(): List<AgentFull> {
+    return agentRepository.listAllFull()
+  }
+
+  suspend fun import(agents: List<AgentFull>) {
+    agentRepository.import(agents)
+  }
 }

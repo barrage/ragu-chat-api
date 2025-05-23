@@ -5,16 +5,26 @@ import io.github.smiley4.ktoropenapi.delete
 import io.github.smiley4.ktoropenapi.get
 import io.github.smiley4.ktoropenapi.post
 import io.github.smiley4.ktoropenapi.put
+import io.ktor.http.ContentDisposition
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.server.request.contentLength
 import io.ktor.server.request.contentType
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
+import io.ktor.utils.io.readRemaining
 import io.ktor.utils.io.toByteArray
+import kotlinx.io.readString
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.http.pathUuid
 import net.barrage.llmao.app.http.query
 import net.barrage.llmao.app.http.queryListAgentsFilters
@@ -45,6 +55,7 @@ import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.string
 import net.barrage.llmao.tryUuid
+import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
 fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings) {
@@ -206,6 +217,44 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings)
       val tools = agentService.listAvailableAgentTools()
       call.respond(HttpStatusCode.OK, tools)
     }
+
+    get("/export", exportAgents()) {
+      val agents = agentService.exportAll()
+      call.response.header(
+        HttpHeaders.ContentDisposition,
+        ContentDisposition.Attachment.withParameter(
+            ContentDisposition.Parameters.FileName,
+            "agents_${KOffsetDateTime.now()}.json",
+          )
+          .toString(),
+      )
+      call.respondBytes(
+        Json.encodeToString(agents).toByteArray(),
+        ContentType.Application.Json,
+        HttpStatusCode.OK,
+      )
+    }
+
+    post("/import", importAgents()) {
+      val multipart = call.receiveMultipart()
+      var agents: List<AgentFull>? = null
+
+      multipart.forEachPart { part ->
+        if (part is PartData.FileItem && part.originalFileName?.endsWith(".json") == true) {
+          val jsonText = part.provider().readRemaining().readString()
+          agents = Json.decodeFromString<List<AgentFull>>(jsonText)
+        }
+        part.dispose()
+      }
+
+      if (agents == null) {
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing JSON file")
+      }
+
+      agentService.import(agents)
+
+      call.respond(HttpStatusCode.NoContent)
+    }
   }
 }
 
@@ -217,6 +266,7 @@ data class AgentDisplay(
   val configuration: AgentConfiguration? = null,
   val collections: List<AgentCollection>? = null,
   val groups: List<String>? = null,
+  val tools: List<String>? = null,
   val whatsapp: Boolean = false,
 )
 
@@ -233,6 +283,7 @@ fun AgentFull.toAgentDisplay(activeWappAgentId: KUUID?) =
     configuration = configuration,
     collections = collections,
     groups = groups,
+    tools = tools,
     whatsapp = agent.id == activeWappAgentId,
   )
 
@@ -670,6 +721,43 @@ private fun deleteAgentAvatar(): RouteConfig.() -> Unit = {
     HttpStatusCode.InternalServerError to
       {
         description = "Internal server error occurred while deleting avatar"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun exportAgents(): RouteConfig.() -> Unit = {
+  tags("admin/agents")
+  description = "Export all agents"
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "A list of Agent objects representing all the agents"
+        body<ByteArray> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while exporting agents"
+        body<List<AppError>> {}
+      }
+  }
+}
+
+private fun importAgents(): RouteConfig.() -> Unit = {
+  tags("admin/agents")
+  description = "Import agents"
+  request {
+    body<ByteArray> {
+      description = "A list of Agent objects representing all the agents"
+      mediaTypes = setOf(ContentType.Application.Json)
+      required = true
+    }
+  }
+  response {
+    HttpStatusCode.NoContent to { description = "Agents imported successfully" }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while importing agents"
         body<List<AppError>> {}
       }
   }

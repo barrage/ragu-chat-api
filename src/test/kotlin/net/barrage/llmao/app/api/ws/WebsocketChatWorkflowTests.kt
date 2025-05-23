@@ -13,7 +13,6 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import kotlin.random.Random
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -46,6 +45,7 @@ import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import kotlin.random.Random
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 
@@ -570,7 +570,9 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         vectorProvider = "weaviate",
       )
 
-    return AgentFull(validAgent, validAgentConfiguration, listOf(validAgentCollection), listOf())
+    return AgentFull(
+      validAgent, validAgentConfiguration, listOf(validAgentCollection), listOf(), listOf()
+    )
   }
 
   private fun insertVectors(content: String) {

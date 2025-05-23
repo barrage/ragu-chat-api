@@ -167,6 +167,159 @@ class AgentRepository(private val dslContext: DSLContext) {
     return CountedList(total, agents)
   }
 
+  suspend fun listAllFull(): List<AgentFull> {
+    val agents = mutableMapOf<KUUID, AgentWithConfiguration>()
+    val collections = mutableMapOf<KUUID, MutableList<AgentCollection>>()
+    val groups = mutableMapOf<KUUID, MutableList<String>>()
+    val tools = mutableMapOf<KUUID, MutableList<String>>()
+
+    dslContext
+      .select(
+        AGENTS.ID,
+        AGENTS.NAME,
+        AGENTS.DESCRIPTION,
+        AGENTS.ACTIVE,
+        AGENTS.ACTIVE_CONFIGURATION_ID,
+        AGENTS.LANGUAGE,
+        AGENTS.AVATAR,
+        AGENTS.CREATED_AT,
+        AGENTS.UPDATED_AT,
+        AGENT_CONFIGURATIONS.ID,
+        AGENT_CONFIGURATIONS.AGENT_ID,
+        AGENT_CONFIGURATIONS.VERSION,
+        AGENT_CONFIGURATIONS.CONTEXT,
+        AGENT_CONFIGURATIONS.LLM_PROVIDER,
+        AGENT_CONFIGURATIONS.MODEL,
+        AGENT_CONFIGURATIONS.TEMPERATURE,
+        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
+        AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
+        AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+        AGENT_CONFIGURATIONS.ERROR_MESSAGE,
+        AGENT_CONFIGURATIONS.CREATED_AT,
+        AGENT_CONFIGURATIONS.UPDATED_AT,
+        AGENT_COLLECTIONS.ID,
+        AGENT_COLLECTIONS.AGENT_ID,
+        AGENT_COLLECTIONS.INSTRUCTION,
+        AGENT_COLLECTIONS.COLLECTION,
+        AGENT_COLLECTIONS.AMOUNT,
+        AGENT_COLLECTIONS.MAX_DISTANCE,
+        AGENT_COLLECTIONS.EMBEDDING_PROVIDER,
+        AGENT_COLLECTIONS.EMBEDDING_MODEL,
+        AGENT_COLLECTIONS.VECTOR_PROVIDER,
+        AGENT_COLLECTIONS.CREATED_AT,
+        AGENT_COLLECTIONS.UPDATED_AT,
+        AGENT_PERMISSIONS.GROUP,
+        AGENT_TOOLS.TOOL_NAME,
+      )
+      .from(AGENTS)
+      .leftJoin(AGENT_CONFIGURATIONS)
+      .on(AGENT_CONFIGURATIONS.ID.eq(AGENTS.ACTIVE_CONFIGURATION_ID))
+      .leftJoin(AGENT_COLLECTIONS)
+      .on(AGENT_COLLECTIONS.AGENT_ID.eq(AGENTS.ID))
+      .leftJoin(AGENT_PERMISSIONS)
+      .on(AGENT_PERMISSIONS.AGENT_ID.eq(AGENTS.ID))
+      .leftJoin(AGENT_TOOLS)
+      .on(AGENT_TOOLS.AGENT_ID.eq(AGENTS.ID))
+      .asFlow()
+      .collect { record ->
+        val agent = record.into(AGENTS).toAgent()
+        val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
+
+        if (!agents.containsKey(agent.id)) {
+          agents[agent.id] = AgentWithConfiguration(agent, configuration)
+        }
+
+        if (record.get<KUUID?>(AGENT_COLLECTIONS.ID) != null) {
+          val collection = record.into(AGENT_COLLECTIONS).toAgentCollection()
+          collections.computeIfAbsent(agent.id) { mutableListOf() }.add(collection)
+        }
+
+        if (record.get<String?>(AGENT_PERMISSIONS.GROUP) != null) {
+          val group = record.into(AGENT_PERMISSIONS).group
+          groups.computeIfAbsent(agent.id) { mutableListOf() }.add(group)
+        }
+
+        if (record.get<String?>(AGENT_TOOLS.TOOL_NAME) != null) {
+          val tool = record.into(AGENT_TOOLS).toolName
+          tools.computeIfAbsent(agent.id) { mutableListOf() }.add(tool)
+        }
+      }
+
+    return agents.values.map {
+      AgentFull(
+        agent = it.agent,
+        configuration = it.configuration,
+        collections = collections[it.agent.id] ?: emptyList(),
+        groups = groups[it.agent.id] ?: emptyList(),
+        tools = tools[it.agent.id] ?: emptyList(),
+      )
+    }
+  }
+
+  suspend fun import(agents: List<AgentFull>) {
+    dslContext.transactionCoroutine { tx ->
+      val context = tx.dsl()
+
+      for (agent in agents) {
+        val agentId = agent.agent.id
+        val configurationId = agent.configuration.id
+
+        context
+          .insertInto(AGENTS)
+          .set(AGENTS.ID, agentId)
+          .set(AGENTS.NAME, agent.agent.name)
+          .set(AGENTS.DESCRIPTION, agent.agent.description)
+          .set(AGENTS.ACTIVE, agent.agent.active)
+          .set(AGENTS.ACTIVE_CONFIGURATION_ID, configurationId)
+          .set(AGENTS.LANGUAGE, agent.agent.language)
+          .awaitSingle()
+
+        context
+          .insertInto(AGENT_CONFIGURATIONS)
+          .set(AGENT_CONFIGURATIONS.ID, configurationId)
+          .set(AGENT_CONFIGURATIONS.AGENT_ID, agentId)
+          .set(AGENT_CONFIGURATIONS.VERSION, agent.configuration.version)
+          .set(AGENT_CONFIGURATIONS.CONTEXT, agent.configuration.context)
+          .set(AGENT_CONFIGURATIONS.LLM_PROVIDER, agent.configuration.llmProvider)
+          .set(AGENT_CONFIGURATIONS.MODEL, agent.configuration.model)
+          .set(AGENT_CONFIGURATIONS.TEMPERATURE, agent.configuration.temperature)
+          .set(AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS, agent.configuration.maxCompletionTokens)
+          .set(AGENT_CONFIGURATIONS.PRESENCE_PENALTY, agent.configuration.presencePenalty)
+          .set(
+            AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
+            agent.configuration.agentInstructions.titleInstruction,
+          )
+          .set(
+            AGENT_CONFIGURATIONS.ERROR_MESSAGE,
+            agent.configuration.agentInstructions.errorMessage,
+          )
+          .awaitSingle()
+
+        for (collection in agent.collections) {
+          context
+            .insertInto(AGENT_COLLECTIONS)
+            .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
+            .set(AGENT_COLLECTIONS.COLLECTION, collection.collection)
+            .set(AGENT_COLLECTIONS.EMBEDDING_PROVIDER, collection.embeddingProvider)
+            .set(AGENT_COLLECTIONS.EMBEDDING_MODEL, collection.embeddingModel)
+            .set(AGENT_COLLECTIONS.VECTOR_PROVIDER, collection.vectorProvider)
+            .set(AGENT_COLLECTIONS.AMOUNT, collection.amount)
+            .set(AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
+            .set(AGENT_COLLECTIONS.MAX_DISTANCE, collection.maxDistance)
+            .awaitSingle()
+        }
+
+        for (tool in agent.tools) {
+          context
+            .insertInto(AGENT_TOOLS)
+            .set(AGENT_TOOLS.AGENT_ID, agentId)
+            .set(AGENT_TOOLS.TOOL_NAME, tool)
+            .awaitSingle()
+        }
+      }
+    }
+  }
+
   /** Should be called from a chat context. */
   suspend fun userGet(id: KUUID, groups: List<String>): AgentFull? {
     val agentGroups =
@@ -216,11 +369,13 @@ class AgentRepository(private val dslContext: DSLContext) {
         val agent = record.into(AGENTS).toAgent()
         val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
         val collections = getCollections(id)
+        val tools = getAgentTools(id)
         AgentFull(
           agent = agent,
           configuration = configuration,
           collections = collections,
           groups = agentGroups,
+          tools = tools.map { it.toolName },
         )
       }
   }
@@ -269,11 +424,13 @@ class AgentRepository(private val dslContext: DSLContext) {
         val agent = record.into(AGENTS).toAgent()
         val configuration = record.into(AGENT_CONFIGURATIONS).toAgentConfiguration()
         val collections = getCollections(id)
+        val tools = getAgentTools(id)
         AgentFull(
           agent = agent,
           configuration = configuration,
           collections = collections,
           groups = agentGroups,
+          tools = tools.map { it.toolName },
         )
       }
   }
