@@ -1,6 +1,7 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
-import kotlinx.serialization.SerialName
+import javax.activation.DataSource
+import javax.mail.util.ByteArrayDataSource
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.EmailAttachment
 import net.barrage.llmao.core.NotBlank
@@ -13,8 +14,6 @@ import net.barrage.llmao.types.KLocalDate
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KOffsetTime
 import net.barrage.llmao.types.KUUID
-import javax.activation.DataSource
-import javax.mail.util.ByteArrayDataSource
 
 @Serializable
 data class TravelManagerUserMappingInsert(
@@ -217,7 +216,6 @@ data class TripInsert(
 ) : Validation
 
 @Serializable
-@SerialName("reminders")
 data class TripUpdateReminders(
   val expectedStartTime: PropertyUpdate<KOffsetTime> = PropertyUpdate.Undefined,
   val expectedEndTime: PropertyUpdate<KOffsetTime> = PropertyUpdate.Undefined,

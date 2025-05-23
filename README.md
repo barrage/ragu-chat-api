@@ -5,12 +5,12 @@
 - [Overview](#overview)
 - [Authorization](#authorization)
 - [Setup](#setup)
-    - [Migrations and seeders](#migrations-and-seeders)
-    - [Building and running](#building-and-running)
+  - [Migrations and seeders](#migrations-and-seeders)
+  - [Building and running](#building-and-running)
 - [WebSocket](#websocket)
 - [WhatsApp](#whatsapp)
-    - [Configuration](#configuration)
-    - [Infobip setup](#infobip-setup)
+  - [Configuration](#configuration)
+  - [Infobip setup](#infobip-setup)
 
 Documentation:
 
@@ -103,13 +103,13 @@ Updated `changelog.yaml` should look like this:
 To rollback all migrations
 
 ```bash
-./gradlew liquibaseRollback 
+./gradlew liquibaseRollback
 ```
 
 To seed the database with the initial agent, run
 
 ```bash
-psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/<FILE>.sql 
+psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/<FILE>.sql
 ```
 
 ### Building and running
@@ -223,4 +223,3 @@ services, etc.
 
 We explicitly grant permission for you to make a build that includes our trademarks while developing Ragu itself. You
 may not publish or share the build, and you may not use that build to run Ragu for any other purpose.
-

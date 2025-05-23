@@ -7,6 +7,8 @@ import io.github.smiley4.ktoropenapi.config.RequestConfig
 import io.github.smiley4.ktoropenapi.openApi
 import io.github.smiley4.ktoropenapi.route
 import io.github.smiley4.ktorswaggerui.swaggerUI
+import io.github.smiley4.schemakenerator.core.data.TypeData
+import io.github.smiley4.schemakenerator.core.data.TypeName
 import io.github.smiley4.schemakenerator.reflection.ReflectionSteps.analyzeTypeUsingReflection
 import io.github.smiley4.schemakenerator.reflection.ReflectionSteps.collectSubTypes
 import io.github.smiley4.schemakenerator.reflection.data.EnumConstType
@@ -17,6 +19,8 @@ import io.github.smiley4.schemakenerator.swagger.SwaggerSteps.withTitle
 import io.github.smiley4.schemakenerator.swagger.data.TitleType
 import io.ktor.server.application.*
 import io.ktor.server.routing.Route
+import io.swagger.v3.oas.models.media.Schema
+import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.types.KUUID
 
 fun Route.openApiRoutes() {
@@ -51,12 +55,59 @@ fun Application.configureOpenApi() {
       generator = { type ->
         type
           .collectSubTypes(10)
-          .analyzeTypeUsingReflection { enumConstType = EnumConstType.TO_STRING }
-          .generateSwaggerSchema()
+          .analyzeTypeUsingReflection {
+            enumConstType = EnumConstType.TO_STRING
+            custom(KUUID::class) { id ->
+              TypeData(
+                id = id,
+                identifyingName = TypeName("KUUID", short = "KUUID"),
+                descriptiveName = TypeName("A UUID", short = "UUID"),
+              )
+            }
+            custom(PropertyUpdate::class) { id ->
+              TypeData(
+                id = id,
+                identifyingName = TypeName("PropertyUpdate", short = "PropertyUpdate"),
+                descriptiveName =
+                  TypeName(
+                    "A primitive number or string with update semantics. Undefined means leave as is, null means remove, value means update.",
+                    short = "Always deserialized as the primitive it wraps.",
+                  ),
+              )
+            }
+          }
+          .generateSwaggerSchema(
+
+          )
           .handleCoreAnnotations()
           .withTitle(TitleType.SIMPLE)
           .compileReferencingRoot()
       }
+
+      schema(
+        "KUUID",
+        schema =
+          Schema<KUUID>().apply {
+            type = "string"
+            format = "uuid"
+          },
+      )
+
+      schema(
+        "PropertyUpdate",
+        schema =
+          Schema<PropertyUpdate<*>>().apply {
+            types = setOf("string", "number")
+            description =
+              """
+              Represents update semantics for nullable properties:
+              - If the field is omitted (undefined), the property remains unchanged
+              - If the field is null, the property will be removed
+              - If the field has a value, the property will be updated to that value
+            """
+                .trimIndent()
+          },
+      )
     }
   }
 }
