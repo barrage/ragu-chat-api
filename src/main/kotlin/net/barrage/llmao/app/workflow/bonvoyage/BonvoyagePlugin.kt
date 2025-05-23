@@ -12,6 +12,8 @@ import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
+import net.barrage.llmao.core.PluginConfiguration
+import net.barrage.llmao.core.administration.settings.ApplicationSettings
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 import net.barrage.llmao.core.workflow.WorkflowOutput
 import net.barrage.llmao.string
@@ -70,6 +72,20 @@ class BonvoyagePlugin() : Plugin {
     subclass(ExpenseUpload::class, ExpenseUpload.serializer())
     subclass(ExpenseUpdate::class, ExpenseUpdate.serializer())
   }
+
+  override fun describe(settings: ApplicationSettings): PluginConfiguration =
+    PluginConfiguration(
+      id = id(),
+      description = "Agentic systems for corporate business trip management solutions.",
+      settings =
+        mapOf(
+          BonvoyageLlmProvider.KEY to settings.getOptional(BonvoyageLlmProvider.KEY),
+          BonvoyageModel.KEY to settings.getOptional(BonvoyageModel.KEY),
+          BonvoyageMaxHistoryTokens.KEY to
+            (settings.getOptional(BonvoyageMaxHistoryTokens.KEY)
+              ?: BonvoyageMaxHistoryTokens.DEFAULT.toString()),
+        ),
+    )
 }
 
 object BonvoyageConfig {

@@ -3,7 +3,9 @@ package net.barrage.llmao.core
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
+import net.barrage.llmao.core.administration.settings.ApplicationSettings
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.WorkflowOutput
 
@@ -46,7 +48,17 @@ interface Plugin : Identity {
 
   /** Handle an event emitted by the server. All events are broadcast to all plugins. */
   suspend fun handleEvent(manager: SessionManager, event: Event) {}
+
+  /** Used to describe the plugin to the client and let them know of its existence. */
+  fun describe(settings: ApplicationSettings): PluginConfiguration
 }
+
+@Serializable
+data class PluginConfiguration(
+  val id: String,
+  val description: String,
+  val settings: Map<String, String?>,
+)
 
 /** Keeps the state of optional modules and is used to configure plugins on app startup. */
 class Plugins {
@@ -62,6 +74,10 @@ class Plugins {
     if (plugins.contains(plugin))
       throw AppError.internal("Invalid configuration; Plugin already registered: ${plugin.id()}")
     else plugins.add(plugin)
+
+  /** List the configuration of all registered plugins. */
+  fun list(settings: ApplicationSettings): List<PluginConfiguration> =
+    plugins.map { it.describe(settings) }
 
   /**
    * Configure all plugins registered in this object.

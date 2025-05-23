@@ -13,7 +13,7 @@ import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
 import net.barrage.llmao.core.blob.BlobStorage
 import net.barrage.llmao.core.model.Image
 
-fun Route.administrationBlobRouter(imageStorage: BlobStorage<Image>) {
+fun Route.administrationBlobRoutes(imageStorage: BlobStorage<Image>) {
   get("/admin/attachments/images/{path}") {
     val imagePath = call.parameters["path"]!!
 

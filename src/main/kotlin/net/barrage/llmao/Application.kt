@@ -17,8 +17,9 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import net.barrage.llmao.app.administration.administrationBlobRouter
-import net.barrage.llmao.app.administration.administrationRouter
+import net.barrage.llmao.app.administration.administrationBlobRoutes
+import net.barrage.llmao.app.administration.administrationRoutes
+import net.barrage.llmao.app.administration.applicationInfoRoutes
 import net.barrage.llmao.app.administration.settings.adminSettingsRoutes
 import net.barrage.llmao.app.http.configureErrorHandling
 import net.barrage.llmao.app.http.configureOpenApi
@@ -43,8 +44,8 @@ private const val BONVOYAGE_FEATURE_FLAG = "ktor.features.specialists.bonvoyage"
 fun main(args: Array<String>) = EngineMain.main(args)
 
 fun Application.module() {
-  val state = state()
   val plugins = Plugins()
+  val state = state(plugins)
 
   plugins.register(ChatPlugin())
 
@@ -91,10 +92,12 @@ fun Application.module() {
 
     // Admin API routes
     authenticate("admin") {
-      administrationBlobRouter(state.providers.image)
+      administrationBlobRoutes(state.providers.image)
       adminSettingsRoutes(state.settings)
-      administrationRouter()
+      administrationRoutes()
     }
+
+    authenticate("user") { applicationInfoRoutes() }
 
     with(plugins) { configureRoutes(state) }
   }

@@ -6,6 +6,8 @@ import io.ktor.server.routing.Route
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
+import net.barrage.llmao.core.PluginConfiguration
+import net.barrage.llmao.core.administration.settings.ApplicationSettings
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 
 const val JIRAKIRA_WORKFLOW_ID = "JIRAKIRA"
@@ -40,6 +42,20 @@ class JiraKiraPlugin : Plugin {
     authenticate("admin") { jiraKiraAdminRoutes(repository) }
     authenticate("user") { jiraKiraUserRoutes(repository) }
   }
+
+  override fun describe(settings: ApplicationSettings): PluginConfiguration =
+    PluginConfiguration(
+      id = id(),
+      description = "Gojira the Jira Kira handles all your Jira related needs.",
+      settings =
+        mapOf(
+          JiraKiraLlmProvider.KEY to settings.getOptional(JiraKiraLlmProvider.KEY),
+          JiraKiraModel.KEY to settings.getOptional(JiraKiraModel.KEY),
+          JiraKiraTimeSlotAttributeKey.KEY to
+            settings.getOptional(JiraKiraTimeSlotAttributeKey.KEY),
+          JiraKiraMaxHistoryTokens.KEY to (settings.getOptional(JiraKiraMaxHistoryTokens.KEY)?: JiraKiraMaxHistoryTokens.DEFAULT.toString()),
+        ),
+    )
 }
 
 /** The LLM provider to use for JiraKira. */

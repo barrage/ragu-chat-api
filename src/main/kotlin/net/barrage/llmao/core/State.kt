@@ -26,12 +26,12 @@ import net.barrage.llmao.int
 import net.barrage.llmao.string
 import org.jooq.DSLContext
 
-fun Application.state(): ApplicationState {
-  return ApplicationState(environment.config, initDatabase(environment.config))
+fun Application.state(plugins: Plugins): ApplicationState {
+  return ApplicationState(environment.config, initDatabase(environment.config), plugins)
 }
 
 /** Application state available to plugins. */
-class ApplicationState(config: ApplicationConfig, val database: DSLContext) {
+class ApplicationState(config: ApplicationConfig, val database: DSLContext, plugins: Plugins) {
   val providers: ProviderState =
     ProviderState(
       llm = InferenceProviderFactory(config),
@@ -73,7 +73,7 @@ class ApplicationState(config: ApplicationConfig, val database: DSLContext) {
     ChatMessageProcessor.init(providers)
     ContextEnrichmentFactory.init(providers)
     TokenUsageTrackerFactory.init(TokenUsageRepositoryWrite(database))
-    Administration.init(providers, TokenUsageRepositoryRead(database))
+    Administration.init(providers, TokenUsageRepositoryRead(database), plugins, settings)
   }
 }
 
@@ -96,7 +96,7 @@ class ProviderState(
     val vectorProviders = vector.listProviders()
     val embeddingProviders = embedding.listProviders()
 
-    return ProvidersResponse(llmProviders, vectorProviders, embeddingProviders)
+    return ProvidersResponse(llmProviders, vectorProviders, embeddingProviders, image.id())
   }
 
   suspend fun listAvailableLlms(): List<String> {
@@ -151,4 +151,5 @@ data class ProvidersResponse(
   val llm: List<String>,
   val vector: List<String>,
   val embedding: List<String>,
+  val image: String,
 )

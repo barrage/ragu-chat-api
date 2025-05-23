@@ -37,6 +37,8 @@ import net.barrage.llmao.app.workflow.chat.whatsapp.whatsAppRoutes
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Event
 import net.barrage.llmao.core.Plugin
+import net.barrage.llmao.core.PluginConfiguration
+import net.barrage.llmao.core.administration.settings.ApplicationSettings
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
@@ -156,6 +158,21 @@ class ChatPlugin : Plugin {
       }
     }
   }
+
+  override fun describe(settings: ApplicationSettings): PluginConfiguration =
+    PluginConfiguration(
+      id = id(),
+      description = "Chat with custom agents.",
+      settings =
+        mapOf(
+          MaxHistoryTokens.KEY to
+            (settings.getOptional(MaxHistoryTokens.KEY) ?: MaxHistoryTokens.DEFAULT.toString()),
+          AgentPresencePenalty.KEY to settings.getOptional(AgentPresencePenalty.KEY),
+          AgentTitleMaxCompletionTokens.KEY to
+            (settings.getOptional(AgentTitleMaxCompletionTokens.KEY)
+              ?: AgentTitleMaxCompletionTokens.DEFAULT.toString()),
+        ),
+    )
 
   override fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {
     subclass(ChatTitleUpdated::class, ChatTitleUpdated.serializer())

@@ -7,12 +7,13 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import net.barrage.llmao.app.http.queryParam
 import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.PluginConfiguration
 import net.barrage.llmao.core.ProvidersResponse
 import net.barrage.llmao.core.administration.Administration
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
-fun Route.administrationRouter() {
+fun Route.administrationRoutes() {
   get("/admin/providers", providers()) {
     val providers = Administration.listProviders()
     call.respond(HttpStatusCode.OK, providers)
@@ -40,6 +41,32 @@ fun Route.administrationRouter() {
   }
 }
 
+fun Route.applicationInfoRoutes() {
+  get("/plugins", applicationInfo()) {
+    val info = Administration.listPlugins()
+    call.respond(HttpStatusCode.OK, info)
+  }
+}
+
+private fun applicationInfo(): RouteConfig.() -> Unit = {
+  summary = "Get application info"
+  description = "Get application info."
+  tags("admin/info")
+  securitySchemeNames = listOf()
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "Application info"
+        body<List<PluginConfiguration>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error"
+        body<List<AppError>>()
+      }
+  }
+}
+
 private fun providers(): RouteConfig.() -> Unit = {
   summary = "List all available providers"
   description = "List all available providers for the application."
@@ -55,6 +82,7 @@ private fun providers(): RouteConfig.() -> Unit = {
               llm = listOf("openai"),
               vector = listOf("weaviate"),
               embedding = listOf("azure"),
+              image = "minio",
             )
           }
         }
