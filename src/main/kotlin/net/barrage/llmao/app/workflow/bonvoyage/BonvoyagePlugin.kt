@@ -10,6 +10,8 @@ import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
+import net.barrage.llmao.app.workflow.bonvoyage.routes.bonvoyageAdminRoutes
+import net.barrage.llmao.app.workflow.bonvoyage.routes.bonvoyageUserRoutes
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.PluginConfiguration
