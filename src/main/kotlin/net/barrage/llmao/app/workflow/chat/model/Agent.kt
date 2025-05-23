@@ -7,6 +7,7 @@ import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.TimeSeries
+import net.barrage.llmao.tables.records.AgentPermissionsRecord
 import net.barrage.llmao.tables.records.AgentToolsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.types.KOffsetDateTime
@@ -63,7 +64,7 @@ data class AgentFull(
   val agent: Agent,
   val configuration: AgentConfiguration,
   val collections: List<AgentCollection>,
-  val groups: List<String>,
+  val groups: List<AgentPermission>,
   val tools: List<String>,
 )
 
@@ -103,6 +104,10 @@ data class AgentChatsOnDate(
   /** Amount of chats opened. */
   val amount: Long,
 )
+
+@Serializable data class AgentPermission(val group: String, val createdBy: String? = null)
+
+fun AgentPermissionsRecord.toAgentPermission() = AgentPermission(group, createdBy)
 
 @Serializable
 data class AgentGroupUpdate(val add: List<String>? = null, val remove: List<String>? = null)

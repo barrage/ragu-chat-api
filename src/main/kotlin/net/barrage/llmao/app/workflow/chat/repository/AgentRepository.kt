@@ -12,6 +12,7 @@ import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.AgentCounts
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.AgentGroupUpdate
+import net.barrage.llmao.app.workflow.chat.model.AgentPermission
 import net.barrage.llmao.app.workflow.chat.model.AgentTool
 import net.barrage.llmao.app.workflow.chat.model.AgentUpdateTools
 import net.barrage.llmao.app.workflow.chat.model.AgentWithConfiguration
@@ -24,6 +25,7 @@ import net.barrage.llmao.app.workflow.chat.model.UpdateAgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.toAgent
 import net.barrage.llmao.app.workflow.chat.model.toAgentCollection
 import net.barrage.llmao.app.workflow.chat.model.toAgentConfiguration
+import net.barrage.llmao.app.workflow.chat.model.toAgentPermission
 import net.barrage.llmao.app.workflow.chat.model.toAgentTool
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -167,7 +169,7 @@ class AgentRepository(private val dslContext: DSLContext) {
   suspend fun listAllFull(): List<AgentFull> {
     val agents = mutableMapOf<KUUID, AgentWithConfiguration>()
     val collections = mutableMapOf<KUUID, MutableList<AgentCollection>>()
-    val groups = mutableMapOf<KUUID, MutableList<String>>()
+    val groups = mutableMapOf<KUUID, MutableList<AgentPermission>>()
     val tools = mutableMapOf<KUUID, MutableList<String>>()
 
     dslContext
@@ -233,7 +235,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         }
 
         if (record.get<String?>(AGENT_PERMISSIONS.GROUP) != null) {
-          val group = record.into(AGENT_PERMISSIONS).group
+          val group = record.into(AGENT_PERMISSIONS).toAgentPermission()
           groups.computeIfAbsent(agent.id) { mutableListOf() }.add(group)
         }
 
@@ -276,7 +278,7 @@ class AgentRepository(private val dslContext: DSLContext) {
           .insertInto(AGENT_CONFIGURATIONS)
           .set(AGENT_CONFIGURATIONS.ID, configurationId)
           .set(AGENT_CONFIGURATIONS.AGENT_ID, agentId)
-          .set(AGENT_CONFIGURATIONS.VERSION, agent.configuration.version)
+          .set(AGENT_CONFIGURATIONS.VERSION, 0)
           .set(AGENT_CONFIGURATIONS.CONTEXT, agent.configuration.context)
           .set(AGENT_CONFIGURATIONS.LLM_PROVIDER, agent.configuration.llmProvider)
           .set(AGENT_CONFIGURATIONS.MODEL, agent.configuration.model)
@@ -314,6 +316,15 @@ class AgentRepository(private val dslContext: DSLContext) {
             .set(AGENT_TOOLS.TOOL_NAME, tool)
             .awaitSingle()
         }
+
+        for (group in agent.groups) {
+          context
+            .insertInto(AGENT_PERMISSIONS)
+            .set(AGENT_PERMISSIONS.AGENT_ID, agentId)
+            .set(AGENT_PERMISSIONS.GROUP, group.group)
+            .set(AGENT_PERMISSIONS.CREATED_BY, "IMPORT")
+            .awaitSingle()
+        }
       }
     }
   }
@@ -323,13 +334,14 @@ class AgentRepository(private val dslContext: DSLContext) {
     val agentGroups =
       dslContext
         .select(AGENT_PERMISSIONS.GROUP)
+        .select(AGENT_PERMISSIONS.CREATED_BY)
         .from(AGENT_PERMISSIONS)
         .where(AGENT_PERMISSIONS.AGENT_ID.eq(id))
         .asFlow()
-        .map { it.into(AGENT_PERMISSIONS).group }
+        .map { it.into(AGENT_PERMISSIONS).toAgentPermission() }
         .toList()
 
-    if (agentGroups.isNotEmpty() && agentGroups.none { it in groups }) {
+    if (agentGroups.isNotEmpty() && agentGroups.none { it.group in groups }) {
       return null
     }
 
@@ -381,11 +393,11 @@ class AgentRepository(private val dslContext: DSLContext) {
   suspend fun get(id: KUUID): AgentFull? {
     val agentGroups =
       dslContext
-        .select(AGENT_PERMISSIONS.GROUP)
+        .select(AGENT_PERMISSIONS.GROUP, AGENT_PERMISSIONS.CREATED_BY)
         .from(AGENT_PERMISSIONS)
         .where(AGENT_PERMISSIONS.AGENT_ID.eq(id))
         .asFlow()
-        .map { it.into(AGENT_PERMISSIONS).group }
+        .map { it.into(AGENT_PERMISSIONS).toAgentPermission() }
         .toList()
 
     return dslContext

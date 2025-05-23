@@ -37,6 +37,7 @@ import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.AgentConfigurationWithEvaluationCounts
 import net.barrage.llmao.app.workflow.chat.model.AgentFull
 import net.barrage.llmao.app.workflow.chat.model.AgentGroupUpdate
+import net.barrage.llmao.app.workflow.chat.model.AgentPermission
 import net.barrage.llmao.app.workflow.chat.model.AgentUpdateTools
 import net.barrage.llmao.app.workflow.chat.model.AgentWithConfiguration
 import net.barrage.llmao.app.workflow.chat.model.CreateAgent
@@ -240,7 +241,7 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings)
       var agents: List<AgentFull>? = null
 
       multipart.forEachPart { part ->
-        if (part is PartData.FileItem && part.originalFileName?.endsWith(".json") == true) {
+        if (part is PartData.FileItem && part.name == "agents") {
           val jsonText = part.provider().readRemaining().readString()
           agents = Json.decodeFromString<List<AgentFull>>(jsonText)
         }
@@ -248,7 +249,7 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings)
       }
 
       if (agents == null) {
-        throw AppError.api(ErrorReason.InvalidParameter, "Missing JSON file")
+        throw AppError.api(ErrorReason.InvalidParameter, "Missing JSON file on field 'agents'")
       }
 
       agentService.import(agents)
@@ -265,7 +266,7 @@ data class AgentDisplay(
   val agent: Agent,
   val configuration: AgentConfiguration? = null,
   val collections: List<AgentCollection>? = null,
-  val groups: List<String>? = null,
+  val groups: List<AgentPermission>? = null,
   val tools: List<String>? = null,
   val whatsapp: Boolean = false,
 )
