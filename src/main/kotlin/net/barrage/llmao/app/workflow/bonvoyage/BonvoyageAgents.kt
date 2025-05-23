@@ -48,7 +48,7 @@ class BonvoyageWelcomeAgent(
   suspend fun welcomeMessage(trip: BonvoyageTrip, default: String): String =
     try {
       completion(
-          "You are a travel chat assistant who is helping ${trip.userFullName} on his business trip from ${trip.startLocation} to ${trip.endLocation}.",
+          "You are a travel chat assistant who is helping ${trip.traveler.userFullName} on his business trip from ${trip.startLocation} to ${trip.endLocation}.",
           """Do not use any emojis. Create a short and friendly welcome message that summarizes the following trip:
           |Start location: ${trip.startLocation}
           |End location: ${trip.endLocation}

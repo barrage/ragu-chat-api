@@ -58,6 +58,10 @@ class BonvoyagePlugin() : Plugin {
   }
 
   override fun RequestValidationConfig.configureRequestValidation() {
+    validate<BonvoyageUser>(BonvoyageUser::validate)
+    validate<TravelManagerUserMappingInsert>(TravelManagerUserMappingInsert::validate)
+    validate<BulkInsertTrip>(BulkInsertTrip::validate)
+    validate<InsertTrip>(InsertTrip::validate)
     validate<TravelRequestParameters>(TravelRequestParameters::validate)
     validate<TripPropertiesUpdate>(TripPropertiesUpdate::validate)
   }

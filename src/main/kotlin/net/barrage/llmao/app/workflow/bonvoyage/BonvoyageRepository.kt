@@ -299,9 +299,12 @@ class BonvoyageRepository(override val dslContext: DSLContext) : Atomic, Message
   suspend fun insertTrip(trip: TripInsert): BonvoyageTrip {
     return dslContext
       .insertInto(BONVOYAGE_TRIPS)
-      .set(BONVOYAGE_TRIPS.USER_ID, trip.userId)
-      .set(BONVOYAGE_TRIPS.USER_FULL_NAME, trip.userFullName)
-      .set(BONVOYAGE_TRIPS.USER_EMAIL, trip.userEmail)
+      .set(BONVOYAGE_TRIPS.USER_ID, trip.traveler.userId)
+      .set(BONVOYAGE_TRIPS.USER_FULL_NAME, trip.traveler.userFullName)
+      .set(BONVOYAGE_TRIPS.USER_EMAIL, trip.traveler.userEmail)
+      .set(BONVOYAGE_TRIPS.CREATED_BY_ID, trip.creatingUser.userId)
+      .set(BONVOYAGE_TRIPS.CREATED_BY_USERNAME, trip.creatingUser.userFullName)
+      .set(BONVOYAGE_TRIPS.CREATED_BY_EMAIL, trip.creatingUser.userEmail)
       .set(BONVOYAGE_TRIPS.TRAVEL_ORDER_ID, trip.travelOrderId)
       .set(BONVOYAGE_TRIPS.START_LOCATION, trip.params.startLocation)
       .set(BONVOYAGE_TRIPS.STOPS, trip.params.stops.joinToString("|"))

@@ -94,7 +94,10 @@ class BonvoyageAdminApi(
     status: BonvoyageTravelRequestStatus?
   ): List<BonvoyageTravelRequest> = repository.listTravelRequests(status = status)
 
-  suspend fun approveTravelRequest(approval: ApproveTravelRequest): BonvoyageTrip {
+  suspend fun approveTravelRequest(
+    approvingUser: BonvoyageUser,
+    approval: ApproveTravelRequest,
+  ): BonvoyageTrip {
     val request = repository.getTravelRequest(approval.requestId)
 
     if (request.status == BonvoyageTravelRequestStatus.APPROVED) {
@@ -129,15 +132,19 @@ class BonvoyageAdminApi(
             isDriver = request.isDriver,
           )
 
-        val travelOrderId = createTravelOrder(request.userFullName, params)
+        val travelOrderId = createTravelOrder(request.traveler.userFullName, params)
 
         val tripDetails =
           TripInsert(
-            userId = request.userId,
-            userFullName = request.userFullName,
-            userEmail = request.userEmail,
+            traveler =
+              BonvoyageUser(
+                userId = request.traveler.userId,
+                userFullName = request.traveler.userFullName,
+                userEmail = request.traveler.userEmail,
+              ),
             travelOrderId = travelOrderId,
             params = params,
+            creatingUser = approvingUser,
           )
 
         val trip = repo.insertTrip(tripDetails)
@@ -150,7 +157,7 @@ class BonvoyageAdminApi(
     emailScope.launch {
       email.sendEmail(
         BonvoyageConfig.emailSender,
-        request.userEmail,
+        request.traveler.userEmail,
         "Travel request approved",
         """Your travel request has been approved.
             |Travel order ID: ${trip.travelOrderId}
@@ -167,17 +174,15 @@ class BonvoyageAdminApi(
     return trip
   }
 
-  suspend fun createTrip(creatingUserId: String, insert: TripInsert): BonvoyageTrip {
-    if (insert.travelOrderId == null) {
-      insert.travelOrderId = createTravelOrder(insert.userFullName, insert.params)
-    }
-    val trip = repository.insertTrip(insert)
+  suspend fun createTrip(creatingUser: BonvoyageUser, insert: InsertTrip): BonvoyageTrip {
+    val travelOrderId = createTravelOrder(insert.traveler.userFullName, insert.params)
+    val trip = repository.insertTrip(insert.toTripInsert(travelOrderId, creatingUser))
 
-    if (creatingUserId != trip.userId) {
+    if (creatingUser.userId != trip.traveler.userId) {
       emailScope.launch {
         email.sendEmail(
           BonvoyageConfig.emailSender,
-          trip.userEmail,
+          trip.traveler.userEmail,
           "Travel request created",
           """A new travel request has been created for you.
             |Travel order ID: ${trip.travelOrderId}
@@ -193,6 +198,25 @@ class BonvoyageAdminApi(
     }
 
     return trip
+  }
+
+  suspend fun bulkCreateTrips(
+    creatingUser: BonvoyageUser,
+    insert: BulkInsertTrip,
+  ): List<BonvoyageTrip> {
+    val trips = mutableListOf<BonvoyageTrip>()
+    for (traveler in insert.travelers) {
+      val trip =
+        createTrip(
+          creatingUser,
+          InsertTrip(
+            traveler = traveler,
+            params = insert.params.copy(isDriver = traveler.userId == insert.driverId),
+          ),
+        )
+      trips.add(trip)
+    }
+    return trips
   }
 
   private suspend fun getWelcomeMessage(trip: BonvoyageTrip): String {
@@ -231,8 +255,8 @@ class BonvoyageAdminApi(
       BonvoyageWelcomeAgent(
         tokenTracker =
           TokenUsageTrackerFactory.newTracker(
-            trip.userId,
-            trip.userFullName,
+            trip.traveler.userId,
+            trip.traveler.userFullName,
             BONVOYAGE_WORKFLOW_ID,
             trip.id,
           ),
@@ -261,8 +285,8 @@ class BonvoyageAdminApi(
   }
 
   private fun defaultWelcomeMessage(trip: BonvoyageTrip): String {
-    return """Hello ${trip.userFullName}, a trip from ${trip.startLocation} to ${trip.endLocation} has been created under ${trip.travelOrderId}.
-      |Your trip starts on ${trip.startDate} and the ends on ${trip.endDate}."""
+    return """Hello ${trip.traveler.userFullName}, a trip from ${trip.startLocation} to ${trip.endLocation} has been created under ${trip.travelOrderId}.
+      |Your trip starts on ${trip.startDate} and ends on ${trip.endDate}."""
       .trimMargin()
   }
 }
@@ -596,7 +620,7 @@ class BonvoyageUserApi(
       Table(UnitValue.createPercentArray(floatArrayOf(1f, 1f))).useAllAvailableWidth()
 
     workerInfoTable.addCell(Cell().add(Paragraph("RADNIK (Ime i prezime)")))
-    workerInfoTable.addCell(Cell().add(Paragraph(trip.trip.userFullName)).simulateBold())
+    workerInfoTable.addCell(Cell().add(Paragraph(trip.trip.traveler.userFullName)).simulateBold())
 
     workerInfoTable.addCell(Cell().add(Paragraph("PUTNI NALOG (Broj putnog naloga)")))
     workerInfoTable.addCell(Cell().add(Paragraph(trip.trip.travelOrderId)).simulateBold())

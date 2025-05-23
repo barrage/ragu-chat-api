@@ -65,6 +65,10 @@ CREATE TABLE bonvoyage_trips(
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    created_by_id TEXT NOT NULL,
+    created_by_username TEXT NOT NULL,
+    created_by_email TEXT NOT NULL,
+
     -- Optional fields when the trip is with a personal vehicle
     vehicle_type TEXT,
     vehicle_registration TEXT,

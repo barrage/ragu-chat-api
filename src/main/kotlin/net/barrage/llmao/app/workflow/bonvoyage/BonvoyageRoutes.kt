@@ -29,9 +29,15 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
       get { call.respond(api.listTrips()) }
 
       post {
-        val insert = call.receive<TripInsert>()
-        val trip = api.createTrip(call.user().id, insert)
+        val insert = call.receive<InsertTrip>()
+        val trip = api.createTrip(call.user().toBonvoyageUser(), insert)
         call.respond(trip)
+      }
+
+      post("/batch") {
+        val insert = call.receive<BulkInsertTrip>()
+        val trips = api.bulkCreateTrips(call.user().toBonvoyageUser(), insert)
+        call.respond(trips)
       }
 
       get("/{id}") {
@@ -60,7 +66,7 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
                   expectedStartTime = request.expectedStartTime,
                   expectedEndTime = request.expectedEndTime,
                 )
-              val trip = api.approveTravelRequest(approval)
+              val trip = api.approveTravelRequest(call.user().toBonvoyageUser(), approval)
               call.respond(trip)
             }
 
@@ -82,7 +88,7 @@ fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
       }
 
       post {
-        val add = call.receive<TravelManagerInsert>()
+        val add = call.receive<BonvoyageUser>()
         val manager = api.addTravelManager(add.userId, add.userFullName, add.userEmail)
         call.respond(manager)
       }

@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.EmailAttachment
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.SchemaValidation
-import net.barrage.llmao.core.ValidEmail
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.addSchemaErr
@@ -18,24 +17,58 @@ import javax.activation.DataSource
 import javax.mail.util.ByteArrayDataSource
 
 @Serializable
-data class TravelManagerInsert(val userId: String, val userFullName: String, val userEmail: String)
-
-@Serializable
 data class TravelManagerUserMappingInsert(
-  val travelManagerId: String,
-  val userId: String,
+  @NotBlank val travelManagerId: String,
+  @NotBlank val userId: String,
   val delivery: BonvoyageNotificationDelivery,
-)
+) : Validation
 
+/**
+ * Used by administrators to create multiple travel orders at once.
+ *
+ * In this payload, the isDriver field is ignored on the [params] and is instead determined by the
+ * [driverId] field.
+ */
 @Serializable
-data class TravelExpenseInsert(
-  val amount: Double,
-  val currency: String,
-  val description: String,
-  val imagePath: String,
-  val imageProvider: String?,
-  val expenseCreatedAt: KOffsetDateTime,
-)
+@SchemaValidation("validateSchema")
+data class BulkInsertTrip(
+  val travelers: List<BonvoyageUser>,
+
+  /** Only necessary if the transport type is [TransportType.PERSONAL]. */
+  val driverId: String? = null,
+  val params: TravelRequestParameters,
+) : Validation {
+  fun validateSchema(): List<ValidationError> {
+    val errors = mutableListOf<ValidationError>()
+
+    if (travelers.isEmpty()) {
+      errors.addSchemaErr(message = "At least one traveler must be specified")
+    }
+
+    if (params.transportType == TransportType.PERSONAL && driverId == null) {
+      errors.addSchemaErr(message = "Driver must be specified for trips with a personal vehicle")
+    }
+
+    if (driverId != null && travelers.none { it.userId == driverId }) {
+      errors.addSchemaErr(message = "Driver must be one of the travelers")
+    }
+
+    return errors
+  }
+}
+
+/** Used by admins to directly insert trips without travel requests. */
+@Serializable
+data class InsertTrip(val traveler: BonvoyageUser, val params: TravelRequestParameters) :
+  Validation {
+  fun toTripInsert(travelOrderId: String, creatingUser: BonvoyageUser) =
+    TripInsert(
+      traveler = traveler,
+      travelOrderId = travelOrderId,
+      params = params,
+      creatingUser = creatingUser,
+    )
+}
 
 /**
  * Optional expected times can be entered in case there is more information on the exact start/end
@@ -111,7 +144,7 @@ data class TravelRequestParameters(
    * A flag enabling additional assertions upon creating the travel request, and prompts when
    * starting the trip. Ignored if the transport type is not [TransportType.PERSONAL].
    */
-  val isDriver: Boolean,
+  val isDriver: Boolean = false,
 ) : Validation {
   fun validateSchema(): List<ValidationError> {
     val errors = mutableListOf<ValidationError>()
@@ -166,14 +199,7 @@ data class TravelRequestStatusUpdate(
 /** Trip parameters. */
 @Serializable
 data class TripInsert(
-  /** User ID on the auth server. */
-  @NotBlank val userId: String,
-
-  /** User's full name. */
-  @NotBlank val userFullName: String,
-
-  /** User's email. */
-  @ValidEmail val userEmail: String,
+  val traveler: BonvoyageUser,
 
   /**
    * Travel order identifier used by accounting to link to the travel order.
@@ -181,10 +207,13 @@ data class TripInsert(
    * If provided during admin trip creation, it will be used. Otherwise, a new one will be generated
    * using the downstream travel order provider.
    */
-  @NotBlank var travelOrderId: String? = null,
+  val travelOrderId: String,
 
   /** We only need a subset of actual trip parameters when creating it. */
   val params: TravelRequestParameters,
+
+  /** User who is inserting the trip directly or by approving a travel request. */
+  val creatingUser: BonvoyageUser,
 ) : Validation
 
 @Serializable
@@ -235,6 +264,16 @@ data class TravelExpense(
   val currency: String,
   val description: String,
   val createdAt: KOffsetDateTime,
+)
+
+@Serializable
+data class TravelExpenseInsert(
+  val amount: Double,
+  val currency: String,
+  val description: String,
+  val imagePath: String,
+  val imageProvider: String?,
+  val expenseCreatedAt: KOffsetDateTime,
 )
 
 /** Used to send PDF attachments in emails. */

@@ -1,7 +1,12 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.core.NotBlank
+import net.barrage.llmao.core.Range
+import net.barrage.llmao.core.ValidEmail
+import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.model.MessageGroupAggregate
+import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.tables.records.BonvoyageTravelExpensesRecord
 import net.barrage.llmao.tables.records.BonvoyageTravelManagerUserMappingsRecord
@@ -53,6 +58,24 @@ data class BonvoyageTravelManagerUserMapping(
 )
 
 /**
+ * Holds the information for a traveler. The user ID is crucial to linking trips to the currently
+ * logged in user.
+ */
+@Serializable
+data class BonvoyageUser(
+  /** User ID on the auth server. */
+  @NotBlank val userId: String,
+
+  /** User's full name. */
+  @NotBlank val userFullName: String,
+
+  /** User's email. */
+  @NotBlank @ValidEmail val userEmail: String,
+) : Validation
+
+internal fun User.toBonvoyageUser() = BonvoyageUser(id, username, email)
+
+/**
  * Represents a request for a travel order that can be approved or rejected by travel managers.
  *
  * This entity is immutable.
@@ -62,14 +85,8 @@ data class BonvoyageTravelRequest(
   /** Primary key. */
   val id: KUUID,
 
-  /** User ID on the auth server. */
-  val userId: String,
-
-  /** Official full name of the user. */
-  val userFullName: String,
-
-  /** Email used to send travel reports. */
-  val userEmail: String,
+  /** Traveler information. */
+  val traveler: BonvoyageUser,
 
   /**
    * Current status of the request.
@@ -217,14 +234,8 @@ data class BonvoyageTrip(
   /** Unique identifier for this workflow. */
   val id: KUUID,
 
-  /** The user's ID, for the authorization server. */
-  val userId: String,
-
-  /** The full name (first + last) of the user who initiated the trip. */
-  val userFullName: String,
-
-  /** The email of the user who initiated the trip. */
-  val userEmail: String,
+  /** Traveler information. */
+  val traveler: BonvoyageUser,
 
   /** The travel order ID. Without this, trips cannot exist. */
   val travelOrderId: String,
@@ -295,6 +306,9 @@ data class BonvoyageTrip(
   /** When the database entry was last updated. */
   val updatedAt: KOffsetDateTime,
 
+  /** The user who approved/created the trip. */
+  val creatingUser: BonvoyageUser,
+
   // Fields for reminders
 
   /** Expected start time of trip, used for reminders. */
@@ -338,6 +352,10 @@ data class BonvoyageTrip(
    * can always leave this null.
    */
   val endMileage: String?,
+
+  /**
+   * Whether or not the user is the driver of the vehicle, in case of trips with personal vehicles.
+   */
   val isDriver: Boolean,
 )
 
@@ -410,10 +428,9 @@ data class BonvoyageTravelExpense(
 
 @Serializable
 data class BonvoyageTravelExpenseUpdateProperties(
-  val amount: PropertyUpdate<Double> = PropertyUpdate.Undefined,
-  val currency: PropertyUpdate<String> = PropertyUpdate.Undefined,
-  val description: PropertyUpdate<String> = PropertyUpdate.Undefined,
-  val verified: PropertyUpdate<Boolean> = PropertyUpdate.Undefined,
+  @Range(min = 0.0) val amount: PropertyUpdate<Double> = PropertyUpdate.Undefined,
+  @NotBlank val currency: PropertyUpdate<String> = PropertyUpdate.Undefined,
+  @NotBlank val description: PropertyUpdate<String> = PropertyUpdate.Undefined,
   val expenseCreatedAt: PropertyUpdate<KOffsetDateTime> = PropertyUpdate.Undefined,
 )
 
@@ -437,9 +454,12 @@ fun BonvoyageTravelManagerUserMappingsRecord.toTravelManagerUserMapping() =
 fun BonvoyageTripsRecord.toTrip() =
   BonvoyageTrip(
     id = this.id!!,
-    userId = this.userId,
-    userFullName = this.userFullName,
-    userEmail = this.userEmail,
+    traveler =
+      BonvoyageUser(
+        userId = this.userId,
+        userFullName = this.userFullName,
+        userEmail = this.userEmail,
+      ),
     travelOrderId = this.travelOrderId,
     startLocation = this.startLocation,
     stops = this.stops.split("|").filter { it.isNotBlank() },
@@ -452,6 +472,12 @@ fun BonvoyageTripsRecord.toTrip() =
     description = this.description,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
+    creatingUser =
+      BonvoyageUser(
+        userId = this.createdById,
+        userFullName = this.createdByUsername,
+        userEmail = this.createdByEmail,
+      ),
     // Reminders
     expectedStartTime = this.startReminderTime,
     expectedEndTime = this.endReminderTime,
@@ -488,9 +514,12 @@ fun BonvoyageTravelExpensesRecord.toTravelExpense() =
 fun BonvoyageTravelRequestsRecord.toTravelRequest() =
   BonvoyageTravelRequest(
     id = this.id!!,
-    userId = this.userId,
-    userFullName = this.userFullName,
-    userEmail = this.userEmail,
+    traveler =
+      BonvoyageUser(
+        userId = this.userId,
+        userFullName = this.userFullName,
+        userEmail = this.userEmail,
+      ),
     startLocation = this.startLocation,
     stops = this.stops.split("|").filter { it.isNotBlank() },
     endLocation = this.endLocation,
