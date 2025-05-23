@@ -206,6 +206,7 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_COLLECTIONS.CREATED_AT,
         AGENT_COLLECTIONS.UPDATED_AT,
         AGENT_PERMISSIONS.GROUP,
+        AGENT_PERMISSIONS.CREATED_BY,
         AGENT_TOOLS.TOOL_NAME,
       )
       .from(AGENTS)
