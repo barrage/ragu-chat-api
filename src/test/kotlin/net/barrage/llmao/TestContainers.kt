@@ -13,12 +13,6 @@ import io.weaviate.client.v1.filters.Operator
 import io.weaviate.client.v1.filters.WhereFilter
 import io.weaviate.client.v1.schema.model.Property
 import io.weaviate.client.v1.schema.model.WeaviateClass
-import java.io.FileOutputStream
-import java.io.PrintStream
-import java.lang.Thread.sleep
-import java.time.Duration
-import java.util.*
-import kotlin.random.Random
 import kotlinx.coroutines.reactive.awaitSingle
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
@@ -67,6 +61,12 @@ import org.testcontainers.containers.MinIOContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.weaviate.WeaviateContainer
+import java.io.FileOutputStream
+import java.io.PrintStream
+import java.lang.Thread.sleep
+import java.time.Duration
+import java.util.*
+import kotlin.random.Random
 
 class TestPostgres {
   val container: PostgreSQLContainer<*> =
@@ -203,7 +203,6 @@ class TestPostgres {
     model: String = "gpt-4o-mini",
     temperature: Double = 0.1,
     presencePenalty: Double? = null,
-    maxCompletionTokens: Int? = null,
     titleInstruction: String? = null,
     errorMessage: String? = null,
   ): AgentConfiguration {
@@ -218,7 +217,6 @@ class TestPostgres {
           AGENT_CONFIGURATIONS.MODEL,
           AGENT_CONFIGURATIONS.TEMPERATURE,
           AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
-          AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.ERROR_MESSAGE,
         )
@@ -230,7 +228,6 @@ class TestPostgres {
           model,
           temperature,
           presencePenalty,
-          maxCompletionTokens,
           titleInstruction,
           errorMessage,
         )

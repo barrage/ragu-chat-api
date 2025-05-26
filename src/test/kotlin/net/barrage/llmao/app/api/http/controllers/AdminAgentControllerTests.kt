@@ -141,7 +141,6 @@ class AdminAgentControllerTests : IntegrationTest() {
             model = "gpt-4o-mini",
             temperature = 0.5,
             presencePenalty = 0.5,
-            maxCompletionTokens = 100,
             instructions = AgentInstructions(titleInstruction = "title", errorMessage = "error"),
           ),
       )
@@ -163,7 +162,6 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals(1, body.configuration.version)
     assertEquals(0.5, body.configuration.temperature)
     assertEquals(0.5, body.configuration.presencePenalty)
-    assertEquals(100, body.configuration.maxCompletionTokens)
     assertEquals("error", body.configuration.agentInstructions.errorMessage)
 
     postgres.deleteTestAgent(body.agent.id)
@@ -225,7 +223,6 @@ class AdminAgentControllerTests : IntegrationTest() {
             llmProvider = "azure",
             model = "gpt-4o-mini",
             temperature = 0.5,
-            maxCompletionTokens = PropertyUpdate.Value(100),
             presencePenalty = PropertyUpdate.Value(0.5),
             instructions = null,
           ),
@@ -247,11 +244,9 @@ class AdminAgentControllerTests : IntegrationTest() {
     assertEquals("TestAgentOneUpdated", body.agent.name)
     assertEquals(0.5, body.configuration.temperature)
     assertEquals(2, body.configuration.version)
-    assertEquals(100, body.configuration.maxCompletionTokens)
     assertEquals(0.5, body.configuration.presencePenalty)
 
     // Leave out presence penalty, to assert it is left unchanged
-    // Set maxCompletionTokens to null, to assert it is changed to null
     val propertiesUpdateTest =
       """
       {
@@ -262,8 +257,7 @@ class AdminAgentControllerTests : IntegrationTest() {
           "context": "context",
           "llmProvider": "azure",
           "model": "gpt-4o-mini",
-          "temperature": 0.5,
-          "maxCompletionTokens": null
+          "temperature": 0.5
         }
       }
     """
@@ -282,30 +276,7 @@ class AdminAgentControllerTests : IntegrationTest() {
 
     assertNull(propertiesCheck.agent.description)
     assertEquals("english", propertiesCheck.agent.language)
-    assertNull(propertiesCheck.configuration.maxCompletionTokens)
     assertEquals(0.5, propertiesCheck.configuration.presencePenalty)
-
-    postgres.deleteTestAgent(agent.id)
-  }
-
-  @Test
-  fun updatingMaxCompletionTokensToZeroFails() = test { client ->
-    val agent = postgres.testAgent()
-    postgres.testAgentConfiguration(agent.id, version = 1)
-
-    val updateAgent =
-      UpdateAgent(
-        configuration = UpdateAgentConfiguration(maxCompletionTokens = PropertyUpdate.Value(0))
-      )
-
-    val response =
-      client.put("/admin/agents/${agent.id}") {
-        header(HttpHeaders.Cookie, adminAccessToken())
-        contentType(ContentType.Application.Json)
-        setBody(updateAgent)
-      }
-
-    assertEquals(422, response.status.value)
 
     postgres.deleteTestAgent(agent.id)
   }
@@ -402,7 +373,6 @@ class AdminAgentControllerTests : IntegrationTest() {
       model = "gpt-4o-mini",
       temperature = 0.1,
       presencePenalty = 0.1,
-      maxCompletionTokens = 100,
     )
     val updateAgent =
       UpdateAgent(
@@ -417,7 +387,6 @@ class AdminAgentControllerTests : IntegrationTest() {
             model = "gpt-4o-mini",
             temperature = 0.1,
             presencePenalty = PropertyUpdate.Value(0.1),
-            maxCompletionTokens = PropertyUpdate.Value(100),
           ),
       )
 

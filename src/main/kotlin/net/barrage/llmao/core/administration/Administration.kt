@@ -7,12 +7,11 @@ import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.ProvidersResponse
 import net.barrage.llmao.core.administration.settings.Settings
-import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
-import net.barrage.llmao.core.token.TokenUsage
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
-import java.time.ZoneOffset
+import net.barrage.llmao.core.token.TokenUsageAggregate
+import net.barrage.llmao.core.token.TokenUsageListParameters
+import net.barrage.llmao.types.KLocalDate
 
 object Administration {
   private lateinit var providers: ProviderState
@@ -47,21 +46,41 @@ object Administration {
     return plugins.list(settings.getAll())
   }
 
-  suspend fun getTotalTokenUsageForPeriod(from: KOffsetDateTime?, to: KOffsetDateTime?): Number {
-    if (from != null && to != null && from.isAfter(to)) {
-      throw AppError.api(ErrorReason.InvalidParameter, "'from' must be before 'to'")
+  suspend fun aggregateTokenUsage(params: TokenUsageListParameters): TokenUsageAggregate {
+    if (params.from != null && params.to != null && params.from!!.isAfter(params.to)) {
+      throw AppError.api(ErrorReason.InvalidParameter, "'dateFrom' must be before 'dateTo'")
     }
 
-    return tokenUsageRead.getTotalTokenUsageForPeriod(
-      from ?: KOffsetDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),
-      to ?: KOffsetDateTime.now(),
-    )
-  }
+    if (params.to != null && params.to!!.isAfter(KLocalDate.now())) {
+      throw AppError.api(ErrorReason.InvalidParameter, "'dateTo' must be today or in the past")
+    }
 
-  suspend fun listTokenUsage(
-    userId: String? = null,
-    agentId: KUUID? = null,
-  ): CountedList<TokenUsage> {
-    return tokenUsageRead.listUsage(userId, agentId)
+    if (params.offset != null && params.limit == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "'limit' must be provided if using 'offset'")
+    }
+
+    if (params.limit != null && params.offset == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "'offset' must be provided if using 'limit'")
+    }
+
+    if (params.limit != null && params.limit!! < 0) {
+      throw AppError.api(ErrorReason.InvalidParameter, "'limit' must be positive")
+    }
+
+    if (params.offset != null && params.offset!! < 0) {
+      throw AppError.api(ErrorReason.InvalidParameter, "'offset' must be positive")
+    }
+
+    val from = params.from ?: Period.MONTH.toDateBeforeNow()
+    val to = params.to ?: KLocalDate.now()
+
+    return tokenUsageRead.getUsageAggregateForPeriod(
+      from = from,
+      to = to,
+      userId = params.userId,
+      workflowType = params.workflowType,
+      limit = params.limit,
+      offset = params.offset,
+    )
   }
 }

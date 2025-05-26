@@ -59,6 +59,8 @@ import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
+private val json = Json { ignoreUnknownKeys = true }
+
 fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings) {
   val maxImageUploadSize = this.environment.config.string("blob.image.maxFileSize").toLong()
 
@@ -243,7 +245,7 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings)
       multipart.forEachPart { part ->
         if (part is PartData.FileItem && part.name == "agents") {
           val jsonText = part.provider().readRemaining().readString()
-          agents = Json.decodeFromString<List<AgentFull>>(jsonText)
+          agents = json.decodeFromString<List<AgentFull>>(jsonText)
         }
         part.dispose()
       }

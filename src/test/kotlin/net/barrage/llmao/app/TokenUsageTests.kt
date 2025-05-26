@@ -18,8 +18,7 @@ import net.barrage.llmao.adminAccessToken
 import net.barrage.llmao.app.workflow.chat.CHAT_WORKFLOW_ID
 import net.barrage.llmao.app.workflow.chat.model.Agent
 import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
-import net.barrage.llmao.core.model.common.CountedList
-import net.barrage.llmao.core.token.TokenUsage
+import net.barrage.llmao.core.token.TokenUsageAggregate
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.openSendAndCollect
 import org.junit.jupiter.api.BeforeAll
@@ -56,16 +55,17 @@ class TokenUsageTests : IntegrationTest() {
           header(HttpHeaders.Cookie, adminAccessToken())
           header(HttpHeaders.Accept, ContentType.Application.Json)
         }
-        .body<CountedList<TokenUsage>>()
-        .items
+        .body<TokenUsageAggregate>()
 
-    val completionUsage = usage.find { it.usageType == TokenUsageType.COMPLETION }!!
+    val completionUsage =
+      usage.usage["openai"]!!["gpt-4o"]!!.find { it.usageType == TokenUsageType.COMPLETION }!!
 
     assertEquals(CHAT_WORKFLOW_ID, completionUsage.workflowType)
     assertEquals(chatId, completionUsage.workflowId)
     assertEquals(ADMIN_USER.id, completionUsage.userId)
 
-    val titleUsage = usage.find { it.usageType == TokenUsageType.COMPLETION_TITLE }!!
+    val titleUsage =
+      usage.usage["openai"]!!["gpt-4o"]!!.find { it.usageType == TokenUsageType.COMPLETION_TITLE }!!
 
     assertEquals(CHAT_WORKFLOW_ID, titleUsage.workflowType)
     assertEquals(chatId, titleUsage.workflowId)

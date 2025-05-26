@@ -1,12 +1,14 @@
 package net.barrage.llmao.app.http
 
 import io.ktor.server.application.*
+import net.barrage.llmao.core.model.common.SortOrder
+import net.barrage.llmao.types.KLocalDate
+import net.barrage.llmao.types.KOffsetDateTime
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.jvm.isAccessible
-import net.barrage.llmao.core.model.common.SortOrder
 
 /** Annotate class fields you want to include for parsing with [query]. */
 @Target(AnnotationTarget.PROPERTY)
@@ -75,6 +77,20 @@ private fun setFieldValue(field: KMutableProperty<*>, instance: Any, value: Stri
 
       // Custom application types
       SortOrder::class -> if (value == "asc") SortOrder.ASC else SortOrder.DESC
+      KLocalDate::class ->
+        try {
+          KLocalDate.parse(value)
+        } catch (e: Exception) {
+          LOG.error("Failed to parse date: $value", e)
+          null
+        }
+      KOffsetDateTime::class ->
+        try {
+          KOffsetDateTime.parse(value)
+        } catch (e: Exception) {
+          LOG.error("Failed to parse date-time: $value", e)
+          null
+        }
       else -> null
     }
 

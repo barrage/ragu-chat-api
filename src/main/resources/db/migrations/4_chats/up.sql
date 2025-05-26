@@ -45,9 +45,6 @@ CREATE TABLE agent_configurations (
     -- Token presence penalty. Overrides global setting.
     presence_penalty FLOAT,
 
-    -- Maximum number of tokens the LLM is allowed to generate. Overrides global setting.
-    max_completion_tokens INTEGER,
-
     -- Maximum number of tokens to keep in chat histories. Overrides global setting.
     max_history_tokens INTEGER,
 

@@ -5,13 +5,15 @@ import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-import net.barrage.llmao.app.http.queryParam
+import net.barrage.llmao.app.http.query
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.PluginConfiguration
 import net.barrage.llmao.core.ProvidersResponse
 import net.barrage.llmao.core.administration.Administration
+import net.barrage.llmao.core.token.TokenUsageAggregate
+import net.barrage.llmao.core.token.TokenUsageListParameters
+import net.barrage.llmao.types.KLocalDate
 import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
 
 fun Route.administrationRoutes() {
   get("/admin/providers", providers()) {
@@ -20,23 +22,14 @@ fun Route.administrationRoutes() {
   }
 
   get("/admin/providers/llm/{provider}", providerModels()) {
-    // Safe to yell since the route won't match if there's no provider
     val provider = call.parameters["provider"]!!
     val models = Administration.listLanguageModels(provider)
     call.respond(HttpStatusCode.OK, models)
   }
 
-  get("/admin/tokens/usage/total", tokenUsageForPeriod()) {
-    val from = call.queryParam("from")?.let { KOffsetDateTime.parse(it) }
-    val to = call.queryParam("to")?.let { KOffsetDateTime.parse(it) }
-    val usage = Administration.getTotalTokenUsageForPeriod(from, to)
-    call.respond(HttpStatusCode.OK, usage)
-  }
-
-  get("/admin/tokens/usage", listTokenUsage()) {
-    val userId = call.queryParam("userId")
-    val agentId = call.queryParam("agentId")?.let { KUUID.fromString(it) }
-    val usage = Administration.listTokenUsage(userId = userId, agentId = agentId)
+  get("/admin/tokens/usage", aggregateTokenUsage()) {
+    val params = call.query(TokenUsageListParameters::class)
+    val usage = Administration.aggregateTokenUsage(params)
     call.respond(HttpStatusCode.OK, usage)
   }
 }
@@ -137,19 +130,23 @@ private fun tokenUsageForPeriod(): RouteConfig.() -> Unit = {
   }
 }
 
-private fun listTokenUsage(): RouteConfig.() -> Unit = {
+private fun aggregateTokenUsage(): RouteConfig.() -> Unit = {
   summary = "List token usage"
   description = "List token usage for the application."
   tags("admin/tokens")
   request {
-    queryParameter<KUUID>("userId") { description = "User ID" }
-    queryParameter<KUUID>("agentId") { description = "Agent ID" }
+    queryParameter<String?>("userId") { description = "User ID" }
+    queryParameter<String?>("workflowType") { description = "Workflow type" }
+    queryParameter<KLocalDate?>("from") { description = "From date" }
+    queryParameter<KLocalDate?>("to") { description = "To date" }
+    queryParameter<Int?>("limit") { description = "Limit" }
+    queryParameter<Int?>("offset") { description = "Offset" }
   }
   response {
     HttpStatusCode.OK to
       {
         description = "Token usage"
-        body<List<Number>> {}
+        body<TokenUsageAggregate> {}
       }
     HttpStatusCode.InternalServerError to
       {

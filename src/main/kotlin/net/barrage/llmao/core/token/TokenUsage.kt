@@ -2,11 +2,38 @@ package net.barrage.llmao.core.token
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.http.QueryParameter
-import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.tables.records.TokenUsageRecord
+import net.barrage.llmao.types.KLocalDate
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
 
+/**
+ * Aggregate of token usage displaying more clearly the amount of tokens used per provider and
+ * model.
+ */
+@Serializable
+data class TokenUsageAggregate(
+  /** Displays the number of entries remaining for querying. */
+  val total: Int,
+
+  /** Maps the provider ID to the model ID to the total amount of tokens used. */
+  val totalTokens: Map<String, Map<String, Int>>,
+
+  /** Full usage details, per provider and model. */
+  val usage: Map<String, Map<String, List<TokenUsage>>>,
+
+  /** The usage start. */
+  val startDate: KOffsetDateTime,
+
+  /** Usage end. */
+  val endDate: KOffsetDateTime,
+)
+
+/**
+ * TABLE: token_usage
+ *
+ * Base model for token usage.
+ */
 @Serializable
 data class TokenUsage(
   val id: Int,
@@ -22,12 +49,35 @@ data class TokenUsage(
   val createdAt: KOffsetDateTime,
 )
 
+/** DTO for querying token usage. */
 data class TokenUsageListParameters(
-  @QueryParameter var userId: String?,
-  @QueryParameter var workflowId: KUUID?,
-  @QueryParameter var period: Period,
+  /** Filter by user ID. */
+  @QueryParameter var userId: String? = null,
+
+  /** Filter by workflow type. */
+  @QueryParameter var workflowType: String? = null,
+
+  /**
+   * Display only entries after and including this date.
+   *
+   * If not provided, defaults to one month ago.
+   */
+  @QueryParameter var from: KLocalDate? = null,
+
+  /**
+   * Display only entries before and including this date.
+   *
+   * If not provided, defaults to today.
+   */
+  @QueryParameter var to: KLocalDate? = null,
+
+  /** Per page. If provided, [offset] must also be provided. */
+  @QueryParameter var limit: Int? = null,
+
+  /** Page. If provided, [limit] must also be provided. */
+  @QueryParameter var offset: Int? = null,
 ) {
-  constructor() : this(null, null, Period.MONTH)
+  constructor() : this(null, null, null, null, null, null)
 }
 
 fun TokenUsageRecord.toTokenUsage() =

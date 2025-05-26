@@ -140,7 +140,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
           AGENT_CONFIGURATIONS.TEMPERATURE,
-          AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
           AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.ERROR_MESSAGE,
@@ -190,7 +189,6 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.LLM_PROVIDER,
         AGENT_CONFIGURATIONS.MODEL,
         AGENT_CONFIGURATIONS.TEMPERATURE,
-        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
         AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
         AGENT_CONFIGURATIONS.ERROR_MESSAGE,
@@ -278,12 +276,11 @@ class AgentRepository(private val dslContext: DSLContext) {
           .insertInto(AGENT_CONFIGURATIONS)
           .set(AGENT_CONFIGURATIONS.ID, configurationId)
           .set(AGENT_CONFIGURATIONS.AGENT_ID, agentId)
-          .set(AGENT_CONFIGURATIONS.VERSION, 0)
+          .set(AGENT_CONFIGURATIONS.VERSION, 1)
           .set(AGENT_CONFIGURATIONS.CONTEXT, agent.configuration.context)
           .set(AGENT_CONFIGURATIONS.LLM_PROVIDER, agent.configuration.llmProvider)
           .set(AGENT_CONFIGURATIONS.MODEL, agent.configuration.model)
           .set(AGENT_CONFIGURATIONS.TEMPERATURE, agent.configuration.temperature)
-          .set(AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS, agent.configuration.maxCompletionTokens)
           .set(AGENT_CONFIGURATIONS.PRESENCE_PENALTY, agent.configuration.presencePenalty)
           .set(
             AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
@@ -363,7 +360,6 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.LLM_PROVIDER,
         AGENT_CONFIGURATIONS.MODEL,
         AGENT_CONFIGURATIONS.TEMPERATURE,
-        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
         AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
         AGENT_CONFIGURATIONS.ERROR_MESSAGE,
@@ -418,7 +414,6 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.LLM_PROVIDER,
         AGENT_CONFIGURATIONS.MODEL,
         AGENT_CONFIGURATIONS.TEMPERATURE,
-        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
         AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
         AGENT_CONFIGURATIONS.ERROR_MESSAGE,
@@ -492,26 +487,6 @@ class AgentRepository(private val dslContext: DSLContext) {
       ?.toAgent()
   }
 
-  suspend fun getActive(id: KUUID): Agent? {
-    return dslContext
-      .select(
-        AGENTS.ID,
-        AGENTS.NAME,
-        AGENTS.DESCRIPTION,
-        AGENTS.ACTIVE,
-        AGENTS.ACTIVE_CONFIGURATION_ID,
-        AGENTS.LANGUAGE,
-        AGENTS.AVATAR,
-        AGENTS.CREATED_AT,
-        AGENTS.UPDATED_AT,
-      )
-      .from(AGENTS)
-      .where(AGENTS.ID.eq(id).and(AGENTS.ACTIVE.isTrue))
-      .awaitFirstOrNull()
-      ?.into(AGENTS)
-      ?.toAgent()
-  }
-
   suspend fun create(create: CreateAgent): AgentWithConfiguration {
     return dslContext.transactionCoroutine { tx ->
       val context = DSL.using(tx)
@@ -536,7 +511,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           .set(AGENT_CONFIGURATIONS.LLM_PROVIDER, create.configuration.llmProvider)
           .set(AGENT_CONFIGURATIONS.MODEL, create.configuration.model)
           .set(AGENT_CONFIGURATIONS.TEMPERATURE, create.configuration.temperature)
-          .set(AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS, create.configuration.maxCompletionTokens)
           .set(AGENT_CONFIGURATIONS.PRESENCE_PENALTY, create.configuration.presencePenalty)
           .set(
             AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
@@ -635,19 +609,24 @@ class AgentRepository(private val dslContext: DSLContext) {
         update.model != null && update.model != current.model ||
         update.temperature != null && update.temperature != current.temperature)
 
-    val optionalChanged =
-      (update.maxCompletionTokens !is PropertyUpdate.Undefined &&
-        update.maxCompletionTokens.value() != current.maxCompletionTokens) ||
-        (update.presencePenalty !is PropertyUpdate.Undefined &&
-          update.presencePenalty.value() != current.presencePenalty) ||
-        (update.instructions != null &&
-          (update.instructions.titleInstruction !is PropertyUpdate.Undefined &&
-            update.instructions.titleInstruction.value() !=
-              current.agentInstructions.titleInstruction) &&
-          (update.instructions.errorMessage !is PropertyUpdate.Undefined &&
-            update.instructions.errorMessage.value() != current.agentInstructions.errorMessage))
+    val presencePenaltyChanged =
+      update.presencePenalty !is PropertyUpdate.Undefined &&
+        update.presencePenalty.value() != current.presencePenalty
 
-    return requiredChanged || optionalChanged
+    val titleInstructionChanged =
+      (update.instructions != null &&
+        update.instructions.titleInstruction !is PropertyUpdate.Undefined &&
+        update.instructions.titleInstruction.value() != current.agentInstructions.titleInstruction)
+
+    val errorMessageChanged =
+      (update.instructions != null &&
+        update.instructions.errorMessage !is PropertyUpdate.Undefined &&
+        update.instructions.errorMessage.value() != current.agentInstructions.errorMessage)
+
+    return requiredChanged ||
+      presencePenaltyChanged ||
+      titleInstructionChanged ||
+      errorMessageChanged
   }
 
   suspend fun delete(id: KUUID): Int {
@@ -840,7 +819,6 @@ class AgentRepository(private val dslContext: DSLContext) {
           AGENT_CONFIGURATIONS.LLM_PROVIDER,
           AGENT_CONFIGURATIONS.MODEL,
           AGENT_CONFIGURATIONS.TEMPERATURE,
-          AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
           AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
           AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
           AGENT_CONFIGURATIONS.ERROR_MESSAGE,
@@ -869,7 +847,6 @@ class AgentRepository(private val dslContext: DSLContext) {
         AGENT_CONFIGURATIONS.LLM_PROVIDER,
         AGENT_CONFIGURATIONS.MODEL,
         AGENT_CONFIGURATIONS.TEMPERATURE,
-        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
         AGENT_CONFIGURATIONS.PRESENCE_PENALTY,
         AGENT_CONFIGURATIONS.TITLE_INSTRUCTION,
         AGENT_CONFIGURATIONS.ERROR_MESSAGE,
@@ -1007,11 +984,6 @@ private fun UpdateAgentConfiguration.insertSet(
       .set(llmProvider, AGENT_CONFIGURATIONS.LLM_PROVIDER, currentConfiguration.llmProvider)
       .set(model, AGENT_CONFIGURATIONS.MODEL, currentConfiguration.model)
       .set(temperature, AGENT_CONFIGURATIONS.TEMPERATURE, currentConfiguration.temperature)
-      .set(
-        maxCompletionTokens,
-        AGENT_CONFIGURATIONS.MAX_COMPLETION_TOKENS,
-        defaultIfUndefined = currentConfiguration.maxCompletionTokens,
-      )
       .set(
         presencePenalty,
         AGENT_CONFIGURATIONS.PRESENCE_PENALTY,

@@ -151,7 +151,6 @@ object ChatWorkflowFactory : WorkflowFactory {
           presencePenalty =
             agent.configuration.presencePenalty
               ?: settings.getOptional(AgentPresencePenalty.KEY)?.toDouble(),
-          maxTokens = agent.configuration.maxCompletionTokens,
         ),
       tokenTracker = tokenTracker,
       history =

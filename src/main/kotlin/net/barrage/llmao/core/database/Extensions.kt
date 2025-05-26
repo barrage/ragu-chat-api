@@ -11,7 +11,11 @@ import org.jooq.UpdateSetStep
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
 
-/** Utility for setting a condition to match the value if it is not null. */
+/**
+ * Utility for setting a condition to match the value if it is not null.
+ *
+ * Outputs either `TABLE_FIELD.eq(field)` or `DSL.noCondition()`.
+ */
 fun <R : Record, T> T?.optionalEq(field: TableField<R, T>): Condition =
   this?.let { field.eq(it) } ?: DSL.noCondition()
 

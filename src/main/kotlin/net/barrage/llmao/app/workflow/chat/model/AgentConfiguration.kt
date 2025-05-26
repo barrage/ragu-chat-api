@@ -34,9 +34,6 @@ data class AgentConfiguration(
   /** LLM LSD consumption amount. */
   val temperature: Double,
 
-  /** Maximum number of tokens to generate. */
-  val maxCompletionTokens: Int?,
-
   /**
    * Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear
    * in the text so far, increasing the model's likelihood to talk about new topics.
@@ -62,7 +59,6 @@ fun AgentConfigurationsRecord.toAgentConfiguration() =
     temperature = this.temperature!!,
     agentInstructions =
       AgentInstructions(titleInstruction = this.titleInstruction, errorMessage = this.errorMessage),
-    maxCompletionTokens = this.maxCompletionTokens,
     presencePenalty = this.presencePenalty,
     createdAt = this.createdAt!!,
     updatedAt = this.updatedAt!!,
@@ -74,7 +70,6 @@ data class CreateAgentConfiguration(
   @NotBlank val llmProvider: String,
   @NotBlank val model: String,
   @Range(min = 0.0, max = 1.0) val temperature: Double? = 0.1,
-  @Range(min = 1.0) val maxCompletionTokens: Int? = null,
   @Range(min = -2.0, max = 2.0) val presencePenalty: Double? = 0.0,
   val instructions: AgentInstructions? = null,
 ) : Validation
@@ -87,11 +82,6 @@ data class UpdateAgentConfiguration(
   @NotBlank val llmProvider: String? = null,
   @NotBlank val model: String? = null,
   @Range(min = 0.0, max = 1.0) val temperature: Double? = null,
-
-  /** Max completion tokens the agent is allowed to generate during completion. */
-  @Range(min = 1.0)
-  @EncodeDefault(EncodeDefault.Mode.NEVER)
-  val maxCompletionTokens: PropertyUpdate<Int> = PropertyUpdate.Undefined,
 
   /** Repetition penalty. */
   @Range(min = -2.0, max = 2.0)
