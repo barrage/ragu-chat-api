@@ -1,6 +1,8 @@
 package net.barrage.llmao.core.token
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.app.http.QueryParameter
+import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.tables.records.TokenUsageRecord
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
@@ -19,6 +21,14 @@ data class TokenUsage(
   val note: String?,
   val createdAt: KOffsetDateTime,
 )
+
+data class TokenUsageListParameters(
+  @QueryParameter var userId: String?,
+  @QueryParameter var workflowId: KUUID?,
+  @QueryParameter var period: Period,
+) {
+  constructor() : this(null, null, Period.MONTH)
+}
 
 fun TokenUsageRecord.toTokenUsage() =
   TokenUsage(

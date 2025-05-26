@@ -1,13 +1,19 @@
 package net.barrage.llmao.core.database
 
 import net.barrage.llmao.core.model.common.PropertyUpdate
+import org.jooq.Condition
 import org.jooq.InsertOnDuplicateSetMoreStep
 import org.jooq.InsertSetMoreStep
 import org.jooq.Record
 import org.jooq.TableField
 import org.jooq.UpdateSetMoreStep
 import org.jooq.UpdateSetStep
+import org.jooq.impl.DSL
 import org.jooq.impl.DSL.excluded
+
+/** Utility for setting a condition to match the value if it is not null. */
+fun <R : Record, T> T?.optionalEq(field: TableField<R, T>): Condition =
+  this?.let { field.eq(it) } ?: DSL.noCondition()
 
 /**
  * Utility for including a SET statement in a DSLContext update statement.
