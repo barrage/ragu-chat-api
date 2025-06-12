@@ -3,7 +3,7 @@ package net.barrage.llmao.app.http
 import io.ktor.server.application.ApplicationCall
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /**
  * Utility for quickly obtaining a path segment from a URL and converting it to a UUID. Throws an

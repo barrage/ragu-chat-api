@@ -11,8 +11,8 @@ import net.barrage.llmao.tables.records.MessageAttachmentsRecord
 import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
 import net.barrage.llmao.tables.records.MessageGroupsRecord
 import net.barrage.llmao.tables.records.MessagesRecord
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 
 /**
  * TABLE: message_groups

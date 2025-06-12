@@ -18,7 +18,7 @@ import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.StreamChunk
 import net.barrage.llmao.core.workflow.StreamComplete
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 import org.junit.jupiter.api.Assertions.assertNotNull
 
 val json = Json { ignoreUnknownKeys = true }

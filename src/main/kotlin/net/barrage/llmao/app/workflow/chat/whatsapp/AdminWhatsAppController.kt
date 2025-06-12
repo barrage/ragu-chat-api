@@ -21,7 +21,7 @@ import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 fun Route.adminWhatsAppRoutes(whatsAppAdapter: WhatsAppAdapter) {
   route("/admin/whatsapp/agent") {

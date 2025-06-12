@@ -10,7 +10,7 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.repository.MessageRepository
 import net.barrage.llmao.tables.references.CHATS
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 

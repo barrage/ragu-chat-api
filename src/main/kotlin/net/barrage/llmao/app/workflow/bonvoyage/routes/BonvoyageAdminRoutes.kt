@@ -29,7 +29,7 @@ import net.barrage.llmao.app.workflow.bonvoyage.TravelRequestStatusUpdate
 import net.barrage.llmao.app.workflow.bonvoyage.toBonvoyageUser
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 fun Route.bonvoyageAdminRoutes(api: BonvoyageAdminApi) {
   route("/bonvoyage/admin") {

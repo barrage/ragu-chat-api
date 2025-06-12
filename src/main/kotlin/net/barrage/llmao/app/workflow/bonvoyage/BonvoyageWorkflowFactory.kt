@@ -16,7 +16,7 @@ import net.barrage.llmao.core.token.TokenUsageTrackerFactory
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 object BonvoyageWorkflowFactory : WorkflowFactory {
   private lateinit var providers: ProviderState

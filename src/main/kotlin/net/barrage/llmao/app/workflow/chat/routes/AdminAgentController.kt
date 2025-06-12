@@ -56,8 +56,8 @@ import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.string
 import net.barrage.llmao.tryUuid
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 
 private val json = Json { ignoreUnknownKeys = true }
 

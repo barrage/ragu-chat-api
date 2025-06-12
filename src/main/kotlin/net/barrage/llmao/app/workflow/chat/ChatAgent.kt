@@ -11,7 +11,7 @@ import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.core.workflow.WorkflowAgent
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /**
  * Implementation of [WorkflowAgent] for custom chat agents.

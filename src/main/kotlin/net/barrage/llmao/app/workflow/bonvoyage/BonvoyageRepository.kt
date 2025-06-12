@@ -19,10 +19,10 @@ import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_MANAGER_USER_MAPPING
 import net.barrage.llmao.tables.references.BONVOYAGE_TRAVEL_REQUESTS
 import net.barrage.llmao.tables.references.BONVOYAGE_TRIPS
 import net.barrage.llmao.tables.references.BONVOYAGE_TRIP_WELCOME_MESSAGES
-import net.barrage.llmao.types.KLocalDate
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KOffsetTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KLocalDate
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KOffsetTime
+import net.barrage.llmao.core.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.kotlin.coroutines.transactionCoroutine

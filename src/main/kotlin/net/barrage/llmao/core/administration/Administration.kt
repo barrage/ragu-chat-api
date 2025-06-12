@@ -11,7 +11,7 @@ import net.barrage.llmao.core.model.common.Period
 import net.barrage.llmao.core.repository.TokenUsageRepositoryRead
 import net.barrage.llmao.core.token.TokenUsageAggregate
 import net.barrage.llmao.core.token.TokenUsageListParameters
-import net.barrage.llmao.types.KLocalDate
+import net.barrage.llmao.core.types.KLocalDate
 
 object Administration {
   private lateinit var providers: ProviderState

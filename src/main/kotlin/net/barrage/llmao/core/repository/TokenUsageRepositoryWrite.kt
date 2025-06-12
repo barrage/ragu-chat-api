@@ -3,7 +3,7 @@ package net.barrage.llmao.core.repository
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.tables.references.TOKEN_USAGE
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 import org.jooq.DSLContext
 
 class TokenUsageRepositoryWrite(private val dslContext: DSLContext) {

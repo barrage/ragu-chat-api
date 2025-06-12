@@ -19,7 +19,7 @@ import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_ATTACHMENTS
 import net.barrage.llmao.tables.references.MESSAGE_GROUPS
 import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 

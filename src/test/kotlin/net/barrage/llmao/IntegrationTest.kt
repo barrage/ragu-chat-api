@@ -20,7 +20,7 @@ import java.util.*
 import kotlinx.serialization.json.Json
 import net.barrage.llmao.app.workflow.chat.WHATSAPP_FEATURE_FLAG
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KOffsetDateTime
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance

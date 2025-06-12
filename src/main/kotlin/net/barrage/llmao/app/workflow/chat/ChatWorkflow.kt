@@ -11,7 +11,7 @@ import net.barrage.llmao.core.workflow.DefaultWorkflowInput
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.core.workflow.WorkflowRealTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** Implementation of a [WorkflowRealTime] for user-created agents. */
 class ChatWorkflow(

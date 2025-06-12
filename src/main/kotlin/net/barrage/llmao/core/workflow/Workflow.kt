@@ -1,7 +1,7 @@
 package net.barrage.llmao.core.workflow
 
 import kotlinx.serialization.json.JsonElement
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** A workflow represents a real-time session between a user and an agent (or multiple). */
 interface Workflow {

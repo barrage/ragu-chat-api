@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.model.MessageAttachment
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.token.TokenUsageAmount
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** Top level response from the LLM whose finish reason can include a manual stop. */
 data class InferenceResponse(val finishReason: FinishReason, val messages: List<ChatMessage>)

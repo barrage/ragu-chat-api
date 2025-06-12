@@ -1,10 +1,8 @@
 package net.barrage.llmao.error
 
 import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.plugins.requestvalidation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -19,7 +17,7 @@ import net.barrage.llmao.core.Range
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

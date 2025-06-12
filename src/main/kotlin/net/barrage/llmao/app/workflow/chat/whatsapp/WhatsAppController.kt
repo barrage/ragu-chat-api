@@ -14,7 +14,7 @@ import net.barrage.llmao.app.http.user
 import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 fun Route.whatsAppHookRoutes(whatsAppAdapter: WhatsAppAdapter) {
   post("/whatsapp/webhook", infobipResponse()) {

@@ -29,8 +29,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 import net.barrage.llmao.core.AppError
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.OffsetDateTimeSerializer
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.OffsetDateTimeSerializer
 
 private val json = Json { ignoreUnknownKeys = true }
 

@@ -2,7 +2,7 @@ package net.barrage.llmao.core.vector
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.Identity
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 interface VectorDatabase : Identity {
   /** Perform semantic similarity search using the given `queries`. */

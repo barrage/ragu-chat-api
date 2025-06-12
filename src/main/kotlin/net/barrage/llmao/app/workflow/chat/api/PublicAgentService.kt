@@ -8,7 +8,7 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** End-user agent API. */
 class PublicAgentService(

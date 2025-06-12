@@ -6,8 +6,8 @@ import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.tables.records.ChatsRecord
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 
 /** Base model with its messages. */
 @Serializable

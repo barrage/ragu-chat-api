@@ -10,10 +10,10 @@ import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.ValidationError
 import net.barrage.llmao.core.addSchemaErr
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.types.KLocalDate
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KOffsetTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KLocalDate
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KOffsetTime
+import net.barrage.llmao.core.types.KUUID
 
 @Serializable
 data class TravelManagerUserMappingInsert(

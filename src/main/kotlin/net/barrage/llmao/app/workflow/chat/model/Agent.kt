@@ -11,8 +11,9 @@ import net.barrage.llmao.core.model.common.TimeSeries
 import net.barrage.llmao.tables.records.AgentPermissionsRecord
 import net.barrage.llmao.tables.records.AgentToolsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
+import java.time.LocalDate
 
 @Serializable
 data class Agent(

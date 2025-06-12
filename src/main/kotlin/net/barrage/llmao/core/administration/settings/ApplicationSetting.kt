@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.tables.records.ApplicationSettingsRecord
-import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KOffsetDateTime
 
 /** The ID of the agent used for WhatsApp. */
 data object WhatsappAgentId {

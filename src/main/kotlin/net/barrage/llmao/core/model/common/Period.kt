@@ -1,7 +1,7 @@
 package net.barrage.llmao.core.model.common
 
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.types.KLocalDate
+import net.barrage.llmao.core.types.KLocalDate
 import org.jooq.DatePart
 
 @Serializable

@@ -1,4 +1,4 @@
-package net.barrage.llmao.types
+package net.barrage.llmao.core.types
 
 import java.time.OffsetDateTime
 import java.time.ZoneOffset

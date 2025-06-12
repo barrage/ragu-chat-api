@@ -40,7 +40,7 @@ import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
 import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
 import net.barrage.llmao.tables.references.AGENT_PERMISSIONS
 import net.barrage.llmao.tables.references.AGENT_TOOLS
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.InsertSetMoreStep

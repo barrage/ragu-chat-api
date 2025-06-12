@@ -36,7 +36,9 @@ import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
+import java.io.ByteArrayOutputStream
+import com.itextpdf.layout.element.Image as PdfImage
 
 class BonvoyageAdminApi(
   private val repository: BonvoyageRepository,

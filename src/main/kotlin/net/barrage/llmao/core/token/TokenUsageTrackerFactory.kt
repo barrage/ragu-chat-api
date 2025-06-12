@@ -1,7 +1,7 @@
 package net.barrage.llmao.core.token
 
 import net.barrage.llmao.core.repository.TokenUsageRepositoryWrite
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** Used for tracking token usage when embedding and performing inference. */
 object TokenUsageTrackerFactory {

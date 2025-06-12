@@ -13,8 +13,8 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.workflow.Emitter
 import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.core.workflow.WorkflowRealTime
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KUUID
 
 /** Real time workflow used for chatting and for uploading/editing expenses. */
 class BonvoyageWorkflow(

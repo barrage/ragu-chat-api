@@ -5,7 +5,7 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.Identity
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /**
  * Implement on classes that produce workflows.

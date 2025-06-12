@@ -1,7 +1,7 @@
 package net.barrage.llmao.core.workflow
 
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** Handles the registration and removal of WS tokens. */
 class SessionTokenManager(private val maxTokensPerUser: Int = 100) {

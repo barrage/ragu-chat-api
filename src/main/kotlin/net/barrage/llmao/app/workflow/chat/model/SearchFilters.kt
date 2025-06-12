@@ -3,7 +3,7 @@ package net.barrage.llmao.app.workflow.chat.model
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.app.http.QueryParameter
 import net.barrage.llmao.tryUuid
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 data class SearchFiltersAdminAgents(val name: String?, val active: Boolean?)
 

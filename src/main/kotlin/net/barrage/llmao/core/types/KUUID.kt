@@ -1,4 +1,4 @@
-package net.barrage.llmao.types
+package net.barrage.llmao.core.types
 
 import java.util.*
 import kotlinx.serialization.KSerializer

@@ -11,7 +11,7 @@ import net.barrage.llmao.core.vector.CollectionQuery
 import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.core.vector.VectorDatabase
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.vector.Weaviate")
 

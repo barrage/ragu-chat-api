@@ -9,7 +9,7 @@ import net.barrage.llmao.core.llm.ToolDefinition
 import net.barrage.llmao.core.llm.ToolFunctionDefinition
 import net.barrage.llmao.core.llm.ToolFunctionParameters
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 const val GET_BIRTHDAY = "get_agent_birthday"
 

@@ -31,7 +31,7 @@ import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 class AdminAgentService(
   private val providers: ProviderState,

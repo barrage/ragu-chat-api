@@ -36,7 +36,7 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.state
 import net.barrage.llmao.core.workflow.SessionManager
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 // TODO: Remove in favor of annotation processing at one point
 private const val JIRAKIRA_FEATURE_FLAG = "ktor.features.specialists.jirakira"
@@ -47,7 +47,7 @@ fun main(args: Array<String>) = EngineMain.main(args)
 fun Application.module() {
   val plugins = Plugins()
   val state = state(plugins)
-
+  
   plugins.register(ChatPlugin())
   plugins.register(HgkPlugin())
 

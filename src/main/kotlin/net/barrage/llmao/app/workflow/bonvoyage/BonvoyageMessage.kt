@@ -7,7 +7,7 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.model.IncomingImageData
 import net.barrage.llmao.core.workflow.DefaultWorkflowInput
 import net.barrage.llmao.core.workflow.WorkflowOutput
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable

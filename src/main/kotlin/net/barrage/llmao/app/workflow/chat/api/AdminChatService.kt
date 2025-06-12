@@ -15,7 +15,7 @@ import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.Period
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** Handles Chat CRUD. */
 class AdminChatService(

@@ -8,7 +8,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.Email
-import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KOffsetDateTime
 
 class BonvoyageNotificationScheduler(
   private val email: Email,

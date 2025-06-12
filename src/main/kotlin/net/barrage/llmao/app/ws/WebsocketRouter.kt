@@ -27,7 +27,7 @@ import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.StreamChunk
 import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.core.workflow.WorkflowOutput
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 private val LOG = KtorSimpleLogger("n.b.l.a.api.ws.WebsocketRouter")
 

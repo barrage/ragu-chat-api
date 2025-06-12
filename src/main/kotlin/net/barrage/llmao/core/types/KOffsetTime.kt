@@ -1,6 +1,6 @@
-package net.barrage.llmao.types
+package net.barrage.llmao.core.types
 
-import java.time.LocalDate
+import java.time.OffsetTime
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -9,18 +9,18 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-typealias KLocalDate = @Serializable(with = LocalDateSerializer::class) LocalDate
+typealias KOffsetTime = @Serializable(with = OffsetTimeSerializer::class) OffsetTime
 
-object LocalDateSerializer : KSerializer<LocalDate> {
+object OffsetTimeSerializer : KSerializer<OffsetTime> {
   override val descriptor: SerialDescriptor =
-    PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
+    PrimitiveSerialDescriptor("LocalTime", PrimitiveKind.STRING)
 
-  override fun serialize(encoder: Encoder, value: LocalDate) {
+  override fun serialize(encoder: Encoder, value: OffsetTime) {
     encoder.encodeString(value.toString())
   }
 
-  override fun deserialize(decoder: Decoder): LocalDate {
+  override fun deserialize(decoder: Decoder): OffsetTime {
     val string = decoder.decodeString()
-    return LocalDate.parse(string)
+    return OffsetTime.parse(string)
   }
 }

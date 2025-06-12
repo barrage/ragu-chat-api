@@ -9,9 +9,9 @@ import net.barrage.llmao.core.token.TokenUsage
 import net.barrage.llmao.core.token.TokenUsageAggregate
 import net.barrage.llmao.core.token.toTokenUsage
 import net.barrage.llmao.tables.references.TOKEN_USAGE
-import net.barrage.llmao.types.KLocalDate
-import net.barrage.llmao.types.KOffsetDateTime
-import net.barrage.llmao.types.KOffsetTime
+import net.barrage.llmao.core.types.KLocalDate
+import net.barrage.llmao.core.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KOffsetTime
 import org.jooq.DSLContext
 
 class TokenUsageRepositoryRead(private val dslContext: DSLContext) {

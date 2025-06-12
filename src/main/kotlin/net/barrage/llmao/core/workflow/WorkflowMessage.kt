@@ -9,7 +9,7 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageAttachment
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 /** Standard input to all workflows. */
 @Serializable

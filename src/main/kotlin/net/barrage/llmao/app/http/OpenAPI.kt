@@ -21,7 +21,7 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.Route
 import io.swagger.v3.oas.models.media.Schema
 import net.barrage.llmao.core.model.common.PropertyUpdate
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 fun Route.openApiRoutes() {
   route("openapi.json") { openApi() }

@@ -12,8 +12,8 @@ import net.barrage.llmao.core.ProvidersResponse
 import net.barrage.llmao.core.administration.Administration
 import net.barrage.llmao.core.token.TokenUsageAggregate
 import net.barrage.llmao.core.token.TokenUsageListParameters
-import net.barrage.llmao.types.KLocalDate
-import net.barrage.llmao.types.KOffsetDateTime
+import net.barrage.llmao.core.types.KLocalDate
+import net.barrage.llmao.core.types.KOffsetDateTime
 
 fun Route.administrationRoutes() {
   get("/admin/providers", providers()) {

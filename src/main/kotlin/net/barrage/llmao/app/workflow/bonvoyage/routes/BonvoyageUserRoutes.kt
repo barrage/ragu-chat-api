@@ -37,7 +37,7 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.IncomingImageData
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageGroupAggregate
-import net.barrage.llmao.types.KUUID
+import net.barrage.llmao.core.types.KUUID
 
 fun Route.bonvoyageUserRoutes(api: BonvoyageUserApi) {
   route("/bonvoyage/managers") {
