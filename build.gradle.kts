@@ -1,4 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import nu.studer.gradle.jooq.JooqEdition
 import org.jooq.meta.jaxb.Logging
 import org.liquibase.gradle.LiquibaseTask
@@ -17,7 +16,6 @@ plugins {
     id("io.ktor.plugin") version "3.1.1"
     id("nu.studer.jooq") version "9.0"
     id("com.ncorti.ktfmt.gradle") version "0.20.1"
-    id("com.gradleup.shadow") version "8.3.3"
     id("org.liquibase.gradle") version "2.2.2"
 }
 
@@ -130,6 +128,7 @@ dependencies {
 
     // MinIO
     implementation("io.minio:minio:8.5.15")
+    implementation(project(":core"))
 }
 
 // Ensures all properties are set in gradle.properties and throws a user friendly error if not
@@ -243,11 +242,11 @@ tasks.named("build") { dependsOn("generateJooq") }
 
 tasks.named("generateJooq") { dependsOn("liquibaseUpdate") }
 
-tasks.matching { it.name != "stopBuildDb" && !it.name.contains("ktfmt") }.all { finalizedBy("stopBuildDb") }
+tasks.matching { it.name != "stopBuildDb" && !it.name.contains("ktfmt") }
+    .all { finalizedBy("stopBuildDb") }
 
 tasks.withType<Jar> { exclude("application.conf") }
 
-tasks.withType<ShadowJar> { mergeServiceFiles() }
 
 tasks.withType<LiquibaseTask> {
     logging.captureStandardError(LogLevel.QUIET)
