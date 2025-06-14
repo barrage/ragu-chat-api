@@ -8,4 +8,4 @@ import kotlinx.serialization.json.Json
 
 /** Initialize Ktor's [HttpClient] with JSON content negotiation. */
 fun httpClient(): HttpClient =
-    HttpClient(CIO) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+  HttpClient(CIO) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }

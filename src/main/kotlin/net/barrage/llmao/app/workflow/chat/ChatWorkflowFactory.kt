@@ -32,180 +32,174 @@ import net.barrage.llmao.core.workflow.Workflow
 import net.barrage.llmao.core.workflow.WorkflowFactory
 
 object ChatWorkflowFactory : WorkflowFactory {
-    private lateinit var providers: ProviderState
-    private lateinit var api: Api
-    private lateinit var agentRepository: AgentRepository
-    private lateinit var settings: Settings
-    private lateinit var chatRepositoryRead: ChatRepositoryRead
-    private lateinit var chatRepositoryWrite: ChatRepositoryWrite
+  private lateinit var providers: ProviderState
+  private lateinit var api: Api
+  private lateinit var agentRepository: AgentRepository
+  private lateinit var settings: Settings
+  private lateinit var chatRepositoryRead: ChatRepositoryRead
+  private lateinit var chatRepositoryWrite: ChatRepositoryWrite
 
-    fun init(providers: ProviderState, api: Api, state: ApplicationState) {
-        val chatRead = ChatRepositoryRead(state.database, CHAT_WORKFLOW_ID)
-        val chatWrite = ChatRepositoryWrite(state.database, CHAT_WORKFLOW_ID)
-        val agentRepository = AgentRepository(state.database)
+  fun init(providers: ProviderState, api: Api, state: ApplicationState) {
+    val chatRead = ChatRepositoryRead(state.database, CHAT_WORKFLOW_ID)
+    val chatWrite = ChatRepositoryWrite(state.database, CHAT_WORKFLOW_ID)
+    val agentRepository = AgentRepository(state.database)
 
-        this.providers = providers
-        this.api = api
-        this.agentRepository = agentRepository
-        settings = state.settings
-        chatRepositoryRead = chatRead
-        chatRepositoryWrite = chatWrite
+    this.providers = providers
+    this.api = api
+    this.agentRepository = agentRepository
+    settings = state.settings
+    chatRepositoryRead = chatRead
+    chatRepositoryWrite = chatWrite
+  }
+
+  override fun id(): String = CHAT_WORKFLOW_ID
+
+  override suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow {
+    if (params == null) {
+      throw AppError.api(ErrorReason.InvalidParameter, "Missing agent ID in creation parameters")
     }
 
-    override fun id(): String = CHAT_WORKFLOW_ID
+    val agentId = Json.decodeFromJsonElement(NewChatWorkflow.serializer(), params).agentId
+    val id = KUUID.randomUUID()
 
-    override suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow {
-        if (params == null) {
-            throw AppError.api(
-                ErrorReason.InvalidParameter,
-                "Missing agent ID in creation parameters"
-            )
-        }
+    val agent =
+      if (user.isAdmin()) {
+        // Load it regardless of active status
+        api.admin.agent.getFull(agentId)
+      } else {
+        api.user.agent.getFull(agentId, user.entitlements)
+      }
 
-        val agentId = Json.decodeFromJsonElement(NewChatWorkflow.serializer(), params).agentId
-        val id = KUUID.randomUUID()
+    val chatAgent = createChatAgent(id, user.id, user.username, user.entitlements, agent)
 
-        val agent =
-            if (user.isAdmin()) {
-                // Load it regardless of active status
-                api.admin.agent.getFull(agentId)
-            } else {
-                api.user.agent.getFull(agentId, user.entitlements)
-            }
+    return ChatWorkflow(
+      id = id,
+      agent = chatAgent,
+      emitter = emitter,
+      repository = chatRepositoryWrite,
+      state = ChatWorkflowState.New,
+      user = user,
+      tools = loadAgentTools(agent.agent.id),
+    )
+  }
 
-        val chatAgent = createChatAgent(id, user.id, user.username, user.entitlements, agent)
+  override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
+    // TODO: Pagination
+    val chat =
+      chatRepositoryRead.getWithMessages(
+        id = workflowId,
+        userId = user.id,
+        pagination = Pagination(1, 200),
+      ) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
 
-        return ChatWorkflow(
-            id = id,
-            agent = chatAgent,
-            emitter = emitter,
-            repository = chatRepositoryWrite,
-            state = ChatWorkflowState.New,
-            user = user,
-            tools = loadAgentTools(agent.agent.id),
-        )
+    val agent =
+      if (user.isAdmin()) api.admin.agent.getFull(chat.chat.agentId)
+      else {
+        api.user.agent.getFull(chat.chat.agentId, user.entitlements)
+      }
+
+    val chatAgent = createChatAgent(workflowId, user.id, user.username, user.entitlements, agent)
+
+    chatAgent.addToHistory(
+      chat.messages.items.flatMap { it.messages }.map(ChatMessageProcessor::loadToChatMessage)
+    )
+
+    return ChatWorkflow(
+      id = chat.chat.id,
+      user = user,
+      agent = chatAgent,
+      emitter = emitter,
+      repository = chatRepositoryWrite,
+      state = ChatWorkflowState.Persisted(chat.chat.title!!),
+      tools = loadAgentTools(agent.agent.id),
+    )
+  }
+
+  suspend fun createChatAgent(
+    workflowId: KUUID,
+    userId: String,
+    username: String,
+    entitlements: List<String>,
+    agent: AgentFull,
+  ): ChatAgent {
+    val tokenizer = Encoder.tokenizer(agent.configuration.model)
+
+    val settings = settings.getAll()
+
+    val tokenTracker =
+      TokenUsageTrackerFactory.newTracker(userId, username, CHAT_WORKFLOW_ID, workflowId)
+
+    val contextEnrichment =
+      ContextEnrichmentFactory.collectionEnrichment(
+        userEntitlements = entitlements,
+        tokenTracker = tokenTracker,
+        collections = agent.collections,
+      )
+
+    return ChatAgent(
+      agentId = agent.agent.id,
+      configuration = agent.configuration,
+      name = agent.agent.name,
+      titleMaxTokens =
+        settings.getOptional(AgentTitleMaxCompletionTokens.KEY)?.toInt()
+          ?: AgentTitleMaxCompletionTokens.DEFAULT,
+      inferenceProvider = providers.llm[agent.configuration.llmProvider],
+      completionParameters =
+        ChatCompletionBaseParameters(
+          model = agent.configuration.model,
+          temperature = agent.configuration.temperature,
+          presencePenalty =
+            agent.configuration.presencePenalty
+              ?: settings.getOptional(AgentPresencePenalty.KEY)?.toDouble(),
+        ),
+      tokenTracker = tokenTracker,
+      history =
+        tokenizer?.let {
+          TokenBasedHistory(
+            messages = mutableListOf(),
+            tokenizer = it,
+            maxTokens =
+              settings.getOptional(MaxHistoryTokens.KEY)?.toInt() ?: MaxHistoryTokens.DEFAULT,
+          )
+        } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
+      contextEnrichment = contextEnrichment?.let { listOf(it) },
+    )
+  }
+
+  private suspend fun loadAgentTools(agentId: KUUID): Tools? {
+    val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
+
+    if (agentTools.isEmpty()) {
+      return null
     }
 
-    override suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow {
-        // TODO: Pagination
-        val chat =
-            chatRepositoryRead.getWithMessages(
-                id = workflowId,
-                userId = user.id,
-                pagination = Pagination(1, 200),
-            ) ?: throw AppError.api(ErrorReason.EntityDoesNotExist, "Chat not found")
+    val toolchain = ToolsBuilder()
 
-        val agent =
-            if (user.isAdmin()) api.admin.agent.getFull(chat.chat.agentId)
-            else {
-                api.user.agent.getFull(chat.chat.agentId, user.entitlements)
-            }
+    for (tool in agentTools) {
+      val definition = ChatToolExecutor.getToolDefinition(tool)
+      if (definition == null) {
+        LOG.warn("Attempted to load tool '$tool' but it does not exist in the tool registry")
+        continue
+      }
 
-        val chatAgent =
-            createChatAgent(workflowId, user.id, user.username, user.entitlements, agent)
+      val handler = ChatToolExecutor.getToolFunction(tool)
+      if (handler == null) {
+        LOG.warn("Attempted to load tool '$tool' but it does not have a handler")
+        continue
+      }
 
-        chatAgent.addToHistory(
-            chat.messages.items.flatMap { it.messages }.map(ChatMessageProcessor::loadToChatMessage)
-        )
-
-        return ChatWorkflow(
-            id = chat.chat.id,
-            user = user,
-            agent = chatAgent,
-            emitter = emitter,
-            repository = chatRepositoryWrite,
-            state = ChatWorkflowState.Persisted(chat.chat.title!!),
-            tools = loadAgentTools(agent.agent.id),
-        )
+      toolchain.addTool(definition, handler)
     }
+    val tools = toolchain.build()
 
-    suspend fun createChatAgent(
-        workflowId: KUUID,
-        userId: String,
-        username: String,
-        entitlements: List<String>,
-        agent: AgentFull,
-    ): ChatAgent {
-        val tokenizer = Encoder.tokenizer(agent.configuration.model)
+    LOG.info(
+      "Loading toolchain for '{}', available tools: {}",
+      agentId,
+      tools.listToolSchemas().map(ToolDefinition::function).map(ToolFunctionDefinition::name),
+    )
 
-        val settings = settings.getAll()
-
-        val tokenTracker =
-            TokenUsageTrackerFactory.newTracker(userId, username, CHAT_WORKFLOW_ID, workflowId)
-
-        val contextEnrichment =
-            ContextEnrichmentFactory.collectionEnrichment(
-                userEntitlements = entitlements,
-                tokenTracker = tokenTracker,
-                collections = agent.collections,
-            )
-
-        return ChatAgent(
-            agentId = agent.agent.id,
-            configuration = agent.configuration,
-            name = agent.agent.name,
-            titleMaxTokens =
-                settings.getOptional(AgentTitleMaxCompletionTokens.KEY)?.toInt()
-                    ?: AgentTitleMaxCompletionTokens.DEFAULT,
-            inferenceProvider = providers.llm[agent.configuration.llmProvider],
-            completionParameters =
-                ChatCompletionBaseParameters(
-                    model = agent.configuration.model,
-                    temperature = agent.configuration.temperature,
-                    presencePenalty =
-                        agent.configuration.presencePenalty
-                            ?: settings.getOptional(AgentPresencePenalty.KEY)?.toDouble(),
-                ),
-            tokenTracker = tokenTracker,
-            history =
-                tokenizer?.let {
-                    TokenBasedHistory(
-                        messages = mutableListOf(),
-                        tokenizer = it,
-                        maxTokens =
-                            settings.getOptional(MaxHistoryTokens.KEY)?.toInt()
-                                ?: MaxHistoryTokens.DEFAULT,
-                    )
-                } ?: MessageBasedHistory(messages = mutableListOf(), maxMessages = 20),
-            contextEnrichment = contextEnrichment?.let { listOf(it) },
-        )
-    }
-
-    private suspend fun loadAgentTools(agentId: KUUID): Tools? {
-        val agentTools = agentRepository.getAgentTools(agentId).map { it.toolName }
-
-        if (agentTools.isEmpty()) {
-            return null
-        }
-
-        val toolchain = ToolsBuilder()
-
-        for (tool in agentTools) {
-            val definition = ChatToolExecutor.getToolDefinition(tool)
-            if (definition == null) {
-                LOG.warn("Attempted to load tool '$tool' but it does not exist in the tool registry")
-                continue
-            }
-
-            val handler = ChatToolExecutor.getToolFunction(tool)
-            if (handler == null) {
-                LOG.warn("Attempted to load tool '$tool' but it does not have a handler")
-                continue
-            }
-
-            toolchain.addTool(definition, handler)
-        }
-        val tools = toolchain.build()
-
-        LOG.info(
-            "Loading toolchain for '{}', available tools: {}",
-            agentId,
-            tools.listToolSchemas().map(ToolDefinition::function).map(ToolFunctionDefinition::name),
-        )
-
-        return toolchain.build()
-    }
+    return toolchain.build()
+  }
 }
 
-@Serializable
-data class NewChatWorkflow(val agentId: KUUID)
+@Serializable data class NewChatWorkflow(val agentId: KUUID)

@@ -5,12 +5,12 @@ package net.barrage.llmao.core.model
  * adapters (e.g. WhatsApp) the username and email are not guaranteed to be present.
  */
 data class User(
-    val id: String,
-    val username: String,
-    val email: String,
-    val entitlements: List<String>,
+  val id: String,
+  val username: String,
+  val email: String,
+  val entitlements: List<String>,
 ) {
-    fun isAdmin(): Boolean {
-        return entitlements.contains("admin")
-    }
+  fun isAdmin(): Boolean {
+    return entitlements.contains("admin")
+  }
 }

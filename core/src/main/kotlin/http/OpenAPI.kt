@@ -25,154 +25,151 @@ import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.types.KUUID
 
 fun Route.openApiRoutes() {
-    route("openapi.json") { openApi() }
-    route("swagger-ui") { swaggerUI("/openapi.json") }
+  route("openapi.json") { openApi() }
+  route("swagger-ui") { swaggerUI("/openapi.json") }
 }
 
 fun Application.configureOpenApi() {
-    install(OpenApi) {
-        info {
-            title = "Ragu API"
-            version = "latest"
-            description = "Ragu API"
-        }
-        server {
-            url = "http://localhost:42069"
-            description = "Local Server"
-        }
-        server {
-            url = "https://llmao-kotlin-api-development.barrage.dev"
-            description = "Development Server"
-        }
-        security {
-            securityScheme("jwt") {
-                name = "access_token"
-                type = AuthType.OAUTH2
-                location = AuthKeyLocation.COOKIE
+  install(OpenApi) {
+    info {
+      title = "Ragu API"
+      version = "latest"
+      description = "Ragu API"
+    }
+    server {
+      url = "http://localhost:42069"
+      description = "Local Server"
+    }
+    server {
+      url = "https://llmao-kotlin-api-development.barrage.dev"
+      description = "Development Server"
+    }
+    security {
+      securityScheme("jwt") {
+        name = "access_token"
+        type = AuthType.OAUTH2
+        location = AuthKeyLocation.COOKIE
+      }
+      defaultSecuritySchemeNames = listOf("jwt")
+    }
+    schemas {
+      generator = { type ->
+        type
+          .collectSubTypes(10)
+          .analyzeTypeUsingReflection {
+            enumConstType = EnumConstType.TO_STRING
+            custom(KUUID::class) { id ->
+              TypeData(
+                id = id,
+                identifyingName = TypeName("KUUID", short = "KUUID"),
+                descriptiveName = TypeName("A UUID", short = "UUID"),
+              )
             }
-            defaultSecuritySchemeNames = listOf("jwt")
-        }
-        schemas {
-            generator = { type ->
-                type
-                    .collectSubTypes(10)
-                    .analyzeTypeUsingReflection {
-                        enumConstType = EnumConstType.TO_STRING
-                        custom(KUUID::class) { id ->
-                            TypeData(
-                                id = id,
-                                identifyingName = TypeName("KUUID", short = "KUUID"),
-                                descriptiveName = TypeName("A UUID", short = "UUID"),
-                            )
-                        }
-                        custom(PropertyUpdate::class) { id ->
-                            TypeData(
-                                id = id,
-                                identifyingName = TypeName(
-                                    "PropertyUpdate",
-                                    short = "PropertyUpdate"
-                                ),
-                                descriptiveName =
-                                    TypeName(
-                                        "A primitive number or string with update semantics. Undefined means leave as is, null means remove, value means update.",
-                                        short = "Always deserialized as the primitive it wraps.",
-                                    ),
-                            )
-                        }
-                    }
-                    .generateSwaggerSchema()
-                    .handleCoreAnnotations()
-                    .withTitle(TitleType.SIMPLE)
-                    .compileReferencingRoot()
+            custom(PropertyUpdate::class) { id ->
+              TypeData(
+                id = id,
+                identifyingName = TypeName("PropertyUpdate", short = "PropertyUpdate"),
+                descriptiveName =
+                  TypeName(
+                    "A primitive number or string with update semantics. Undefined means leave as is, null means remove, value means update.",
+                    short = "Always deserialized as the primitive it wraps.",
+                  ),
+              )
             }
+          }
+          .generateSwaggerSchema()
+          .handleCoreAnnotations()
+          .withTitle(TitleType.SIMPLE)
+          .compileReferencingRoot()
+      }
 
-            schema(
-                "KUUID",
-                schema =
-                    Schema<KUUID>().apply {
-                        type = "string"
-                        format = "uuid"
-                    },
-            )
+      schema(
+        "KUUID",
+        schema =
+          Schema<KUUID>().apply {
+            type = "string"
+            format = "uuid"
+          },
+      )
 
-            schema(
-                "PropertyUpdate",
-                schema =
-                    Schema<PropertyUpdate<*>>().apply {
-                        types = setOf("string", "number")
-                        description =
-                            """
+      schema(
+        "PropertyUpdate",
+        schema =
+          Schema<PropertyUpdate<*>>().apply {
+            types = setOf("string", "number")
+            description =
+              """
               Represents update semantics for nullable properties:
               - If the field is omitted (undefined), the property remains unchanged
               - If the field is null, the property will be removed
               - If the field has a value, the property will be updated to that value
             """
-                                .trimIndent()
-                    },
-            )
-        }
+                .trimIndent()
+          },
+      )
     }
+  }
 }
 
 /** Utility for generating OpenAPI spec for query param pagination. */
 fun RequestConfig.queryPaginationSort() {
-    queryParameter<Int>("page") {
-        description = "Page number for pagination"
-        required = false
-        example("default") { value = 1 }
-    }
-    queryParameter<Int>("perPage") {
-        description = "Number of items per page"
-        required = false
-        example("default") { value = 10 }
-    }
-    queryParameter<String>("sortBy") {
-        description = "Sort by field"
-        required = false
-        example("default") { value = "name" }
-    }
-    queryParameter<String>("sortOrder") {
-        description = "Sort order (asc or desc)"
-        required = false
-        example("default") { value = "asc" }
-    }
+  queryParameter<Int>("page") {
+    description = "Page number for pagination"
+    required = false
+    example("default") { value = 1 }
+  }
+  queryParameter<Int>("perPage") {
+    description = "Number of items per page"
+    required = false
+    example("default") { value = 10 }
+  }
+  queryParameter<String>("sortBy") {
+    description = "Sort by field"
+    required = false
+    example("default") { value = "name" }
+  }
+  queryParameter<String>("sortOrder") {
+    description = "Sort order (asc or desc)"
+    required = false
+    example("default") { value = "asc" }
+  }
 }
 
 fun RequestConfig.queryPagination() {
-    queryParameter<Int>("page") {
-        description = "Page number for pagination"
-        required = false
-        example("default") { value = 1 }
-    }
-    queryParameter<Int>("perPage") {
-        description = "Number of items per page"
-        required = false
-        example("default") { value = 10 }
-    }
+  queryParameter<Int>("page") {
+    description = "Page number for pagination"
+    required = false
+    example("default") { value = 1 }
+  }
+  queryParameter<Int>("perPage") {
+    description = "Number of items per page"
+    required = false
+    example("default") { value = 10 }
+  }
 }
 
 fun RequestConfig.queryListChatsFilters() {
-    queryParameter<KUUID>("userId") {
-        description = "Filter by user ID"
-        required = false
-    }
-    queryParameter<KUUID>("agentId") {
-        description = "Filter by agent ID"
-        required = false
-    }
-    queryParameter<String>("title") {
-        description = "Filter by chat title"
-        required = false
-    }
+  queryParameter<KUUID>("userId") {
+    description = "Filter by user ID"
+    required = false
+  }
+  queryParameter<KUUID>("agentId") {
+    description = "Filter by agent ID"
+    required = false
+  }
+  queryParameter<String>("title") {
+    description = "Filter by chat title"
+    required = false
+  }
 }
 
 fun RequestConfig.queryListAgentsFilters() {
-    queryParameter<String>("name") {
-        description = "Filter by name"
-        required = false
-    }
-    queryParameter<Boolean>("active") {
-        description = "Filter by active status"
-        required = false
-    }
+  queryParameter<String>("name") {
+    description = "Filter by name"
+    required = false
+  }
+  queryParameter<Boolean>("active") {
+    description = "Filter by active status"
+    required = false
+  }
 }

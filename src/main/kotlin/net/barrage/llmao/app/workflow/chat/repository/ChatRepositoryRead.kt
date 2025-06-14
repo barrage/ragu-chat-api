@@ -44,264 +44,261 @@ import org.jooq.SortField
 import org.jooq.impl.DSL
 
 class ChatRepositoryRead(override val dslContext: DSLContext, private val type: String) :
-    MessageRepository {
-    suspend fun getAll(pagination: PaginationSort, userId: String? = null): CountedList<Chat> {
-        val order = getSortOrder(pagination)
-        val (limit, offset) = pagination.limitOffset()
+  MessageRepository {
+  suspend fun getAll(pagination: PaginationSort, userId: String? = null): CountedList<Chat> {
+    val order = getSortOrder(pagination)
+    val (limit, offset) = pagination.limitOffset()
 
-        val total =
-            dslContext
-                .selectCount()
-                .from(CHATS)
-                .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-                .awaitSingle()
-                .value1()
-                ?.toInt() ?: 0
+    val total =
+      dslContext
+        .selectCount()
+        .from(CHATS)
+        .where(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+        .awaitSingle()
+        .value1()
+        ?.toInt() ?: 0
 
-        val chats =
-            dslContext
-                .select(
-                    CHATS.ID,
-                    CHATS.USER_ID,
-                    CHATS.USERNAME,
-                    CHATS.AGENT_ID,
-                    CHATS.AGENT_CONFIGURATION_ID,
-                    CHATS.TITLE,
-                    CHATS.TYPE,
-                    CHATS.CREATED_AT,
-                    CHATS.UPDATED_AT,
-                )
-                .from(CHATS)
-                .where(
-                    CHATS.TYPE.eq(type)
-                        .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-                )
-                .orderBy(order)
-                .limit(limit)
-                .offset(offset)
-                .asFlow()
-                .map { it.into(CHATS).toChat() }
-                .toList()
+    val chats =
+      dslContext
+        .select(
+          CHATS.ID,
+          CHATS.USER_ID,
+          CHATS.USERNAME,
+          CHATS.AGENT_ID,
+          CHATS.AGENT_CONFIGURATION_ID,
+          CHATS.TITLE,
+          CHATS.TYPE,
+          CHATS.CREATED_AT,
+          CHATS.UPDATED_AT,
+        )
+        .from(CHATS)
+        .where(
+          CHATS.TYPE.eq(type).and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+        )
+        .orderBy(order)
+        .limit(limit)
+        .offset(offset)
+        .asFlow()
+        .map { it.into(CHATS).toChat() }
+        .toList()
 
-        return CountedList(total, chats)
+    return CountedList(total, chats)
+  }
+
+  suspend fun getAllAdmin(
+    pagination: PaginationSort,
+    filters: SearchFiltersAdminChats,
+  ): CountedList<ChatWithAgent> {
+    val order = getSortOrder(pagination)
+    val (limit, offset) = pagination.limitOffset()
+
+    val conditions = filters.toConditions()
+    val total =
+      dslContext.selectCount().from(CHATS).where(conditions).awaitSingle().value1()?.toInt() ?: 0
+
+    val chats =
+      dslContext
+        .select(
+          CHATS.ID,
+          CHATS.USER_ID,
+          CHATS.USERNAME,
+          CHATS.AGENT_ID,
+          CHATS.AGENT_CONFIGURATION_ID,
+          CHATS.TITLE,
+          CHATS.TYPE,
+          CHATS.CREATED_AT,
+          CHATS.UPDATED_AT,
+          AGENTS.ID,
+          AGENTS.NAME,
+          AGENTS.DESCRIPTION,
+          AGENTS.ACTIVE,
+          AGENTS.ACTIVE_CONFIGURATION_ID,
+          AGENTS.LANGUAGE,
+          AGENTS.CREATED_AT,
+          AGENTS.UPDATED_AT,
+        )
+        .from(CHATS)
+        .leftJoin(AGENTS)
+        .on(CHATS.AGENT_ID.eq(AGENTS.ID))
+        .where(CHATS.TYPE.eq(type).and(conditions))
+        .orderBy(order)
+        .limit(limit)
+        .offset(offset)
+        .asFlow()
+        .map { ChatWithAgent(it.into(CHATS).toChat(), it.into(AGENTS).toAgent()) }
+        .toList()
+
+    return CountedList(total, chats)
+  }
+
+  suspend fun getSingleByUserId(userId: String, messageLimit: Int = 50): ChatWithMessages? {
+    val chat =
+      dslContext
+        .select(
+          CHATS.ID,
+          CHATS.USER_ID,
+          CHATS.AGENT_ID,
+          CHATS.AGENT_CONFIGURATION_ID,
+          CHATS.TITLE,
+          CHATS.TYPE,
+          CHATS.CREATED_AT,
+          CHATS.UPDATED_AT,
+        )
+        .from(CHATS)
+        .where(CHATS.TYPE.eq(type).and(CHATS.USER_ID.eq(userId)))
+        .orderBy(CHATS.CREATED_AT.desc())
+        .limit(1)
+        .awaitFirstOrNull()
+        ?.into(CHATS) ?: return null
+
+    val messages = getWorkflowMessages(chat.id!!, Pagination(1, messageLimit))
+
+    return ChatWithMessages(chat.into(CHATS).toChat(), messages)
+  }
+
+  suspend fun get(id: KUUID, userId: String? = null): Chat? {
+    return dslContext
+      .select(
+        CHATS.ID,
+        CHATS.USER_ID,
+        CHATS.USERNAME,
+        CHATS.AGENT_ID,
+        CHATS.AGENT_CONFIGURATION_ID,
+        CHATS.TITLE,
+        CHATS.TYPE,
+        CHATS.CREATED_AT,
+        CHATS.UPDATED_AT,
+      )
+      .from(CHATS)
+      .where(
+        CHATS.TYPE.eq(type)
+          .and(CHATS.ID.eq(id))
+          .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
+      )
+      .awaitFirstOrNull()
+      ?.into(CHATS)
+      ?.toChat()
+  }
+
+  suspend fun getWithMessages(
+    id: KUUID,
+    pagination: Pagination,
+    userId: String? = null,
+  ): ChatWithMessages? {
+    val chat = get(id, userId) ?: return null
+    val messages = getWorkflowMessages(id, pagination)
+    return ChatWithMessages(chat, messages)
+  }
+
+  suspend fun evaluateMessageGroup(messageGroupId: KUUID, input: EvaluateMessage): Int {
+    if (input.evaluation == null) {
+      return dslContext
+        .deleteFrom(MESSAGE_GROUP_EVALUATIONS)
+        .where(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(messageGroupId))
+        .awaitSingle()
     }
 
-    suspend fun getAllAdmin(
-        pagination: PaginationSort,
-        filters: SearchFiltersAdminChats,
-    ): CountedList<ChatWithAgent> {
-        val order = getSortOrder(pagination)
-        val (limit, offset) = pagination.limitOffset()
+    return dslContext
+      .insertInto(MESSAGE_GROUP_EVALUATIONS)
+      .set(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID, messageGroupId)
+      .set(MESSAGE_GROUP_EVALUATIONS.EVALUATION, input.evaluation)
+      .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback.value())
+      .onConflict(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID)
+      .doUpdate()
+      .let { input.applyUpdates(it as InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>) }
+      .awaitSingle()
+  }
 
-        val conditions = filters.toConditions()
-        val total =
-            dslContext.selectCount().from(CHATS).where(conditions).awaitSingle().value1()?.toInt()
-                ?: 0
+  suspend fun updateTitle(id: KUUID, title: String): Chat? {
+    return dslContext
+      .update(CHATS)
+      .set(CHATS.TITLE, title)
+      .set(CHATS.UPDATED_AT, OffsetDateTime.now())
+      .where(CHATS.ID.eq(id))
+      .returning()
+      .awaitFirstOrNull()
+      ?.into(CHATS)
+      ?.toChat()
+  }
 
-        val chats =
-            dslContext
-                .select(
-                    CHATS.ID,
-                    CHATS.USER_ID,
-                    CHATS.USERNAME,
-                    CHATS.AGENT_ID,
-                    CHATS.AGENT_CONFIGURATION_ID,
-                    CHATS.TITLE,
-                    CHATS.TYPE,
-                    CHATS.CREATED_AT,
-                    CHATS.UPDATED_AT,
-                    AGENTS.ID,
-                    AGENTS.NAME,
-                    AGENTS.DESCRIPTION,
-                    AGENTS.ACTIVE,
-                    AGENTS.ACTIVE_CONFIGURATION_ID,
-                    AGENTS.LANGUAGE,
-                    AGENTS.CREATED_AT,
-                    AGENTS.UPDATED_AT,
-                )
-                .from(CHATS)
-                .leftJoin(AGENTS)
-                .on(CHATS.AGENT_ID.eq(AGENTS.ID))
-                .where(CHATS.TYPE.eq(type).and(conditions))
-                .orderBy(order)
-                .limit(limit)
-                .offset(offset)
-                .asFlow()
-                .map { ChatWithAgent(it.into(CHATS).toChat(), it.into(AGENTS).toAgent()) }
-                .toList()
+  suspend fun userUpdateTitle(id: KUUID, userId: String, title: String): Chat? {
+    return dslContext
+      .update(CHATS)
+      .set(CHATS.TITLE, title)
+      .set(CHATS.UPDATED_AT, OffsetDateTime.now())
+      .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
+      .returning()
+      .awaitFirstOrNull()
+      ?.into(CHATS)
+      ?.toChat()
+  }
 
-        return CountedList(total, chats)
-    }
+  suspend fun delete(id: KUUID): Int {
+    return dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).awaitSingle()
+  }
 
-    suspend fun getSingleByUserId(userId: String, messageLimit: Int = 50): ChatWithMessages? {
-        val chat =
-            dslContext
-                .select(
-                    CHATS.ID,
-                    CHATS.USER_ID,
-                    CHATS.AGENT_ID,
-                    CHATS.AGENT_CONFIGURATION_ID,
-                    CHATS.TITLE,
-                    CHATS.TYPE,
-                    CHATS.CREATED_AT,
-                    CHATS.UPDATED_AT,
-                )
-                .from(CHATS)
-                .where(CHATS.TYPE.eq(type).and(CHATS.USER_ID.eq(userId)))
-                .orderBy(CHATS.CREATED_AT.desc())
-                .limit(1)
-                .awaitFirstOrNull()
-                ?.into(CHATS) ?: return null
+  suspend fun delete(id: KUUID, userId: String): Int {
+    return dslContext
+      .deleteFrom(CHATS)
+      .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
+      .awaitSingle()
+  }
 
-        val messages = getWorkflowMessages(chat.id!!, Pagination(1, messageLimit))
+  private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "createdAt" -> CHATS.CREATED_AT
+        "updatedAt" -> CHATS.UPDATED_AT
+        "agentId" -> CHATS.AGENT_ID
+        "title" -> CHATS.TITLE
+        else -> CHATS.CREATED_AT
+      }
 
-        return ChatWithMessages(chat.into(CHATS).toChat(), messages)
-    }
+    val order =
+      if (sortOrder == SortOrder.DESC) {
+        sortField.desc()
+      } else {
+        sortField.asc()
+      }
 
-    suspend fun get(id: KUUID, userId: String? = null): Chat? {
-        return dslContext
-            .select(
-                CHATS.ID,
-                CHATS.USER_ID,
-                CHATS.USERNAME,
-                CHATS.AGENT_ID,
-                CHATS.AGENT_CONFIGURATION_ID,
-                CHATS.TITLE,
-                CHATS.TYPE,
-                CHATS.CREATED_AT,
-                CHATS.UPDATED_AT,
-            )
-            .from(CHATS)
-            .where(
-                CHATS.TYPE.eq(type)
-                    .and(CHATS.ID.eq(id))
-                    .and(userId?.let { CHATS.USER_ID.eq(userId) } ?: DSL.noCondition())
-            )
-            .awaitFirstOrNull()
-            ?.into(CHATS)
-            ?.toChat()
-    }
+    return order
+  }
 
-    suspend fun getWithMessages(
-        id: KUUID,
-        pagination: Pagination,
-        userId: String? = null,
-    ): ChatWithMessages? {
-        val chat = get(id, userId) ?: return null
-        val messages = getWorkflowMessages(id, pagination)
-        return ChatWithMessages(chat, messages)
-    }
+  suspend fun getChatCounts(): ChatCounts {
+    val total = dslContext.selectCount().from(CHATS).awaitSingle().value1() ?: 0
 
-    suspend fun evaluateMessageGroup(messageGroupId: KUUID, input: EvaluateMessage): Int {
-        if (input.evaluation == null) {
-            return dslContext
-                .deleteFrom(MESSAGE_GROUP_EVALUATIONS)
-                .where(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(messageGroupId))
-                .awaitSingle()
-        }
+    val chats = mutableListOf<ChatCount>()
 
-        return dslContext
-            .insertInto(MESSAGE_GROUP_EVALUATIONS)
-            .set(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID, messageGroupId)
-            .set(MESSAGE_GROUP_EVALUATIONS.EVALUATION, input.evaluation)
-            .set(MESSAGE_GROUP_EVALUATIONS.FEEDBACK, input.feedback.value())
-            .onConflict(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID)
-            .doUpdate()
-            .let { input.applyUpdates(it as InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>) }
-            .awaitSingle()
-    }
+    dslContext
+      .select(CHATS.AGENT_ID, DSL.count(), AGENTS.NAME)
+      .from(CHATS)
+      .join(AGENTS)
+      .on(CHATS.AGENT_ID.eq(AGENTS.ID))
+      .groupBy(CHATS.AGENT_ID, AGENTS.NAME)
+      .asFlow()
+      .map { row -> chats.add(ChatCount(row.value1()!!, row.value3()!!, row.value2())) }
+      .toList()
 
-    suspend fun updateTitle(id: KUUID, title: String): Chat? {
-        return dslContext
-            .update(CHATS)
-            .set(CHATS.TITLE, title)
-            .set(CHATS.UPDATED_AT, OffsetDateTime.now())
-            .where(CHATS.ID.eq(id))
-            .returning()
-            .awaitFirstOrNull()
-            ?.into(CHATS)
-            ?.toChat()
-    }
+    return ChatCounts(total, chats)
+  }
 
-    suspend fun userUpdateTitle(id: KUUID, userId: String, title: String): Chat? {
-        return dslContext
-            .update(CHATS)
-            .set(CHATS.TITLE, title)
-            .set(CHATS.UPDATED_AT, OffsetDateTime.now())
-            .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
-            .returning()
-            .awaitFirstOrNull()
-            ?.into(CHATS)
-            ?.toChat()
-    }
+  /**
+   * Returns a map of agent names to a map of dates to chat counts for the given period. The map is
+   * { Agent -> { Date -> Count }}.
+   */
+  suspend fun agentsChatHistoryCounts(period: Period): List<AgentChatsOnDate> {
+    val startDate =
+      when (period) {
+        Period.WEEK -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(6)
+        Period.MONTH -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusMonths(1)
+        Period.YEAR ->
+          KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusYears(1).withDayOfMonth(1)
+      }
 
-    suspend fun delete(id: KUUID): Int {
-        return dslContext.deleteFrom(CHATS).where(CHATS.ID.eq(id)).awaitSingle()
-    }
-
-    suspend fun delete(id: KUUID, userId: String): Int {
-        return dslContext
-            .deleteFrom(CHATS)
-            .where(CHATS.ID.eq(id).and(CHATS.USER_ID.eq(userId)))
-            .awaitSingle()
-    }
-
-    private fun getSortOrder(pagination: PaginationSort): SortField<out Any> {
-        val (sortBy, sortOrder) = pagination.sorting()
-        val sortField =
-            when (sortBy) {
-                "createdAt" -> CHATS.CREATED_AT
-                "updatedAt" -> CHATS.UPDATED_AT
-                "agentId" -> CHATS.AGENT_ID
-                "title" -> CHATS.TITLE
-                else -> CHATS.CREATED_AT
-            }
-
-        val order =
-            if (sortOrder == SortOrder.DESC) {
-                sortField.desc()
-            } else {
-                sortField.asc()
-            }
-
-        return order
-    }
-
-    suspend fun getChatCounts(): ChatCounts {
-        val total = dslContext.selectCount().from(CHATS).awaitSingle().value1() ?: 0
-
-        val chats = mutableListOf<ChatCount>()
-
-        dslContext
-            .select(CHATS.AGENT_ID, DSL.count(), AGENTS.NAME)
-            .from(CHATS)
-            .join(AGENTS)
-            .on(CHATS.AGENT_ID.eq(AGENTS.ID))
-            .groupBy(CHATS.AGENT_ID, AGENTS.NAME)
-            .asFlow()
-            .map { row -> chats.add(ChatCount(row.value1()!!, row.value3()!!, row.value2())) }
-            .toList()
-
-        return ChatCounts(total, chats)
-    }
-
-    /**
-     * Returns a map of agent names to a map of dates to chat counts for the given period. The map is
-     * { Agent -> { Date -> Count }}.
-     */
-    suspend fun agentsChatHistoryCounts(period: Period): List<AgentChatsOnDate> {
-        val startDate =
-            when (period) {
-                Period.WEEK -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(6)
-                Period.MONTH -> KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusMonths(1)
-                Period.YEAR ->
-                    KOffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minusYears(1)
-                        .withDayOfMonth(1)
-            }
-
-        return dslContext
-            .resultQuery(
-                """
+    return dslContext
+      .resultQuery(
+        """
           WITH chat_date_count AS (
               SELECT 
                   agent_id,
@@ -321,157 +318,155 @@ class ChatRepositoryRead(override val dslContext: DSLContext, private val type: 
           LEFT JOIN chat_date_count ON agents.id = chat_date_count.agent_id
           ORDER BY chat_date_count.agent_id, chat_date_count.date
         """
-            )
-            .asFlow()
-            .map {
-                AgentChatsOnDate(
-                    agentId = it.get("id", KUUID::class.java),
-                    agentName = it.get("name", String::class.java),
-                    // If no chats for a given date, this will be null, and we can skip the whole entry
-                    date = it.get("date", KOffsetDateTime::class.java)?.toLocalDate(),
-                    amount = it.get("count", Long::class.java),
-                )
-            }
-            .filterNotNull()
-            .toList()
+      )
+      .asFlow()
+      .map {
+        AgentChatsOnDate(
+          agentId = it.get("id", KUUID::class.java),
+          agentName = it.get("name", String::class.java),
+          // If no chats for a given date, this will be null, and we can skip the whole entry
+          date = it.get("date", KOffsetDateTime::class.java)?.toLocalDate(),
+          amount = it.get("count", Long::class.java),
+        )
+      }
+      .filterNotNull()
+      .toList()
+  }
+
+  suspend fun getAgentConfigurationMessageCounts(
+    agentConfigurationId: KUUID
+  ): AgentConfigurationEvaluatedMessageCounts {
+    val result =
+      dslContext
+        .select(
+          DSL.count(MESSAGE_GROUPS.ID).`as`("total"),
+          DSL.sum(DSL.`when`(MESSAGE_GROUP_EVALUATIONS.EVALUATION.isTrue, 1).otherwise(0))
+            .`as`("positive"),
+          DSL.sum(DSL.`when`(MESSAGE_GROUP_EVALUATIONS.EVALUATION.isFalse, 1).otherwise(0))
+            .`as`("negative"),
+        )
+        .from(CHATS)
+        .leftJoin(MESSAGE_GROUPS)
+        .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
+        .leftJoin(MESSAGE_GROUP_EVALUATIONS)
+        .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
+        .where(CHATS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId))
+        .awaitSingle()
+
+    val total = result.get("total", Int::class.java) ?: 0
+    val positive = result.get("positive", Int::class.java) ?: 0
+    val negative = result.get("negative", Int::class.java) ?: 0
+
+    return AgentConfigurationEvaluatedMessageCounts(total, positive, negative)
+  }
+
+  /** List all evaluated messages for a given agent configuration version. */
+  suspend fun getAgentConfigurationEvaluatedMessages(
+    agentConfigurationId: KUUID,
+    evaluation: Boolean? = null,
+    pagination: PaginationSort,
+  ): CountedList<MessageGroupAggregate> {
+    val order = getSortOrderEvaluatedMessages(pagination)
+    val (limit, offset) = pagination.limitOffset()
+
+    val where = {
+      CHATS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId)
+        .and(
+          evaluation?.let { MESSAGE_GROUP_EVALUATIONS.EVALUATION.eq(evaluation) }
+            ?: DSL.noCondition()
+        )
     }
 
-    suspend fun getAgentConfigurationMessageCounts(
-        agentConfigurationId: KUUID
-    ): AgentConfigurationEvaluatedMessageCounts {
-        val result =
-            dslContext
-                .select(
-                    DSL.count(MESSAGE_GROUPS.ID).`as`("total"),
-                    DSL.sum(DSL.`when`(MESSAGE_GROUP_EVALUATIONS.EVALUATION.isTrue, 1).otherwise(0))
-                        .`as`("positive"),
-                    DSL.sum(
-                        DSL.`when`(MESSAGE_GROUP_EVALUATIONS.EVALUATION.isFalse, 1).otherwise(0)
-                    )
-                        .`as`("negative"),
-                )
-                .from(CHATS)
-                .leftJoin(MESSAGE_GROUPS)
-                .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
-                .leftJoin(MESSAGE_GROUP_EVALUATIONS)
-                .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
-                .where(CHATS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId))
-                .awaitSingle()
+    val count =
+      dslContext
+        .selectCount()
+        .from(CHATS)
+        .leftJoin(MESSAGE_GROUPS)
+        .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
+        .leftJoin(MESSAGE_GROUP_EVALUATIONS)
+        .on(MESSAGE_GROUPS.ID.eq(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID))
+        .where(where())
+        .awaitSingle()
+        .value1() ?: 0
 
-        val total = result.get("total", Int::class.java) ?: 0
-        val positive = result.get("positive", Int::class.java) ?: 0
-        val negative = result.get("negative", Int::class.java) ?: 0
+    val messageGroups = mutableMapOf<KUUID, MessageGroupAggregate>()
 
-        return AgentConfigurationEvaluatedMessageCounts(total, positive, negative)
-    }
+    dslContext
+      .select(
+        MESSAGE_GROUPS.ID,
+        MESSAGE_GROUPS.PARENT_ID,
+        MESSAGE_GROUPS.PARENT_TYPE,
+        MESSAGE_GROUPS.CREATED_AT,
+        MESSAGES.ID,
+        MESSAGES.ORDER,
+        MESSAGES.MESSAGE_GROUP_ID,
+        MESSAGES.SENDER_TYPE,
+        MESSAGES.CONTENT,
+        MESSAGES.TOOL_CALLS,
+        MESSAGES.TOOL_CALL_ID,
+        MESSAGES.FINISH_REASON,
+        MESSAGES.CREATED_AT,
+        MESSAGE_GROUP_EVALUATIONS.ID,
+        MESSAGE_GROUP_EVALUATIONS.EVALUATION,
+        MESSAGE_GROUP_EVALUATIONS.FEEDBACK,
+        MESSAGE_GROUP_EVALUATIONS.CREATED_AT,
+        MESSAGE_GROUP_EVALUATIONS.UPDATED_AT,
+      )
+      .from(CHATS)
+      .leftJoin(MESSAGE_GROUPS)
+      .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
+      .leftJoin(MESSAGES)
+      .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
+      .leftJoin(MESSAGE_GROUP_EVALUATIONS)
+      .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
+      .where(where())
+      .orderBy(order)
+      .limit(limit)
+      .offset(offset)
+      .asFlow()
+      .collect { record ->
+        val message = record.into(MESSAGES).toMessage()
+        val group = record.into(MESSAGE_GROUPS).toMessageGroup()
+        val evaluation = record.into(MESSAGE_GROUP_EVALUATIONS).toMessageGroupEvaluation()
+        messageGroups
+          .computeIfAbsent(group.id) { _ ->
+            MessageGroupAggregate(group, mutableListOf(), evaluation)
+          }
+          .messages
+          .add(message)
+      }
 
-    /** List all evaluated messages for a given agent configuration version. */
-    suspend fun getAgentConfigurationEvaluatedMessages(
-        agentConfigurationId: KUUID,
-        evaluation: Boolean? = null,
-        pagination: PaginationSort,
-    ): CountedList<MessageGroupAggregate> {
-        val order = getSortOrderEvaluatedMessages(pagination)
-        val (limit, offset) = pagination.limitOffset()
+    return CountedList(count, messageGroups.values.toList())
+  }
 
-        val where = {
-            CHATS.AGENT_CONFIGURATION_ID.eq(agentConfigurationId)
-                .and(
-                    evaluation?.let { MESSAGE_GROUP_EVALUATIONS.EVALUATION.eq(evaluation) }
-                        ?: DSL.noCondition()
-                )
-        }
+  private fun getSortOrderEvaluatedMessages(pagination: PaginationSort): SortField<out Any> {
+    val (sortBy, sortOrder) = pagination.sorting()
+    val sortField =
+      when (sortBy) {
+        "createdAt" -> MESSAGE_GROUPS.CREATED_AT
+        "evaluation" -> MESSAGE_GROUP_EVALUATIONS.EVALUATION
+        else -> MESSAGES.CREATED_AT
+      }
 
-        val count =
-            dslContext
-                .selectCount()
-                .from(CHATS)
-                .leftJoin(MESSAGE_GROUPS)
-                .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
-                .leftJoin(MESSAGE_GROUP_EVALUATIONS)
-                .on(MESSAGE_GROUPS.ID.eq(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID))
-                .where(where())
-                .awaitSingle()
-                .value1() ?: 0
+    val order = if (sortOrder == SortOrder.DESC) sortField.desc() else sortField.asc()
 
-        val messageGroups = mutableMapOf<KUUID, MessageGroupAggregate>()
-
-        dslContext
-            .select(
-                MESSAGE_GROUPS.ID,
-                MESSAGE_GROUPS.PARENT_ID,
-                MESSAGE_GROUPS.PARENT_TYPE,
-                MESSAGE_GROUPS.CREATED_AT,
-                MESSAGES.ID,
-                MESSAGES.ORDER,
-                MESSAGES.MESSAGE_GROUP_ID,
-                MESSAGES.SENDER_TYPE,
-                MESSAGES.CONTENT,
-                MESSAGES.TOOL_CALLS,
-                MESSAGES.TOOL_CALL_ID,
-                MESSAGES.FINISH_REASON,
-                MESSAGES.CREATED_AT,
-                MESSAGE_GROUP_EVALUATIONS.ID,
-                MESSAGE_GROUP_EVALUATIONS.EVALUATION,
-                MESSAGE_GROUP_EVALUATIONS.FEEDBACK,
-                MESSAGE_GROUP_EVALUATIONS.CREATED_AT,
-                MESSAGE_GROUP_EVALUATIONS.UPDATED_AT,
-            )
-            .from(CHATS)
-            .leftJoin(MESSAGE_GROUPS)
-            .on(MESSAGE_GROUPS.PARENT_ID.eq(CHATS.ID))
-            .leftJoin(MESSAGES)
-            .on(MESSAGES.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
-            .leftJoin(MESSAGE_GROUP_EVALUATIONS)
-            .on(MESSAGE_GROUP_EVALUATIONS.MESSAGE_GROUP_ID.eq(MESSAGE_GROUPS.ID))
-            .where(where())
-            .orderBy(order)
-            .limit(limit)
-            .offset(offset)
-            .asFlow()
-            .collect { record ->
-                val message = record.into(MESSAGES).toMessage()
-                val group = record.into(MESSAGE_GROUPS).toMessageGroup()
-                val evaluation = record.into(MESSAGE_GROUP_EVALUATIONS).toMessageGroupEvaluation()
-                messageGroups
-                    .computeIfAbsent(group.id) { _ ->
-                        MessageGroupAggregate(group, mutableListOf(), evaluation)
-                    }
-                    .messages
-                    .add(message)
-            }
-
-        return CountedList(count, messageGroups.values.toList())
-    }
-
-    private fun getSortOrderEvaluatedMessages(pagination: PaginationSort): SortField<out Any> {
-        val (sortBy, sortOrder) = pagination.sorting()
-        val sortField =
-            when (sortBy) {
-                "createdAt" -> MESSAGE_GROUPS.CREATED_AT
-                "evaluation" -> MESSAGE_GROUP_EVALUATIONS.EVALUATION
-                else -> MESSAGES.CREATED_AT
-            }
-
-        val order = if (sortOrder == SortOrder.DESC) sortField.desc() else sortField.asc()
-
-        return order
-    }
+    return order
+  }
 }
 
 private fun SearchFiltersAdminChats.toConditions(): Condition {
-    val userIdCondition = userId?.let { CHATS.USER_ID.eq(it) } ?: DSL.noCondition()
-    val agentIdCondition = agentId?.let { CHATS.AGENT_ID.eq(it) } ?: DSL.noCondition()
-    val titleCondition = title?.let { CHATS.TITLE.containsIgnoreCase(it) } ?: DSL.noCondition()
+  val userIdCondition = userId?.let { CHATS.USER_ID.eq(it) } ?: DSL.noCondition()
+  val agentIdCondition = agentId?.let { CHATS.AGENT_ID.eq(it) } ?: DSL.noCondition()
+  val titleCondition = title?.let { CHATS.TITLE.containsIgnoreCase(it) } ?: DSL.noCondition()
 
-    return DSL.and(userIdCondition, agentIdCondition, titleCondition)
+  return DSL.and(userIdCondition, agentIdCondition, titleCondition)
 }
 
 fun EvaluateMessage.applyUpdates(
-    value: InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>
+  value: InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord>
 ): InsertOnDuplicateSetMoreStep<MessageGroupEvaluationsRecord> {
-    var value = value
-    value = value.set(evaluation, MESSAGE_GROUP_EVALUATIONS.EVALUATION)
-    value = value.set(feedback, MESSAGE_GROUP_EVALUATIONS.FEEDBACK)
-    return value
+  var value = value
+  value = value.set(evaluation, MESSAGE_GROUP_EVALUATIONS.EVALUATION)
+  value = value.set(feedback, MESSAGE_GROUP_EVALUATIONS.FEEDBACK)
+  return value
 }

@@ -1,12 +1,12 @@
 package net.barrage.llmao.core
 
 import io.ktor.server.plugins.requestvalidation.ValidationResult
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import net.barrage.llmao.core.model.common.PropertyUpdate
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.functions
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import net.barrage.llmao.core.model.common.PropertyUpdate
 
 /**
  * Auto-implements the `validate` method based on annotations used.
@@ -15,59 +15,59 @@ import kotlin.reflect.full.functions
  * **especially** with schema validation functions.
  */
 interface Validation {
-    fun validate(): ValidationResult {
-        val clazz = this::class
+  fun validate(): ValidationResult {
+    val clazz = this::class
 
-        val errors = mutableListOf<ValidationError>()
+    val errors = mutableListOf<ValidationError>()
 
-        val schemaValidation = clazz.findAnnotations<SchemaValidation>().firstOrNull()
+    val schemaValidation = clazz.findAnnotations<SchemaValidation>().firstOrNull()
 
-        schemaValidation?.let { schema ->
-            // Throws an exception if the function does not exist.
-            val fn = clazz.functions.first { it.name == schema.fn }
-            val schemaErrors = fn.call(this) as List<*>
-            for (error in schemaErrors) {
-                errors.add(error as ValidationError)
-            }
-        }
-
-        val fields = clazz.declaredMemberProperties
-
-        for (field in fields) {
-            val value = field.getter.call(this) ?: continue
-
-            if (value is PropertyUpdate<*>) {
-                for (annotation in field.annotations) {
-                    value.value()?.let {
-                        val error = validateInternal(field.name, it, annotation)
-                        error?.let { errors.addAll(it) }
-                    } ?: continue
-                }
-                continue
-            }
-
-            for (annotation in field.annotations) {
-                val error = validateInternal(field.name, value, annotation)
-                error?.let { errors.addAll(it) }
-            }
-
-            if (value is Validation) {
-                val result = value.validate()
-                if (result is ValidationResult.Invalid) {
-                    result.reasons.forEach { reason ->
-                        val original = Json.decodeFromString<ValidationError>(reason)
-                        errors.add(original.copy(fieldName = "${field.name}.${original.fieldName}"))
-                    }
-                }
-            }
-        }
-
-        return if (errors.isEmpty()) {
-            ValidationResult.Valid
-        } else {
-            ValidationResult.Invalid(errors.map { Json.encodeToString(it) })
-        }
+    schemaValidation?.let { schema ->
+      // Throws an exception if the function does not exist.
+      val fn = clazz.functions.first { it.name == schema.fn }
+      val schemaErrors = fn.call(this) as List<*>
+      for (error in schemaErrors) {
+        errors.add(error as ValidationError)
+      }
     }
+
+    val fields = clazz.declaredMemberProperties
+
+    for (field in fields) {
+      val value = field.getter.call(this) ?: continue
+
+      if (value is PropertyUpdate<*>) {
+        for (annotation in field.annotations) {
+          value.value()?.let {
+            val error = validateInternal(field.name, it, annotation)
+            error?.let { errors.addAll(it) }
+          } ?: continue
+        }
+        continue
+      }
+
+      for (annotation in field.annotations) {
+        val error = validateInternal(field.name, value, annotation)
+        error?.let { errors.addAll(it) }
+      }
+
+      if (value is Validation) {
+        val result = value.validate()
+        if (result is ValidationResult.Invalid) {
+          result.reasons.forEach { reason ->
+            val original = Json.decodeFromString<ValidationError>(reason)
+            errors.add(original.copy(fieldName = "${field.name}.${original.fieldName}"))
+          }
+        }
+      }
+    }
+
+    return if (errors.isEmpty()) {
+      ValidationResult.Valid
+    } else {
+      ValidationResult.Invalid(errors.map { Json.encodeToString(it) })
+    }
+  }
 }
 
 /** Valid only on `String` fields. Validate the string is not blank. */
@@ -75,8 +75,8 @@ interface Validation {
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class NotBlank(
-    val code: String = "notBlank",
-    val message: String = "Value cannot be blank",
+  val code: String = "notBlank",
+  val message: String = "Value cannot be blank",
 )
 
 /** Valid only on `String` fields. Validate the string is a correct email. */
@@ -84,8 +84,8 @@ annotation class NotBlank(
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class ValidEmail(
-    val code: String = "email",
-    val message: String = "Value is not valid email",
+  val code: String = "email",
+  val message: String = "Value is not valid email",
 )
 
 /**
@@ -96,10 +96,10 @@ annotation class ValidEmail(
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class Range(
-    val min: Double = Double.MAX_VALUE * -1,
-    val max: Double = Double.MAX_VALUE,
-    val code: String = "range",
-    val message: String = "",
+  val min: Double = Double.MAX_VALUE * -1,
+  val max: Double = Double.MAX_VALUE,
+  val code: String = "range",
+  val message: String = "",
 )
 
 /** Valid only on `String` fields. Validate that it's a number. */
@@ -107,8 +107,8 @@ annotation class Range(
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class Number(
-    val code: String = "number",
-    val message: String = "Value is not valid number",
+  val code: String = "number",
+  val message: String = "Value is not valid number",
 )
 
 /**
@@ -118,10 +118,10 @@ annotation class Number(
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class CharRange(
-    val min: Int = 0,
-    val max: Int = Int.MAX_VALUE,
-    val code: String = "charRange",
-    val message: String = "",
+  val min: Int = 0,
+  val max: Int = Int.MAX_VALUE,
+  val code: String = "charRange",
+  val message: String = "",
 )
 
 /**
@@ -136,108 +136,108 @@ annotation class SchemaValidation(val fn: String)
 
 /** Validation dirty work. All downstream functions return `true` if the validation passed */
 private fun validateInternal(
-    fieldName: String,
-    value: Any,
-    annotation: Annotation,
+  fieldName: String,
+  value: Any,
+  annotation: Annotation,
 ): List<ValidationError>? {
 
-    // Calling a getter never throws since it never takes in any
-    // parameters and is auto-generated by Kotlin.
-    // Skip validating null fields
+  // Calling a getter never throws since it never takes in any
+  // parameters and is auto-generated by Kotlin.
+  // Skip validating null fields
 
-    when (annotation) {
-        is NotBlank -> {
-            return if (validateNotBlank(value as String)) {
-                null
-            } else {
-                listOf(ValidationError(annotation.code, annotation.message, fieldName))
-            }
-        }
-
-        is ValidEmail -> {
-            return if (validateEmail(value as String)) {
-                null
-            } else {
-                listOf(ValidationError(annotation.code, annotation.message, fieldName))
-            }
-        }
-
-        is Number -> {
-            return if (validateNumber(value as String)) {
-                null
-            } else {
-                listOf(ValidationError(annotation.code, annotation.message, fieldName))
-            }
-        }
-
-        is Range -> {
-            return if (validateRange(value, annotation.min, annotation.max)) {
-                null
-            } else {
-                val message =
-                    annotation.message.ifBlank {
-                        "Value must be in range ${annotation.min} - ${annotation.max}"
-                    }
-                listOf(ValidationError(annotation.code, message, fieldName))
-            }
-        }
-
-        is CharRange -> {
-            return if (validateStringLength(value as String, annotation.min, annotation.max)) {
-                null
-            } else {
-                val message =
-                    annotation.message.ifBlank {
-                        "Value must be between ${annotation.min} - ${annotation.max} characters long"
-                    }
-                listOf(ValidationError(annotation.code, message, fieldName))
-            }
-        }
-
-        else -> {
-            return null
-        }
+  when (annotation) {
+    is NotBlank -> {
+      return if (validateNotBlank(value as String)) {
+        null
+      } else {
+        listOf(ValidationError(annotation.code, annotation.message, fieldName))
+      }
     }
+
+    is ValidEmail -> {
+      return if (validateEmail(value as String)) {
+        null
+      } else {
+        listOf(ValidationError(annotation.code, annotation.message, fieldName))
+      }
+    }
+
+    is Number -> {
+      return if (validateNumber(value as String)) {
+        null
+      } else {
+        listOf(ValidationError(annotation.code, annotation.message, fieldName))
+      }
+    }
+
+    is Range -> {
+      return if (validateRange(value, annotation.min, annotation.max)) {
+        null
+      } else {
+        val message =
+          annotation.message.ifBlank {
+            "Value must be in range ${annotation.min} - ${annotation.max}"
+          }
+        listOf(ValidationError(annotation.code, message, fieldName))
+      }
+    }
+
+    is CharRange -> {
+      return if (validateStringLength(value as String, annotation.min, annotation.max)) {
+        null
+      } else {
+        val message =
+          annotation.message.ifBlank {
+            "Value must be between ${annotation.min} - ${annotation.max} characters long"
+          }
+        listOf(ValidationError(annotation.code, message, fieldName))
+      }
+    }
+
+    else -> {
+      return null
+    }
+  }
 }
 
 @Serializable
 data class ValidationError(
-    /** Validator code. */
-    val code: String,
+  /** Validator code. */
+  val code: String,
 
-    /** Validation failure description. */
-    val message: String,
+  /** Validation failure description. */
+  val message: String,
 
-    /** Name of the field that failed validation. */
-    val fieldName: String? = null,
+  /** Name of the field that failed validation. */
+  val fieldName: String? = null,
 )
 
 fun MutableList<ValidationError>.addSchemaErr(code: String = "schema", message: String) {
-    add(ValidationError(code, message))
+  add(ValidationError(code, message))
 }
 
 fun validateEmail(email: String): Boolean {
-    return email.isNotBlank() && email.matches(Regex("^[\\w\\-.]+@([\\w-]+\\.)+[\\w-]{2,4}$"))
+  return email.isNotBlank() && email.matches(Regex("^[\\w\\-.]+@([\\w-]+\\.)+[\\w-]{2,4}$"))
 }
 
 private fun validateNumber(number: String): Boolean {
-    return number.isNotBlank() && number.matches(Regex("^[0-9]+$"))
+  return number.isNotBlank() && number.matches(Regex("^[0-9]+$"))
 }
 
 private fun validateNotBlank(param: String): Boolean {
-    return param.isNotBlank()
+  return param.isNotBlank()
 }
 
 private fun validateRange(input: Any, min: Double, max: Double): Boolean {
-    return when (input) {
-        is Int -> input.toDouble() in min..max
-        is Long -> input.toDouble() in min..max
-        is Float -> input.toDouble() in min..max
-        is Double -> input in min..max
-        else -> false
-    }
+  return when (input) {
+    is Int -> input.toDouble() in min..max
+    is Long -> input.toDouble() in min..max
+    is Float -> input.toDouble() in min..max
+    is Double -> input in min..max
+    else -> false
+  }
 }
 
 private fun validateStringLength(input: String, min: Int, max: Int): Boolean {
-    return input.length in min..max
+  return input.length in min..max
 }

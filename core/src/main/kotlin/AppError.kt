@@ -12,76 +12,76 @@ import kotlinx.serialization.Transient
  */
 @Serializable
 open class AppError(
-    /** Can be one of: API, Internal */
-    val errorType: String,
+  /** Can be one of: API, Internal */
+  val errorType: String,
 
-    /** The reason for the error. Matched in the error handler to determine the HTTP status code. */
-    val errorReason: ErrorReason,
+  /** The reason for the error. Matched in the error handler to determine the HTTP status code. */
+  val errorReason: ErrorReason,
 
-    /** Optional error description. */
-    val errorMessage: String? = null,
+  /** Optional error description. */
+  val errorMessage: String? = null,
 
-    /** The original caught error if this error originates from a caught exception. */
-    @Transient val original: Throwable? = null,
+  /** The original caught error if this error originates from a caught exception. */
+  @Transient val original: Throwable? = null,
 ) : Throwable(message = "${errorReason.reason}; $errorMessage", cause = original) {
-    /**
-     * Used to display an error message to the user. Used by custom chat agents to display user
-     * friendly messages in chats.
-     */
-    var displayMessage: String? = null
+  /**
+   * Used to display an error message to the user. Used by custom chat agents to display user
+   * friendly messages in chats.
+   */
+  var displayMessage: String? = null
 
-    companion object {
-        fun api(
-            reason: ErrorReason,
-            description: String? = null,
-            original: Throwable? = null,
-        ): AppError {
-            return AppError(
-                errorType = "API",
-                errorReason = reason,
-                errorMessage = description,
-                original = original,
-            )
-        }
-
-        fun internal(message: String? = null, original: Throwable? = null): AppError {
-            return AppError(
-                errorType = "Internal",
-                errorReason = ErrorReason.Internal,
-                errorMessage = message,
-                original = original,
-            )
-        }
+  companion object {
+    fun api(
+      reason: ErrorReason,
+      description: String? = null,
+      original: Throwable? = null,
+    ): AppError {
+      return AppError(
+        errorType = "API",
+        errorReason = reason,
+        errorMessage = description,
+        original = original,
+      )
     }
 
-    fun withDisplayMessage(message: String): AppError {
-        this.displayMessage = message
-        return this
+    fun internal(message: String? = null, original: Throwable? = null): AppError {
+      return AppError(
+        errorType = "Internal",
+        errorReason = ErrorReason.Internal,
+        errorMessage = message,
+        original = original,
+      )
     }
+  }
+
+  fun withDisplayMessage(message: String): AppError {
+    this.displayMessage = message
+    return this
+  }
 }
 
 @Serializable
 enum class ErrorReason(val reason: String) {
-    /** Access token is missing or invalid. */
-    Authentication("Unauthorized"),
+  /** Access token is missing or invalid. */
+  Authentication("Unauthorized"),
 
-    /**
-     * Entity not found. Also thrown in cases where the user is not authorized to access the entity.
-     */
-    EntityDoesNotExist("Entity does not exist"),
+  /**
+   * Entity not found. Also thrown in cases where the user is not authorized to access the entity.
+   */
+  EntityDoesNotExist("Entity does not exist"),
 
-    /** Conflicting entity is found. */
-    EntityAlreadyExists("Entity already exists"),
+  /** Conflicting entity is found. */
+  EntityAlreadyExists("Entity already exists"),
 
-    /** Invalid input value received from client. */
-    InvalidParameter("Invalid parameter"),
+  /** Invalid input value received from client. */
+  InvalidParameter("Invalid parameter"),
 
-    /** Depends on the context it was created in. Usually used to indicate an invalid state change. */
-    InvalidOperation("Invalid operation"),
+  /** Depends on the context it was created in. Usually used to indicate an invalid state change. */
+  InvalidOperation("Invalid operation"),
 
-    /** Used for BLOBs. */
-    PayloadTooLarge("Payload too large"),
+  /** Used for BLOBs. */
+  PayloadTooLarge("Payload too large"),
 
-    /** Downstream service error. */
-    Internal("Something went wrong"),
+  /** Downstream service error. */
+  Internal("Something went wrong"),
 }

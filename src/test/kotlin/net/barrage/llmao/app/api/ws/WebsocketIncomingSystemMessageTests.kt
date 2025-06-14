@@ -28,239 +28,236 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class WebsocketIncomingSystemMessageTests : IntegrationTest() {
-    private lateinit var agent: Agent
-    private lateinit var agentConfiguration: AgentConfiguration
+  private lateinit var agent: Agent
+  private lateinit var agentConfiguration: AgentConfiguration
 
-    @BeforeAll
-    fun setup() {
-        runBlocking {
-            agent = postgres.testAgent()
-            agentConfiguration = postgres.testAgentConfiguration(agentId = agent.id)
-        }
+  @BeforeAll
+  fun setup() {
+    runBlocking {
+      agent = postgres.testAgent()
+      agentConfiguration = postgres.testAgentConfiguration(agentId = agent.id)
+    }
+  }
+
+  @Test
+  fun rejectsRequestNoSession() = wsTest { client ->
+    var asserted = false
+
+    client.webSocket("/") {
+      val result = incoming.receiveCatching()
+      assert(result.isClosed)
+      val err = closeReason.await()!!.message
+      assertEquals("Unauthorized", err)
+      asserted = true
     }
 
-    @Test
-    fun rejectsRequestNoSession() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.webSocket("/") {
-            val result = incoming.receiveCatching()
-            assert(result.isClosed)
-            val err = closeReason.await()!!.message
-            assertEquals("Unauthorized", err)
-            asserted = true
-        }
+  @Test
+  fun rejectsRequestMalformedToken() = wsTest { client ->
+    var asserted = false
 
-        assert(asserted)
+    client.webSocket("/?token=foo") {
+      val result = incoming.receiveCatching()
+      assert(result.isClosed)
+      val err = closeReason.await()!!.message
+      assertEquals("Unauthorized", err)
+      asserted = true
     }
 
-    @Test
-    fun rejectsRequestMalformedToken() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.webSocket("/?token=foo") {
-            val result = incoming.receiveCatching()
-            assert(result.isClosed)
-            val err = closeReason.await()!!.message
-            assertEquals("Unauthorized", err)
-            asserted = true
-        }
+  @Test
+  fun rejectsRequestInvalidToken() = wsTest { client ->
+    var asserted = false
 
-        assert(asserted)
+    val token = KUUID.randomUUID()
+
+    client.webSocket("/?token=$token") {
+      val result = incoming.receiveCatching()
+      assert(result.isClosed)
+      val err = closeReason.await()!!.message
+      assertEquals("Unauthorized", err)
+      asserted = true
     }
 
-    @Test
-    fun rejectsRequestInvalidToken() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        val token = KUUID.randomUUID()
+  @Test
+  fun rejectsMessageInvalidJson() = wsTest { client ->
+    var asserted = false
 
-        client.webSocket("/?token=$token") {
-            val result = incoming.receiveCatching()
-            assert(result.isClosed)
-            val err = closeReason.await()!!.message
-            assertEquals("Unauthorized", err)
-            asserted = true
-        }
-
-        assert(asserted)
+    client.adminWsSession {
+      openNewChat(agent.id)
+      send("asdf")
+      val response = (incoming.receive() as Frame.Text).readText()
+      val error = receiveJson<AppError>(response)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.InvalidParameter, error.errorReason)
+      asserted = true
     }
 
-    @Test
-    fun rejectsMessageInvalidJson() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.adminWsSession {
-            openNewChat(agent.id)
-            send("asdf")
-            val response = (incoming.receive() as Frame.Text).readText()
-            val error = receiveJson<AppError>(response)
-            assertEquals("API", error.errorType)
-            assertEquals(ErrorReason.InvalidParameter, error.errorReason)
-            asserted = true
-        }
+  @Test
+  fun openingNewChatWorks() = wsTest { client ->
+    var asserted = false
 
-        assert(asserted)
+    client.adminWsSession {
+      sendClientSystem(
+        IncomingSystemMessage.CreateNewWorkflow(
+          "CHAT",
+          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+        )
+      )
+      val response = (incoming.receive() as Frame.Text).readText()
+      val message = receiveJson<OutgoingSystemMessage.WorkflowOpen>(response)
+      assertNotNull(message.id)
+      asserted = true
     }
 
-    @Test
-    fun openingNewChatWorks() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.adminWsSession {
-            sendClientSystem(
-                IncomingSystemMessage.CreateNewWorkflow(
-                    "CHAT",
-                    Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
-                )
-            )
-            val response = (incoming.receive() as Frame.Text).readText()
-            val message = receiveJson<OutgoingSystemMessage.WorkflowOpen>(response)
-            assertNotNull(message.id)
-            asserted = true
-        }
+  @Test
+  fun openingNewChatWorksWithAlreadyOpenChat() = wsTest { client ->
+    var asserted = false
 
-        assert(asserted)
+    client.adminWsSession {
+      val openChat =
+        IncomingSystemMessage.CreateNewWorkflow(
+          "CHAT",
+          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+        )
+
+      sendClientSystem(openChat)
+      val first = (incoming.receive() as Frame.Text).readText()
+      val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
+      assertNotNull(firstMessage.id)
+
+      sendClientSystem(openChat)
+      val second = (incoming.receive() as Frame.Text).readText()
+      val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
+      assertNotNull(secondMessage.id)
+
+      assertNotEquals(firstMessage.id, secondMessage.id)
+      asserted = true
     }
 
-    @Test
-    fun openingNewChatWorksWithAlreadyOpenChat() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.adminWsSession {
-            val openChat =
-                IncomingSystemMessage.CreateNewWorkflow(
-                    "CHAT",
-                    Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
-                )
+  @Test
+  fun openingExistingChatWorks() = wsTest { client ->
+    var asserted = false
 
-            sendClientSystem(openChat)
-            val first = (incoming.receive() as Frame.Text).readText()
-            val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
-            assertNotNull(firstMessage.id)
+    client.adminWsSession {
+      sendClientSystem(
+        IncomingSystemMessage.CreateNewWorkflow(
+          "CHAT",
+          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+        )
+      )
 
-            sendClientSystem(openChat)
-            val second = (incoming.receive() as Frame.Text).readText()
-            val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
-            assertNotNull(secondMessage.id)
+      val first = (incoming.receive() as Frame.Text).readText()
+      val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
+      assertNotNull(firstMessage.id)
 
-            assertNotEquals(firstMessage.id, secondMessage.id)
-            asserted = true
-        }
+      sendClientSystem(
+        IncomingSystemMessage.LoadExistingWorkflow(workflowType = "CHAT", firstMessage.id)
+      )
 
-        assert(asserted)
+      val second = (incoming.receive() as Frame.Text).readText()
+      val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
+      assertNotNull(secondMessage.id)
+
+      assertEquals(firstMessage.id, secondMessage.id)
+      asserted = true
     }
 
-    @Test
-    fun openingExistingChatWorks() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.adminWsSession {
-            sendClientSystem(
-                IncomingSystemMessage.CreateNewWorkflow(
-                    "CHAT",
-                    Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
-                )
-            )
+  @Test
+  fun openingExistingChatFailsDoesNotExist() = wsTest { client ->
+    var asserted = false
 
-            val first = (incoming.receive() as Frame.Text).readText()
-            val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
-            assertNotNull(firstMessage.id)
+    client.adminWsSession {
+      val openChat =
+        IncomingSystemMessage.LoadExistingWorkflow(workflowType = "CHAT", KUUID.randomUUID())
+      sendClientSystem(openChat)
 
-            sendClientSystem(
-                IncomingSystemMessage.LoadExistingWorkflow(workflowType = "CHAT", firstMessage.id)
-            )
-
-            val second = (incoming.receive() as Frame.Text).readText()
-            val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
-            assertNotNull(secondMessage.id)
-
-            assertEquals(firstMessage.id, secondMessage.id)
-            asserted = true
-        }
-
-        assert(asserted)
+      val message = (incoming.receive() as Frame.Text).readText()
+      val error = receiveJson<AppError>(message)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
+      asserted = true
     }
 
-    @Test
-    fun openingExistingChatFailsDoesNotExist() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.adminWsSession {
-            val openChat =
-                IncomingSystemMessage.LoadExistingWorkflow(
-                    workflowType = "CHAT",
-                    KUUID.randomUUID()
-                )
-            sendClientSystem(openChat)
+  @Test
+  fun closesChannelOnCloseFrame() = wsTest { client ->
+    var asserted = false
 
-            val message = (incoming.receive() as Frame.Text).readText()
-            val error = receiveJson<AppError>(message)
-            assertEquals("API", error.errorType)
-            assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
-            asserted = true
-        }
-
-        assert(asserted)
+    client.adminWsSession {
+      send(Frame.Close())
+      val result = incoming.receiveCatching()
+      assert(result.isClosed)
+      asserted = true
     }
 
-    @Test
-    fun closesChannelOnCloseFrame() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.adminWsSession {
-            send(Frame.Close())
-            val result = incoming.receiveCatching()
-            assert(result.isClosed)
-            asserted = true
-        }
+  @Test
+  fun openingChatFailsAgentDoesNotExist() = wsTest { client ->
+    var asserted = false
 
-        assert(asserted)
+    client.adminWsSession {
+      val openChat =
+        IncomingSystemMessage.CreateNewWorkflow(
+          "CHAT",
+          Json.encodeToJsonElement(NewChatWorkflow(KUUID.randomUUID())),
+        )
+      sendClientSystem(openChat)
+
+      val message = (incoming.receive() as Frame.Text).readText()
+      val error = receiveJson<AppError>(message)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
+      asserted = true
     }
 
-    @Test
-    fun openingChatFailsAgentDoesNotExist() = wsTest { client ->
-        var asserted = false
+    assert(asserted)
+  }
 
-        client.adminWsSession {
-            val openChat =
-                IncomingSystemMessage.CreateNewWorkflow(
-                    "CHAT",
-                    Json.encodeToJsonElement(NewChatWorkflow(KUUID.randomUUID())),
-                )
-            sendClientSystem(openChat)
+  @Test
+  fun openingChatFailsUserNotAllowedToAccessAgent() = wsTest { client ->
+    val agent = postgres.testAgent(groups = listOf("admin"))
+    postgres.testAgentConfiguration(agentId = agent.id)
+    var asserted = false
 
-            val message = (incoming.receive() as Frame.Text).readText()
-            val error = receiveJson<AppError>(message)
-            assertEquals("API", error.errorType)
-            assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
-            asserted = true
-        }
+    client.userWsSession {
+      sendClientSystem(
+        IncomingSystemMessage.CreateNewWorkflow(
+          "CHAT",
+          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+        )
+      )
 
-        assert(asserted)
+      val message = (incoming.receive() as Frame.Text).readText()
+      val error = receiveJson<AppError>(message)
+      assertEquals("API", error.errorType)
+      assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
+      asserted = true
     }
 
-    @Test
-    fun openingChatFailsUserNotAllowedToAccessAgent() = wsTest { client ->
-        val agent = postgres.testAgent(groups = listOf("admin"))
-        postgres.testAgentConfiguration(agentId = agent.id)
-        var asserted = false
-
-        client.userWsSession {
-            sendClientSystem(
-                IncomingSystemMessage.CreateNewWorkflow(
-                    "CHAT",
-                    Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
-                )
-            )
-
-            val message = (incoming.receive() as Frame.Text).readText()
-            val error = receiveJson<AppError>(message)
-            assertEquals("API", error.errorType)
-            assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
-            asserted = true
-        }
-
-        assert(asserted)
-    }
+    assert(asserted)
+  }
 }

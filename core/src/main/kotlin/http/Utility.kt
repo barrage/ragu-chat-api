@@ -10,14 +10,10 @@ import net.barrage.llmao.core.types.KUUID
  * [AppError] if the UUID is malformed.
  */
 fun ApplicationCall.pathUuid(param: String): KUUID {
-    val value = parameters[param]
-    try {
-        return KUUID.fromString(value)
-    } catch (e: IllegalArgumentException) {
-        throw AppError.api(
-            ErrorReason.InvalidParameter,
-            "'$value' is not a valid UUID",
-            original = e
-        )
-    }
+  val value = parameters[param]
+  try {
+    return KUUID.fromString(value)
+  } catch (e: IllegalArgumentException) {
+    throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID", original = e)
+  }
 }

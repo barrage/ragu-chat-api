@@ -13,41 +13,41 @@ import net.barrage.llmao.core.workflow.WorkflowOutput
 @Serializable
 @JsonClassDiscriminator("type")
 sealed class BonvoyageInput {
-    /**
-     * Sent by travelers during trips to chat with the agent.
-     *
-     * Input to [BonvoyageChatAgent].
-     */
-    @Serializable
-    @SerialName("bonvoyage.chat")
-    data class Chat(val message: DefaultWorkflowInput) : BonvoyageInput()
+  /**
+   * Sent by travelers during trips to chat with the agent.
+   *
+   * Input to [BonvoyageChatAgent].
+   */
+  @Serializable
+  @SerialName("bonvoyage.chat")
+  data class Chat(val message: DefaultWorkflowInput) : BonvoyageInput()
 
-    /**
-     * Sent to upload a business trip expense. Usually a picture of a receipt.
-     *
-     * Input to [BonvoyageExpenseAgent].
-     */
-    @Serializable
-    @SerialName("bonvoyage.expense.upload")
-    data class ExpenseUpload(
-        /** Base64 encoded image data. */
-        val data: IncomingImageData,
+  /**
+   * Sent to upload a business trip expense. Usually a picture of a receipt.
+   *
+   * Input to [BonvoyageExpenseAgent].
+   */
+  @Serializable
+  @SerialName("bonvoyage.expense.upload")
+  data class ExpenseUpload(
+    /** Base64 encoded image data. */
+    val data: IncomingImageData,
 
-        /** Description of the expense. */
-        val description: String? = null,
-    ) : BonvoyageInput()
+    /** Description of the expense. */
+    val description: String? = null,
+  ) : BonvoyageInput()
 
-    /**
-     * Sent to update an expense entry.
-     *
-     * System message; does not use agent.
-     */
-    @Serializable
-    @SerialName("bonvoyage.expense.update")
-    data class ExpenseUpdate(
-        val expenseId: KUUID,
-        val properties: BonvoyageTravelExpenseUpdateProperties,
-    ) : BonvoyageInput()
+  /**
+   * Sent to update an expense entry.
+   *
+   * System message; does not use agent.
+   */
+  @Serializable
+  @SerialName("bonvoyage.expense.update")
+  data class ExpenseUpdate(
+    val expenseId: KUUID,
+    val properties: BonvoyageTravelExpenseUpdateProperties,
+  ) : BonvoyageInput()
 }
 
 /**

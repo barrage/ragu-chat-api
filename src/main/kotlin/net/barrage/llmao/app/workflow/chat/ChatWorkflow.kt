@@ -15,110 +15,109 @@ import net.barrage.llmao.core.workflow.WorkflowRealTime
 
 /** Implementation of a [WorkflowRealTime] for user-created agents. */
 class ChatWorkflow(
-    override val id: KUUID,
-    private val user: User,
-    private val emitter: Emitter,
-    private val tools: Tools?,
-    private val agent: ChatAgent,
-    private val repository: ChatRepositoryWrite,
+  override val id: KUUID,
+  private val user: User,
+  private val emitter: Emitter,
+  private val tools: Tools?,
+  private val agent: ChatAgent,
+  private val repository: ChatRepositoryWrite,
 
-    /** The current state of this workflow. */
-    private var state: ChatWorkflowState,
+  /** The current state of this workflow. */
+  private var state: ChatWorkflowState,
 ) : WorkflowRealTime<DefaultWorkflowInput>(inputSerializer = DefaultWorkflowInput.serializer()) {
-    fun agentId(): KUUID {
-        return agent.agentId
+  fun agentId(): KUUID {
+    return agent.agentId
+  }
+
+  override suspend fun handleInput(input: DefaultWorkflowInput) {
+    val content =
+      input.attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
+        ?: ContentSingle(input.text!!)
+
+    val userMessage = ChatMessage.user(content)
+
+    var (finishReason, messages) =
+      agent.collectAndForwardStream(agent.configuration.context, userMessage, tools, emitter)
+
+    if (messages.isEmpty()) {
+      emitter.emit(StreamComplete(workflowId = id, reason = finishReason))
+      return
     }
 
-    override suspend fun handleInput(input: DefaultWorkflowInput) {
-        val content =
-            input.attachments?.let { ChatMessageProcessor.toContentMulti(input.text, it) }
-                ?: ContentSingle(input.text!!)
+    val assistantMessage = messages.last()
 
-        val userMessage = ChatMessage.user(content)
+    assert(assistantMessage.role == "assistant")
+    assert(assistantMessage.finishReason != null)
+    assert(assistantMessage.content != null)
 
-        var (finishReason, messages) =
-            agent.collectAndForwardStream(agent.configuration.context, userMessage, tools, emitter)
+    finishReason = assistantMessage.finishReason!!
 
-        if (messages.isEmpty()) {
-            emitter.emit(StreamComplete(workflowId = id, reason = finishReason))
-            return
-        }
+    agent.addToHistory(messages = listOf(userMessage) + messages)
 
-        val assistantMessage = messages.last()
+    // Have to use the scope here for cases when the workflow is closed.
+    scope.launch {
+      val originalPrompt = userMessage.content!!.text()
+      val attachmentsInsert =
+        input.attachments?.let { ChatMessageProcessor.storeMessageAttachments(it) }
+      val userMessageInsert = userMessage.toInsert(attachmentsInsert)
 
-        assert(assistantMessage.role == "assistant")
-        assert(assistantMessage.finishReason != null)
-        assert(assistantMessage.content != null)
+      val messagesInsert = listOf(userMessageInsert) + messages.map { it.toInsert() }
 
-        finishReason = assistantMessage.finishReason!!
+      val assistantMessage = messages.last()
+      assert(assistantMessage.role == "assistant") { "Last message must be from the assistant" }
+      assert(assistantMessage.content != null) { "Last assistant message must have content" }
 
-        agent.addToHistory(messages = listOf(userMessage) + messages)
-
-        // Have to use the scope here for cases when the workflow is closed.
-        scope.launch {
-            val originalPrompt = userMessage.content!!.text()
-            val attachmentsInsert =
-                input.attachments?.let { ChatMessageProcessor.storeMessageAttachments(it) }
-            val userMessageInsert = userMessage.toInsert(attachmentsInsert)
-
-            val messagesInsert = listOf(userMessageInsert) + messages.map { it.toInsert() }
-
-            val assistantMessage = messages.last()
-            assert(assistantMessage.role == "assistant") { "Last message must be from the assistant" }
-            assert(assistantMessage.content != null) { "Last assistant message must have content" }
-
+      val groupId =
+        when (state) {
+          ChatWorkflowState.New -> {
             val groupId =
-                when (state) {
-                    ChatWorkflowState.New -> {
-                        val groupId =
-                            repository.insertChatWithMessages(
-                                chatId = id,
-                                userId = user.id,
-                                username = user.username,
-                                agentId = agent.agentId,
-                                agentConfigurationId = agent.configuration.id,
-                                messages = messagesInsert,
-                            )
+              repository.insertChatWithMessages(
+                chatId = id,
+                userId = user.id,
+                username = user.username,
+                agentId = agent.agentId,
+                agentConfigurationId = agent.configuration.id,
+                messages = messagesInsert,
+              )
 
-                        val title =
-                            agent.createTitle(originalPrompt, assistantMessage.content!!.text())
+            val title = agent.createTitle(originalPrompt, assistantMessage.content!!.text())
 
-                        repository.updateTitle(id, user.id, title)
-                        emitter.emit(ChatTitleUpdated(id, title))
-                        state = ChatWorkflowState.Persisted(title)
+            repository.updateTitle(id, user.id, title)
+            emitter.emit(ChatTitleUpdated(id, title))
+            state = ChatWorkflowState.Persisted(title)
 
-                        groupId
-                    }
+            groupId
+          }
 
-                    is ChatWorkflowState.Persisted -> {
-                        repository.insertWorkflowMessages(
-                            workflowId = id,
-                            workflowType = CHAT_WORKFLOW_ID,
-                            messages = messagesInsert,
-                        )
-                    }
-                }
-
-            emitter.emit(
-                StreamComplete(
-                    workflowId = id,
-                    reason = finishReason,
-                    messageGroupId = groupId,
-                    attachmentPaths = attachmentsInsert,
-                    content = null,
-                )
+          is ChatWorkflowState.Persisted -> {
+            repository.insertWorkflowMessages(
+              workflowId = id,
+              workflowType = CHAT_WORKFLOW_ID,
+              messages = messagesInsert,
             )
+          }
         }
+
+      emitter.emit(
+        StreamComplete(
+          workflowId = id,
+          reason = finishReason,
+          messageGroupId = groupId,
+          attachmentPaths = attachmentsInsert,
+          content = null,
+        )
+      )
     }
+  }
 }
 
 sealed class ChatWorkflowState {
-    /** State when a chat is created from scratch. It has no title and received no messages. */
-    data object New : ChatWorkflowState()
+  /** State when a chat is created from scratch. It has no title and received no messages. */
+  data object New : ChatWorkflowState()
 
-    /**
-     * State when a chat is persisted in the database. It has a title and received at least one
-     * message.
-     */
-    data class Persisted(val title: String) : ChatWorkflowState()
+  /**
+   * State when a chat is persisted in the database. It has a title and received at least one
+   * message.
+   */
+  data class Persisted(val title: String) : ChatWorkflowState()
 }

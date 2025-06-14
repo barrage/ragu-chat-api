@@ -14,11 +14,11 @@ import net.barrage.llmao.core.types.KUUID
  * workflow types.
  */
 interface WorkflowFactory : Identity {
-    /** Instantiate a new workflow. */
-    suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow
+  /** Instantiate a new workflow. */
+  suspend fun new(user: User, emitter: Emitter, params: JsonElement?): Workflow
 
-    /** Continue an existing workflow. */
-    suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow
+  /** Continue an existing workflow. */
+  suspend fun existing(user: User, workflowId: KUUID, emitter: Emitter): Workflow
 }
 
 /**
@@ -27,33 +27,33 @@ interface WorkflowFactory : Identity {
  * Used by the session manager to create workflows based on input messages.
  */
 object WorkflowFactoryManager {
-    private val factories: MutableMap<String, WorkflowFactory> = mutableMapOf()
+  private val factories: MutableMap<String, WorkflowFactory> = mutableMapOf()
 
-    suspend fun new(
-        workflowType: String,
-        user: User,
-        emitter: Emitter,
-        params: JsonElement?,
-    ): Workflow {
-        val factory =
-            factories[workflowType]
-                ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
-        return factory.new(user, emitter, params)
-    }
+  suspend fun new(
+    workflowType: String,
+    user: User,
+    emitter: Emitter,
+    params: JsonElement?,
+  ): Workflow {
+    val factory =
+      factories[workflowType]
+        ?: throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
+    return factory.new(user, emitter, params)
+  }
 
-    suspend fun existing(
-        workflowType: String,
-        user: User,
-        workflowId: KUUID,
-        emitter: Emitter,
-    ): Workflow {
-        if (!factories.containsKey(workflowType)) {
-            throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
-        }
-        return factories[workflowType]!!.existing(user, workflowId, emitter)
+  suspend fun existing(
+    workflowType: String,
+    user: User,
+    workflowId: KUUID,
+    emitter: Emitter,
+  ): Workflow {
+    if (!factories.containsKey(workflowType)) {
+      throw AppError.api(ErrorReason.InvalidParameter, "Unsupported workflow type")
     }
+    return factories[workflowType]!!.existing(user, workflowId, emitter)
+  }
 
-    fun register(factory: WorkflowFactory) {
-        factories[factory.id()] = factory
-    }
+  fun register(factory: WorkflowFactory) {
+    factories[factory.id()] = factory
+  }
 }

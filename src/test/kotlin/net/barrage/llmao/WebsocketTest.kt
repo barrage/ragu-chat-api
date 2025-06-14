@@ -27,108 +27,105 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 val json = Json { ignoreUnknownKeys = true }
 
 suspend fun HttpClient.adminWsSession(block: suspend ClientWebSocketSession.() -> Unit) {
-    val token = get("/ws") { header(HttpHeaders.Cookie, adminAccessToken()) }.bodyAsText()
-    webSocket("/?token=$token") { block() }
+  val token = get("/ws") { header(HttpHeaders.Cookie, adminAccessToken()) }.bodyAsText()
+  webSocket("/?token=$token") { block() }
 }
 
 suspend fun HttpClient.userWsSession(block: suspend ClientWebSocketSession.() -> Unit) {
-    val token = get("/ws") { header(HttpHeaders.Cookie, userAccessToken()) }.bodyAsText()
-    webSocket("/?token=$token") { block() }
+  val token = get("/ws") { header(HttpHeaders.Cookie, userAccessToken()) }.bodyAsText()
+  webSocket("/?token=$token") { block() }
 }
 
 /** Open a new chat, send a message and collect the response. */
 suspend fun HttpClient.openSendAndCollect(
-    agentId: KUUID? = null,
-    chatId: KUUID? = null,
-    message: String,
+  agentId: KUUID? = null,
+  chatId: KUUID? = null,
+  message: String,
 ): Pair<KUUID, String> {
-    var buffer = ""
-    lateinit var openChatId: KUUID
+  var buffer = ""
+  lateinit var openChatId: KUUID
 
-    adminWsSession {
-        openChatId =
-            agentId?.let { openNewChat(it) }
-                ?: chatId?.let { openExistingChat(it) }
-                        ?: throw IllegalArgumentException("Must provide either agentId or chatId")
+  adminWsSession {
+    openChatId =
+      agentId?.let { openNewChat(it) }
+        ?: chatId?.let { openExistingChat(it) }
+        ?: throw IllegalArgumentException("Must provide either agentId or chatId")
 
-        sendMessage(message) { incoming ->
-            for (frame in incoming) {
-                val response = (frame as Frame.Text).readText()
-                try {
-                    val message = json.decodeFromString<StreamChunk>(response)
-                    buffer += message.chunk
-                } catch (_: SerializationException) {
-                }
+    sendMessage(message) { incoming ->
+      for (frame in incoming) {
+        val response = (frame as Frame.Text).readText()
+        try {
+          val message = json.decodeFromString<StreamChunk>(response)
+          buffer += message.chunk
+        } catch (_: SerializationException) {}
 
-                try {
-                    val message = json.decodeFromString<StreamComplete>(response)
-                    assert(message.reason == FinishReason.Stop)
-                    break
-                } catch (_: SerializationException) {
-                }
+        try {
+          val message = json.decodeFromString<StreamComplete>(response)
+          assert(message.reason == FinishReason.Stop)
+          break
+        } catch (_: SerializationException) {}
 
-                try {
-                    val message = json.decodeFromString<AppError>(response)
-                    throw message
-                    break
-                } catch (_: SerializationException) {
-                }
-            }
-        }
+        try {
+          val message = json.decodeFromString<AppError>(response)
+          throw message
+          break
+        } catch (_: SerializationException) {}
+      }
     }
+  }
 
-    return Pair(openChatId, buffer)
+  return Pair(openChatId, buffer)
 }
 
 suspend fun ClientWebSocketSession.sendClientSystem(message: IncomingSystemMessage) {
-    send(Frame.Text(Json.encodeToString(message)))
+  send(Frame.Text(Json.encodeToString(message)))
 }
 
 /** Send the `chat_open_new` system message and wait for the chat_open response. */
 suspend fun ClientWebSocketSession.openNewChat(
-    agentId: KUUID? = null,
-    workflowType: String = "CHAT",
+  agentId: KUUID? = null,
+  workflowType: String = "CHAT",
 ): KUUID {
-    // Open a chat and confirm it's open
-    sendClientSystem(
-        IncomingSystemMessage.CreateNewWorkflow(
-            workflowType,
-            agentId?.let { Json.encodeToJsonElement(NewChatWorkflow(it)) },
-        )
+  // Open a chat and confirm it's open
+  sendClientSystem(
+    IncomingSystemMessage.CreateNewWorkflow(
+      workflowType,
+      agentId?.let { Json.encodeToJsonElement(NewChatWorkflow(it)) },
     )
-    val chatOpen = (incoming.receive() as Frame.Text).readText()
-    val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
-    assertNotNull(workflowOpenMessage.id)
-    return workflowOpenMessage.id
+  )
+  val chatOpen = (incoming.receive() as Frame.Text).readText()
+  val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
+  assertNotNull(workflowOpenMessage.id)
+  return workflowOpenMessage.id
 }
 
 suspend fun ClientWebSocketSession.openExistingChat(
-    chatId: KUUID,
-    workflowType: String = "CHAT",
+  chatId: KUUID,
+  workflowType: String = "CHAT",
 ): KUUID {
-    // Open a chat and confirm it's open
-    sendClientSystem(IncomingSystemMessage.LoadExistingWorkflow(workflowType, chatId))
-    val chatOpen = (incoming.receive() as Frame.Text).readText()
-    val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
-    assertNotNull(workflowOpenMessage.id)
-    return workflowOpenMessage.id
+  // Open a chat and confirm it's open
+  sendClientSystem(IncomingSystemMessage.LoadExistingWorkflow(workflowType, chatId))
+  val chatOpen = (incoming.receive() as Frame.Text).readText()
+  val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
+  assertNotNull(workflowOpenMessage.id)
+  return workflowOpenMessage.id
 }
 
 /** Send a chat message and wait for the response. */
 suspend fun ClientWebSocketSession.sendMessage(
-    text: String,
-    block: suspend (ReceiveChannel<Frame>) -> Unit,
+  text: String,
+  block: suspend (ReceiveChannel<Frame>) -> Unit,
 ) {
-    val input = Json.encodeToJsonElement(DefaultWorkflowInput(text))
-    send(
-        Frame.Text(
-            json.encodeToString(
-                IncomingSystemMessage.serializer(),
-                IncomingSystemMessage.WorkflowInput(input),
-            )
-        )
+  val input = Json.encodeToJsonElement(DefaultWorkflowInput(text))
+  send(
+    Frame.Text(
+      json.encodeToString(
+        IncomingSystemMessage.serializer(),
+        IncomingSystemMessage.WorkflowInput(input),
+      )
     )
-    block(incoming)
+  )
+  block(incoming)
 }
 
 inline fun <reified T> receiveJson(message: String): T = json.decodeFromString(message)

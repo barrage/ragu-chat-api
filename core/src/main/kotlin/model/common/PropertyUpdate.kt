@@ -48,54 +48,52 @@ import kotlinx.serialization.json.JsonNull
  */
 @Serializable(with = PropertyUpdateSerializer::class)
 sealed class PropertyUpdate<out T> {
-    /**
-     * An *optional* property completely omitted from JSON that should remain as is.
-     *
-     * All PropertyUpdate fields should be instantiated to this by default.
-     */
-    data object Undefined : PropertyUpdate<Nothing>()
+  /**
+   * An *optional* property completely omitted from JSON that should remain as is.
+   *
+   * All PropertyUpdate fields should be instantiated to this by default.
+   */
+  data object Undefined : PropertyUpdate<Nothing>()
 
-    /** If the clients send explicit nulls, this will be the instance. */
-    data object Null : PropertyUpdate<Nothing>()
+  /** If the clients send explicit nulls, this will be the instance. */
+  data object Null : PropertyUpdate<Nothing>()
 
-    /** If the clients send a value, this will be the instance. */
-    data class Value<T>(val value: T) : PropertyUpdate<T>()
+  /** If the clients send a value, this will be the instance. */
+  data class Value<T>(val value: T) : PropertyUpdate<T>()
 
-    fun value(): T? {
-        return when (this) {
-            is Value -> value
-            else -> null
-        }
+  fun value(): T? {
+    return when (this) {
+      is Value -> value
+      else -> null
     }
+  }
 }
 
 class PropertyUpdateSerializer<T>(private val classSerializer: KSerializer<T>) :
-    KSerializer<PropertyUpdate<T>> {
-    override val descriptor: SerialDescriptor =
-        buildClassSerialDescriptor("PropertyUpdate", classSerializer.descriptor)
+  KSerializer<PropertyUpdate<T>> {
+  override val descriptor: SerialDescriptor =
+    buildClassSerialDescriptor("PropertyUpdate", classSerializer.descriptor)
 
-    @OptIn(ExperimentalSerializationApi::class)
-    override fun serialize(encoder: Encoder, value: PropertyUpdate<T>) {
-        val encoder =
-            encoder as? JsonEncoder ?: throw SerializationException("Only JSON is supported")
-        // We serialize this only in tests
-        when (value) {
-            is PropertyUpdate.Value -> encoder.encodeSerializableValue(classSerializer, value.value)
-            is PropertyUpdate.Null -> encoder.encodeNull()
-            is PropertyUpdate.Undefined -> {}
-        }
+  @OptIn(ExperimentalSerializationApi::class)
+  override fun serialize(encoder: Encoder, value: PropertyUpdate<T>) {
+    val encoder = encoder as? JsonEncoder ?: throw SerializationException("Only JSON is supported")
+    // We serialize this only in tests
+    when (value) {
+      is PropertyUpdate.Value -> encoder.encodeSerializableValue(classSerializer, value.value)
+      is PropertyUpdate.Null -> encoder.encodeNull()
+      is PropertyUpdate.Undefined -> {}
     }
+  }
 
-    // This will only run if the field is defined.
-    override fun deserialize(decoder: Decoder): PropertyUpdate<T> {
-        val decoder =
-            decoder as? JsonDecoder ?: throw SerializationException("Only JSON is supported")
-        val element = decoder.decodeJsonElement()
-        return if (element is JsonNull) {
-            PropertyUpdate.Null
-        } else {
-            val value = decoder.json.decodeFromJsonElement(classSerializer, element)
-            PropertyUpdate.Value(value)
-        }
+  // This will only run if the field is defined.
+  override fun deserialize(decoder: Decoder): PropertyUpdate<T> {
+    val decoder = decoder as? JsonDecoder ?: throw SerializationException("Only JSON is supported")
+    val element = decoder.decodeJsonElement()
+    return if (element is JsonNull) {
+      PropertyUpdate.Null
+    } else {
+      val value = decoder.json.decodeFromJsonElement(classSerializer, element)
+      PropertyUpdate.Value(value)
     }
+  }
 }

@@ -14,17 +14,17 @@ import net.barrage.llmao.core.types.KUUID
 /** Standard input to all workflows. */
 @Serializable
 data class DefaultWorkflowInput(
-    val text: String? = null,
-    val attachments: List<IncomingMessageAttachment>? = null,
+  val text: String? = null,
+  val attachments: List<IncomingMessageAttachment>? = null,
 ) {
-    fun validate() {
-        if (text.isNullOrBlank() && attachments.isNullOrEmpty()) {
-            throw AppError.api(
-                ErrorReason.InvalidParameter,
-                "Workflow input must contain either text or attachments",
-            )
-        }
+  fun validate() {
+    if (text.isNullOrBlank() && attachments.isNullOrEmpty()) {
+      throw AppError.api(
+        ErrorReason.InvalidParameter,
+        "Workflow input must contain either text or attachments",
+      )
     }
+  }
 }
 
 @Serializable
@@ -41,23 +41,23 @@ data class StreamChunk(val chunk: String) : WorkflowOutput()
 @Serializable
 @SerialName("workflow.stream_complete")
 data class StreamComplete(
-    /** The streaming chat ID */
-    val workflowId: KUUID,
+  /** The streaming chat ID */
+  val workflowId: KUUID,
 
-    /** What caused the stream to finish. */
-    val reason: FinishReason,
+  /** What caused the stream to finish. */
+  val reason: FinishReason,
 
-    /**
-     * The message group ID of the interaction. Present only when the stream finishes successfully.
-     */
-    val messageGroupId: KUUID? = null,
+  /**
+   * The message group ID of the interaction. Present only when the stream finishes successfully.
+   */
+  val messageGroupId: KUUID? = null,
 
-    /**
-     * Contains a list of processed attachment paths, in the order they were sent by the client, if
-     * any.
-     */
-    val attachmentPaths: List<MessageAttachment>? = null,
+  /**
+   * Contains a list of processed attachment paths, in the order they were sent by the client, if
+   * any.
+   */
+  val attachmentPaths: List<MessageAttachment>? = null,
 
-    /** If the response was not streamed, this will contain the output of the LLM. */
-    val content: String? = null,
+  /** If the response was not streamed, this will contain the output of the LLM. */
+  val content: String? = null,
 ) : WorkflowOutput()

@@ -12,27 +12,25 @@ import net.barrage.llmao.core.types.KUUID
 @JsonClassDiscriminator("type")
 @OptIn(ExperimentalSerializationApi::class)
 sealed class IncomingSystemMessage {
-    @Serializable
-    @SerialName("workflow.new")
-    data class CreateNewWorkflow(val workflowType: String, val params: JsonElement?) :
-        IncomingSystemMessage()
+  @Serializable
+  @SerialName("workflow.new")
+  data class CreateNewWorkflow(val workflowType: String, val params: JsonElement?) :
+    IncomingSystemMessage()
 
-    @Serializable
-    @SerialName("workflow.existing")
-    data class LoadExistingWorkflow(val workflowType: String, val workflowId: KUUID) :
-        IncomingSystemMessage()
+  @Serializable
+  @SerialName("workflow.existing")
+  data class LoadExistingWorkflow(val workflowType: String, val workflowId: KUUID) :
+    IncomingSystemMessage()
 
-    @Serializable
-    @SerialName("workflow.close")
-    data object CloseWorkflow : IncomingSystemMessage()
+  @Serializable @SerialName("workflow.close") data object CloseWorkflow : IncomingSystemMessage()
 
-    @Serializable
-    @SerialName("workflow.cancel_stream")
-    data object CancelWorkflowStream : IncomingSystemMessage()
+  @Serializable
+  @SerialName("workflow.cancel_stream")
+  data object CancelWorkflowStream : IncomingSystemMessage()
 
-    @Serializable
-    @SerialName("workflow.input")
-    data class WorkflowInput(val input: JsonElement) : IncomingSystemMessage()
+  @Serializable
+  @SerialName("workflow.input")
+  data class WorkflowInput(val input: JsonElement) : IncomingSystemMessage()
 }
 
 /** Outgoing session messages. */
@@ -40,21 +38,21 @@ sealed class IncomingSystemMessage {
 @JsonClassDiscriminator("type")
 @OptIn(ExperimentalSerializationApi::class)
 sealed class OutgoingSystemMessage {
-    /** Sent when a workflow is opened manually by the client. */
-    @SerialName("workflow.open")
-    @Serializable
-    data class WorkflowOpen(val id: KUUID) : OutgoingSystemMessage()
+  /** Sent when a workflow is opened manually by the client. */
+  @SerialName("workflow.open")
+  @Serializable
+  data class WorkflowOpen(val id: KUUID) : OutgoingSystemMessage()
 
-    /** Sent when a workflow is closed manually by the client. */
-    @SerialName("workflow.closed")
-    @Serializable
-    data class WorkflowClosed(val id: KUUID) : OutgoingSystemMessage()
+  /** Sent when a workflow is closed manually by the client. */
+  @SerialName("workflow.closed")
+  @Serializable
+  data class WorkflowClosed(val id: KUUID) : OutgoingSystemMessage()
 
-    /**
-     * Sent when an administrator deactivates an agent via the service and is used to indicate the
-     * chat is no longer available.
-     */
-    @SerialName("system.event.agent_deactivated")
-    @Serializable
-    data class AgentDeactivated(val agentId: KUUID) : OutgoingSystemMessage()
+  /**
+   * Sent when an administrator deactivates an agent via the service and is used to indicate the
+   * chat is no longer available.
+   */
+  @SerialName("system.event.agent_deactivated")
+  @Serializable
+  data class AgentDeactivated(val agentId: KUUID) : OutgoingSystemMessage()
 }

@@ -18,62 +18,62 @@ import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
 
 fun Route.agentsRoutes(service: PublicAgentService) {
-    route("/agents") {
-        get(getAllAgents()) {
-            val pagination = call.query(PaginationSort::class)
-            val user = call.user()
-            val agents =
-                service.listAgents(pagination, showDeactivated = false, groups = user.entitlements)
-            call.respond(HttpStatusCode.OK, agents)
-        }
-
-        get("/{id}", getAgent()) {
-            val agentId = call.pathUuid("id")
-            val user = call.user()
-            val agent = service.getAgent(agentId, user.entitlements)
-            call.respond(HttpStatusCode.OK, agent)
-        }
+  route("/agents") {
+    get(getAllAgents()) {
+      val pagination = call.query(PaginationSort::class)
+      val user = call.user()
+      val agents =
+        service.listAgents(pagination, showDeactivated = false, groups = user.entitlements)
+      call.respond(HttpStatusCode.OK, agents)
     }
+
+    get("/{id}", getAgent()) {
+      val agentId = call.pathUuid("id")
+      val user = call.user()
+      val agent = service.getAgent(agentId, user.entitlements)
+      call.respond(HttpStatusCode.OK, agent)
+    }
+  }
 }
 
 // OpenAPI documentation
 private fun getAllAgents(): RouteConfig.() -> Unit = {
-    tags("agents")
-    description = "Retrieve list of all agents"
-    request { queryPaginationSort() }
-    response {
-        HttpStatusCode.OK to
-                {
-                    description = "A list of Agent objects representing all the agents"
-                    body<CountedList<Agent>> {}
-                }
-        HttpStatusCode.InternalServerError to
-                {
-                    description = "Internal server error occurred while retrieving agents"
-                    body<List<AppError>> {}
-                }
-    }
+  tags("agents")
+  description = "Retrieve list of all agents"
+  request { queryPaginationSort() }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "A list of Agent objects representing all the agents"
+        body<CountedList<Agent>> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving agents"
+        body<List<AppError>> {}
+      }
+  }
 }
 
 private fun getAgent(): RouteConfig.() -> Unit = {
-    tags("agents")
-    description = "Retrieve agent by ID"
-    request {
-        pathParameter<KUUID>("id") {
-            description = "Agent ID"
-            example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
-        }
+  tags("agents")
+  description = "Retrieve agent by ID"
+  request {
+    pathParameter<KUUID>("id") {
+      description = "Agent ID"
+      example("example") { value = "a923b56f-528d-4a31-ac2f-78810069488e" }
     }
-    response {
-        HttpStatusCode.OK to
-                {
-                    description = "An Agent object representing the agent"
-                    body<Agent> {}
-                }
-        HttpStatusCode.InternalServerError to
-                {
-                    description = "Internal server error occurred while retrieving agent"
-                    body<List<AppError>> {}
-                }
-    }
+  }
+  response {
+    HttpStatusCode.OK to
+      {
+        description = "An Agent object representing the agent"
+        body<Agent> {}
+      }
+    HttpStatusCode.InternalServerError to
+      {
+        description = "Internal server error occurred while retrieving agent"
+        body<List<AppError>> {}
+      }
+  }
 }

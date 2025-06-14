@@ -4,20 +4,20 @@ import kotlinx.coroutines.flow.Flow
 import net.barrage.llmao.core.Identity
 
 interface InferenceProvider : Identity {
-    /** Execute chat completion on an LLM. */
-    suspend fun chatCompletion(
-        messages: List<ChatMessage>,
-        config: ChatCompletionParameters,
-    ): ChatCompletion
+  /** Execute chat completion on an LLM. */
+  suspend fun chatCompletion(
+    messages: List<ChatMessage>,
+    config: ChatCompletionParameters,
+  ): ChatCompletion
 
-    /** Create a stream that emits [ChatMessageChunk]s. */
-    suspend fun completionStream(
-        messages: List<ChatMessage>,
-        config: ChatCompletionParameters,
-    ): Flow<ChatMessageChunk>
+  /** Create a stream that emits [ChatMessageChunk]s. */
+  suspend fun completionStream(
+    messages: List<ChatMessage>,
+    config: ChatCompletionParameters,
+  ): Flow<ChatMessageChunk>
 
-    /** Return `true` if the implementor supports the model, `false` otherwise. */
-    suspend fun supportsModel(model: String): Boolean
+  /** Return `true` if the implementor supports the model, `false` otherwise. */
+  suspend fun supportsModel(model: String): Boolean
 
-    suspend fun listModels(): List<String>
+  suspend fun listModels(): List<String>
 }

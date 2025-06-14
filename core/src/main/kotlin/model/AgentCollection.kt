@@ -6,49 +6,50 @@ import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorCollectionInfo
-import net.barrage.llmao.tables.records.AgentCollectionsRecord
+
+// import net.barrage.llmao.tables.records.AgentCollectionsRecord
 
 @Serializable
 data class AgentCollection(
-    val id: KUUID,
-    /** Collection name. */
-    val collection: String,
+  val id: KUUID,
+  /** Collection name. */
+  val collection: String,
 
-    /** Max amount of results to return when querying. */
-    val amount: Int,
+  /** Max amount of results to return when querying. */
+  val amount: Int,
 
-    /** The instruction to prepend to the collection data. */
-    val instruction: String,
+  /** The instruction to prepend to the collection data. */
+  val instruction: String,
 
-    /** Filter any results above this distance. */
-    val maxDistance: Double?,
+  /** Filter any results above this distance. */
+  val maxDistance: Double?,
 
-    /** The embedding provider used to embed the query. */
-    val embeddingProvider: String,
+  /** The embedding provider used to embed the query. */
+  val embeddingProvider: String,
 
-    /** The model to use for embeddings. */
-    val embeddingModel: String,
+  /** The model to use for embeddings. */
+  val embeddingModel: String,
 
-    /** Which vector database implementation is used to store the vectors. */
-    val vectorProvider: String,
-    val createdAt: KOffsetDateTime?,
-    val updatedAt: KOffsetDateTime?,
+  /** Which vector database implementation is used to store the vectors. */
+  val vectorProvider: String,
+  val createdAt: KOffsetDateTime?,
+  val updatedAt: KOffsetDateTime?,
 )
 
-fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
-    return AgentCollection(
-        id = id!!,
-        instruction = instruction,
-        collection = collection,
-        amount = amount,
-        embeddingProvider = embeddingProvider,
-        embeddingModel = embeddingModel,
-        vectorProvider = vectorProvider,
-        maxDistance = maxDistance,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-    )
-}
+// fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
+//  return AgentCollection(
+//    id = id!!,
+//    instruction = instruction,
+//    collection = collection,
+//    amount = amount,
+//    embeddingProvider = embeddingProvider,
+//    embeddingModel = embeddingModel,
+//    vectorProvider = vectorProvider,
+//    maxDistance = maxDistance,
+//    createdAt = createdAt,
+//    updatedAt = updatedAt,
+//  )
+// }
 
 /**
  * Update DTO for an agent's knowledge base.
@@ -62,35 +63,33 @@ fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
  */
 @Serializable
 data class UpdateCollections(
-    val add: List<UpdateCollectionAddition>? = null,
-    val remove: List<CollectionRemove>? = null,
+  val add: List<UpdateCollectionAddition>? = null,
+  val remove: List<CollectionRemove>? = null,
 ) : Validation
 
 @Serializable
 data class UpdateCollectionAddition(
-    @NotBlank val provider: String,
-    @NotBlank val name: String,
-    val amount: Int,
-    val instruction: String,
-    val maxDistance: Double? = null,
+  @NotBlank val provider: String,
+  @NotBlank val name: String,
+  val amount: Int,
+  val instruction: String,
+  val maxDistance: Double? = null,
 ) : Validation
 
 @Serializable
 data class UpdateCollectionsResult(
-    val added: List<VectorCollectionInfo>,
-    val removed: List<CollectionRemove>,
-    val failed: List<UpdateCollectionsFailure>,
+  val added: List<VectorCollectionInfo>,
+  val removed: List<CollectionRemove>,
+  val failed: List<UpdateCollectionsFailure>,
 )
 
-@Serializable
-data class UpdateCollectionsFailure(val name: String, val reason: String)
+@Serializable data class UpdateCollectionsFailure(val name: String, val reason: String)
 
 data class CollectionInsert(
-    val amount: Int,
-    val instruction: String,
-    val maxDistance: Double?,
-    val info: VectorCollectionInfo,
+  val amount: Int,
+  val instruction: String,
+  val maxDistance: Double?,
+  val info: VectorCollectionInfo,
 )
 
-@Serializable
-data class CollectionRemove(val name: String, val provider: String)
+@Serializable data class CollectionRemove(val name: String, val provider: String)
