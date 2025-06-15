@@ -1,6 +1,5 @@
 package net.barrage.llmao.app.vector
 
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
 import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
@@ -14,16 +13,18 @@ import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.core.vector.VectorData
 import net.barrage.llmao.core.vector.VectorDatabase
 
-internal val LOG = KtorSimpleLogger("net.barrage.llmao.app.vector.Weaviate")
+internal val LOG = KtorSimpleLogger("adapters.vector.Weaviate")
 
 class Weaviate(scheme: String, host: String) : VectorDatabase {
   private val client: WeaviateClient = WeaviateClient(Config(scheme, host))
 
   companion object {
-    fun initialize(config: ApplicationConfig): Weaviate {
+    fun initialize(scheme: String, host: String): Weaviate {
       return Weaviate(
-        config.property("weaviate.scheme").getString(),
-        config.property("weaviate.host").getString(),
+        scheme,
+        host,
+        //        config.property("weaviate.scheme").getString(),
+        //        config.property("weaviate.host").getString(),
       )
     }
   }

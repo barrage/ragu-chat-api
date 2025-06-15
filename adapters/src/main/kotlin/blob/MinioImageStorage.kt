@@ -1,6 +1,5 @@
 package blob
 
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
 import io.minio.GetObjectArgs
 import io.minio.MinioClient
@@ -13,19 +12,17 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.blob.BlobStorage
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.ImageType
-import net.barrage.llmao.core.string
 
 class MinioImageStorage(
-  config: ApplicationConfig,
-  private val bucket: String = config.string("minio.bucket"),
+  private val bucket: String,
+  endpoint: String,
+  accessKey: String,
+  secretKey: String,
 ) : BlobStorage<Image> {
   private val client =
-    MinioClient.builder()
-      .endpoint(config.string("minio.endpoint"))
-      .credentials(config.string("minio.accessKey"), config.string("minio.secretKey"))
-      .build()
+    MinioClient.builder().endpoint(endpoint).credentials(accessKey, secretKey).build()
 
-  private val log = KtorSimpleLogger("net.barrage.llmao.app.storage.MinioImageStorage")
+  private val log = KtorSimpleLogger("blob.MinioImageStorage")
 
   override fun id(): String = "minio"
 

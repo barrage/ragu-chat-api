@@ -10,7 +10,6 @@ import com.aallam.openai.client.LoggingConfig
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -23,9 +22,8 @@ import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.DeploymentId
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ModelDeploymentMap
-import net.barrage.llmao.core.string
 
-private val log = KtorSimpleLogger("adapters.llm.openai.Vllm")
+private val log = KtorSimpleLogger("adapters.llm.Vllm")
 
 class Vllm(
   private val endpoint: String,
@@ -33,10 +31,15 @@ class Vllm(
   private val deploymentMap: ModelDeploymentMap<DeploymentId>,
 ) : InferenceProvider {
   companion object {
-    fun initialize(config: ApplicationConfig): Vllm {
-      val endpoint = config.string("llm.vllm.endpoint")
-      val apiKey = config.string("llm.vllm.apiKey")
-      val deploymentMap = ModelDeploymentMap.llmDeploymentMap(config.config("llm.vllm.models"))
+    fun initialize(
+      endpoint: String,
+      apiKey: String,
+      deploymentMap: ModelDeploymentMap<DeploymentId>,
+    ): Vllm {
+      //      val endpoint = config.string("llm.vllm.endpoint")
+      //      val apiKey = config.string("llm.vllm.apiKey")
+      //      val deploymentMap =
+      // ModelDeploymentMap.llmDeploymentMap(config.config("llm.vllm.models"))
 
       if (deploymentMap.isEmpty()) {
         throw AppError.internal(

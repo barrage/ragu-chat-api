@@ -1,7 +1,6 @@
-import nu.studer.gradle.jooq.JooqEdition
-import org.jooq.meta.jaxb.Logging
-import org.liquibase.gradle.LiquibaseTask
-import org.testcontainers.containers.PostgreSQLContainer
+group = "net.barrage"
+
+version = "0.4.0"
 
 val ktorVersion = "3.1.1"
 val openApiVersion = "5.0.1"
@@ -14,14 +13,14 @@ plugins {
   kotlin("plugin.serialization") version "2.1.20"
   id("org.jetbrains.dokka") version "2.0.0"
   id("io.ktor.plugin") version "3.1.1"
-  id("nu.studer.jooq") version "9.0"
+  // id("nu.studer.jooq") version "9.0"
   id("com.ncorti.ktfmt.gradle") version "0.20.1"
   id("org.liquibase.gradle") version "2.2.2"
 }
 
-group = "net.barrage"
+kotlin { jvmToolchain(21) }
 
-version = "0.4.0"
+ktfmt { googleStyle() }
 
 application {
   mainClass.set("io.ktor.server.cio.EngineMain")
@@ -114,13 +113,13 @@ dependencies {
   testImplementation("org.testcontainers:minio:1.20.4")
 
   // Database communication
-  liquibaseRuntime("org.liquibase:liquibase-core:4.29.2")
-  liquibaseRuntime("ch.qos.logback:logback-core:1.5.13")
-  liquibaseRuntime("ch.qos.logback:logback-classic:1.4.12")
-  liquibaseRuntime("info.picocli:picocli:4.7.5")
-  liquibaseRuntime("javax.xml.bind:jaxb-api:2.2.4")
-  liquibaseRuntime("org.postgresql:postgresql:$postgresVersion")
-  jooqGenerator("org.postgresql:postgresql:$postgresVersion")
+  // liquibaseRuntime("org.liquibase:liquibase-core:4.29.2")
+  // liquibaseRuntime("ch.qos.logback:logback-core:1.5.13")
+  // liquibaseRuntime("ch.qos.logback:logback-classic:1.4.12")
+  // liquibaseRuntime("info.picocli:picocli:4.7.5")
+  // liquibaseRuntime("javax.xml.bind:jaxb-api:2.2.4")
+  // liquibaseRuntime("org.postgresql:postgresql:$postgresVersion")
+  // jooqGenerator("org.postgresql:postgresql:$postgresVersion")
   implementation("io.ktor:ktor-server-auth:$ktorVersion")
   implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
   // Weaviate client
@@ -131,48 +130,6 @@ dependencies {
 
   implementation(project(":core"))
   implementation(project(":adapters"))
-}
-
-fun Project.configureJooq() {
-  jooq {
-    extensions.configure(nu.studer.gradle.jooq.JooqExtension::class.java) {
-      version = project.findProperty("jooqVersion") as String
-      edition = JooqEdition.OSS
-
-      configurations.create("main") {
-        generateSchemaSourceOnCompilation = true
-        jooqConfiguration.apply {
-          logging = Logging.ERROR
-          jdbc.apply {
-            url = project.findProperty("db.url") as String
-            user = project.findProperty("db.user") as String
-            password = project.findProperty("db.password") as String
-          }
-          generator.apply {
-            name = "org.jooq.codegen.KotlinGenerator"
-            database.apply {
-              name = "org.jooq.meta.postgres.PostgresDatabase"
-              inputSchema = "public"
-              excludes = "databasechangelog | databasechangeloglock"
-            }
-            generate.apply {
-              isDeprecated = false
-              isKotlinSetterJvmNameAnnotationsOnIsPrefix = true
-              isPojosAsKotlinDataClasses = true
-              isKotlinNotNullRecordAttributes = true
-              isFluentSetters = true
-              isRoutines = false
-            }
-            target.apply {
-              packageName = "net.barrage.llmao"
-              directory = "build/generated-src/jooq"
-            }
-            strategy.name = "org.jooq.codegen.DefaultGeneratorStrategy"
-          }
-        }
-      }
-    }
-  }
 }
 
 // Ensures all properties are set in gradle.properties and throws a user friendly error if not
@@ -220,53 +177,27 @@ tasks.register("stopBuildDb") {
   }
 }
 
-liquibase {
-  activities.register("main") {
-    arguments =
-      mapOf(
-        "url" to dbUrl,
-        "username" to dbUser,
-        "password" to dbPassword,
-        "changelogFile" to dbChangelog,
-        "logLevel" to "error",
-        "showBanner" to "false",
-      )
-  }
-  runList = "main"
+// tasks.test {
+//  useJUnitPlatform() // This is essential for JUnit 5
+//  testLogging { showStandardStreams = env == "local" }
+// }
+
+// tasks
+//  .matching { it.name != "stopBuildDb" && !it.name.contains("ktfmt") }
+//  .all { finalizedBy("stopBuildDb") }
+
+tasks.withType<Jar> {
+  exclude("application.conf")
 }
 
-configureJooq()
+// tasks.named("liquibaseRollback") {
+//  doFirst {
+//    // This sets the tag you're rolling back to
+//    project.ext.set("liquibaseCommandValue", "0.0")
+//  }
+// }
 
-ktfmt { googleStyle() }
-
-tasks.test {
-  useJUnitPlatform() // This is essential for JUnit 5
-  testLogging { showStandardStreams = env == "local" }
-}
-
-tasks.named("build") { dependsOn("generateJooq") }
-
-tasks.named("generateJooq") { dependsOn("liquibaseUpdate") }
-
-tasks
-  .matching { it.name != "stopBuildDb" && !it.name.contains("ktfmt") }
-  .all { finalizedBy("stopBuildDb") }
-
-tasks.withType<Jar> { exclude("application.conf") }
-
-tasks.withType<LiquibaseTask> {
-  logging.captureStandardError(LogLevel.QUIET)
-  logging.captureStandardOutput(LogLevel.QUIET)
-}
-
-tasks.named("liquibaseRollback") {
-  doFirst {
-    // This sets the tag you're rolling back to
-    project.ext.set("liquibaseCommandValue", "0.0")
-  }
-}
-
-tasks.named("liquibaseUpdate") {
-  logging.captureStandardError(LogLevel.QUIET)
-  logging.captureStandardOutput(LogLevel.QUIET)
-}
+// tasks.named("liquibaseUpdate") {
+//   logging.captureStandardError(LogLevel.QUIET)
+//   logging.captureStandardOutput(LogLevel.QUIET)
+// }

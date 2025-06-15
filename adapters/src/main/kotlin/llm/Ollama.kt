@@ -8,7 +8,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.flow.Flow
@@ -28,15 +27,14 @@ import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.string
 import net.barrage.llmao.core.types.KOffsetDateTime
 
 class Ollama(private val endpoint: String) : InferenceProvider {
   private val client: HttpClient = httpClient()
 
   companion object {
-    fun initialize(config: ApplicationConfig): Ollama {
-      val endpoint = config.string("llm.ollama.endpoint")
+    fun initialize(endpoint: String): Ollama {
+      // val endpoint = config.string("llm.ollama.endpoint")
       return Ollama(endpoint)
     }
   }

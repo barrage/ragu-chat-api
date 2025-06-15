@@ -4,14 +4,11 @@ import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIHost
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.embedding.Embeddings
-import net.barrage.llmao.core.int
-import net.barrage.llmao.core.string
 import net.barrage.llmao.core.token.TokenUsageAmount
 
 private val log = KtorSimpleLogger("adapters.embeddings.OpenAIEmbedder")
@@ -30,14 +27,14 @@ class OpenAIEmbedder(
   private val client: OpenAI = OpenAI(token = apiKey, host = OpenAIHost(endpoint))
 
   companion object {
-    fun initialize(config: ApplicationConfig): OpenAIEmbedder {
-      val endpoint = config.string("embeddings.openai.endpoint")
-      val apiKey = config.string("embeddings.openai.apiKey")
-      val models =
-        config
-          .configList("embeddings.openai.models")
-          .associateBy { it.string("model") }
-          .mapValues { it.value.int("vectorSize") }
+    fun initialize(endpoint: String, apiKey: String, models: Map<String, Int>): OpenAIEmbedder {
+      //      val endpoint = config.string("embeddings.openai.endpoint")
+      //      val apiKey = config.string("embeddings.openai.apiKey")
+      //      val models =
+      //        config
+      //          .configList("embeddings.openai.models")
+      //          .associateBy { it.string("model") }
+      //          .mapValues { it.value.int("vectorSize") }
 
       if (models.isEmpty()) {
         throw AppError.internal(

@@ -5,7 +5,6 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
@@ -13,7 +12,6 @@ import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.embedding.Embeddings
 import net.barrage.llmao.core.llm.EmbeddingModelDeployment
 import net.barrage.llmao.core.llm.ModelDeploymentMap
-import net.barrage.llmao.core.string
 import net.barrage.llmao.core.token.TokenUsageAmount
 
 private val log = KtorSimpleLogger("adapters.embeddings.VllmEmbedder")
@@ -29,12 +27,16 @@ class VllmEmbedder(
   private val deploymentMap: ModelDeploymentMap<EmbeddingModelDeployment>,
 ) : Embedder {
   companion object {
-
-    fun initialize(config: ApplicationConfig): VllmEmbedder {
-      val endpoint = config.string("embeddings.vllm.endpoint")
-      val apiKey = config.string("embeddings.vllm.apiKey")
-      val deploymentMap =
-        ModelDeploymentMap.embeddingDeploymentMap(config.configList("embeddings.vllm.models"))
+    fun initialize(
+      endpoint: String,
+      apiKey: String,
+      deploymentMap: ModelDeploymentMap<EmbeddingModelDeployment>,
+    ): VllmEmbedder {
+      //      val endpoint = config.string("embeddings.vllm.endpoint")
+      //      val apiKey = config.string("embeddings.vllm.apiKey")
+      //      val deploymentMap =
+      //
+      // ModelDeploymentMap.embeddingDeploymentMap(config.configList("embeddings.vllm.models"))
 
       if (deploymentMap.isEmpty()) {
         throw AppError.internal(

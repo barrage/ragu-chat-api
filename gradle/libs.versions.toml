@@ -1,0 +1,76 @@
+[versions]
+kotlin = "2.1.20"
+ktor = "3.1.1"
+jooq = "3.20.5"
+postgres = "42.7.7"
+liquibase = "4.29.2"
+r2dbc-postgresql = "1.0.7.RELEASE"
+r2dbc-pool = "1.0.2.RELEASE"
+openapi = "5.0.1"
+schemakenerator = "2.1.1"
+java-jwt = "4.4.0"
+jtokkit = "1.1.0"
+commons-email = "1.5"
+openai-client = "4.0.1"
+weaviate = "4.8.3"
+minio = "8.5.15"
+testcontainers = "1.20.2"
+logback = "1.5.8"
+
+[libraries]
+# Ktor server
+ktor-server-auth-jvm = { module = "io.ktor:ktor-server-auth-jvm", version.ref = "ktor" }
+ktor-server-core-jvm = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
+ktor-server-resources-jvm = { module = "io.ktor:ktor-server-resources-jvm", version.ref = "ktor" }
+ktor-server-content-negotiation-jvm = { module = "io.ktor:ktor-server-content-negotiation-jvm", version.ref = "ktor" }
+ktor-server-request-validation-jvm = { module = "io.ktor:ktor-server-request-validation-jvm", version.ref = "ktor" }
+ktor-server-cors-jvm = { module = "io.ktor:ktor-server-cors-jvm", version.ref = "ktor" }
+ktor-server-cio-jvm = { module = "io.ktor:ktor-server-cio-jvm", version.ref = "ktor" }
+ktor-server-websockets-jvm = { module = "io.ktor:ktor-server-websockets-jvm", version.ref = "ktor" }
+ktor-server-status-pages-jvm = { module = "io.ktor:ktor-server-status-pages-jvm", version.ref = "ktor" }
+ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
+
+# Ktor client
+ktor-client-logging-jvm = { module = "io.ktor:ktor-client-logging-jvm", version.ref = "ktor" }
+ktor-client-core-jvm = { module = "io.ktor:ktor-client-core-jvm", version.ref = "ktor" }
+ktor-client-cio-jvm = { module = "io.ktor:ktor-client-cio-jvm", version.ref = "ktor" }
+ktor-client-content-negotiation-jvm = { module = "io.ktor:ktor-client-content-negotiation-jvm", version.ref = "ktor" }
+
+# Ktor OpenAPI
+ktor-openapi = { module = "io.github.smiley4:ktor-openapi", version.ref = "openapi" }
+ktor-swagger-ui = { module = "io.github.smiley4:ktor-swagger-ui", version.ref = "openapi" }
+schema-kenerator-core = { module = "io.github.smiley4:schema-kenerator-core", version.ref = "schemakenerator" }
+schema-kenerator-reflection = { module = "io.github.smiley4:schema-kenerator-reflection", version.ref = "schemakenerator" }
+schema-kenerator-swagger = { module = "io.github.smiley4:schema-kenerator-swagger", version.ref = "schemakenerator" }
+
+ktor-serialization-kotlinx-json-jvm = { module = "io.ktor:ktor-serialization-kotlinx-json-jvm", version.ref = "ktor" }
+
+# Database
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres" }
+r2dbc-postgresql = { module = "org.postgresql:r2dbc-postgresql", version.ref = "r2dbc-postgresql" }
+r2dbc-pool = { module = "io.r2dbc:r2dbc-pool", version.ref = "r2dbc-pool" }
+jooq-kotlin-coroutines = { module = "org.jooq:jooq-kotlin-coroutines", version.ref = "jooq" }
+liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
+
+# Auth
+java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
+
+# OpenAI
+openai-client = { module = "com.aallam.openai:openai-client-jvm", version.ref = "openai-client" }
+jtokkit = { module = "com.knuddels:jtokkit", version.ref = "jtokkit" }
+
+# Email
+commons-email = { module = "org.apache.commons:commons-email", version.ref = "commons-email" }
+
+# Vector database
+weaviate-client = { module = "io.weaviate:client", version.ref = "weaviate" }
+
+# Blob storage
+minio-client = { module = "io.minio:minio", version.ref = "minio" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+dokka = { id = "org.jetbrains.dokka", version = "2.0.0" }
+ktfmt = { id = "com.ncorti.ktfmt.gradle", version = "0.20.1" }
+ktor = { id = "io.ktor.plugin", version.ref = "ktor" }

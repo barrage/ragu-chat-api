@@ -5,7 +5,7 @@ import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
-import net.barrage.llmao.core.administration.settings.ApplicationSettings
+import net.barrage.llmao.core.settings.ApplicationSettings
 import net.barrage.llmao.core.workflow.SessionManager
 import net.barrage.llmao.core.workflow.WorkflowOutput
 

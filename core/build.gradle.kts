@@ -1,25 +1,12 @@
-val ktorVersion = "3.1.1"
-val openApiVersion = "5.0.1"
-val postgresVersion = "42.7.7"
-val jooqVersion = "3.20.5"
-
-kotlin { jvmToolchain(21) }
-
-plugins {
-  `java-library`
-  kotlin("jvm") version "2.1.20"
-  kotlin("plugin.serialization") version "2.1.20"
-  id("org.jetbrains.dokka") version "2.0.0"
-  id("nu.studer.jooq") version "10.1"
-  id("com.ncorti.ktfmt.gradle") version "0.20.1"
-  id("org.liquibase.gradle") version "2.2.2"
-}
-
-group = "net.barrage"
+group = "net.barrage.llmao.core"
 
 version = "0.4.0"
 
-repositories { mavenCentral() }
+plugins {
+  `java-library`
+  id("nu.studer.jooq") version "10.1"
+  id("org.liquibase.gradle") version "2.2.2"
+}
 
 // We need these during the build step because of JOOQ class generation.
 buildscript {
@@ -46,7 +33,7 @@ liquibase {
 
 jooq {
   extensions.configure(nu.studer.gradle.jooq.JooqExtension::class.java) {
-    version = jooqVersion
+    version = libs.versions.jooq.get()
     edition = nu.studer.gradle.jooq.JooqEdition.OSS
 
     configurations.create("main") {
@@ -85,54 +72,50 @@ jooq {
 }
 
 dependencies {
-  implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
-  implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-resources-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-request-validation-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-websockets-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion")
+  implementation(rootProject.libs.ktor.server.core.jvm)
+  implementation(rootProject.libs.ktor.server.auth.jvm)
+  implementation(rootProject.libs.ktor.server.auth.jwt)
+  implementation(rootProject.libs.ktor.server.resources.jvm)
+  implementation(rootProject.libs.ktor.server.content.negotiation.jvm)
+  implementation(rootProject.libs.ktor.server.request.validation.jvm)
+  implementation(rootProject.libs.ktor.server.cors.jvm)
+  implementation(rootProject.libs.ktor.server.cio.jvm)
+  implementation(rootProject.libs.ktor.server.websockets.jvm)
+  implementation(rootProject.libs.ktor.server.status.pages.jvm)
 
-  implementation("io.ktor:ktor-client-logging-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
-  implementation("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
+  implementation(rootProject.libs.ktor.client.logging.jvm)
+  implementation(rootProject.libs.ktor.client.core.jvm)
+  implementation(rootProject.libs.ktor.client.cio.jvm)
+  implementation(rootProject.libs.ktor.client.content.negotiation.jvm)
 
-  implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
+  implementation(rootProject.libs.ktor.serialization.kotlinx.json.jvm)
 
-  implementation("org.liquibase:liquibase-core:4.29.2")
+  implementation(rootProject.libs.liquibase.core)
   liquibaseRuntime("org.liquibase:liquibase-core:4.29.2")
   liquibaseRuntime("info.picocli:picocli:4.7.5")
-  liquibaseRuntime("org.postgresql:postgresql:$postgresVersion")
+  liquibaseRuntime(rootProject.libs.postgresql)
 
-  implementation("org.postgresql:postgresql:$postgresVersion")
-  implementation("org.jooq:jooq-kotlin-coroutines:$jooqVersion")
-  jooqGenerator("org.postgresql:postgresql:$postgresVersion")
+  implementation(rootProject.libs.postgresql)
+  implementation(rootProject.libs.jooq.kotlin.coroutines)
+  jooqGenerator(rootProject.libs.postgresql)
 
-  implementation("org.postgresql:r2dbc-postgresql:1.0.7.RELEASE")
-  implementation("io.r2dbc:r2dbc-pool:1.0.2.RELEASE")
+  implementation(rootProject.libs.r2dbc.postgresql)
+  implementation(rootProject.libs.r2dbc.pool)
 
-  implementation("io.github.smiley4:ktor-openapi:$openApiVersion")
-  implementation("io.github.smiley4:ktor-swagger-ui:$openApiVersion")
-  implementation("io.github.smiley4:schema-kenerator-core:2.1.1")
-  implementation("io.github.smiley4:schema-kenerator-reflection:2.1.1")
-  implementation("io.github.smiley4:schema-kenerator-swagger:2.1.1")
+  implementation(rootProject.libs.ktor.openapi)
+  implementation(rootProject.libs.ktor.swagger.ui)
+  implementation(rootProject.libs.schema.kenerator.core)
+  implementation(rootProject.libs.schema.kenerator.reflection)
+  implementation(rootProject.libs.schema.kenerator.swagger)
 
   // Auth
-  implementation("com.auth0:java-jwt:4.4.0")
+  implementation(rootProject.libs.java.jwt)
 
   // Tokenizers
-  implementation("com.knuddels:jtokkit:1.1.0")
+  implementation(rootProject.libs.jtokkit)
 
   // Email
-  implementation("org.apache.commons:commons-email:1.5")
+  implementation(rootProject.libs.commons.email)
 }
 
-ktfmt { googleStyle() }
-
 tasks.named("build") { dependsOn("generateJooq") }
-
-tasks.named("generateJooq") { dependsOn("liquibaseUpdate") }

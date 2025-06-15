@@ -23,8 +23,6 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.LoggingConfig
 import com.aallam.openai.client.OpenAI as OpenAIClient
 import com.aallam.openai.client.OpenAIHost
-import io.ktor.server.config.ApplicationConfig
-import io.ktor.server.config.tryGetStringList
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -45,10 +43,9 @@ import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ToolCallChunk
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.string
 import net.barrage.llmao.core.token.TokenUsageAmount
 
-private val log = KtorSimpleLogger("adapters.llm.openai.OpenAI")
+private val log = KtorSimpleLogger("adapters.llm.OpenAI")
 
 class OpenAI(endpoint: String, apiKey: String, private val models: List<String>) :
   InferenceProvider {
@@ -60,10 +57,10 @@ class OpenAI(endpoint: String, apiKey: String, private val models: List<String>)
     )
 
   companion object {
-    fun initialize(config: ApplicationConfig): OpenAI {
-      val endpoint = config.string("llm.openai.endpoint")
-      val apiKey = config.string("llm.openai.apiKey")
-      val models = config.tryGetStringList("llm.openai.models") ?: emptyList()
+    fun initialize(endpoint: String, apiKey: String, models: List<String>): OpenAI {
+      //      val endpoint = config.string("llm.openai.endpoint")
+      //      val apiKey = config.string("llm.openai.apiKey")
+      //      val models = config.tryGetStringList("llm.openai.models") ?: emptyList()
 
       if (models.isEmpty()) {
         throw AppError.internal(

@@ -7,21 +7,13 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import io.ktor.server.config.ApplicationConfig
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.embedding.Embeddings
 import net.barrage.llmao.core.http.httpClient
-import net.barrage.llmao.core.string
 
 class FastEmbedder(private val endpoint: String) : Embedder {
   private val client: HttpClient = httpClient()
-
-  companion object {
-    fun initialize(config: ApplicationConfig): FastEmbedder {
-      return FastEmbedder(config.string("embeddings.fembed.endpoint"))
-    }
-  }
 
   override fun id(): String = "fembed"
 

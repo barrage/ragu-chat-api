@@ -1,25 +1,19 @@
 package net.barrage.llmao.core.database
 
-/**
- * A repository with atomic operations.
- *
- * @param C The type of the context used for atomic operations, i.e. a database executor interface.
- */
-interface Atomic<C> {
-  val context: C
+import org.jooq.DSLContext
+import org.jooq.kotlin.coroutines.transactionCoroutine
+
+/** A repository with atomic operations. */
+interface Atomic {
+  val dsl: DSLContext
 
   /**
    * Start a transaction, supplying it to the provided `block` closure and using the `factory` to
    * wrap the context in the repository.
    *
-   * Usually, when dealing with databases such as Postgres, a transaction will provide the same
-   * database operations API as the context it was created from. E.g. for JOOQ, this is the
-   * DSLContext interface.
-   *
    * Usage example:
    * ```kotlin
-   * // C is an arbitrary, but concrete, type like Jooq's DSLContext.
-   * class Repository(private val context: C) {
+   * class Repository(private val context: DSLContext) {
    *   fun insertSomething() {
    *       // ...
    *   }
@@ -37,9 +31,10 @@ interface Atomic<C> {
    *
    * @param factory The "function" to use to create the repository from the transaction context. If
    *   the implementing repository has a single parameter constructor and that parameter is of type
-   *   C, you can use `::Repository` as the factory.
+   *   DSLContext, you can use `::Repository` as the factory.
    * @param block What to execute in the transaction context. Any exceptions thrown in this will
    *   revert the transaction.
    */
-  suspend fun <T, R : Atomic<C>> transaction(factory: (C) -> R, block: suspend (R) -> T): T
+  suspend fun <T, R : Atomic> transaction(factory: (DSLContext) -> R, block: suspend (R) -> T): T =
+    dsl.transactionCoroutine { tx -> block(factory(tx.dsl())) }
 }

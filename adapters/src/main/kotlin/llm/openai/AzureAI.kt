@@ -8,7 +8,6 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
-import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,9 +20,8 @@ import net.barrage.llmao.core.llm.ChatMessageChunk
 import net.barrage.llmao.core.llm.DeploymentId
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.ModelDeploymentMap
-import net.barrage.llmao.core.string
 
-private val log = KtorSimpleLogger("adapters.llm.openai.AzureAI")
+private val log = KtorSimpleLogger("adapters.llm.AzureAI")
 
 class AzureAI(
   /** The `resourceId` identifying the Azure resource. */
@@ -40,12 +38,17 @@ class AzureAI(
 ) : InferenceProvider {
 
   companion object {
-    fun initialize(config: ApplicationConfig): AzureAI {
-      val endpoint = config.string("llm.azure.endpoint")
-      val apiKey = config.string("llm.azure.apiKey")
-      val apiVersion = config.string("llm.azure.apiVersion")
-      val deploymentMap =
-        ModelDeploymentMap.Companion.llmDeploymentMap(config.config("llm.azure.models"))
+    fun initialize(
+      endpoint: String,
+      apiKey: String,
+      apiVersion: String,
+      deploymentMap: ModelDeploymentMap<DeploymentId>,
+    ): AzureAI {
+      //      val endpoint = config.string("llm.azure.endpoint")
+      //      val apiKey = config.string("llm.azure.apiKey")
+      //      val apiVersion = config.string("llm.azure.apiVersion")
+      //      val deploymentMap =
+      //        ModelDeploymentMap.Companion.llmDeploymentMap(config.config("llm.azure.models"))
 
       if (deploymentMap.isEmpty()) {
         throw AppError.internal(
