@@ -1,4 +1,4 @@
-package llm
+package net.barrage.llmao.adapters.llm
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -34,7 +34,6 @@ class Ollama(private val endpoint: String) : InferenceProvider {
 
   companion object {
     fun initialize(endpoint: String): Ollama {
-      // val endpoint = config.string("llm.ollama.endpoint")
       return Ollama(endpoint)
     }
   }

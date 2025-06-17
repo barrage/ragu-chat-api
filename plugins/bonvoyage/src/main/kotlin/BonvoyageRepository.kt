@@ -8,10 +8,12 @@ import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.database.Atomic
+import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.repository.MessageRepository
+import net.barrage.llmao.core.repository.insertWorkflowMessages
 import net.barrage.llmao.core.types.KLocalDate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KOffsetTime
@@ -617,7 +619,7 @@ class BonvoyageRepository(override val dsl: DSLContext) : Atomic, MessageReposit
     val (id, travelExpense) =
       dsl.transactionCoroutine { ctx ->
         val dsl = ctx.dsl()
-        val id = insertWorkflowMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages, dsl)
+        val id = dsl.insertWorkflowMessages(workflowId, BONVOYAGE_WORKFLOW_ID, messages)
         val e = dsl.insertTravelExpense(workflowId, id, expense)
         Pair(id, e)
       }

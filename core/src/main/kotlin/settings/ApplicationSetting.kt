@@ -6,17 +6,6 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.tables.records.ApplicationSettingsRecord
 
-/** The ID of the agent used for WhatsApp. */
-data object WhatsappAgentId {
-  const val KEY = "WHATSAPP.AGENT_ID"
-}
-
-/** The maximum amount of tokens for completion generation for the WhatsApp agent. */
-data object WhatsappMaxCompletionTokens {
-  const val KEY = "WHATSAPP.AGENT_MAX_COMPLETION_TOKENS"
-  const val DEFAULT = 300
-}
-
 @JvmInline
 @Serializable
 value class ApplicationSettings(private val m: Map<String, ApplicationSetting>) {

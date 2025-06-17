@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.vector
+package net.barrage.llmao.adapters.vector
 
 import io.ktor.util.logging.KtorSimpleLogger
 import io.weaviate.client.Config
@@ -20,12 +20,7 @@ class Weaviate(scheme: String, host: String) : VectorDatabase {
 
   companion object {
     fun initialize(scheme: String, host: String): Weaviate {
-      return Weaviate(
-        scheme,
-        host,
-        //        config.property("weaviate.scheme").getString(),
-        //        config.property("weaviate.host").getString(),
-      )
+      return Weaviate(scheme, host)
     }
   }
 

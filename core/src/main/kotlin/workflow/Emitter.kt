@@ -17,7 +17,7 @@ interface Emitter {
    * Free implementation of serializing and emitting workflow output data.
    *
    * All workflow output variants must be registered via its [plugin serialization configuration]
-   * [net.barrage.llmao.core.Plugin.configureOutputSerialization].
+   * [net.barrage.llmao.core.net.barrage.llmao.core.net.barrage.llmao.core.Plugin.configureOutputSerialization].
    *
    * See [emit].
    */

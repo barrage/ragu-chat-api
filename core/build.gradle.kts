@@ -72,50 +72,54 @@ jooq {
 }
 
 dependencies {
-  implementation(rootProject.libs.ktor.server.core.jvm)
-  implementation(rootProject.libs.ktor.server.auth.jvm)
-  implementation(rootProject.libs.ktor.server.auth.jwt)
-  implementation(rootProject.libs.ktor.server.resources.jvm)
-  implementation(rootProject.libs.ktor.server.content.negotiation.jvm)
-  implementation(rootProject.libs.ktor.server.request.validation.jvm)
-  implementation(rootProject.libs.ktor.server.cors.jvm)
-  implementation(rootProject.libs.ktor.server.cio.jvm)
-  implementation(rootProject.libs.ktor.server.websockets.jvm)
-  implementation(rootProject.libs.ktor.server.status.pages.jvm)
+  implementation(libs.ktor.server.core.jvm)
+  implementation(libs.ktor.server.auth.jvm)
+  implementation(libs.ktor.server.auth.jwt)
+  implementation(libs.ktor.server.resources.jvm)
+  implementation(libs.ktor.server.content.negotiation.jvm)
+  implementation(libs.ktor.server.request.validation.jvm)
+  implementation(libs.ktor.server.cors.jvm)
+  implementation(libs.ktor.server.cio.jvm)
+  implementation(libs.ktor.server.websockets.jvm)
+  implementation(libs.ktor.server.status.pages.jvm)
 
-  implementation(rootProject.libs.ktor.client.logging.jvm)
-  implementation(rootProject.libs.ktor.client.core.jvm)
-  implementation(rootProject.libs.ktor.client.cio.jvm)
-  implementation(rootProject.libs.ktor.client.content.negotiation.jvm)
+  implementation(libs.ktor.client.logging.jvm)
+  implementation(libs.ktor.client.core.jvm)
+  implementation(libs.ktor.client.cio.jvm)
+  implementation(libs.ktor.client.content.negotiation.jvm)
 
-  implementation(rootProject.libs.ktor.serialization.kotlinx.json.jvm)
+  implementation(libs.ktor.serialization.kotlinx.json.jvm)
 
-  implementation(rootProject.libs.liquibase.core)
+  implementation(libs.liquibase.core)
   liquibaseRuntime("org.liquibase:liquibase-core:4.29.2")
   liquibaseRuntime("info.picocli:picocli:4.7.5")
-  liquibaseRuntime(rootProject.libs.postgresql)
+  liquibaseRuntime(libs.postgresql)
 
-  implementation(rootProject.libs.postgresql)
-  implementation(rootProject.libs.jooq.kotlin.coroutines)
-  jooqGenerator(rootProject.libs.postgresql)
+  implementation(libs.postgresql)
+  implementation(libs.jooq.kotlin.coroutines)
+  jooqGenerator(libs.postgresql)
 
-  implementation(rootProject.libs.r2dbc.postgresql)
-  implementation(rootProject.libs.r2dbc.pool)
+  implementation(libs.r2dbc.postgresql)
+  implementation(libs.r2dbc.pool)
 
-  implementation(rootProject.libs.ktor.openapi)
-  implementation(rootProject.libs.ktor.swagger.ui)
-  implementation(rootProject.libs.schema.kenerator.core)
-  implementation(rootProject.libs.schema.kenerator.reflection)
-  implementation(rootProject.libs.schema.kenerator.swagger)
+  implementation(libs.ktor.openapi)
+  implementation(libs.ktor.swagger.ui)
+  implementation(libs.schema.kenerator.core)
+  implementation(libs.schema.kenerator.reflection)
+  implementation(libs.schema.kenerator.swagger)
 
   // Auth
-  implementation(rootProject.libs.java.jwt)
+  implementation(libs.java.jwt)
 
   // Tokenizers
-  implementation(rootProject.libs.jtokkit)
+  implementation(libs.jtokkit)
 
   // Email
-  implementation(rootProject.libs.commons.email)
+  implementation(libs.commons.email)
+
+  testImplementation(libs.ktor.server.test.host)
+  testImplementation(libs.junit.jupiter.api)
+  testImplementation(project(":test"))
 }
 
 tasks.named("build") { dependsOn("generateJooq") }

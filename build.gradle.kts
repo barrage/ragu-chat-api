@@ -1,3 +1,5 @@
+import com.ncorti.ktfmt.gradle.tasks.KtfmtCheckTask
+
 group = "net.barrage.llmao"
 
 repositories { mavenCentral() }
@@ -19,4 +21,8 @@ subprojects {
   repositories { mavenCentral() }
   kotlin { jvmToolchain(21) }
   ktfmt { googleStyle() }
+
+  tasks.withType<KtfmtCheckTask> { enabled = false }
 }
+
+// sourceSets { main { resources { srcDir("config") } } }

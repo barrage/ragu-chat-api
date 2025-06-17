@@ -6,6 +6,7 @@ import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorCollectionInfo
+import net.barrage.llmao.tables.records.AgentCollectionsRecord
 
 // import net.barrage.llmao.tables.records.AgentCollectionsRecord
 
@@ -36,20 +37,20 @@ data class AgentCollection(
   val updatedAt: KOffsetDateTime?,
 )
 
-// fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
-//  return AgentCollection(
-//    id = id!!,
-//    instruction = instruction,
-//    collection = collection,
-//    amount = amount,
-//    embeddingProvider = embeddingProvider,
-//    embeddingModel = embeddingModel,
-//    vectorProvider = vectorProvider,
-//    maxDistance = maxDistance,
-//    createdAt = createdAt,
-//    updatedAt = updatedAt,
-//  )
-// }
+fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
+  return AgentCollection(
+    id = id!!,
+    instruction = instruction,
+    collection = collection,
+    amount = amount,
+    embeddingProvider = embeddingProvider,
+    embeddingModel = embeddingModel,
+    vectorProvider = vectorProvider,
+    maxDistance = maxDistance,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+  )
+}
 
 /**
  * Update DTO for an agent's knowledge base.

@@ -72,7 +72,9 @@ class Plugins {
    */
   fun register(plugin: Plugin) =
     if (plugins.contains(plugin))
-      throw AppError.internal("Invalid configuration; Plugin already registered: ${plugin.id()}")
+      throw AppError.Companion.internal(
+        "Invalid configuration; Plugin already registered: ${plugin.id()}"
+      )
     else plugins.add(plugin)
 
   /** List the configuration of all registered plugins. */

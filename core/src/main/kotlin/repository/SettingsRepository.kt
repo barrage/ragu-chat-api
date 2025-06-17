@@ -1,9 +1,9 @@
 package net.barrage.llmao.core.repository
 
 import io.ktor.util.logging.KtorSimpleLogger
-import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.settings.ApplicationSetting

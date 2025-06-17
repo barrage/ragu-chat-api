@@ -1,4 +1,4 @@
-package embeddings.openai
+package net.barrage.llmao.adapters.embeddings.openai
 
 import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.model.ModelId

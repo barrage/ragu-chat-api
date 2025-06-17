@@ -51,7 +51,7 @@ abstract class WorkflowAgent(
   /** Used to enrich the agent's context in the user message. */
   protected val contextEnrichment: List<ContextEnrichment>?,
 ) {
-  protected open val log = KtorSimpleLogger("n.b.l.c.workflow.WorkflowAgent")
+  open val log = KtorSimpleLogger("core.workflow.WorkflowAgent")
 
   open fun errorMessage(): String = "An error occurred. Please try again later."
 

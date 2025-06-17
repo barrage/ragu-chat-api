@@ -1,5 +1,11 @@
 rootProject.name = "llmao"
 
-include(":core")
-
-include(":adapters")
+include(
+  ":core",
+  ":adapters",
+  ":app",
+  ":plugins:bonvoyage",
+  ":plugins:chat",
+  ":plugins:jirakira",
+  ":test",
+)

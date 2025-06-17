@@ -202,7 +202,12 @@ interface MessageRepository {
   }
 }
 
-private suspend fun DSLContext.insertWorkflowMessages(
+/**
+ * An extension function on [DSLContext] to support atomic operations. To insert messages in the
+ * scope of a transaction, use the `transactionCoroutine` method on [DSLContext], then obtain the
+ * context with `dsl()`.
+ */
+suspend fun DSLContext.insertWorkflowMessages(
   workflowId: KUUID,
   workflowType: String,
   messages: List<MessageInsert>,

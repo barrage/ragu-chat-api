@@ -1,4 +1,4 @@
-package llm.openai
+package net.barrage.llmao.adapters.llm.openai
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatResponseFormat
@@ -44,12 +44,6 @@ class AzureAI(
       apiVersion: String,
       deploymentMap: ModelDeploymentMap<DeploymentId>,
     ): AzureAI {
-      //      val endpoint = config.string("llm.azure.endpoint")
-      //      val apiKey = config.string("llm.azure.apiKey")
-      //      val apiVersion = config.string("llm.azure.apiVersion")
-      //      val deploymentMap =
-      //        ModelDeploymentMap.Companion.llmDeploymentMap(config.config("llm.azure.models"))
-
       if (deploymentMap.isEmpty()) {
         throw AppError.internal(
           """Invalid azure configuration; Check your `llm.azure.models` config.

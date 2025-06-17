@@ -1,4 +1,4 @@
-package llm.openai
+package net.barrage.llmao.adapters.llm.openai
 
 import com.aallam.openai.api.chat.ChatChoice as OpenAiChatChoice
 import com.aallam.openai.api.chat.ChatCompletion as OpenAiChatCompletion
@@ -58,10 +58,6 @@ class OpenAI(endpoint: String, apiKey: String, private val models: List<String>)
 
   companion object {
     fun initialize(endpoint: String, apiKey: String, models: List<String>): OpenAI {
-      //      val endpoint = config.string("llm.openai.endpoint")
-      //      val apiKey = config.string("llm.openai.apiKey")
-      //      val models = config.tryGetStringList("llm.openai.models") ?: emptyList()
-
       if (models.isEmpty()) {
         throw AppError.internal(
           """Invalid openai configuration; Check your `llm.openai.models` config.

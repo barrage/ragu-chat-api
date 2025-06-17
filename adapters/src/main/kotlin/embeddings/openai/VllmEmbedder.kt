@@ -1,4 +1,4 @@
-package embeddings.openai
+package net.barrage.llmao.adapters.embeddings.openai
 
 import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.model.ModelId
@@ -32,11 +32,6 @@ class VllmEmbedder(
       apiKey: String,
       deploymentMap: ModelDeploymentMap<EmbeddingModelDeployment>,
     ): VllmEmbedder {
-      //      val endpoint = config.string("embeddings.vllm.endpoint")
-      //      val apiKey = config.string("embeddings.vllm.apiKey")
-      //      val deploymentMap =
-      //
-      // ModelDeploymentMap.embeddingDeploymentMap(config.configList("embeddings.vllm.models"))
 
       if (deploymentMap.isEmpty()) {
         throw AppError.internal(

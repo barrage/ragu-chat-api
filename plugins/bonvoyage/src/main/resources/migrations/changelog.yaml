@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - logicalFilePath: src/main/resources/migrations/changelog.yaml
+  - changeSet:
+      id: BONVOYAGE_SETUP
+      author: barrage
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: setup/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: setup/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+

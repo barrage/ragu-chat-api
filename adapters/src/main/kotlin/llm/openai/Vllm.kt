@@ -1,4 +1,4 @@
-package llm.openai
+package net.barrage.llmao.adapters.llm.openai
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatResponseFormat
@@ -36,11 +36,6 @@ class Vllm(
       apiKey: String,
       deploymentMap: ModelDeploymentMap<DeploymentId>,
     ): Vllm {
-      //      val endpoint = config.string("llm.vllm.endpoint")
-      //      val apiKey = config.string("llm.vllm.apiKey")
-      //      val deploymentMap =
-      // ModelDeploymentMap.llmDeploymentMap(config.config("llm.vllm.models"))
-
       if (deploymentMap.isEmpty()) {
         throw AppError.internal(
           """Invalid vllm configuration; Check your `llm.vllm.models` config.

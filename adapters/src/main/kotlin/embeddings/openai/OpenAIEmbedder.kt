@@ -1,4 +1,4 @@
-package embeddings.openai
+package net.barrage.llmao.adapters.embeddings.openai
 
 import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.model.ModelId
@@ -28,14 +28,6 @@ class OpenAIEmbedder(
 
   companion object {
     fun initialize(endpoint: String, apiKey: String, models: Map<String, Int>): OpenAIEmbedder {
-      //      val endpoint = config.string("embeddings.openai.endpoint")
-      //      val apiKey = config.string("embeddings.openai.apiKey")
-      //      val models =
-      //        config
-      //          .configList("embeddings.openai.models")
-      //          .associateBy { it.string("model") }
-      //          .mapValues { it.value.int("vectorSize") }
-
       if (models.isEmpty()) {
         throw AppError.internal(
           """Invalid openai configuration; Check your `embeddings.openai.models` config.

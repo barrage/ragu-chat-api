@@ -1,4 +1,4 @@
-package blob
+package net.barrage.llmao.adapters.blob
 
 import io.ktor.util.logging.KtorSimpleLogger
 import io.minio.GetObjectArgs

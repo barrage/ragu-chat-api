@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - logicalFilePath: src/main/resources/migrations/changelog.yaml
+  - changeSet:
+      id: CHAT_SETUP
+      author: barrage
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: setup/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: setup/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+
+  - changeSet:
+      id: WHATSAPP
+      author: barrage
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: whatsapp/up.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: whatsapp/down.sql
+            relativeToChangelogFile: true
+            splitStatements: false
+
+
