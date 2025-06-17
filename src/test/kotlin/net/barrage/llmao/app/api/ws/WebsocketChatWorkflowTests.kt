@@ -11,6 +11,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import kotlin.random.Random
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -45,7 +46,6 @@ import net.barrage.llmao.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import kotlin.random.Random
 
 private const val TEST_COLLECTION = "KusturicaChatTests"
 
@@ -582,7 +582,11 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
       )
 
     return AgentFull(
-      validAgent, validAgentConfiguration, listOf(validAgentCollection), listOf(), listOf()
+      validAgent,
+      validAgentConfiguration,
+      listOf(validAgentCollection),
+      listOf(),
+      listOf(),
     )
   }
 

@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.KtorSimpleLogger
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -11,7 +12,6 @@ import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage.*
-import java.util.concurrent.ConcurrentHashMap
 
 private val LOG = KtorSimpleLogger("n.b.l.c.workflow.SessionManager")
 

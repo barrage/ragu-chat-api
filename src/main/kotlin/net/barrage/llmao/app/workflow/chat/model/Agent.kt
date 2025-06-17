@@ -1,5 +1,6 @@
 package net.barrage.llmao.app.workflow.chat.model
 
+import java.time.LocalDate
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -12,7 +13,6 @@ import net.barrage.llmao.tables.records.AgentToolsRecord
 import net.barrage.llmao.tables.records.AgentsRecord
 import net.barrage.llmao.types.KOffsetDateTime
 import net.barrage.llmao.types.KUUID
-import java.time.LocalDate
 
 @Serializable
 data class Agent(

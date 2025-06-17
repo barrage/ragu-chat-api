@@ -6,6 +6,7 @@ import com.infobip.ApiKey
 import com.infobip.BaseUrl
 import com.infobip.api.WhatsAppApi
 import com.infobip.model.WhatsAppBulkMessage
+import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 import com.infobip.model.WhatsAppSingleMessageInfo
 import com.infobip.model.WhatsAppTemplateBodyContent
 import com.infobip.model.WhatsAppTemplateContent
@@ -39,7 +40,6 @@ import net.barrage.llmao.core.model.common.Pagination
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.tryUuid
 import net.barrage.llmao.types.KUUID
-import com.infobip.model.WhatsAppMessage as InfobipWhatsAppMessage
 
 private const val MAX_HISTORY_MESSAGES = 10
 
@@ -214,11 +214,11 @@ class WhatsAppAdapter(
     val agent = ChatWorkflowFactory.createChatAgent(chatId, userId, username, listOf("user"), agent)
 
     val messages =
-      chatMessages.items
-        .flatMap { it.messages.map(ChatMessageProcessor::loadToChatMessage) }
-        .toMutableList()
+      chatMessages.items.flatMap { it.messages.map(ChatMessageProcessor::loadToChatMessage) }
 
-    agent.addToHistory(messages)
+    if (messages.isNotEmpty()) {
+      agent.addToHistory(messages)
+    }
 
     return agent
   }

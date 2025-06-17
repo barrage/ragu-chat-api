@@ -1,5 +1,7 @@
 package net.barrage.llmao.app.workflow.chat.repository
 
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
@@ -41,8 +43,6 @@ import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep
 import org.jooq.SortField
 import org.jooq.impl.DSL
-import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
 
 class ChatRepositoryRead(override val dslContext: DSLContext, private val type: String) :
   MessageRepository {

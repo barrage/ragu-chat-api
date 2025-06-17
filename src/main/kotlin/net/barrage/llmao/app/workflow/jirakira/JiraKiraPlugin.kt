@@ -53,7 +53,9 @@ class JiraKiraPlugin : Plugin {
           JiraKiraModel.KEY to settings.getOptional(JiraKiraModel.KEY),
           JiraKiraTimeSlotAttributeKey.KEY to
             settings.getOptional(JiraKiraTimeSlotAttributeKey.KEY),
-          JiraKiraMaxHistoryTokens.KEY to (settings.getOptional(JiraKiraMaxHistoryTokens.KEY)?: JiraKiraMaxHistoryTokens.DEFAULT.toString()),
+          JiraKiraMaxHistoryTokens.KEY to
+            (settings.getOptional(JiraKiraMaxHistoryTokens.KEY)
+              ?: JiraKiraMaxHistoryTokens.DEFAULT.toString()),
         ),
     )
 }

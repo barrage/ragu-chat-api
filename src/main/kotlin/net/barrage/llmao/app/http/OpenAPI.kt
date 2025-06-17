@@ -76,9 +76,7 @@ fun Application.configureOpenApi() {
               )
             }
           }
-          .generateSwaggerSchema(
-
-          )
+          .generateSwaggerSchema()
           .handleCoreAnnotations()
           .withTitle(TitleType.SIMPLE)
           .compileReferencingRoot()

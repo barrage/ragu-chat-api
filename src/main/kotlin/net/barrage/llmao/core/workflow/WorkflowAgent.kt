@@ -1,6 +1,7 @@
 package net.barrage.llmao.core.workflow
 
 import io.ktor.util.logging.KtorSimpleLogger
+import kotlin.coroutines.cancellation.CancellationException
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.ChatCompletionAgentParameters
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
@@ -21,7 +22,6 @@ import net.barrage.llmao.core.llm.collectToolCalls
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
-import kotlin.coroutines.cancellation.CancellationException
 
 private const val DEFAULT_MAX_TOOL_ATTEMPTS: Int = 5
 
@@ -48,9 +48,7 @@ abstract class WorkflowAgent(
   /** Prevents the LLM from infinitely calling tools. */
   protected val maxToolAttempts: Int = DEFAULT_MAX_TOOL_ATTEMPTS,
 
-  /**
-   * Used to enrich the agent's context in the user message.
-   */
+  /** Used to enrich the agent's context in the user message. */
   protected val contextEnrichment: List<ContextEnrichment>?,
 ) {
   protected open val log = KtorSimpleLogger("n.b.l.c.workflow.WorkflowAgent")
