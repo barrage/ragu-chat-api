@@ -337,11 +337,11 @@ class HgkPlugin() : Plugin {
                 struka = null,
                 kolicinaZaposlenika = null,
                 vrstaTrgovanja = null,
-                lokacija = null,
-                vrstaPoslovanja = null,
+                mjestoPoslovanja = null,
+                pausalniObrt = null,
                 ocekivaniPrihod = null,
                 imaRacunovodju = null,
-                imaPoslovniRacun = null,
+                imaPoslovniBankovniRacun = null,
               )
           }
 
@@ -608,7 +608,7 @@ class HgkPlugin() : Plugin {
       return
     }
 
-    info.lokacija = result.text
+    info.mjestoPoslovanja = result.text
 
     val response =
       agent(from)
@@ -683,7 +683,7 @@ class HgkPlugin() : Plugin {
       return
     }
 
-    info.vrstaPoslovanja = result.title
+    info.pausalniObrt = result.title
 
     val response =
       agent(from)
@@ -829,7 +829,7 @@ class HgkPlugin() : Plugin {
       return
     }
 
-    info.imaPoslovniRacun = result.title
+    info.imaPoslovniBankovniRacun = result.title
 
     val response =
       agent(from)
@@ -837,8 +837,7 @@ class HgkPlugin() : Plugin {
           AGGREGATION_CONTEXT,
           """Trenutno korisnikovo stanje: $info
                 | Onboarding je uspjesno zavrsen. Prikazi korisniku sve podatke koje si izdvojio i pitaj ga da li su podaci točni.
-                | U daljnjem razgovoru budi pristojan i ohrabri korisnika da ce mu poslovna ideja donjet meleone za cas posla.
-            """
+                | U daljnjem razgovoru budi pristojan i ohrabri korisnika da ce mu poslovna ideja donjet puno uspjeha."""
             .trimMargin(),
         )
 
@@ -966,11 +965,11 @@ data class PodaciZaOtvaranjeTvrtke(
   var struka: String?,
   var kolicinaZaposlenika: String?,
   var vrstaTrgovanja: String?,
-  var lokacija: String?,
-  var vrstaPoslovanja: String?,
+  var mjestoPoslovanja: String?,
+  var pausalniObrt: String?,
   var ocekivaniPrihod: String?,
   var imaRacunovodju: String?,
-  var imaPoslovniRacun: String?,
+  var imaPoslovniBankovniRacun: String?,
 )
 
 class HgkAgent(
