@@ -1,6 +1,9 @@
 package net.barrage.llmao.app.workflow.chat.whatsapp.model
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 
 /** Request received on the Infobip webhook. */
 @Serializable
@@ -42,12 +45,15 @@ data class InfobipResult(
 )
 
 @Serializable
-data class Message(
-  /** Message content. */
-  val text: String,
-  /** We are mostly interested in the 'TEXT' type. */
-  val type: InfobipMessageType,
-)
+@JsonClassDiscriminator("type")
+@OptIn(ExperimentalSerializationApi::class)
+sealed class Message {
+  @Serializable @SerialName("TEXT") data class Text(val text: String) : Message()
+
+  @Serializable
+  @SerialName("INTERACTIVE_BUTTON_REPLY")
+  data class ButtonReply(val id: String, val title: String) : Message()
+}
 
 @Serializable
 data class Contact(
@@ -62,23 +68,3 @@ data class Price(
   /** Currency of the price. */
   val currency: String,
 )
-
-enum class InfobipMessageType {
-  ORDER,
-  UNSUPPORTED,
-  TEXT,
-  LOCATION,
-  IMAGE,
-  DOCUMENT,
-  AUDIO,
-  VIDEO,
-  VOICE,
-  CONTACT,
-  INFECTED_CONTENT,
-  BUTTON,
-  STICKER,
-  INTERACTIVE_BUTTON_REPLY,
-  INTERACTIVE_LIST_REPLY,
-  INTERACTIVE_FLOW_REPLY,
-  INTERACTIVE_PAYMENT_CONFIRMATION,
-}

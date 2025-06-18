@@ -25,6 +25,7 @@ import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryRead
 import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryWrite
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResponse
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResult
+import net.barrage.llmao.app.workflow.chat.whatsapp.model.Message
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
@@ -156,6 +157,11 @@ class WhatsAppAdapter(
   }
 
   private suspend fun handleMessage(result: InfobipResult, agent: AgentFull) {
+    if (result.message !is Message.Text) {
+      log.warn("Unsupported message type: {}", result.message)
+      return
+    }
+
     val whatsAppNumber = whatsAppRepository.getNumber(result.from)
 
     if (whatsAppNumber == null) {

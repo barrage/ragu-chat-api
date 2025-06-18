@@ -2,7 +2,7 @@ package net.barrage.llmao
 
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.auth.authenticate
@@ -28,6 +28,7 @@ import net.barrage.llmao.app.http.noAuth
 import net.barrage.llmao.app.http.openApiRoutes
 import net.barrage.llmao.app.workflow.bonvoyage.BonvoyagePlugin
 import net.barrage.llmao.app.workflow.chat.ChatPlugin
+import net.barrage.llmao.app.workflow.hgk.HgkPlugin
 import net.barrage.llmao.app.workflow.jirakira.JiraKiraPlugin
 import net.barrage.llmao.app.ws.websocketServer
 import net.barrage.llmao.core.AppError
@@ -48,6 +49,7 @@ fun Application.module() {
   val state = state(plugins)
 
   plugins.register(ChatPlugin())
+  plugins.register(HgkPlugin())
 
   if (environment.config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
     plugins.register(JiraKiraPlugin())

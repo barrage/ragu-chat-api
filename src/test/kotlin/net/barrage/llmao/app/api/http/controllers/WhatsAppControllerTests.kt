@@ -15,7 +15,6 @@ import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
 import net.barrage.llmao.app.workflow.chat.model.Chat
 import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.Contact
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipMessageType
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResponse
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResult
 import net.barrage.llmao.app.workflow.chat.whatsapp.model.Message
@@ -106,7 +105,7 @@ class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsA
                 messageId = "wamid.HBgLMzg1OTg2MzE4MjkVAgASGBQzQUIxNzY4MzZBOUE2MDE0QUZDMwA=",
                 pairedMessageId = null,
                 callbackData = null,
-                message = Message(text = "Hello", type = InfobipMessageType.TEXT),
+                message = Message.Text(text = "Hello"),
                 contact = Contact(name = "385981234567"),
                 price = Price(pricePerMessage = 0.0, currency = "EUR"),
               )
