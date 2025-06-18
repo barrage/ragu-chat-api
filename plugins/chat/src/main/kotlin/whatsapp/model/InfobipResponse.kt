@@ -1,3 +1,7 @@
+package net.barrage.llmao.app.workflow.chat.whatsapp.model
+
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 

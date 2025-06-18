@@ -46,6 +46,7 @@ fun Application.module() {
   val state = state(plugins)
 
   plugins.register(ChatPlugin())
+  plugins.register(HgkPlugin())
 
   if (environment.config.string(JIRAKIRA_FEATURE_FLAG).toBoolean()) {
     plugins.register(JiraKiraPlugin())
