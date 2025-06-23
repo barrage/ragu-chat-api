@@ -8,8 +8,6 @@ import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorCollectionInfo
 import net.barrage.llmao.tables.records.AgentCollectionsRecord
 
-// import net.barrage.llmao.tables.records.AgentCollectionsRecord
-
 @Serializable
 data class AgentCollection(
   val id: KUUID,
