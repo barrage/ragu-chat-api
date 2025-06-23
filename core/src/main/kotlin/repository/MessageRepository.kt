@@ -1,8 +1,8 @@
 package net.barrage.llmao.core.repository
 
-import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.serialization.json.Json

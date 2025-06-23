@@ -27,6 +27,10 @@ data class DefaultWorkflowInput(
   }
 }
 
+/**
+ * Marker class for all workflow outputs that should be sent to real time workflows via the session
+ * manager.
+ */
 @Serializable
 @JsonClassDiscriminator("type")
 @OptIn(ExperimentalSerializationApi::class)

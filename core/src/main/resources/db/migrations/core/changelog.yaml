@@ -1,18 +1,18 @@
 databaseChangeLog:
-  - logicalFilePath: src/main/resources/db/changelog.yaml
+  - logicalFilePath: src/main/resources/db/migrations/core/changelog.yaml
   - changeSet:
       id: PG_EXTENSIONS
       author: barrage
       changes:
         - sqlFile:
             encoding: utf8
-            path: migrations/0_extensions/up.sql
+            path: 0_extensions/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/0_extensions/down.sql
+            path: 0_extensions/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -22,13 +22,13 @@ databaseChangeLog:
       changes:
         - sqlFile:
             encoding: utf8
-            path: migrations/1_application_settings/up.sql
+            path: 1_application_settings/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/1_application_settings/down.sql
+            path: 1_application_settings/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -39,13 +39,13 @@ databaseChangeLog:
       changes:
         - sqlFile:
             encoding: utf8
-            path: migrations/2_messages/up.sql
+            path: 2_messages/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/2_messages/down.sql
+            path: 2_messages/down.sql
             relativeToChangelogFile: true
             splitStatements: false
 
@@ -55,12 +55,12 @@ databaseChangeLog:
       changes:
         - sqlFile:
             encoding: utf8
-            path: migrations/3_token_usage/up.sql
+            path: 3_token_usage/up.sql
             relativeToChangelogFile: true
             splitStatements: false
       rollback:
         - sqlFile:
             encoding: utf8
-            path: migrations/3_token_usage/down.sql
+            path: 3_token_usage/down.sql
             relativeToChangelogFile: true
             splitStatements: false

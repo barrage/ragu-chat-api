@@ -23,6 +23,9 @@ import io.ktor.utils.io.toByteArray
 import kotlinx.io.readString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import model.AgentCollection
+import model.UpdateCollections
+import model.UpdateCollectionsResult
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.http.pathUuid
@@ -30,12 +33,10 @@ import net.barrage.llmao.core.http.query
 import net.barrage.llmao.core.http.queryListAgentsFilters
 import net.barrage.llmao.core.http.queryPaginationSort
 import net.barrage.llmao.core.http.queryParam
-import net.barrage.llmao.core.model.AgentCollection
+import net.barrage.llmao.core.http.user
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.ImageType
 import net.barrage.llmao.core.model.Message
-import net.barrage.llmao.core.model.UpdateCollections
-import net.barrage.llmao.core.model.UpdateCollectionsResult
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.settings.Settings
@@ -90,7 +91,7 @@ fun Route.adminAgentsRoutes(agentService: AdminAgentService, settings: Settings)
         put(updateAgentGroups()) {
           val agentId = call.pathUuid("id")
           val groups = call.receive<AgentGroupUpdate>()
-          agentService.updateGroups(agentId, groups)
+          agentService.updateGroups(call.user().id, agentId, groups)
           call.respond(HttpStatusCode.NoContent)
         }
       }

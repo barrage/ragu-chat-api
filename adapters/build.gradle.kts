@@ -5,6 +5,7 @@ version = "0.4.0"
 plugins { `java-library` }
 
 dependencies {
+  implementation(libs.ktor.server.core.jvm)
   implementation(libs.ktor.client.core.jvm)
   implementation(libs.ktor.client.cio.jvm)
   implementation(libs.openai.client)

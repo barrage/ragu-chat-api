@@ -8,17 +8,23 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.core.token.TokenUsageAggregate
 import net.barrage.llmao.core.token.TokenUsageType
+import net.barrage.llmao.test.ADMIN_USER
+import net.barrage.llmao.test.COMPLETIONS_STREAM_PROMPT
+import net.barrage.llmao.test.COMPLETIONS_STREAM_RESPONSE
+import net.barrage.llmao.test.COMPLETIONS_TITLE_PROMPT
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.adminAccessToken
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class TokenUsageTests : IntegrationTest() {
+class TokenUsageTests : IntegrationTest(plugin = ChatPlugin()) {
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
 
   @BeforeAll
   fun setup() {
     runBlocking {
-      // agent = postgres.testAgent()
+      agent = postgres.testAgent()
       agentConfiguration =
         postgres.testAgentConfiguration(
           agent.id,

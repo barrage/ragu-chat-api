@@ -1,24 +1,25 @@
 package net.barrage.llmao.test
 
+import io.ktor.server.config.ApplicationConfig
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
 import io.r2dbc.spi.ConnectionFactories
 import io.r2dbc.spi.ConnectionFactoryOptions
-import java.io.FileOutputStream
-import java.io.PrintStream
 import java.lang.Thread.sleep
 import java.time.Duration
-import liquibase.Liquibase
-import liquibase.database.jvm.JdbcConnection
-import liquibase.resource.ClassLoaderResourceAccessor
+import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.core.Plugins
+import net.barrage.llmao.core.database.runCoreMigrations
+import net.barrage.llmao.core.settings.SettingsUpdate
+import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
+import org.jooq.impl.DSL.excluded
 import org.jooq.impl.DefaultConfiguration
-import org.postgresql.ds.PGSimpleDataSource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 
-class TestPostgres {
+class TestPostgres() {
   val container: PostgreSQLContainer<*> =
     PostgreSQLContainer("postgres:latest")
       .apply {
@@ -39,49 +40,11 @@ class TestPostgres {
     System.setProperty("liquibase.duplicateFileMode", "WARN")
 
     initConnectionPool()
-    initDslContext()
+  }
 
-    val dataSource =
-      PGSimpleDataSource().apply {
-        setURL(container.jdbcUrl)
-        password = "test"
-        user = "test"
-        databaseName = "test"
-      }
-
-    val originalOut = System.out
-    val originalErr = System.err
-
-    var attempt = 0
-    while (attempt < 5) {
-      try {
-        // Disable liquibase output
-        System.setOut(PrintStream(FileOutputStream("/dev/null")))
-        System.setErr(PrintStream(FileOutputStream("/dev/null")))
-        val liquibase =
-          Liquibase(
-              "db/changelog.yaml",
-              ClassLoaderResourceAccessor(),
-              JdbcConnection(dataSource.connection),
-            )
-            .apply {
-              // Set property to handle duplicate files
-              setChangeLogParameter("liquibase.duplicateFileMode", "WARN")
-            }
-        liquibase.update()
-        break
-      } catch (e: Throwable) {
-        System.setOut(originalOut)
-        println("Postgres initialization error: ${e.message}")
-        println("Attempting reconnection...")
-        System.setOut(PrintStream(FileOutputStream("/dev/null")))
-        attempt += 1
-        sleep(500)
-      }
-    }
-
-    System.setOut(originalOut)
-    System.setErr(originalErr)
+  fun migrate(config: ApplicationConfig) {
+    runCoreMigrations(config)
+    Plugins.migrate(config)
   }
 
   private fun initConnectionPool() {
@@ -104,37 +67,27 @@ class TestPostgres {
         .build()
 
     connectionPool = ConnectionPool(poolConfiguration)
-  }
-
-  private fun initDslContext() {
     val configuration = DefaultConfiguration().set(connectionPool).set(SQLDialect.POSTGRES)
     dslContext = configuration.dsl()
+    sleep(1000)
   }
 
-  fun resetConnectionPool() {
-    connectionPool.dispose()
-    initConnectionPool()
-    initDslContext()
-  }
+  suspend fun testSettings(settings: SettingsUpdate) {
+    settings.removals?.forEach { key ->
+      dslContext
+        .deleteFrom(APPLICATION_SETTINGS)
+        .where(APPLICATION_SETTINGS.NAME.eq(key))
+        .awaitSingle()
+    }
 
-  fun closeConnectionPool() {
-    connectionPool.dispose()
+    settings.updates?.let { updates ->
+      dslContext
+        .insertInto(APPLICATION_SETTINGS, APPLICATION_SETTINGS.NAME, APPLICATION_SETTINGS.VALUE)
+        .apply { updates.forEach { setting -> values(setting.key, setting.value) } }
+        .onConflict(APPLICATION_SETTINGS.NAME)
+        .doUpdate()
+        .set(APPLICATION_SETTINGS.VALUE, excluded(APPLICATION_SETTINGS.VALUE))
+        .awaitSingle()
+    }
   }
-
-  //  suspend fun testJiraApiKey(userId: String, apiKey: String) {
-  //    dslContext
-  //      .insertInto(JIRA_API_KEYS)
-  //      .set(JIRA_API_KEYS.USER_ID, userId)
-  //      .set(JIRA_API_KEYS.API_KEY, apiKey)
-  //      .awaitSingle()
-  //  }
-  //
-  //  suspend fun testJiraWorklogAttribute(id: String, description: String, required: Boolean) {
-  //    dslContext
-  //      .insertInto(JIRA_WORKLOG_ATTRIBUTES)
-  //      .set(JIRA_WORKLOG_ATTRIBUTES.ID, id)
-  //      .set(JIRA_WORKLOG_ATTRIBUTES.DESCRIPTION, description)
-  //      .set(JIRA_WORKLOG_ATTRIBUTES.REQUIRED, required)
-  //      .awaitSingle()
-  //  }
 }

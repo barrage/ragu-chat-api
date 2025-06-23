@@ -10,18 +10,11 @@ import net.barrage.llmao.core.types.KLocalDate
 object Administration {
   private lateinit var providers: ProviderState
   private lateinit var tokenUsage: TokenUsageRepository
-  private lateinit var plugins: Plugins
   private lateinit var settings: Settings
 
-  fun init(
-    providers: ProviderState,
-    tokenUsage: TokenUsageRepository,
-    plugins: Plugins,
-    settings: Settings,
-  ) {
+  fun init(providers: ProviderState, tokenUsage: TokenUsageRepository, settings: Settings) {
     this.providers = providers
     this.tokenUsage = tokenUsage
-    this.plugins = plugins
     this.settings = settings
   }
 
@@ -37,7 +30,7 @@ object Administration {
   }
 
   suspend fun listPlugins(): List<PluginConfiguration> {
-    return plugins.list(settings.getAll())
+    return Plugins.list(settings.getAll())
   }
 
   suspend fun aggregateTokenUsage(params: TokenUsageListParameters): TokenUsageAggregate {

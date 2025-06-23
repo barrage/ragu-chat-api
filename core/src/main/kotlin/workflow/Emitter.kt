@@ -17,11 +17,17 @@ interface Emitter {
    * Free implementation of serializing and emitting workflow output data.
    *
    * All workflow output variants must be registered via its [plugin serialization configuration]
-   * [net.barrage.llmao.core.net.barrage.llmao.core.net.barrage.llmao.core.Plugin.configureOutputSerialization].
-   *
-   * See [emit].
+   * [net.barrage.llmao.core.Plugin.configureOutputSerialization].
    */
   suspend fun emit(message: WorkflowOutput) = emit(message, WorkflowOutput.serializer())
+
+  /**
+   * Free implementation of serializing and emitting events.
+   *
+   * All event variants must be registered via its [plugin serialization configuration]
+   * [net.barrage.llmao.core.Plugin.configureEventSerialization].
+   */
+  suspend fun emit(event: Event) = emit(event, Event.serializer())
 
   /**
    * Free implementation of serializing and emitting errors.

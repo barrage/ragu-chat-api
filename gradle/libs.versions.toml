@@ -4,8 +4,10 @@ ktor = "3.1.1"
 openapi = "5.0.1"
 schemakenerator = "2.1.1"
 jooq = "3.20.5"
+jooqplugin = "10.1"
 postgres = "42.7.7"
 liquibase = "4.29.2"
+liquibaseplugin = "2.2.2"
 r2dbc-postgresql = "1.0.7.RELEASE"
 r2dbc-pool = "1.0.2.RELEASE"
 java-jwt = "4.4.0"
@@ -15,7 +17,7 @@ openai-client = "4.0.1"
 weaviate = "4.8.3"
 minio = "8.5.15"
 testcontainers = "1.20.2"
-logback = "1.5.8"
+logback = "1.5.13"
 itext-core = "9.1.0"
 infobip-api-java-client = "4.4.0"
 wiremock = "3.12.1"
@@ -104,3 +106,5 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 dokka = { id = "org.jetbrains.dokka", version = "2.0.0" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version = "0.20.1" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
+jooq = { id = "nu.studer.jooq", version.ref = "jooqplugin" }
+liquibase = { id = "org.liquibase.gradle", version.ref = "liquibaseplugin" }

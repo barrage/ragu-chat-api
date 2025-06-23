@@ -2,7 +2,7 @@ package net.barrage.llmao.core.repository
 
 import java.time.LocalTime
 import java.time.ZoneOffset
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.database.optionalEq

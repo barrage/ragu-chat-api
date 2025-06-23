@@ -1,13 +1,16 @@
-import io.ktor.server.auth.*
-import io.ktor.server.config.*
-import io.ktor.server.plugins.requestvalidation.*
-import io.ktor.server.routing.*
+import io.ktor.server.auth.authenticate
+import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
+import io.ktor.server.routing.Route
+import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
-import net.barrage.llmao.core.*
-import net.barrage.llmao.core.model.UpdateCollections
+import model.UpdateCollections
+import net.barrage.llmao.core.ApplicationState
+import net.barrage.llmao.core.Plugin
+import net.barrage.llmao.core.PluginConfiguration
 import net.barrage.llmao.core.settings.ApplicationSettings
-import net.barrage.llmao.core.workflow.OutgoingSystemMessage
-import net.barrage.llmao.core.workflow.SessionManager
+import net.barrage.llmao.core.string
+import net.barrage.llmao.core.workflow.Event
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 import net.barrage.llmao.core.workflow.WorkflowOutput
 
@@ -20,7 +23,9 @@ class ChatPlugin : Plugin {
 
   private var whatsapp: WhatsAppAdapter? = null
 
-  override fun id(): String = "CHAT"
+  private val log = KtorSimpleLogger("net.barrage.llmao.plugins.chat.ChatPlugin")
+
+  override fun id(): String = CHAT_WORKFLOW_ID
 
   override suspend fun initialize(config: ApplicationConfig, state: ApplicationState) {
     val chatRead = ChatRepositoryRead(state.database, CHAT_WORKFLOW_ID)
@@ -32,13 +37,7 @@ class ChatPlugin : Plugin {
           AdminApi(
             chat = AdminChatService(chatRead, agentRepository),
             agent =
-              AdminAgentService(
-                state.providers,
-                agentRepository,
-                chatRead,
-                state.providers.image,
-                state.listener,
-              ),
+              AdminAgentService(state.providers, agentRepository, chatRead, state.providers.image),
           ),
         user =
           PublicApi(
@@ -108,21 +107,6 @@ class ChatPlugin : Plugin {
     validate<UpdateNumber>(UpdateNumber::validate)
   }
 
-  override suspend fun handleEvent(manager: SessionManager, event: Event) {
-    when (event) {
-      is AgentDeactivated -> {
-        LOG.info("Handling agent deactivated event ({})", event.agentId)
-
-        manager.retainWorkflows {
-          val chat = it as? ChatWorkflow ?: return@retainWorkflows true
-          chat.agentId() != event.agentId
-        }
-
-        manager.broadcast(OutgoingSystemMessage.AgentDeactivated(event.agentId))
-      }
-    }
-  }
-
   override fun describe(settings: ApplicationSettings): PluginConfiguration =
     PluginConfiguration(
       id = id(),
@@ -140,6 +124,10 @@ class ChatPlugin : Plugin {
 
   override fun PolymorphicModuleBuilder<WorkflowOutput>.configureOutputSerialization() {
     subclass(ChatTitleUpdated::class, ChatTitleUpdated.serializer())
+  }
+
+  override fun PolymorphicModuleBuilder<Event>.configureEventSerialization() {
+    subclass(AgentDeactivated::class, AgentDeactivated.serializer())
   }
 }
 

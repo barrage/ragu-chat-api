@@ -10,13 +10,19 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
 import net.barrage.llmao.core.workflow.OutgoingSystemMessage
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.adminWsSession
+import net.barrage.llmao.test.decode
+import net.barrage.llmao.test.openNewWorkflow
+import net.barrage.llmao.test.sendClientSystem
+import net.barrage.llmao.test.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class WebsocketIncomingSystemMessageTests : IntegrationTest() {
+class WebsocketIncomingSystemMessageTests : IntegrationTest(plugin = ChatPlugin()) {
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
 
@@ -80,10 +86,13 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
-      openNewChat(agent.id)
+      openNewWorkflow(
+        CHAT_WORKFLOW_ID,
+        Json.encodeToJsonElement(NewChatWorkflowParameters(agent.id)),
+      )
       send("asdf")
       val response = (incoming.receive() as Frame.Text).readText()
-      val error = receiveJson<AppError>(response)
+      val error = decode<AppError>(response)
       assertEquals("API", error.errorType)
       assertEquals(ErrorReason.InvalidParameter, error.errorReason)
       asserted = true
@@ -100,11 +109,11 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       sendClientSystem(
         IncomingSystemMessage.CreateNewWorkflow(
           "CHAT",
-          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+          Json.encodeToJsonElement(NewChatWorkflowParameters(agent.id)),
         )
       )
       val response = (incoming.receive() as Frame.Text).readText()
-      val message = receiveJson<OutgoingSystemMessage.WorkflowOpen>(response)
+      val message = decode<OutgoingSystemMessage.WorkflowOpen>(response)
       assertNotNull(message.id)
       asserted = true
     }
@@ -120,17 +129,17 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       val openChat =
         IncomingSystemMessage.CreateNewWorkflow(
           "CHAT",
-          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+          Json.encodeToJsonElement(NewChatWorkflowParameters(agent.id)),
         )
 
       sendClientSystem(openChat)
       val first = (incoming.receive() as Frame.Text).readText()
-      val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
+      val firstMessage = decode<OutgoingSystemMessage.WorkflowOpen>(first)
       assertNotNull(firstMessage.id)
 
       sendClientSystem(openChat)
       val second = (incoming.receive() as Frame.Text).readText()
-      val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
+      val secondMessage = decode<OutgoingSystemMessage.WorkflowOpen>(second)
       assertNotNull(secondMessage.id)
 
       assertNotEquals(firstMessage.id, secondMessage.id)
@@ -148,12 +157,12 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       sendClientSystem(
         IncomingSystemMessage.CreateNewWorkflow(
           "CHAT",
-          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+          Json.encodeToJsonElement(NewChatWorkflowParameters(agent.id)),
         )
       )
 
       val first = (incoming.receive() as Frame.Text).readText()
-      val firstMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(first)
+      val firstMessage = decode<OutgoingSystemMessage.WorkflowOpen>(first)
       assertNotNull(firstMessage.id)
 
       sendClientSystem(
@@ -161,7 +170,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       )
 
       val second = (incoming.receive() as Frame.Text).readText()
-      val secondMessage = receiveJson<OutgoingSystemMessage.WorkflowOpen>(second)
+      val secondMessage = decode<OutgoingSystemMessage.WorkflowOpen>(second)
       assertNotNull(secondMessage.id)
 
       assertEquals(firstMessage.id, secondMessage.id)
@@ -181,7 +190,7 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()
-      val error = receiveJson<AppError>(message)
+      val error = decode<AppError>(message)
       assertEquals("API", error.errorType)
       assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
       asserted = true
@@ -212,12 +221,12 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       val openChat =
         IncomingSystemMessage.CreateNewWorkflow(
           "CHAT",
-          Json.encodeToJsonElement(NewChatWorkflow(KUUID.randomUUID())),
+          Json.encodeToJsonElement(NewChatWorkflowParameters(KUUID.randomUUID())),
         )
       sendClientSystem(openChat)
 
       val message = (incoming.receive() as Frame.Text).readText()
-      val error = receiveJson<AppError>(message)
+      val error = decode<AppError>(message)
       assertEquals("API", error.errorType)
       assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
       asserted = true
@@ -236,12 +245,12 @@ class WebsocketIncomingSystemMessageTests : IntegrationTest() {
       sendClientSystem(
         IncomingSystemMessage.CreateNewWorkflow(
           "CHAT",
-          Json.encodeToJsonElement(NewChatWorkflow(agent.id)),
+          Json.encodeToJsonElement(NewChatWorkflowParameters(agent.id)),
         )
       )
 
       val message = (incoming.receive() as Frame.Text).readText()
-      val error = receiveJson<AppError>(message)
+      val error = decode<AppError>(message)
       assertEquals("API", error.errorType)
       assertEquals(ErrorReason.EntityDoesNotExist, error.errorReason)
       asserted = true

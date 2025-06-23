@@ -1,8 +1,8 @@
 package net.barrage.llmao.core.llm
 
 import io.ktor.util.logging.KtorSimpleLogger
+import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.core.vector.CollectionQuery
@@ -48,16 +48,16 @@ object ContextEnrichmentFactory {
   fun collectionEnrichment(
     tokenTracker: TokenUsageTracker,
     userEntitlements: List<String>,
-    collections: List<AgentCollection>,
+    collections: List<CollectionEnrichment>,
   ): RagContextEnrichment? {
-    val chatCollections = mutableListOf<AgentCollection>()
+    val chatCollections = mutableListOf<CollectionEnrichment>()
 
     for (collection in collections) {
       val collectionInfo =
-        providers.vector[collection.vectorProvider].getCollectionInfo(collection.collection)
+        providers.vector[collection.vectorProvider].getCollectionInfo(collection.name)
 
       if (collectionInfo == null) {
-        LOG.warn("Collection '{}' does not exist, skipping", collection.collection)
+        LOG.warn("Collection '{}' does not exist, skipping", collection.name)
         continue
       }
 
@@ -84,7 +84,7 @@ object ContextEnrichmentFactory {
       if (!allowed) {
         LOG.warn(
           "Collection '{}' is not available to user; required: {}, user: {}",
-          collection.collection,
+          collection.name,
           collectionInfo.groups,
           userEntitlements,
         )
@@ -100,7 +100,7 @@ object ContextEnrichmentFactory {
 }
 
 class RagContextEnrichment(
-  private val collections: List<AgentCollection>,
+  private val collections: List<CollectionEnrichment>,
   private val providers: ProviderState,
   private val tokenTracker: TokenUsageTracker,
 ) : ContextEnrichment {
@@ -141,7 +141,7 @@ class RagContextEnrichment(
 
       providerQueries[collection.vectorProvider]?.add(
         CollectionQuery(
-          name = collection.collection,
+          name = collection.name,
           amount = collection.amount,
           maxDistance = collection.maxDistance,
           vector = embeddings.embeddings,
@@ -151,7 +151,7 @@ class RagContextEnrichment(
           providerQueries[collection.vectorProvider] =
             mutableListOf(
               CollectionQuery(
-                name = collection.collection,
+                name = collection.name,
                 amount = collection.amount,
                 maxDistance = collection.maxDistance,
                 vector = embeddings.embeddings,
@@ -177,12 +177,12 @@ class RagContextEnrichment(
       val instruction = collection.instruction
 
       if (relatedChunks[collection.vectorProvider] == null) {
-        LOG.warn("No results for collection: {}", collection.collection)
+        LOG.warn("No results for collection: {}", collection.name)
         continue
       }
 
       val collectionData =
-        relatedChunks[collection.vectorProvider]!![collection.collection]?.joinToString("\n") {
+        relatedChunks[collection.vectorProvider]!![collection.name]?.joinToString("\n") {
           it.content
         }
 
@@ -204,3 +204,28 @@ class RagContextEnrichment(
     return if (instructions.isBlank()) input else "$instructions\n$input"
   }
 }
+
+/** Used as the base configuration when exeucting RAG with vector databases. */
+@Serializable
+data class CollectionEnrichment(
+  /** Collection name. Serves as the collection identifier in most cases. */
+  val name: String,
+
+  /** Max amount of results to return when querying. */
+  val amount: Int,
+
+  /** The instruction to prepend to the collection data. */
+  val instruction: String,
+
+  /** Filter any results above this distance. */
+  val maxDistance: Double?,
+
+  /** The embedding provider used to embed the query. */
+  val embeddingProvider: String,
+
+  /** The model to use for embeddings. */
+  val embeddingModel: String,
+
+  /** Which vector database implementation is used to store the vectors. */
+  val vectorProvider: String,
+)

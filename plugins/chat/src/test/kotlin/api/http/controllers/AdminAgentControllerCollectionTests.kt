@@ -8,15 +8,18 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import kotlinx.coroutines.runBlocking
-import net.barrage.llmao.core.model.UpdateCollectionAddition
-import net.barrage.llmao.core.model.UpdateCollections
-import net.barrage.llmao.core.model.UpdateCollectionsResult
+import model.UpdateCollectionAddition
+import model.UpdateCollections
+import model.UpdateCollectionsResult
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.adminAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) {
+class AdminAgentControllerCollectionTests :
+  IntegrationTest(useWeaviate = true, plugin = ChatPlugin()) {
   private lateinit var agentOne: Agent
   private lateinit var agentTwo: Agent
 
@@ -132,9 +135,9 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
         .body<AgentFull>()
 
     assertEquals(1, agentOneBefore.collections.size)
-    assertEquals("Kusturica", agentOneBefore.collections[0].collection)
-    assertEquals(10, agentOneBefore.collections[0].amount)
-    assertEquals("you pass the butter", agentOneBefore.collections[0].instruction)
+    assertEquals("Kusturica", agentOneBefore.collections[0].collection.name)
+    assertEquals(10, agentOneBefore.collections[0].collection.amount)
+    assertEquals("you pass the butter", agentOneBefore.collections[0].collection.instruction)
 
     val agentTwoBefore =
       client
@@ -142,9 +145,9 @@ class AdminAgentControllerCollectionTests : IntegrationTest(useWeaviate = true) 
         .body<AgentFull>()
 
     assertEquals(1, agentTwoBefore.collections.size)
-    assertEquals("Kusturica", agentTwoBefore.collections[0].collection)
-    assertEquals(10, agentTwoBefore.collections[0].amount)
-    assertEquals("you pass the butter", agentTwoBefore.collections[0].instruction)
+    assertEquals("Kusturica", agentTwoBefore.collections[0].collection.name)
+    assertEquals(10, agentTwoBefore.collections[0].collection.amount)
+    assertEquals("you pass the butter", agentTwoBefore.collections[0].collection.instruction)
 
     val response =
       client.delete("/admin/agents/collections?collection=Kusturica&provider=weaviate") {

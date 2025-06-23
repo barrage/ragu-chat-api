@@ -7,5 +7,6 @@ include(
   ":plugins:bonvoyage",
   ":plugins:chat",
   ":plugins:jirakira",
+  ":plugins:hgk",
   ":test",
 )

@@ -1,7 +1,7 @@
 databaseChangeLog:
-  - logicalFilePath: src/main/resources/migrations/changelog.yaml
+  - logicalFilePath: src/main/resources/db/migrations/jirakira/changelog.yaml
   - changeSet:
-      id: BONVOYAGE_SETUP
+      id: JIRAKIRA_SETUP
       author: barrage
       changes:
         - sqlFile:
@@ -15,4 +15,3 @@ databaseChangeLog:
             path: setup/down.sql
             relativeToChangelogFile: true
             splitStatements: false
-

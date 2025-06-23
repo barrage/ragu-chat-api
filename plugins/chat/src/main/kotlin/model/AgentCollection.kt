@@ -1,8 +1,9 @@
-package net.barrage.llmao.core.model
+package model
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Validation
+import net.barrage.llmao.core.llm.CollectionEnrichment
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.VectorCollectionInfo
@@ -11,40 +12,24 @@ import net.barrage.llmao.tables.records.AgentCollectionsRecord
 @Serializable
 data class AgentCollection(
   val id: KUUID,
-  /** Collection name. */
-  val collection: String,
-
-  /** Max amount of results to return when querying. */
-  val amount: Int,
-
-  /** The instruction to prepend to the collection data. */
-  val instruction: String,
-
-  /** Filter any results above this distance. */
-  val maxDistance: Double?,
-
-  /** The embedding provider used to embed the query. */
-  val embeddingProvider: String,
-
-  /** The model to use for embeddings. */
-  val embeddingModel: String,
-
-  /** Which vector database implementation is used to store the vectors. */
-  val vectorProvider: String,
   val createdAt: KOffsetDateTime?,
   val updatedAt: KOffsetDateTime?,
+  val collection: CollectionEnrichment,
 )
 
 fun AgentCollectionsRecord.toAgentCollection(): AgentCollection {
   return AgentCollection(
     id = id!!,
-    instruction = instruction,
-    collection = collection,
-    amount = amount,
-    embeddingProvider = embeddingProvider,
-    embeddingModel = embeddingModel,
-    vectorProvider = vectorProvider,
-    maxDistance = maxDistance,
+    collection =
+      CollectionEnrichment(
+        instruction = instruction,
+        name = collection,
+        amount = amount,
+        embeddingProvider = embeddingProvider,
+        embeddingModel = embeddingModel,
+        vectorProvider = vectorProvider,
+        maxDistance = maxDistance,
+      ),
     createdAt = createdAt,
     updatedAt = updatedAt,
   )

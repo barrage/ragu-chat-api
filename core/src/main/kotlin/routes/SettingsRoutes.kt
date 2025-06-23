@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.routes
+package net.barrage.llmao.core.routes
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.get

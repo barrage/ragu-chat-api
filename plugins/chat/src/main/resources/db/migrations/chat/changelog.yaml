@@ -1,5 +1,5 @@
 databaseChangeLog:
-  - logicalFilePath: src/main/resources/migrations/changelog.yaml
+  - logicalFilePath: src/main/resources/db/migrations/chat/changelog.yaml
   - changeSet:
       id: CHAT_SETUP
       author: barrage

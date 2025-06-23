@@ -18,7 +18,6 @@ import org.jooq.DSLContext
 /** Application state available to plugins. */
 class ApplicationState(
   config: ApplicationConfig,
-  plugins: Plugins,
   val database: DSLContext,
   val providers: ProviderState,
   /** A key-value storage API for application settings. */
@@ -41,21 +40,13 @@ class ApplicationState(
           EmailAuthentication(username, password)
         },
     ),
-
-  /**
-   * Handle to the event listener.
-   *
-   * Events can be dispatched to this handle and are forwarded to all registered plugins via the
-   * session manager.
-   */
-  val listener: EventListener = EventListener(),
 ) {
 
   init {
     ChatMessageProcessor.init(providers)
     ContextEnrichmentFactory.init(providers)
     TokenUsageTrackerFactory.init(TokenUsageRepository(database))
-    Administration.init(providers, TokenUsageRepository(database), plugins, settings)
+    Administration.init(providers, TokenUsageRepository(database), settings)
   }
 }
 

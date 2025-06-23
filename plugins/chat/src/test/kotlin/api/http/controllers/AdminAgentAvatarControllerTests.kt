@@ -9,12 +9,14 @@ import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.adminAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true) {
+class AdminAgentAvatarControllerTests : IntegrationTest(useMinio = true, plugin = ChatPlugin()) {
   private lateinit var agentOne: Agent
   private lateinit var agentTwo: Agent
 

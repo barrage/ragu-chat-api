@@ -1,11 +1,11 @@
 group = "net.barrage.llmao.plugins.jirakira"
 
-version = "0.4.0"
+version = "0.1.0"
 
 plugins {
   `java-library`
-  id("nu.studer.jooq") version "10.1"
-  id("org.liquibase.gradle") version "2.2.2"
+  alias(libs.plugins.jooq)
+  alias(libs.plugins.liquibase)
 }
 
 dependencies {
@@ -51,6 +51,20 @@ dependencies {
   testImplementation(project(":test"))
   testImplementation(libs.junit.jupiter.api)
   testImplementation(libs.ktor.server.test.host)
+  testImplementation(libs.kotlin.test)
+  testRuntimeOnly(libs.junit.jupiter.engine)
+  testImplementation(libs.logback.classic)
+}
+
+tasks.named("build") { dependsOn("generateJooq") }
+
+tasks.test {
+  useJUnitPlatform()
+  testLogging {
+    showStandardStreams = true // Always show standard streams
+    events("passed", "skipped", "failed")
+    exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+  }
 }
 
 liquibase {
@@ -60,9 +74,10 @@ liquibase {
         "url" to project.findProperty("db.url") as String,
         "username" to project.findProperty("db.user") as String,
         "password" to project.findProperty("db.password") as String,
-        "changelogFile" to "src/main/resources/migrations/changelog.yaml",
+        "changelogFile" to "changelog.yaml",
         "logLevel" to "error",
         "showBanner" to "false",
+        "searchPath" to "$projectDir/src/main/resources/db/migrations/jirakira",
       )
   }
   runList = "main"
@@ -107,5 +122,3 @@ jooq {
     }
   }
 }
-
-tasks.named("build") { dependsOn("generateJooq") }

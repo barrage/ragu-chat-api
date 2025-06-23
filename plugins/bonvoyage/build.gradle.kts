@@ -1,13 +1,11 @@
-import org.gradle.kotlin.dsl.jooq
-
 group = "net.barrage.llmao.plugins.bonvoyage"
 
-version = "0.4.0"
+version = "0.1.0"
 
 plugins {
   `java-library`
-  id("nu.studer.jooq") version "10.1"
-  id("org.liquibase.gradle") version "2.2.2"
+  alias(libs.plugins.jooq)
+  alias(libs.plugins.liquibase)
 }
 
 dependencies {
@@ -68,9 +66,10 @@ liquibase {
         "url" to project.findProperty("db.url") as String,
         "username" to project.findProperty("db.user") as String,
         "password" to project.findProperty("db.password") as String,
-        "changelogFile" to "src/main/resources/migrations/changelog.yaml",
+        "changelogFile" to "changelog.yaml",
         "logLevel" to "error",
         "showBanner" to "false",
+        "searchPath" to "$projectDir/src/main/resources/db/migrations/bonvoyage",
       )
   }
   runList = "main"

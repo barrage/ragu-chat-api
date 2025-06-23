@@ -1,19 +1,19 @@
+import model.CollectionInsert
+import model.UpdateCollections
+import model.UpdateCollectionsFailure
+import model.UpdateCollectionsResult
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
-import net.barrage.llmao.core.EventListener
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.blob.AVATARS_PATH
 import net.barrage.llmao.core.blob.BlobStorage
 import net.barrage.llmao.core.llm.ToolDefinition
-import net.barrage.llmao.core.model.CollectionInsert
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.MessageGroupAggregate
-import net.barrage.llmao.core.model.UpdateCollections
-import net.barrage.llmao.core.model.UpdateCollectionsFailure
-import net.barrage.llmao.core.model.UpdateCollectionsResult
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.core.workflow.SessionManager
 
 class AdminAgentService(
   private val providers: ProviderState,
@@ -22,7 +22,6 @@ class AdminAgentService(
 
   /** The image storage provider for avatars. */
   private val avatarStorage: BlobStorage<Image>,
-  private val listener: EventListener,
 ) {
 
   suspend fun listAgents(
@@ -50,7 +49,7 @@ class AdminAgentService(
     )
 
     if (update.active == false) {
-      listener.dispatch(AgentDeactivated(id))
+      SessionManager.broadcastEvent(AgentDeactivated(id))
     }
 
     return agentRepository.update(id, update)
@@ -199,8 +198,8 @@ class AdminAgentService(
     agentRepository.updateAgentTools(agentId, update)
   }
 
-  suspend fun updateGroups(agentId: KUUID, update: AgentGroupUpdate) {
-    agentRepository.updateGroups(agentId, update)
+  suspend fun updateGroups(createdBy: String, agentId: KUUID, update: AgentGroupUpdate) {
+    agentRepository.updateGroups(createdBy, agentId, update)
   }
 
   suspend fun exportAll(): List<AgentFull> {

@@ -1,10 +1,15 @@
-package net.barrage.llmao.app.routes
+package net.barrage.llmao.core.routes
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.get
-import io.ktor.http.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.http.ContentDisposition
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.response.header
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
+import io.ktor.server.routing.Route
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
 import net.barrage.llmao.core.blob.BlobStorage

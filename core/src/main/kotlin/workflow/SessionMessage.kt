@@ -47,12 +47,4 @@ sealed class OutgoingSystemMessage {
   @SerialName("workflow.closed")
   @Serializable
   data class WorkflowClosed(val id: KUUID) : OutgoingSystemMessage()
-
-  /**
-   * Sent when an administrator deactivates an agent via the service and is used to indicate the
-   * chat is no longer available.
-   */
-  @SerialName("system.event.agent_deactivated")
-  @Serializable
-  data class AgentDeactivated(val agentId: KUUID) : OutgoingSystemMessage()
 }

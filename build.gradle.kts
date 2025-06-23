@@ -24,5 +24,3 @@ subprojects {
 
   tasks.withType<KtfmtCheckTask> { enabled = false }
 }
-
-// sourceSets { main { resources { srcDir("config") } } }

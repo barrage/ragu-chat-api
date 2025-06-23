@@ -9,11 +9,28 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.config.ConfigLoader
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.config.mergeWith
+import io.ktor.server.config.tryGetString
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import java.time.Instant
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import net.barrage.llmao.adapters.blob.initializeMinio
+import net.barrage.llmao.adapters.embeddings.initializeEmbedders
+import net.barrage.llmao.adapters.llm.initializeInference
+import net.barrage.llmao.adapters.vector.initializeVectorDatabases
+import net.barrage.llmao.core.ApplicationState
+import net.barrage.llmao.core.Email
+import net.barrage.llmao.core.EmailAuthentication
+import net.barrage.llmao.core.Plugin
+import net.barrage.llmao.core.Plugins
+import net.barrage.llmao.core.ProviderState
+import net.barrage.llmao.core.configureCore
+import net.barrage.llmao.core.int
 import net.barrage.llmao.core.model.User
+import net.barrage.llmao.core.repository.SettingsRepository
+import net.barrage.llmao.core.settings.Settings
+import net.barrage.llmao.core.string
 import net.barrage.llmao.core.types.KOffsetDateTime
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -40,11 +57,13 @@ open class IntegrationTest(
    */
   private val wiremockUrlOverride: String? = null,
   enableWhatsApp: Boolean = false,
+  plugin: Plugin? = null,
 ) {
   val postgres: TestPostgres = TestPostgres()
   private var minio: TestMinio? = null
   var weaviate: TestWeaviate? = null
   var wiremock: WireMockServer? = null
+  lateinit var state: ApplicationState
 
   private var cfg = ConfigLoader.load("application.example.conf")
 
@@ -69,6 +88,10 @@ open class IntegrationTest(
     val now = Instant.now().epochSecond
     val max = KOffsetDateTime.MAX.toEpochSecond()
     cfg = cfg.mergeWith(MapApplicationConfig("jwt.leeway" to (max - now).toString()))
+
+    plugin?.let { Plugins.register(it) }
+
+    postgres.migrate(cfg)
   }
 
   /**
@@ -77,11 +100,13 @@ open class IntegrationTest(
    */
   fun test(block: suspend ApplicationTestBuilder.(client: HttpClient) -> Unit) = testApplication {
     environment { config = cfg }
-    val client = createClient {
-      install(ContentNegotiation) { json(json = Json { ignoreUnknownKeys = true }) }
-    }
+    application { configureCore(state) }
     try {
-      block(client)
+      block(
+        createClient {
+          install(ContentNegotiation) { json(json = Json { ignoreUnknownKeys = true }) }
+        }
+      )
     } catch (e: Throwable) {
       e.printStackTrace()
       throw e
@@ -91,6 +116,7 @@ open class IntegrationTest(
   /** Main execution function for websocket tests that exposes a websocket client. */
   fun wsTest(block: suspend ApplicationTestBuilder.(client: HttpClient) -> Unit) = testApplication {
     environment { config = cfg }
+    application { configureCore(state) }
     block(
       createClient {
         install(WebSockets) {}
@@ -112,12 +138,45 @@ open class IntegrationTest(
     if (useMinio) {
       loadMinio()
     }
+
+    state =
+      ApplicationState(
+        config = cfg,
+        database = postgres.dslContext,
+        providers =
+          ProviderState(
+            llm = initializeInference(cfg),
+            vector = initializeVectorDatabases(cfg),
+            embedding = initializeEmbedders(cfg),
+            image = initializeMinio(cfg),
+          ),
+        settings = Settings(SettingsRepository(postgres.dslContext)),
+        email =
+          Email(
+            host = cfg.string("email.host"),
+            port = cfg.int("email.port"),
+            auth =
+              run {
+                val username = cfg.tryGetString("email.username")
+                val password = cfg.tryGetString("email.password")
+
+                if (username == null || password == null) {
+                  return@run null
+                }
+
+                EmailAuthentication(username, password)
+              },
+          ),
+      )
+
+    runBlocking { Plugins.initialize(cfg, state) }
   }
 
   @AfterAll
   fun stopContainersAfterTests() {
     postgres.container.stop()
     weaviate?.container?.stop()
+    Plugins.reset()
   }
 
   private fun loadWeaviate() {

@@ -14,15 +14,30 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.workflow.DefaultWorkflowInput
 import net.barrage.llmao.core.workflow.IncomingSystemMessage
-import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.StreamChunk
 import net.barrage.llmao.core.workflow.StreamComplete
+import net.barrage.llmao.test.COMPLETIONS_ERROR_PROMPT
+import net.barrage.llmao.test.COMPLETIONS_STREAM_LONG_PROMPT
+import net.barrage.llmao.test.COMPLETIONS_STREAM_PROMPT
+import net.barrage.llmao.test.COMPLETIONS_STREAM_RESPONSE
+import net.barrage.llmao.test.COMPLETIONS_STREAM_WHITESPACE_PROMPT
+import net.barrage.llmao.test.COMPLETIONS_STREAM_WHITESPACE_RESPONSE
+import net.barrage.llmao.test.COMPLETIONS_TITLE_PROMPT
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.adminAccessToken
+import net.barrage.llmao.test.adminWsSession
+import net.barrage.llmao.test.openNewWorkflow
+import net.barrage.llmao.test.sendClientSystem
+import net.barrage.llmao.test.sendMessage
+import net.barrage.llmao.test.userWsSession
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -31,7 +46,10 @@ private const val TEST_COLLECTION = "KusturicaChatTests"
 
 private const val SIZE = 1536
 
-class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
+private var json = Json { ignoreUnknownKeys = true }
+
+class WebsocketChatWorkflowTests :
+  IntegrationTest(useWeaviate = true, useWiremock = true, plugin = ChatPlugin()) {
   @BeforeAll
   fun setup() {
     runBlocking { weaviate!!.insertTestCollection(TEST_COLLECTION, SIZE) }
@@ -50,7 +68,10 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     var asserted = false
 
     client.userWsSession {
-      openNewChat(agent.agent.id)
+      openNewWorkflow(
+        CHAT_WORKFLOW_ID,
+        Json.encodeToJsonElement(NewChatWorkflowParameters(agent.agent.id)),
+      )
 
       var buffer = ""
 
@@ -98,7 +119,10 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val validAgent = createValidAgent()
 
     client.adminWsSession {
-      openNewChat(validAgent.agent.id)
+      openNewWorkflow(
+        CHAT_WORKFLOW_ID,
+        Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+      )
 
       var buffer = ""
 
@@ -140,7 +164,10 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val validAgent = createValidAgent()
 
     client.adminWsSession {
-      openNewChat(validAgent.agent.id)
+      openNewWorkflow(
+        CHAT_WORKFLOW_ID,
+        Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+      )
 
       var buffer = ""
 
@@ -178,7 +205,11 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val validAgent = createValidAgent()
 
     client.adminWsSession {
-      val chatId = openNewChat(validAgent.agent.id)
+      val chatId =
+        openNewWorkflow(
+          CHAT_WORKFLOW_ID,
+          Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+        )
 
       val error =
         client.get("/admin/chats/$chatId/messages") {
@@ -233,14 +264,22 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val validAgent = createValidAgent()
 
     client.adminWsSession {
-      val chatOne = openNewChat(validAgent.agent.id)
+      val chatOne =
+        openNewWorkflow(
+          CHAT_WORKFLOW_ID,
+          Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+        )
       val errorOne =
         client.get("/admin/chats/$chatOne/messages") {
           header(HttpHeaders.Cookie, adminAccessToken())
         }
       assertEquals(404, errorOne.status.value)
 
-      val chatTwo = openNewChat(validAgent.agent.id)
+      val chatTwo =
+        openNewWorkflow(
+          CHAT_WORKFLOW_ID,
+          Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+        )
       val errorTwo =
         client.get("/admin/chats/$chatTwo/messages") {
           header(HttpHeaders.Cookie, adminAccessToken())
@@ -264,7 +303,11 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val validAgent = createValidAgent()
 
     client.adminWsSession {
-      val chatId = openNewChat(validAgent.agent.id)
+      val chatId =
+        openNewWorkflow(
+          CHAT_WORKFLOW_ID,
+          Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+        )
 
       val error =
         client.get("/admin/chats/$chatId/messages") {
@@ -336,7 +379,10 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
         val job = launch {
           var buffer = ""
           client.adminWsSession {
-            openNewChat(validAgent.agent.id)
+            openNewWorkflow(
+              CHAT_WORKFLOW_ID,
+              Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+            )
             sendMessage("Will this trigger a stream response?") { incoming ->
               for (frame in incoming) {
                 val response = (frame as Frame.Text).readText()
@@ -376,23 +422,23 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val agent = createValidAgent()
 
     client.adminWsSession {
-      openNewChat(agent.agent.id)
+      openNewWorkflow(
+        CHAT_WORKFLOW_ID,
+        Json.encodeToJsonElement(NewChatWorkflowParameters(agent.agent.id)),
+      )
       var buffer = ""
       sendMessage("Will this trigger a stream response?") { incoming ->
-        // Block on this so we can see what happens.
-        runBlocking {
-          client.put("/admin/agents/${agent.agent.id}") {
-            header(HttpHeaders.Cookie, adminAccessToken())
-            header(HttpHeaders.Accept, ContentType.Application.Json)
-            contentType(ContentType.Application.Json)
-            setBody(UpdateAgent(active = false))
-          }
+        client.put("/admin/agents/${agent.agent.id}") {
+          header(HttpHeaders.Cookie, adminAccessToken())
+          header(HttpHeaders.Accept, ContentType.Application.Json)
+          contentType(ContentType.Application.Json)
+          setBody(UpdateAgent(active = false))
         }
 
         for (frame in incoming) {
           val response = (frame as Frame.Text).readText()
           try {
-            val message = json.decodeFromString<OutgoingSystemMessage.AgentDeactivated>(response)
+            val message = json.decodeFromString<AgentDeactivated>(response)
             // Asserts the right agent was deactivated
             assert(message.agentId == agent.agent.id)
             asserted = true
@@ -402,7 +448,7 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
           try {
             val event = json.decodeFromString<StreamChunk>(response)
             buffer += event.chunk
-          } catch (e: SerializationException) {}
+          } catch (_: SerializationException) {}
 
           try {
             json.decodeFromString<StreamComplete>(response)
@@ -429,7 +475,10 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val validAgent = createValidAgent("This is an error message.")
 
     client.adminWsSession {
-      openNewChat(validAgent.agent.id)
+      openNewWorkflow(
+        CHAT_WORKFLOW_ID,
+        Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+      )
 
       sendMessage("Give me an error") { incoming ->
         for (frame in incoming) {
@@ -464,7 +513,11 @@ class WebsocketChatWorkflowTests : IntegrationTest(useWeaviate = true) {
     val prompt = "Will this trigger a stream response?"
 
     client.adminWsSession {
-      val chatId = openNewChat(validAgent.agent.id)
+      val chatId =
+        openNewWorkflow(
+          CHAT_WORKFLOW_ID,
+          Json.encodeToJsonElement(NewChatWorkflowParameters(validAgent.agent.id)),
+        )
 
       var buffer = ""
 

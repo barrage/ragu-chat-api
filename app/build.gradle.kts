@@ -10,15 +10,6 @@ application {
   applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-// sourceSets { main { resources { srcDir("config") } } }
-
-// sourceSets {
-//  main {
-//    kotlin { srcDir("src/main/kotlin") }
-//    resources { srcDir("src/main/resources") }
-//  }
-// }
-
 ktor { fatJar { archiveFileName.set("llmao.jar") } }
 
 dependencies {
@@ -71,6 +62,7 @@ dependencies {
   implementation(project(":plugins:chat"))
   implementation(project(":plugins:jirakira"))
   implementation(project(":plugins:bonvoyage"))
+  implementation(project(":plugins:hgk"))
 
   testImplementation(project(":test"))
 }

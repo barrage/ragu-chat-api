@@ -1,24 +1,21 @@
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.websocket.ClientWebSocketSession
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import java.util.UUID
+import java.util.*
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
+import model.AgentCollection
+import model.toAgentCollection
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
-import net.barrage.llmao.core.model.AgentCollection
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.model.toAgentCollection
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.core.workflow.IncomingSystemMessage
-import net.barrage.llmao.core.workflow.OutgoingSystemMessage
 import net.barrage.llmao.core.workflow.StreamChunk
 import net.barrage.llmao.core.workflow.StreamComplete
 import net.barrage.llmao.tables.references.AGENTS
@@ -31,7 +28,14 @@ import net.barrage.llmao.tables.references.MESSAGES
 import net.barrage.llmao.tables.references.MESSAGE_GROUPS
 import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
-import org.junit.jupiter.api.Assertions.assertNotNull
+import net.barrage.llmao.test.ADMIN_USER
+import net.barrage.llmao.test.TestPostgres
+import net.barrage.llmao.test.adminWsSession
+import net.barrage.llmao.test.openExistingWorkflow
+import net.barrage.llmao.test.openNewWorkflow
+import net.barrage.llmao.test.sendMessage
+
+private val json = Json { ignoreUnknownKeys = true }
 
 suspend fun TestPostgres.deleteTestAgent(id: UUID) {
   dslContext.deleteFrom(AGENTS).where(AGENTS.ID.eq(id)).awaitSingle()
@@ -248,36 +252,6 @@ suspend fun TestPostgres.deleteWhatsAppAgent() {
     .awaitSingle()
 }
 
-/** Send the `chat_open_new` system message and wait for the chat_open response. */
-suspend fun ClientWebSocketSession.openNewChat(
-  agentId: KUUID? = null,
-  workflowType: String = "CHAT",
-): KUUID {
-  // Open a chat and confirm it's open
-  sendClientSystem(
-    IncomingSystemMessage.CreateNewWorkflow(
-      workflowType,
-      agentId?.let { Json.encodeToJsonElement(NewChatWorkflow(it)) },
-    )
-  )
-  val chatOpen = (incoming.receive() as Frame.Text).readText()
-  val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
-  assertNotNull(workflowOpenMessage.id)
-  return workflowOpenMessage.id
-}
-
-suspend fun ClientWebSocketSession.openExistingChat(
-  chatId: KUUID,
-  workflowType: String = "CHAT",
-): KUUID {
-  // Open a chat and confirm it's open
-  sendClientSystem(IncomingSystemMessage.LoadExistingWorkflow(workflowType, chatId))
-  val chatOpen = (incoming.receive() as Frame.Text).readText()
-  val workflowOpenMessage = json.decodeFromString<OutgoingSystemMessage.WorkflowOpen>(chatOpen)
-  assertNotNull(workflowOpenMessage.id)
-  return workflowOpenMessage.id
-}
-
 /** Open a new chat, send a message and collect the response. */
 suspend fun HttpClient.openSendAndCollect(
   agentId: KUUID? = null,
@@ -289,8 +263,8 @@ suspend fun HttpClient.openSendAndCollect(
 
   adminWsSession {
     openChatId =
-      agentId?.let { openNewChat(it) }
-        ?: chatId?.let { openExistingChat(it) }
+      agentId?.let { openNewWorkflow(CHAT_WORKFLOW_ID, Json.encodeToJsonElement(NewChatWorkflowParameters(agentId))) }
+        ?: chatId?.let { openExistingWorkflow(it, CHAT_WORKFLOW_ID) }
         ?: throw IllegalArgumentException("Must provide either agentId or chatId")
 
     sendMessage(message) { incoming ->

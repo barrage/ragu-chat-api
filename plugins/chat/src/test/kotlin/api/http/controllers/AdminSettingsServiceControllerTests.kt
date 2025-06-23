@@ -10,11 +10,13 @@ import io.ktor.http.contentType
 import net.barrage.llmao.core.settings.ApplicationSettings
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsUpdate
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.adminAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
-class AdminSettingsServiceControllerTests : IntegrationTest() {
+class AdminSettingsServiceControllerTests : IntegrationTest(plugin = ChatPlugin()) {
   @Test
   fun updatesSingleSetting() = test { client ->
     val update = SettingsUpdate(listOf(SettingUpdate(MaxHistoryTokens.KEY, "15")))

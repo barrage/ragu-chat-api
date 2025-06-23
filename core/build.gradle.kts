@@ -2,10 +2,15 @@ group = "net.barrage.llmao.core"
 
 version = "0.4.0"
 
+sourceSets {
+  main { resources { srcDir("../config") } }
+  test { resources { srcDir("../config") } }
+}
+
 plugins {
   `java-library`
-  id("nu.studer.jooq") version "10.1"
-  id("org.liquibase.gradle") version "2.2.2"
+  alias(libs.plugins.jooq)
+  alias(libs.plugins.liquibase)
 }
 
 // We need these during the build step because of JOOQ class generation.
@@ -23,9 +28,10 @@ liquibase {
         "url" to project.findProperty("db.url") as String,
         "username" to project.findProperty("db.user") as String,
         "password" to project.findProperty("db.password") as String,
-        "changelogFile" to "src/main/resources/db/changelog.yaml",
+        "changelogFile" to "changelog.yaml",
         "logLevel" to "error",
         "showBanner" to "false",
+        "searchPath" to "$projectDir/src/main/resources/db/migrations/core",
       )
   }
   runList = "main"
@@ -119,7 +125,16 @@ dependencies {
 
   testImplementation(libs.ktor.server.test.host)
   testImplementation(libs.junit.jupiter.api)
+  testRuntimeOnly(libs.junit.jupiter.engine)
+  testImplementation(libs.kotlin.test)
   testImplementation(project(":test"))
 }
 
 tasks.named("build") { dependsOn("generateJooq") }
+
+tasks.named("generateJooq") { dependsOn("liquibaseUpdate") }
+
+tasks.test {
+  useJUnitPlatform()
+  testLogging { showStandardStreams = true }
+}

@@ -1,5 +1,10 @@
-import io.ktor.client.call.*
-import io.ktor.client.request.*
+import io.ktor.client.call.body
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.runBlocking
@@ -8,13 +13,17 @@ import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.USER_USER
+import net.barrage.llmao.test.adminAccessToken
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class AdminWhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsApp = true) {
+class AdminWhatsAppControllerTests :
+  IntegrationTest(useWeaviate = true, enableWhatsApp = true, plugin = ChatPlugin()) {
   private lateinit var number: WhatsAppNumber
   private lateinit var whatsAppAgentOne: Agent
   private lateinit var whatsAppAgentTwo: Agent

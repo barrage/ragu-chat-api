@@ -3,15 +3,24 @@ import io.ktor.websocket.readText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.workflow.StreamComplete
+import net.barrage.llmao.test.ADMIN_USER
+import net.barrage.llmao.test.COMPLETIONS_RESPONSE
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.adminWsSession
+import net.barrage.llmao.test.openNewWorkflow
+import net.barrage.llmao.test.sendMessage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
+private val json = Json { ignoreUnknownKeys = true }
+
+class WebsocketJiraKiraWorkflowTests : IntegrationTest(plugin = JiraKiraPlugin()) {
   @BeforeAll
   fun setup() {
     runBlocking {
@@ -38,7 +47,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
     var asserted = false
 
     client.adminWsSession {
-      openNewChat(workflowType = "JIRAKIRA")
+      openNewWorkflow(workflowType = "JIRAKIRA")
 
       sendMessage(
         "JIRAKIRA, create worklog for LLMAO-252, monday, added azure embedder with ada-002 support, 30 minutes starting at 7am"
@@ -66,7 +75,7 @@ class WebsocketJiraKiraWorkflowTests : IntegrationTest() {
     var assertions = 0
 
     client.adminWsSession {
-      openNewChat(workflowType = "JIRAKIRA")
+      openNewWorkflow(workflowType = "JIRAKIRA")
 
       sendMessage("JIRA_KIRA_CREATE_WORKLOG") { incoming ->
         for (frame in incoming) {

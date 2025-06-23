@@ -1,16 +1,21 @@
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.http.*
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.core.ProvidersResponse
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.USER_USER
+import net.barrage.llmao.test.adminAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
-class AdministrationControllerTests : IntegrationTest() {
+class AdministrationControllerTests : IntegrationTest(plugin = ChatPlugin()) {
   private lateinit var agentOne: Agent
   private lateinit var agentOneConfiguration: AgentConfiguration
   private lateinit var agentTwo: Agent

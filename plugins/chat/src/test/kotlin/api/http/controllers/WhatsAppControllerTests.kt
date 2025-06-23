@@ -6,26 +6,23 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import kotlinx.coroutines.runBlocking
-import net.barrage.llmao.IntegrationTest
-import net.barrage.llmao.USER_USER
-import net.barrage.llmao.app.workflow.chat.model.Agent
-import net.barrage.llmao.app.workflow.chat.model.AgentConfiguration
-import net.barrage.llmao.app.workflow.chat.model.Chat
-import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.Contact
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResponse
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResult
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.Message
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.Price
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
+import net.barrage.llmao.core.input.whatsapp.model.Contact
+import net.barrage.llmao.core.input.whatsapp.model.InfobipResponse
+import net.barrage.llmao.core.input.whatsapp.model.InfobipResult
+import net.barrage.llmao.core.input.whatsapp.model.Message
+import net.barrage.llmao.core.input.whatsapp.model.Price
 import net.barrage.llmao.core.model.MessageGroupAggregate
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.USER_USER
+import net.barrage.llmao.test.userAccessToken
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class WhatsAppControllerTests : IntegrationTest(useWeaviate = true, enableWhatsApp = true) {
+class WhatsAppControllerTests :
+  IntegrationTest(useWeaviate = true, enableWhatsApp = true, plugin = ChatPlugin()) {
   private lateinit var whatsAppNumber: WhatsAppNumber
   private lateinit var whatsAppAgentOne: Agent
   private lateinit var whatsAppAgentTwo: Agent

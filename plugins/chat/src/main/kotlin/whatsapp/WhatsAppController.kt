@@ -11,6 +11,7 @@ import io.ktor.server.routing.route
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.http.pathUuid
 import net.barrage.llmao.core.http.user
+import net.barrage.llmao.core.input.whatsapp.model.InfobipResponse
 import net.barrage.llmao.core.types.KUUID
 
 fun Route.whatsAppHookRoutes(whatsAppAdapter: WhatsAppAdapter) {

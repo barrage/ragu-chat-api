@@ -4,17 +4,17 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitLast
 import kotlinx.coroutines.reactive.awaitSingle
+import model.AgentCollection
+import model.CollectionInsert
+import model.CollectionRemove
+import model.toAgentCollection
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.database.set
-import net.barrage.llmao.core.model.AgentCollection
-import net.barrage.llmao.core.model.CollectionInsert
-import net.barrage.llmao.core.model.CollectionRemove
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.SortOrder
-import net.barrage.llmao.core.model.toAgentCollection
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.tables.references.AGENTS
@@ -277,13 +277,13 @@ class AgentRepository(private val dslContext: DSLContext) {
           context
             .insertInto(AGENT_COLLECTIONS)
             .set(AGENT_COLLECTIONS.AGENT_ID, agentId)
-            .set(AGENT_COLLECTIONS.COLLECTION, collection.collection)
-            .set(AGENT_COLLECTIONS.EMBEDDING_PROVIDER, collection.embeddingProvider)
-            .set(AGENT_COLLECTIONS.EMBEDDING_MODEL, collection.embeddingModel)
-            .set(AGENT_COLLECTIONS.VECTOR_PROVIDER, collection.vectorProvider)
-            .set(AGENT_COLLECTIONS.AMOUNT, collection.amount)
-            .set(AGENT_COLLECTIONS.INSTRUCTION, collection.instruction)
-            .set(AGENT_COLLECTIONS.MAX_DISTANCE, collection.maxDistance)
+            .set(AGENT_COLLECTIONS.COLLECTION, collection.collection.name)
+            .set(AGENT_COLLECTIONS.EMBEDDING_PROVIDER, collection.collection.embeddingProvider)
+            .set(AGENT_COLLECTIONS.EMBEDDING_MODEL, collection.collection.embeddingModel)
+            .set(AGENT_COLLECTIONS.VECTOR_PROVIDER, collection.collection.vectorProvider)
+            .set(AGENT_COLLECTIONS.AMOUNT, collection.collection.amount)
+            .set(AGENT_COLLECTIONS.INSTRUCTION, collection.collection.instruction)
+            .set(AGENT_COLLECTIONS.MAX_DISTANCE, collection.collection.maxDistance)
             .awaitSingle()
         }
 
@@ -865,7 +865,7 @@ class AgentRepository(private val dslContext: DSLContext) {
     }
   }
 
-  suspend fun updateGroups(agentId: KUUID, groups: AgentGroupUpdate) {
+  suspend fun updateGroups(createdBy: String, agentId: KUUID, groups: AgentGroupUpdate) {
     dslContext.transactionCoroutine { tx ->
       val context = DSL.using(tx)
 
@@ -875,6 +875,7 @@ class AgentRepository(private val dslContext: DSLContext) {
             .insertInto(AGENT_PERMISSIONS)
             .set(AGENT_PERMISSIONS.AGENT_ID, agentId)
             .set(AGENT_PERMISSIONS.GROUP, group)
+            .set(AGENT_PERMISSIONS.CREATED_BY, createdBy)
             .onConflict()
             .doNothing()
             .awaitSingle()

@@ -36,12 +36,6 @@ class AzureEmbedder(
       apiVersion: String,
       deploymentMap: ModelDeploymentMap<EmbeddingModelDeployment>,
     ): AzureEmbedder {
-      //      val endpoint = config.string("embeddings.azure.endpoint")
-      //      val apiKey = config.string("embeddings.azure.apiKey")
-      //      val apiVersion = config.string("embeddings.azure.apiVersion")
-      //      val deploymentMap =
-      //
-      // ModelDeploymentMap.embeddingDeploymentMap(config.configList("embeddings.azure.models"))
       if (deploymentMap.isEmpty()) {
         throw AppError.internal(
           """Invalid azure configuration; Check your `embeddings.azure.models` config.

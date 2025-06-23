@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.hgk
+package net.barrage.llmao
 
 import com.infobip.ApiClient
 import com.infobip.ApiKey
@@ -19,25 +19,25 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResponse
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResult
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.Message
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.PluginConfiguration
 import net.barrage.llmao.core.ProviderState
-import net.barrage.llmao.core.administration.settings.ApplicationSettings
+import net.barrage.llmao.core.input.whatsapp.model.InfobipResponse
+import net.barrage.llmao.core.input.whatsapp.model.InfobipResult
+import net.barrage.llmao.core.input.whatsapp.model.Message
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.ChatMessage
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.llm.TokenBasedHistory
+import net.barrage.llmao.core.settings.ApplicationSettings
+import net.barrage.llmao.core.string
 import net.barrage.llmao.core.token.Encoder
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
+import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.WorkflowAgent
-import net.barrage.llmao.string
-import net.barrage.llmao.types.KUUID
 
 const val HGK_WORKFLOW_ID = "HGK"
 private val CHAT_CONTEXT =
@@ -128,6 +128,8 @@ class HgkPlugin() : Plugin {
     }
   }
 
+  override fun migrate(config: ApplicationConfig) {}
+
   private fun agent(userNumber: String): HgkAgent {
     return HgkAgent(
       inferenceProvider = providers.llm["openai"],
@@ -155,7 +157,7 @@ class HgkPlugin() : Plugin {
   }
 
   private suspend fun handleMessage(result: InfobipResult) {
-    if (result.message is Message.Text && result.message.text == "/reset") {
+    if (result.message is Message.Text && (result.message as Message.Text).text == "/reset") {
       log.debug("Resetting state for {}", result.from)
       state.remove(result.from)
       companies.remove(result.from)
@@ -188,10 +190,10 @@ class HgkPlugin() : Plugin {
           is Message.Text -> {
             when (state.state) {
               is OnboardingState.WorkTypePhase ->
-                handleWorkTypeResponse(result.from, result.to, result.message)
+                handleWorkTypeResponse(result.from, result.to, result.message as Message.Text)
 
               is OnboardingState.LocationPhase ->
-                handleLocationResponse(result.from, result.to, result.message)
+                handleLocationResponse(result.from, result.to, result.message as Message.Text)
 
               else ->
                 log.warn(
@@ -205,28 +207,56 @@ class HgkPlugin() : Plugin {
           is Message.ButtonReply -> {
             when (state.state) {
               is OnboardingState.IdeaPhase ->
-                handleIdeaResponse(result.from, result.to, result.message)
+                handleIdeaResponse(result.from, result.to, result.message as Message.ButtonReply)
 
               is OnboardingState.CompanySizePhase ->
-                handleCompanySizeResponse(result.from, result.to, result.message)
+                handleCompanySizeResponse(
+                  result.from,
+                  result.to,
+                  result.message as Message.ButtonReply,
+                )
 
               is OnboardingState.EmployeeAmountPhase ->
-                handleEmployeeAmountResponse(result.from, result.to, result.message)
+                handleEmployeeAmountResponse(
+                  result.from,
+                  result.to,
+                  result.message as Message.ButtonReply,
+                )
 
               is OnboardingState.CommerceTypePhase ->
-                handleCommerceTypeResponse(result.from, result.to, result.message)
+                handleCommerceTypeResponse(
+                  result.from,
+                  result.to,
+                  result.message as Message.ButtonReply,
+                )
 
               is OnboardingState.BusinessTypePhase ->
-                handleBusinessTypeResponse(result.from, result.to, result.message)
+                handleBusinessTypeResponse(
+                  result.from,
+                  result.to,
+                  result.message as Message.ButtonReply,
+                )
 
               is OnboardingState.IncomeEstimatePhase ->
-                handleIncomeEstimateResponse(result.from, result.to, result.message)
+                handleIncomeEstimateResponse(
+                  result.from,
+                  result.to,
+                  result.message as Message.ButtonReply,
+                )
 
               is OnboardingState.AccountingStatePhase ->
-                handleAccountingStateResponse(result.from, result.to, result.message)
+                handleAccountingStateResponse(
+                  result.from,
+                  result.to,
+                  result.message as Message.ButtonReply,
+                )
 
               is OnboardingState.BankAccountPhase ->
-                handleBankAccountResponse(result.from, result.to, result.message)
+                handleBankAccountResponse(
+                  result.from,
+                  result.to,
+                  result.message as Message.ButtonReply,
+                )
 
               else ->
                 log.warn(
@@ -253,7 +283,7 @@ class HgkPlugin() : Plugin {
                         | Ako korisnik postavlja pitanje vezano za trenutni status onboarding-a, iskoristi prethodno
                         | navedeno stanje da pristojno odgovoris na njegovo pitanje.
                         | 
-                        | ${result.message.text}
+                        | ${(result.message as Message.Text).text}
                     """
                 .trimMargin(),
             )
@@ -280,7 +310,7 @@ class HgkPlugin() : Plugin {
         // history is loaded with agent
         val agent = agent(result.from)
 
-        val response = agent.completion(CHAT_CONTEXT, result.message.text)
+        val response = agent.completion(CHAT_CONTEXT, (result.message as Message.Text).text)
 
         whatsAppApi
           .sendWhatsAppTextMessage(
@@ -297,7 +327,7 @@ class HgkPlugin() : Plugin {
       }
 
       is Message.ButtonReply -> {
-        when (result.message.id) {
+        when ((result.message as Message.ButtonReply).id) {
           "START_YES" -> {
             val response =
               agent(result.from)

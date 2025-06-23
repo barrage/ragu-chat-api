@@ -12,22 +12,11 @@ import com.infobip.model.WhatsAppTemplateDataContent
 import com.infobip.model.WhatsAppTextContent
 import com.infobip.model.WhatsAppTextMessage
 import io.ktor.util.logging.KtorSimpleLogger
-import net.barrage.llmao.app.workflow.chat.CHAT_WORKFLOW_ID
-import net.barrage.llmao.app.workflow.chat.ChatAgent
-import net.barrage.llmao.app.workflow.chat.ChatWorkflowFactory
-import net.barrage.llmao.app.workflow.chat.model.AgentFull
-import net.barrage.llmao.app.workflow.chat.model.Chat
-import net.barrage.llmao.app.workflow.chat.model.ChatWithMessages
-import net.barrage.llmao.app.workflow.chat.repository.AgentRepository
-import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryRead
-import net.barrage.llmao.app.workflow.chat.repository.ChatRepositoryWrite
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResponse
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.InfobipResult
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.Message
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.UpdateNumber
-import net.barrage.llmao.app.workflow.chat.whatsapp.model.WhatsAppNumber
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
+import net.barrage.llmao.core.input.whatsapp.model.InfobipResponse
+import net.barrage.llmao.core.input.whatsapp.model.InfobipResult
+import net.barrage.llmao.core.input.whatsapp.model.Message
 import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ContentSingle
 import net.barrage.llmao.core.model.common.CountedList
@@ -179,7 +168,8 @@ class WhatsAppAdapter(
 
     val chatAgent = getChatAgent(whatsAppNumber.userId, whatsAppNumber.username, chat.id, agent)
 
-    val messages = chatAgent.completion(chatAgent.configuration.context, result.message.text)
+    val messages =
+      chatAgent.completion(chatAgent.configuration.context, (result.message as Message.Text).text)
 
     // TODO: Include tools in wapp conversation histories
     val response = messages.last()

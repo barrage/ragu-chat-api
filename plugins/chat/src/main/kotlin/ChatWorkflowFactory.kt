@@ -52,7 +52,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       throw AppError.api(ErrorReason.InvalidParameter, "Missing agent ID in creation parameters")
     }
 
-    val agentId = Json.decodeFromJsonElement(NewChatWorkflow.serializer(), params).agentId
+    val agentId = Json.decodeFromJsonElement(NewChatWorkflowParameters.serializer(), params).agentId
     val id = KUUID.randomUUID()
 
     val agent =
@@ -126,7 +126,7 @@ object ChatWorkflowFactory : WorkflowFactory {
       ContextEnrichmentFactory.collectionEnrichment(
         userEntitlements = entitlements,
         tokenTracker = tokenTracker,
-        collections = agent.collections,
+        collections = agent.collections.map { it.collection },
       )
 
     return ChatAgent(
@@ -195,4 +195,4 @@ object ChatWorkflowFactory : WorkflowFactory {
   }
 }
 
-@Serializable data class NewChatWorkflow(val agentId: KUUID)
+@Serializable data class NewChatWorkflowParameters(val agentId: KUUID)

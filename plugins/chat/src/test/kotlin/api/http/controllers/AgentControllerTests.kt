@@ -1,19 +1,24 @@
 package api.http.controllers
 
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.http.*
+import Agent
+import AgentConfiguration
+import ChatPlugin
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.runBlocking
 import net.barrage.llmao.core.model.common.CountedList
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.userAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import testAgent
 import testAgentConfiguration
-import userAccessToken
 
-class AgentControllerTests : IntegrationTest() {
+class AgentControllerTests : IntegrationTest(plugin = ChatPlugin()) {
   private lateinit var agent: Agent
   private lateinit var agentConfiguration: AgentConfiguration
 

@@ -15,13 +15,16 @@ import net.barrage.llmao.core.model.MessageGroupAggregate
 import net.barrage.llmao.core.model.common.CountedList
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.types.KUUID
+import net.barrage.llmao.test.IntegrationTest
+import net.barrage.llmao.test.USER_USER
+import net.barrage.llmao.test.adminAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
 
-class AdminAgentControllerTests : IntegrationTest() {
+class AdminAgentControllerTests : IntegrationTest(plugin = ChatPlugin()) {
   private lateinit var agentOne: Agent
   private lateinit var agentOneConfigurationV1: AgentConfiguration
   private lateinit var agentOneConfigurationV2: AgentConfiguration

@@ -25,4 +25,5 @@ dependencies {
   implementation(libs.junit.jupiter.api)
 
   implementation(project(":core"))
+  implementation(project(":adapters"))
 }

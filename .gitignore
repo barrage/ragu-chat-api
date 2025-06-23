@@ -29,4 +29,5 @@ out/
 
 gradle.properties
 liquibase.properties
-app/src/main/resources/application.conf
+**/application.conf
+config/application.conf

@@ -4,11 +4,11 @@ import com.itextpdf.io.image.ImageData
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.font.PdfFont
 import com.itextpdf.kernel.font.PdfFontFactory
-import io.ktor.server.auth.*
-import io.ktor.server.config.*
-import io.ktor.server.plugins.requestvalidation.*
-import io.ktor.server.routing.*
-import io.ktor.util.logging.*
+import io.ktor.server.auth.authenticate
+import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
+import io.ktor.server.routing.Route
+import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
 import net.barrage.llmao.app.workflow.bonvoyage.routes.bonvoyageAdminRoutes
 import net.barrage.llmao.app.workflow.bonvoyage.routes.bonvoyageUserRoutes
@@ -25,12 +25,14 @@ internal const val BONVOYAGE_WORKFLOW_ID = "BONVOYAGE"
 class BonvoyagePlugin() : Plugin {
   private lateinit var admin: BonvoyageAdminApi
   private lateinit var user: BonvoyageUserApi
-  private val log = KtorSimpleLogger("n.b.l.a.workflow.bonvoyage.BonvoyagePlugin")
+  private val log = KtorSimpleLogger("net.barrage.llmao.plugins.bonvoyage.BonvoyagePlugin")
 
   override fun id(): String = BONVOYAGE_WORKFLOW_ID
 
   override suspend fun initialize(config: ApplicationConfig, state: ApplicationState) {
+    log.info("Initializing Bonvoyage")
     BonvoyageConfig.init(config)
+    log.info("Bonvoyage resources configured")
     BonvoyageWorkflowFactory.init(state)
     WorkflowFactoryManager.register(BonvoyageWorkflowFactory)
 

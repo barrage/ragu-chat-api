@@ -4,7 +4,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Validation
-import net.barrage.llmao.core.model.AgentCollection
+import model.AgentCollection
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.TimeSeries
 import net.barrage.llmao.core.types.KOffsetDateTime

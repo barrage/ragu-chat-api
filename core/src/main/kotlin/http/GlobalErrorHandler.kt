@@ -17,9 +17,11 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.ValidationError
 
-internal val LOG = KtorSimpleLogger("n.b.l.a.plugins.GlobalErrorHandler")
+internal val LOG = KtorSimpleLogger("net.barrage.llmao.core.http.GlobalErrorHandler")
 
 fun Application.configureErrorHandling() {
+  LOG.info("Configuring error handling")
+
   install(StatusPages) {
     exception<AppError> { call, err ->
       LOG.error(err)
@@ -66,8 +68,6 @@ fun Application.configureErrorHandling() {
         return@exception
       }
 
-      // TODO: Not good currently, we have to wait for QA to inject their dependencies
-      // in our classes so we can see which errors we handle and how
       call.respond(HttpStatusCode.BadRequest, err)
     }
 
