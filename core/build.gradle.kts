@@ -132,8 +132,6 @@ dependencies {
 
 tasks.named("build") { dependsOn("generateJooq") }
 
-tasks.named("generateJooq") { dependsOn("liquibaseUpdate") }
-
 tasks.test {
   useJUnitPlatform()
   testLogging { showStandardStreams = true }
