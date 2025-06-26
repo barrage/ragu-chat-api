@@ -90,9 +90,6 @@ class RaguPlugin : Plugin<Project> {
           }
         }
       }
-
-      // Make build depend on generateJooq
-      project.tasks.named("build") { dependsOn("generateJooq") }
     }
   }
 }
