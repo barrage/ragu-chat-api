@@ -7,7 +7,7 @@ import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
+import net.barrage.llmao.chat.tables.references.WHATS_APP_NUMBERS
 import org.jooq.DSLContext
 import org.jooq.exception.DataAccessException
 

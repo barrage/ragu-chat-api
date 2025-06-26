@@ -7,9 +7,9 @@ import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.repository.MessageRepository
 import net.barrage.llmao.core.repository.insertWorkflowMessages
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.references.JIRAKIRA_WORKFLOWS
-import net.barrage.llmao.tables.references.JIRA_API_KEYS
-import net.barrage.llmao.tables.references.JIRA_WORKLOG_ATTRIBUTES
+import net.barrage.llmao.jirakira.tables.references.JIRAKIRA_WORKFLOWS
+import net.barrage.llmao.jirakira.tables.references.JIRA_API_KEYS
+import net.barrage.llmao.jirakira.tables.references.JIRA_WORKLOG_ATTRIBUTES
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 

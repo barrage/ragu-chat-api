@@ -1,5 +1,5 @@
 import kotlinx.serialization.Serializable
-import net.barrage.llmao.tables.records.JiraWorklogAttributesRecord
+import net.barrage.llmao.jirakira.tables.records.JiraWorklogAttributesRecord
 
 /**
  * Descriptions of custom Jira worklog attributes. If an attribute is present in the database, it

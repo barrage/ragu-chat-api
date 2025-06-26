@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0
+
+- Refactor codebase to multi-module project. Add the concept of Ragu plugins.
+- Added gradle plugin for developing Ragu plugins
+- Implemented test framework that can be used by plugins.
+
+## 0.4.0
+
+- Restructure codebase to prepare for plugin based refactor
+
 ## 0.3.0
 
 - Refactor authorization to use JWKs and an auth server

@@ -1,6 +1,6 @@
-group = "net.barrage.llmao.adapters"
+group = "net.barrage.llmao"
 
-version = "0.4.0"
+version = "0.1.0"
 
 plugins { `java-library` }
 

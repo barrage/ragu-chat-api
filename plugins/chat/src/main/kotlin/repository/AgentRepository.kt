@@ -8,6 +8,12 @@ import model.AgentCollection
 import model.CollectionInsert
 import model.CollectionRemove
 import model.toAgentCollection
+import net.barrage.llmao.chat.tables.records.AgentConfigurationsRecord
+import net.barrage.llmao.chat.tables.references.AGENTS
+import net.barrage.llmao.chat.tables.references.AGENT_COLLECTIONS
+import net.barrage.llmao.chat.tables.references.AGENT_CONFIGURATIONS
+import net.barrage.llmao.chat.tables.references.AGENT_PERMISSIONS
+import net.barrage.llmao.chat.tables.references.AGENT_TOOLS
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.database.set
@@ -16,12 +22,6 @@ import net.barrage.llmao.core.model.common.PaginationSort
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.model.common.SortOrder
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.AgentConfigurationsRecord
-import net.barrage.llmao.tables.references.AGENTS
-import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
-import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
-import net.barrage.llmao.tables.references.AGENT_PERMISSIONS
-import net.barrage.llmao.tables.references.AGENT_TOOLS
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.InsertSetMoreStep

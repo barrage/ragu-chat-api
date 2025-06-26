@@ -4,11 +4,13 @@ import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.tryGetString
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.blob.BlobStorage
+import net.barrage.llmao.core.database.initDatabase
 import net.barrage.llmao.core.embedding.Embedder
 import net.barrage.llmao.core.llm.ChatMessageProcessor
 import net.barrage.llmao.core.llm.ContextEnrichmentFactory
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.model.Image
+import net.barrage.llmao.core.repository.SettingsRepository
 import net.barrage.llmao.core.repository.TokenUsageRepository
 import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.token.TokenUsageTrackerFactory
@@ -18,10 +20,13 @@ import org.jooq.DSLContext
 /** Application state available to plugins. */
 class ApplicationState(
   config: ApplicationConfig,
-  val database: DSLContext,
+  /** Providers must be injected from outside due to their dynamic nature. */
   val providers: ProviderState,
+) {
+  val database: DSLContext = initDatabase(config)
+
   /** A key-value storage API for application settings. */
-  val settings: Settings,
+  val settings: Settings = Settings(SettingsRepository(database))
 
   /** Handle for sending emails, configured via application properties. */
   val email: Email =
@@ -39,8 +44,7 @@ class ApplicationState(
 
           EmailAuthentication(username, password)
         },
-    ),
-) {
+    )
 
   init {
     ChatMessageProcessor.init(providers)

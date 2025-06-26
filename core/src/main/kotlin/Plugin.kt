@@ -161,14 +161,6 @@ object Plugins {
     }
   }
 
-  /** Emit an event to all the plugins in the registry. */
-  suspend fun emitEvent(manager: SessionManager, event: Event) {
-    log.info("Emitting event to plugins: {}", event)
-    for (plugin in plugins.values) {
-      plugin.handleEvent(manager, event)
-    }
-  }
-
   /**
    * Register all plugin routes.
    *

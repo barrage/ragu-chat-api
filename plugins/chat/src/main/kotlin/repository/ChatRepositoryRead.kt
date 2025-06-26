@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.chat.tables.references.AGENTS
+import net.barrage.llmao.chat.tables.references.CHATS
 import net.barrage.llmao.core.database.set
 import net.barrage.llmao.core.model.EvaluateMessage
 import net.barrage.llmao.core.model.MessageGroupAggregate
@@ -18,14 +20,12 @@ import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
 import net.barrage.llmao.core.repository.MessageRepository
+import net.barrage.llmao.core.tables.records.MessageGroupEvaluationsRecord
+import net.barrage.llmao.core.tables.references.MESSAGES
+import net.barrage.llmao.core.tables.references.MESSAGE_GROUPS
+import net.barrage.llmao.core.tables.references.MESSAGE_GROUP_EVALUATIONS
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
-import net.barrage.llmao.tables.references.AGENTS
-import net.barrage.llmao.tables.references.CHATS
-import net.barrage.llmao.tables.references.MESSAGES
-import net.barrage.llmao.tables.references.MESSAGE_GROUPS
-import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep

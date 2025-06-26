@@ -1,6 +1,9 @@
 package net.barrage.llmao.core
 
 import io.ktor.server.config.ApplicationConfig
+import io.ktor.util.logging.KtorSimpleLogger
+import io.ktor.util.logging.Logger
+import kotlin.reflect.KClass
 import net.barrage.llmao.core.types.KUUID
 
 /** Shorthand for `config.property(key).getString()` */
@@ -25,4 +28,14 @@ fun tryUuid(value: String): KUUID {
   } catch (e: IllegalArgumentException) {
     throw AppError.api(ErrorReason.InvalidParameter, "'$value' is not a valid UUID", original = e)
   }
+}
+
+/**
+ * Creates a logger with a name based on the calling class.
+ *
+ * @param clazz The class to use for naming the logger
+ * @return A KtorSimpleLogger with a name based on the class
+ */
+fun logger(clazz: KClass<*>): Logger {
+  return KtorSimpleLogger(clazz.qualifiedName ?: clazz.java.name)
 }

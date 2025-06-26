@@ -1,6 +1,12 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.bonvoyage.tables.records.BonvoyageTravelExpensesRecord
+import net.barrage.llmao.bonvoyage.tables.records.BonvoyageTravelManagerUserMappingsRecord
+import net.barrage.llmao.bonvoyage.tables.records.BonvoyageTravelManagersRecord
+import net.barrage.llmao.bonvoyage.tables.records.BonvoyageTravelRequestsRecord
+import net.barrage.llmao.bonvoyage.tables.records.BonvoyageTripWelcomeMessagesRecord
+import net.barrage.llmao.bonvoyage.tables.records.BonvoyageTripsRecord
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Range
 import net.barrage.llmao.core.ValidEmail
@@ -12,12 +18,6 @@ import net.barrage.llmao.core.types.KLocalDate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KOffsetTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.BonvoyageTravelExpensesRecord
-import net.barrage.llmao.tables.records.BonvoyageTravelManagerUserMappingsRecord
-import net.barrage.llmao.tables.records.BonvoyageTravelManagersRecord
-import net.barrage.llmao.tables.records.BonvoyageTravelRequestsRecord
-import net.barrage.llmao.tables.records.BonvoyageTripWelcomeMessagesRecord
-import net.barrage.llmao.tables.records.BonvoyageTripsRecord
 
 @Serializable
 data class BonvoyageTripFullAggregate(

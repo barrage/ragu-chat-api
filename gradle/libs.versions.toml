@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.1.20"
+kotlin-dsl = "6.1.2"
 ktor = "3.1.1"
 openapi = "5.0.1"
 schemakenerator = "2.1.1"
@@ -77,6 +78,7 @@ r2dbc-postgresql = { module = "org.postgresql:r2dbc-postgresql", version.ref = "
 r2dbc-pool = { module = "io.r2dbc:r2dbc-pool", version.ref = "r2dbc-pool" }
 jooq-kotlin-coroutines = { module = "org.jooq:jooq-kotlin-coroutines", version.ref = "jooq" }
 liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
+liquibase-plugin = { module = "org.liquibase:liquibase-gradle-plugin", version.ref = "liquibaseplugin" }
 
 # Auth
 java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
@@ -100,7 +102,40 @@ itext-core = { module = "com.itextpdf:itext-core", version.ref = "itext-core" }
 # Whatsapp
 infobip-api-java-client = { module = "com.infobip:infobip-api-java-client", version.ref = "infobip-api-java-client" }
 
+[bundles]
+ktor-server = [
+    "ktor-server-auth-jvm",
+    "ktor-server-core-jvm",
+    "ktor-server-resources-jvm",
+    "ktor-server-content-negotiation-jvm",
+    "ktor-server-request-validation-jvm",
+    "ktor-server-cors-jvm",
+    "ktor-server-cio-jvm",
+    "ktor-server-websockets-jvm",
+    "ktor-server-status-pages-jvm",
+]
+ktor-client = [
+    "ktor-client-logging-jvm",
+    "ktor-client-core-jvm",
+    "ktor-client-cio-jvm",
+    "ktor-client-content-negotiation-jvm",
+]
+ktor-openapi = [
+    "ktor-openapi",
+    "ktor-swagger-ui",
+    "schema-kenerator-core",
+    "schema-kenerator-reflection",
+    "schema-kenerator-swagger",
+]
+postgres = [
+    "postgresql",
+    "r2dbc-postgresql",
+    "r2dbc-pool",
+    "jooq-kotlin-coroutines",
+]
+
 [plugins]
+kotlin-dsl = { id = "org.gradle.kotlin.kotlin-dsl", version.ref = "kotlin-dsl" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version = "2.0.0" }

@@ -2,10 +2,10 @@ package net.barrage.llmao.core.token
 
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.core.http.QueryParameter
+import net.barrage.llmao.core.tables.records.TokenUsageRecord
 import net.barrage.llmao.core.types.KLocalDate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.TokenUsageRecord
 
 /**
  * Aggregate of token usage displaying more clearly the amount of tokens used per provider and

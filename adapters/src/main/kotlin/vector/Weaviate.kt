@@ -5,7 +5,7 @@ import io.weaviate.client.Config
 import io.weaviate.client.WeaviateClient
 import io.weaviate.client.base.Result
 import io.weaviate.client.v1.graphql.model.GraphQLError
-import java.util.UUID
+import java.util.*
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.vector.CollectionQuery
@@ -241,7 +241,7 @@ private fun VectorCollectionInfo.Companion.fromWeaviateProperties(
     properties["embedding_provider"]?.let { it as String }
       ?: throw AppError.internal("missing collection property: embedding_provider")
 
-  val groups = properties["groups"]?.let { it as? List<String> }
+  val groups = properties["groups"]?.let { it as? List<*> }?.let { it.map { it as String } }
 
   return VectorCollectionInfo(
     collectionId = collectionId,

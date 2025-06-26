@@ -8,6 +8,12 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 import model.AgentCollection
 import model.toAgentCollection
+import net.barrage.llmao.chat.tables.references.AGENTS
+import net.barrage.llmao.chat.tables.references.AGENT_COLLECTIONS
+import net.barrage.llmao.chat.tables.references.AGENT_CONFIGURATIONS
+import net.barrage.llmao.chat.tables.references.AGENT_PERMISSIONS
+import net.barrage.llmao.chat.tables.references.CHATS
+import net.barrage.llmao.chat.tables.references.WHATS_APP_NUMBERS
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.model.MessageGroupAggregate
@@ -15,19 +21,13 @@ import net.barrage.llmao.core.model.User
 import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
+import net.barrage.llmao.core.tables.references.APPLICATION_SETTINGS
+import net.barrage.llmao.core.tables.references.MESSAGES
+import net.barrage.llmao.core.tables.references.MESSAGE_GROUPS
+import net.barrage.llmao.core.tables.references.MESSAGE_GROUP_EVALUATIONS
 import net.barrage.llmao.core.types.KUUID
 import net.barrage.llmao.core.workflow.StreamChunk
 import net.barrage.llmao.core.workflow.StreamComplete
-import net.barrage.llmao.tables.references.AGENTS
-import net.barrage.llmao.tables.references.AGENT_COLLECTIONS
-import net.barrage.llmao.tables.references.AGENT_CONFIGURATIONS
-import net.barrage.llmao.tables.references.AGENT_PERMISSIONS
-import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
-import net.barrage.llmao.tables.references.CHATS
-import net.barrage.llmao.tables.references.MESSAGES
-import net.barrage.llmao.tables.references.MESSAGE_GROUPS
-import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
-import net.barrage.llmao.tables.references.WHATS_APP_NUMBERS
 import net.barrage.llmao.test.ADMIN_USER
 import net.barrage.llmao.test.TestPostgres
 import net.barrage.llmao.test.adminWsSession
@@ -263,7 +263,12 @@ suspend fun HttpClient.openSendAndCollect(
 
   adminWsSession {
     openChatId =
-      agentId?.let { openNewWorkflow(CHAT_WORKFLOW_ID, Json.encodeToJsonElement(NewChatWorkflowParameters(agentId))) }
+      agentId?.let {
+        openNewWorkflow(
+          CHAT_WORKFLOW_ID,
+          Json.encodeToJsonElement(NewChatWorkflowParameters(agentId)),
+        )
+      }
         ?: chatId?.let { openExistingWorkflow(it, CHAT_WORKFLOW_ID) }
         ?: throw IllegalArgumentException("Must provide either agentId or chatId")
 

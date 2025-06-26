@@ -3,7 +3,7 @@ import net.barrage.llmao.core.Number
 import net.barrage.llmao.core.Validation
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.WhatsAppNumbersRecord
+import net.barrage.llmao.chat.tables.records.WhatsAppNumbersRecord
 
 @Serializable
 data class WhatsAppNumber(

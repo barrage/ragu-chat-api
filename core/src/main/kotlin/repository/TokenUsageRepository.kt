@@ -6,6 +6,7 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.database.optionalEq
+import net.barrage.llmao.core.tables.references.TOKEN_USAGE
 import net.barrage.llmao.core.token.TokenUsage
 import net.barrage.llmao.core.token.TokenUsageAggregate
 import net.barrage.llmao.core.token.TokenUsageType
@@ -14,7 +15,6 @@ import net.barrage.llmao.core.types.KLocalDate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KOffsetTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.references.TOKEN_USAGE
 import org.jooq.DSLContext
 
 class TokenUsageRepository(private val dslContext: DSLContext) {

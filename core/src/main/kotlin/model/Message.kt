@@ -7,12 +7,12 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 import net.barrage.llmao.core.llm.FinishReason
 import net.barrage.llmao.core.llm.ToolCallData
 import net.barrage.llmao.core.model.common.PropertyUpdate
+import net.barrage.llmao.core.tables.records.MessageAttachmentsRecord
+import net.barrage.llmao.core.tables.records.MessageGroupEvaluationsRecord
+import net.barrage.llmao.core.tables.records.MessageGroupsRecord
+import net.barrage.llmao.core.tables.records.MessagesRecord
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.MessageAttachmentsRecord
-import net.barrage.llmao.tables.records.MessageGroupEvaluationsRecord
-import net.barrage.llmao.tables.records.MessageGroupsRecord
-import net.barrage.llmao.tables.records.MessagesRecord
 
 /**
  * TABLE: message_groups

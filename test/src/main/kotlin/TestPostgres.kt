@@ -11,7 +11,7 @@ import kotlinx.coroutines.reactive.awaitSingle
 import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.database.runCoreMigrations
 import net.barrage.llmao.core.settings.SettingsUpdate
-import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
+import net.barrage.llmao.core.tables.references.APPLICATION_SETTINGS
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL.excluded

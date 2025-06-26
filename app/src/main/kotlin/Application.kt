@@ -14,9 +14,6 @@ import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.configureCore
-import net.barrage.llmao.core.database.initDatabase
-import net.barrage.llmao.core.repository.SettingsRepository
-import net.barrage.llmao.core.settings.Settings
 import net.barrage.llmao.core.string
 
 // TODO: Remove in favor of annotation processing at one point
@@ -37,20 +34,15 @@ fun Application.module() {
     Plugins.register(BonvoyagePlugin())
   }
 
-  val db = initDatabase(environment.config)
-  val settings = Settings(SettingsRepository(db))
-
   val state =
     ApplicationState(
       environment.config,
-      initDatabase(environment.config),
       ProviderState(
         llm = initializeInference(environment.config),
         vector = initializeVectorDatabases(environment.config),
         embedding = initializeEmbedders(environment.config),
         image = initializeMinio(environment.config),
       ),
-      settings,
     )
 
   configureCore(state)

@@ -9,7 +9,6 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.config.ConfigLoader
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.config.mergeWith
-import io.ktor.server.config.tryGetString
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import java.time.Instant
@@ -20,17 +19,11 @@ import net.barrage.llmao.adapters.embeddings.initializeEmbedders
 import net.barrage.llmao.adapters.llm.initializeInference
 import net.barrage.llmao.adapters.vector.initializeVectorDatabases
 import net.barrage.llmao.core.ApplicationState
-import net.barrage.llmao.core.Email
-import net.barrage.llmao.core.EmailAuthentication
 import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.Plugins
 import net.barrage.llmao.core.ProviderState
 import net.barrage.llmao.core.configureCore
-import net.barrage.llmao.core.int
 import net.barrage.llmao.core.model.User
-import net.barrage.llmao.core.repository.SettingsRepository
-import net.barrage.llmao.core.settings.Settings
-import net.barrage.llmao.core.string
 import net.barrage.llmao.core.types.KOffsetDateTime
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -142,30 +135,12 @@ open class IntegrationTest(
     state =
       ApplicationState(
         config = cfg,
-        database = postgres.dslContext,
         providers =
           ProviderState(
             llm = initializeInference(cfg),
             vector = initializeVectorDatabases(cfg),
             embedding = initializeEmbedders(cfg),
             image = initializeMinio(cfg),
-          ),
-        settings = Settings(SettingsRepository(postgres.dslContext)),
-        email =
-          Email(
-            host = cfg.string("email.host"),
-            port = cfg.int("email.port"),
-            auth =
-              run {
-                val username = cfg.tryGetString("email.username")
-                val password = cfg.tryGetString("email.password")
-
-                if (username == null || password == null) {
-                  return@run null
-                }
-
-                EmailAuthentication(username, password)
-              },
           ),
       )
 

@@ -1,6 +1,5 @@
 package net.barrage.llmao.app.workflow.bonvoyage
 
-import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -8,6 +7,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.Email
+import net.barrage.llmao.core.logger
 import net.barrage.llmao.core.types.KOffsetDateTime
 
 class BonvoyageNotificationScheduler(
@@ -19,7 +19,7 @@ class BonvoyageNotificationScheduler(
   private var job: Job? = null
   private val jobScope = CoroutineScope(Dispatchers.Default)
   private val emailScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-  private val log = KtorSimpleLogger("n.b.l.a.workflow.bonvoyage.BonvoyageNotificationScheduler")
+  private val log = logger(BonvoyageNotificationScheduler::class)
 
   fun start() {
     if (job != null) {

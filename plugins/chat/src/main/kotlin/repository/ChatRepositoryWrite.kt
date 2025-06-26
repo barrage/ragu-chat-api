@@ -6,7 +6,7 @@ import net.barrage.llmao.core.model.MessageInsert
 import net.barrage.llmao.core.repository.MessageRepository
 import net.barrage.llmao.core.repository.insertWorkflowMessages
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.references.CHATS
+import net.barrage.llmao.chat.tables.references.CHATS
 import org.jooq.DSLContext
 import org.jooq.kotlin.coroutines.transactionCoroutine
 

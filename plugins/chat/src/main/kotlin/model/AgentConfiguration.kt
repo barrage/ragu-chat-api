@@ -1,6 +1,7 @@
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import net.barrage.llmao.chat.tables.records.AgentConfigurationsRecord
 import net.barrage.llmao.core.NotBlank
 import net.barrage.llmao.core.Range
 import net.barrage.llmao.core.SchemaValidation
@@ -10,7 +11,6 @@ import net.barrage.llmao.core.addSchemaErr
 import net.barrage.llmao.core.model.common.PropertyUpdate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.records.AgentConfigurationsRecord
 
 @Serializable
 data class AgentConfiguration(

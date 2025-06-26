@@ -6,6 +6,19 @@ import org.apache.commons.mail.DefaultAuthenticator
 import org.apache.commons.mail.MultiPartEmail
 import org.apache.commons.mail.SimpleEmail
 
+/**
+ * Handle for sending emails.
+ *
+ * Configured in `application.conf` with the following:
+ * ```
+ * email {
+ *   host = "my.smtp.server"
+ *   port = 420
+ *   username = "Optional username if the SMTP server requires auth"
+ *   password = "Optional password if the SMTP server requires auth"
+ * }
+ * ```
+ */
 class Email(
   private val host: String,
   private val port: Int,
@@ -32,7 +45,6 @@ class Email(
     bcc: List<String>? = null,
   ) {
     val email = MultiPartEmail()
-    //
     with(email) {
       attach(attachment.bytes(), attachment.name(), attachment.description())
       setHostName(host)

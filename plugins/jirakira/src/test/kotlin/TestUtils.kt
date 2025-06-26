@@ -1,6 +1,6 @@
 import kotlinx.coroutines.reactive.awaitSingle
-import net.barrage.llmao.tables.references.JIRA_API_KEYS
-import net.barrage.llmao.tables.references.JIRA_WORKLOG_ATTRIBUTES
+import net.barrage.llmao.jirakira.tables.references.JIRA_API_KEYS
+import net.barrage.llmao.jirakira.tables.references.JIRA_WORKLOG_ATTRIBUTES
 import net.barrage.llmao.test.TestPostgres
 
 suspend fun TestPostgres.testJiraApiKey(userId: String, apiKey: String) {

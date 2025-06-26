@@ -9,7 +9,7 @@ import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.settings.ApplicationSetting
 import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.settings.toModel
-import net.barrage.llmao.tables.references.APPLICATION_SETTINGS
+import net.barrage.llmao.core.tables.references.APPLICATION_SETTINGS
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.excluded
 

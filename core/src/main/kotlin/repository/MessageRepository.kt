@@ -15,11 +15,11 @@ import net.barrage.llmao.core.model.toMessage
 import net.barrage.llmao.core.model.toMessageAttachment
 import net.barrage.llmao.core.model.toMessageGroup
 import net.barrage.llmao.core.model.toMessageGroupEvaluation
+import net.barrage.llmao.core.tables.references.MESSAGES
+import net.barrage.llmao.core.tables.references.MESSAGE_ATTACHMENTS
+import net.barrage.llmao.core.tables.references.MESSAGE_GROUPS
+import net.barrage.llmao.core.tables.references.MESSAGE_GROUP_EVALUATIONS
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.tables.references.MESSAGES
-import net.barrage.llmao.tables.references.MESSAGE_ATTACHMENTS
-import net.barrage.llmao.tables.references.MESSAGE_GROUPS
-import net.barrage.llmao.tables.references.MESSAGE_GROUP_EVALUATIONS
 import org.jooq.DSLContext
 
 /** Implement on classes that need to track workflow messages. */
