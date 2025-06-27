@@ -1,3 +1,5 @@
+package net.barrage.llmao.jirakira
+
 import kotlinx.serialization.Serializable
 import net.barrage.llmao.jirakira.tables.records.JiraWorklogAttributesRecord
 
@@ -5,7 +7,7 @@ import net.barrage.llmao.jirakira.tables.records.JiraWorklogAttributesRecord
  * Descriptions of custom Jira worklog attributes. If an attribute is present in the database, it
  * will be included in tool definitions for creating worklog entries. Only static list type JIRA
  * attributes are supported. The enumeration of the values they can take is obtained from the Jira
- * API when initializing JiraKira.
+ * API when initializing net.barrage.llmao.jirakira.JiraKira.
  */
 @Serializable
 data class WorklogAttribute(

@@ -1,11 +1,10 @@
-import io.ktor.util.logging.KtorSimpleLogger
+package net.barrage.llmao.jirakira
+
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatHistory
 import net.barrage.llmao.core.llm.InferenceProvider
 import net.barrage.llmao.core.token.TokenUsageTracker
 import net.barrage.llmao.core.workflow.WorkflowAgent
-
-internal val LOG = KtorSimpleLogger("n.b.l.a.workflow.jirakira.JiraKiraAgent")
 
 class JiraKira(
   model: String,

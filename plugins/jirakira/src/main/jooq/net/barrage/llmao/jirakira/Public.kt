@@ -3,52 +3,47 @@
  */
 package net.barrage.llmao.jirakira
 
-
 import kotlin.collections.List
-
 import net.barrage.llmao.jirakira.tables.JiraApiKeys
 import net.barrage.llmao.jirakira.tables.JiraWorklogAttributes
 import net.barrage.llmao.jirakira.tables.JirakiraWorkflows
-
 import org.jooq.Catalog
 import org.jooq.Table
 import org.jooq.impl.DSL
 import org.jooq.impl.SchemaImpl
 
-
-/**
- * standard public schema
- */
+/** standard public schema */
 @Suppress("warnings")
-open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALOG, DSL.comment("standard public schema")) {
-    companion object {
+open class Public :
+  SchemaImpl(
+    DSL.name("public"),
+    DefaultCatalog.DEFAULT_CATALOG,
+    DSL.comment("standard public schema"),
+  ) {
+  companion object {
 
-        /**
-         * The reference instance of <code>public</code>
-         */
-        val PUBLIC: Public = Public()
-    }
+    /** The reference instance of <code>public</code> */
+    val PUBLIC: Public = Public()
+  }
 
-    /**
-     * The table <code>public.jira_api_keys</code>.
-     */
-    val JIRA_API_KEYS: JiraApiKeys get() = JiraApiKeys.JIRA_API_KEYS
+  /** The table <code>public.jira_api_keys</code>. */
+  val JIRA_API_KEYS: JiraApiKeys
+    get() = JiraApiKeys.JIRA_API_KEYS
 
-    /**
-     * The table <code>public.jira_worklog_attributes</code>.
-     */
-    val JIRA_WORKLOG_ATTRIBUTES: JiraWorklogAttributes get() = JiraWorklogAttributes.JIRA_WORKLOG_ATTRIBUTES
+  /** The table <code>public.jira_worklog_attributes</code>. */
+  val JIRA_WORKLOG_ATTRIBUTES: JiraWorklogAttributes
+    get() = JiraWorklogAttributes.JIRA_WORKLOG_ATTRIBUTES
 
-    /**
-     * The table <code>public.jirakira_workflows</code>.
-     */
-    val JIRAKIRA_WORKFLOWS: JirakiraWorkflows get() = JirakiraWorkflows.JIRAKIRA_WORKFLOWS
+  /** The table <code>public.jirakira_workflows</code>. */
+  val JIRAKIRA_WORKFLOWS: JirakiraWorkflows
+    get() = JirakiraWorkflows.JIRAKIRA_WORKFLOWS
 
-    override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
+  override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
 
-    override fun getTables(): List<Table<*>> = listOf(
-        JiraApiKeys.JIRA_API_KEYS,
-        JiraWorklogAttributes.JIRA_WORKLOG_ATTRIBUTES,
-        JirakiraWorkflows.JIRAKIRA_WORKFLOWS
+  override fun getTables(): List<Table<*>> =
+    listOf(
+      JiraApiKeys.JIRA_API_KEYS,
+      JiraWorklogAttributes.JIRA_WORKLOG_ATTRIBUTES,
+      JirakiraWorkflows.JIRAKIRA_WORKFLOWS,
     )
 }

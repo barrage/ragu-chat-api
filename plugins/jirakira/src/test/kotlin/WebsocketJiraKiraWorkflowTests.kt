@@ -8,6 +8,11 @@ import net.barrage.llmao.core.llm.ToolEvent
 import net.barrage.llmao.core.settings.SettingUpdate
 import net.barrage.llmao.core.settings.SettingsUpdate
 import net.barrage.llmao.core.workflow.StreamComplete
+import net.barrage.llmao.jirakira.JiraKiraLlmProvider
+import net.barrage.llmao.jirakira.JiraKiraModel
+import net.barrage.llmao.jirakira.JiraKiraPlugin
+import net.barrage.llmao.jirakira.JiraKiraTimeSlotAttributeKey
+import net.barrage.llmao.jirakira.JiraKiraWorkflowOutput
 import net.barrage.llmao.test.ADMIN_USER
 import net.barrage.llmao.test.COMPLETIONS_RESPONSE
 import net.barrage.llmao.test.IntegrationTest

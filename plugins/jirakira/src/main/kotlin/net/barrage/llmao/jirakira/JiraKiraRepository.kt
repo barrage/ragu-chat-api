@@ -1,3 +1,5 @@
+package net.barrage.llmao.jirakira
+
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow

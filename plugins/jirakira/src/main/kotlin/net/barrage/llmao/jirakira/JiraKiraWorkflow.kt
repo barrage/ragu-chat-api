@@ -1,3 +1,5 @@
+package net.barrage.llmao.jirakira
+
 import java.time.OffsetDateTime
 import kotlinx.coroutines.launch
 import net.barrage.llmao.core.llm.ChatMessage

@@ -1,3 +1,5 @@
+package net.barrage.llmao.jirakira
+
 import io.ktor.server.config.ApplicationConfig
 import kotlinx.serialization.json.JsonElement
 import net.barrage.llmao.core.AppError
@@ -49,7 +51,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     if (!providers.llm[jiraKiraLlmProvider].supportsModel(jiraKiraModel)) {
       throw AppError.api(
         ErrorReason.InvalidOperation,
-        "JiraKira LLM provider does not support the configured JiraKira model",
+        "net.barrage.llmao.jirakira.JiraKira LLM provider does not support the configured net.barrage.llmao.jirakira.JiraKira model",
       )
     }
     val jiraApi = JiraApi(endpoint = endpoint, apiKey = userJiraApiKey, client = httpClient())

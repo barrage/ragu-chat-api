@@ -1,3 +1,5 @@
+package net.barrage.llmao.jirakira
+
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -8,6 +10,7 @@ import net.barrage.llmao.core.llm.ToolFunctionParameters
 import net.barrage.llmao.core.llm.ToolPropertyDefinition
 import net.barrage.llmao.core.llm.Tools
 import net.barrage.llmao.core.llm.ToolsBuilder
+import net.barrage.llmao.core.logger
 import net.barrage.llmao.core.workflow.Emitter
 
 class JiraKiraToolExecutor(
@@ -29,13 +32,16 @@ class JiraKiraToolExecutor(
    */
   val timeSlotAttributeKey: String?,
 ) {
+  private val log = logger(JiraKiraToolExecutor::class)
+
   fun tools(
     attributes: List<TempoWorkAttribute>,
 
     /**
      * A set of attributes that are allowed/required to be used in worklog entries. This is
-     * predefined in jira and will be obtained via the Jira API when instantiating JiraKira. These
-     * attributes will be included in the JSON schema for the [CreateWorklogEntrySchema] tool.
+     * predefined in jira and will be obtained via the Jira API when instantiating
+     * net.barrage.llmao.jirakira.JiraKira. These attributes will be included in the JSON schema for
+     * the [CreateWorklogEntrySchema] tool.
      */
     worklogAttributes: List<WorklogAttribute>,
   ): Tools {
@@ -57,7 +63,7 @@ class JiraKiraToolExecutor(
   }
 
   suspend fun createWorklogEntry(input: String): String {
-    LOG.debug("{} - creating worklog entry; input: {}", jiraUser.name, input)
+    log.debug("{} - creating worklog entry; input: {}", jiraUser.name, input)
 
     val input = Json.decodeFromString<CreateWorklogInput>(input)
 
@@ -67,13 +73,13 @@ class JiraKiraToolExecutor(
       timeSlotAttributeKey?.let {
         val acc = api.getDefaultBillingAccountForIssue(issueKey.issueKey) ?: return@let null
         val timeSlotAccount = TimeSlotAttribute(timeSlotAttributeKey, acc.key)
-        LOG.debug("{} - using timeslot account: {}", jiraUser.name, timeSlotAccount)
+        log.debug("{} - using timeslot account: {}", jiraUser.name, timeSlotAccount)
         timeSlotAccount
       }
 
     val worklog = api.createWorklogEntry(input, jiraUser.key, timeSlotAccount)
 
-    LOG.debug(
+    log.debug(
       "Worklog for issue ${input.issueId} created successfully for issue (time: {})",
       worklog.timeSpent,
     )
@@ -87,7 +93,7 @@ class JiraKiraToolExecutor(
   }
 
   suspend fun listUserOpenIssues(input: String): String {
-    LOG.debug("{} - listing open issues; input: {}", jiraUser.name, input)
+    log.debug("{} - listing open issues; input: {}", jiraUser.name, input)
 
     val input = Json.decodeFromString<ProjectKey>(input)
 
@@ -95,7 +101,7 @@ class JiraKiraToolExecutor(
   }
 
   suspend fun getIssueId(input: String): String {
-    LOG.debug("{} - getting ID for issue; input: {}", jiraUser.name, input)
+    log.debug("{} - getting ID for issue; input: {}", jiraUser.name, input)
 
     val input = Json.decodeFromString<IssueKey>(input)
 
@@ -103,13 +109,13 @@ class JiraKiraToolExecutor(
   }
 
   suspend fun updateWorklogEntry(input: String): String {
-    LOG.debug("{} - updating worklog entry; input: {}", jiraUser.name, input)
+    log.debug("{} - updating worklog entry; input: {}", jiraUser.name, input)
 
     val input =
       try {
         Json.decodeFromString<UpdateWorklogInput>(input)
       } catch (e: SerializationException) {
-        LOG.error("Failed to decode tool call arguments: {}", input, e)
+        log.error("Failed to decode tool call arguments: {}", input, e)
         if (e.message?.startsWith("Missing required field") == true) {
           // Sometimes gippitties can be self-healing
           return "${e.message}"
@@ -119,7 +125,7 @@ class JiraKiraToolExecutor(
 
     val worklog = api.updateWorklogEntry(input)
 
-    LOG.debug(
+    log.debug(
       "Worklog for issue ${worklog.issue?.key} updated successfully (time: {})",
       worklog.timeSpent,
     )
@@ -133,7 +139,7 @@ class JiraKiraToolExecutor(
   }
 
   suspend fun getIssueWorklog(input: String): String {
-    LOG.debug("{} - getting issue worklog; input: {}", jiraUser.name, input)
+    log.debug("{} - getting issue worklog; input: {}", jiraUser.name, input)
 
     val input = Json.decodeFromString<IssueKeyOrId>(input)
 
@@ -141,7 +147,7 @@ class JiraKiraToolExecutor(
 
     val result = worklog.joinToString("\n")
 
-    LOG.debug("{} - worklog: {}", jiraUser.name, result)
+    log.debug("{} - worklog: {}", jiraUser.name, result)
 
     return result
   }
@@ -175,12 +181,12 @@ class JiraKiraToolExecutor(
       val worklogAttribute = worklogAttributes.find { it.key == attribute.key }
 
       if (worklogAttribute == null) {
-        LOG.debug("Skipping worklog attribute '{}'", attribute.name)
+        log.debug("Skipping worklog attribute '{}'", attribute.name)
         continue
       }
 
       if (attribute.staticListValues == null) {
-        LOG.warn(
+        log.warn(
           "Worklog attribute '{}' ({}) has no static list values, only static list attributes are supported",
           attribute.name,
           attribute.key,
@@ -196,7 +202,7 @@ class JiraKiraToolExecutor(
           enum = enumerations,
         )
 
-      LOG.debug("Adding worklog attribute to tool definition: {}", attribute.key)
+      log.debug("Adding worklog attribute to tool definition: {}", attribute.key)
       propertiesCreateWorklog[attribute.key] = property
       propertiesUpdateWorklog[attribute.key] = property
     }

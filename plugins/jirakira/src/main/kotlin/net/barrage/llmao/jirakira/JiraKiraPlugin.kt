@@ -1,10 +1,12 @@
-import io.ktor.server.auth.*
-import io.ktor.server.config.*
-import io.ktor.server.routing.*
-import io.ktor.util.logging.*
+package net.barrage.llmao.jirakira
+
+import io.ktor.server.auth.authenticate
+import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.routing.Route
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.PluginConfiguration
+import net.barrage.llmao.core.logger
 import net.barrage.llmao.core.settings.ApplicationSettings
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
 
@@ -12,7 +14,7 @@ const val JIRAKIRA_WORKFLOW_ID = "JIRAKIRA"
 
 class JiraKiraPlugin : Plugin {
   private lateinit var repository: JiraKiraRepository
-  private val log = KtorSimpleLogger("n.b.l.a.workflow.jirakira.JiraKiraPlugin")
+  private val log = logger(JiraKiraPlugin::class)
 
   override fun id(): String = JIRAKIRA_WORKFLOW_ID
 
@@ -25,13 +27,13 @@ class JiraKiraPlugin : Plugin {
 
     if (settings.getOptional(JiraKiraLlmProvider.KEY) == null) {
       log.warn(
-        "No JiraKira LLM provider configured. JiraKira is disabled. Set `${JiraKiraLlmProvider.KEY}` in the application settings to enable."
+        "No net.barrage.llmao.jirakira.JiraKira LLM provider configured. net.barrage.llmao.jirakira.JiraKira is disabled. Set `${JiraKiraLlmProvider.KEY}` in the application settings to enable."
       )
     }
 
     if (settings.getOptional(JiraKiraModel.KEY) == null) {
       log.warn(
-        "No JiraKira model configured. JiraKira is disabled. Set `${JiraKiraModel.KEY}` in the application settings to enable. The model must be supported by the provider."
+        "No net.barrage.llmao.jirakira.JiraKira model configured. net.barrage.llmao.jirakira.JiraKira is disabled. Set `${JiraKiraModel.KEY}` in the application settings to enable. The model must be supported by the provider."
       )
     }
   }
@@ -58,12 +60,15 @@ class JiraKiraPlugin : Plugin {
     )
 }
 
-/** The LLM provider to use for JiraKira. */
+/** The LLM provider to use for net.barrage.llmao.jirakira.JiraKira. */
 internal data object JiraKiraLlmProvider {
   const val KEY = "JIRAKIRA_LLM_PROVIDER"
 }
 
-/** Which model will be used for JiraKira. Has to be compatible with [JiraKiraLlmProvider]. */
+/**
+ * Which model will be used for net.barrage.llmao.jirakira.JiraKira. Has to be compatible with
+ * [JiraKiraLlmProvider].
+ */
 internal data object JiraKiraModel {
   const val KEY = "JIRAKIRA_MODEL"
 }

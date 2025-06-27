@@ -1,3 +1,5 @@
+package net.barrage.llmao.jirakira
+
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
@@ -26,6 +28,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 import net.barrage.llmao.core.AppError
+import net.barrage.llmao.core.logger
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.OffsetDateTimeSerializer
 
@@ -37,8 +40,10 @@ class JiraApi(
   private val apiKey: String,
   private val client: HttpClient,
 ) {
+  private val log = logger(JiraApi::class)
+
   suspend fun getCurrentJiraUser(): JiraUser {
-    LOG.debug("Fetching Jira user metadata")
+    log.debug("Fetching Jira user metadata")
 
     val account = runWithHandler<JiraUserSession>("$endpoint/rest/auth/1/session")
     return runWithHandler<JiraUser>("$endpoint/rest/api/2/user?username=${account.name}")
@@ -55,8 +60,8 @@ class JiraApi(
     val response =
       runWithHandler<JiraIssueResponse>("$endpoint/rest/api/2/search?jql=$jql&fields=$fields")
 
-    LOG.debug("Found ${response.issues.size} open issues for project {}", projectKey)
-    LOG.debug("{}", response.issues.joinToString(", ") { it.key })
+    log.debug("Found ${response.issues.size} open issues for project {}", projectKey)
+    log.debug("{}", response.issues.joinToString(", ") { it.key })
 
     return response.issues.map {
       JiraIssueShort(
@@ -90,13 +95,13 @@ class JiraApi(
 
   suspend fun getIssueId(issueKey: String): String {
     val issue = runWithHandler<JiraIssue>("$endpoint/rest/api/2/issue/$issueKey")
-    LOG.debug("Found issue ID {} for key {}", issue.id, issueKey)
+    log.debug("Found issue ID {} for key {}", issue.id, issueKey)
     return issue.id
   }
 
   suspend fun getIssueKey(id: String): IssueKey {
     val issue = runWithHandler<JiraIssue>("$endpoint/rest/api/2/issue/$id")
-    LOG.debug("Found issue key {} for ID {}", issue.key, id)
+    log.debug("Found issue key {} for ID {}", issue.key, id)
     return IssueKey(issue.key)
   }
 
@@ -136,7 +141,7 @@ class JiraApi(
         worker = jiraUserId,
       )
 
-    LOG.debug("jira - creating worklog entry: {}", body)
+    log.debug("jira - creating worklog entry: {}", body)
 
     return runWithHandler<List<TempoWorklogEntry>>(
         "$endpoint/rest/tempo-timesheets/4/worklogs",
@@ -161,7 +166,7 @@ class JiraApi(
         attributes = attributes,
       )
 
-    LOG.debug("jira - updating worklog entry: {}", body)
+    log.debug("jira - updating worklog entry: {}", body)
 
     return runWithHandler<TempoWorklogEntry>(
       "$endpoint/rest/tempo-timesheets/4/worklogs/${input.worklogEntryId}",
@@ -177,7 +182,7 @@ class JiraApi(
     // The actual JSON will be wrapped like: `__fn__({...})`
     val body =
       runWithHandler<String>(
-        "$endpoint/rest/tempo-rest/1.0/accounts/json/billingKeyList/$issueKey?callback=__fn__"
+        "$endpoint/rest/tempo-rest/1.0/accounts/net.barrage.llmao.jirakira.json/billingKeyList/$issueKey?callback=__fn__"
       ) {
         header("Accept", "application/x-javascript;charset=UTF-8")
       }
@@ -189,21 +194,21 @@ class JiraApi(
         )
       return accounts.values.find { it.selected } ?: accounts.values.firstOrNull()
     } catch (e: Exception) {
-      LOG.error("Failed to parse Jira response for billing account: {}", body, e)
+      log.error("Failed to parse Jira response for billing account: {}", body, e)
       return null
     }
   }
 
   suspend fun listWorklogAttributes(): List<TempoWorkAttribute> {
-    LOG.debug("Listing worklog attributes")
+    log.debug("Listing worklog attributes")
 
     val attributes =
       runWithHandler<List<TempoWorkAttribute>>("$endpoint/rest/tempo-core/1/work-attribute")
 
-    LOG.debug("Found ${attributes.size} worklog attributes")
+    log.debug("Found ${attributes.size} worklog attributes")
 
     for (attribute in attributes) {
-      LOG.debug(" - {}: {}", attribute.key, attribute.name)
+      log.debug(" - {}: {}", attribute.key, attribute.name)
     }
 
     return attributes
@@ -226,7 +231,7 @@ class JiraApi(
     try {
       return response.body<T>()
     } catch (e: Exception) {
-      LOG.error("Failed to parse Jira response ({})", url, e)
+      log.error("Failed to parse Jira response ({})", url, e)
       throw AppError.internal("Failed to parse Jira response")
     }
   }
@@ -239,12 +244,12 @@ class JiraApi(
       try {
         response.body<JiraError>()
       } catch (e: Exception) {
-        LOG.error("Failed to parse Jira error ({})", url, e)
+        log.error("Failed to parse Jira error ({})", url, e)
         throw AppError.internal("An error occurred when calling the Jira API")
       }
     // Log the original error, now the Throwable
-    LOG.error("Jira API call failed ({})", url)
-    LOG.error("$error")
+    log.error("Jira API call failed ({})", url)
+    log.error("$error")
     throw error
   }
 }
@@ -256,7 +261,7 @@ data class JiraError(val errorMessages: List<String>, val errors: Map<String, St
 /** Customer account attribute. */
 @Serializable data class TimeSlotAttribute(val key: String, val value: String)
 
-/** Original Jira user model. Also used in JiraKira sessions. */
+/** Original Jira user model. Also used in net.barrage.llmao.jirakira.JiraKira sessions. */
 @Serializable
 data class JiraUser(
   val self: String,
@@ -420,8 +425,8 @@ data class Issue(
 @Serializable data class EpicIssue(val issueType: String, val summary: String)
 
 /**
- * Obtained when instantiating JiraKira. These attributes represent custom attributes that can be
- * used in worklog entries.
+ * Obtained when instantiating net.barrage.llmao.jirakira.JiraKira. These attributes represent
+ * custom attributes that can be used in worklog entries.
  */
 @Serializable
 data class TempoWorkAttribute(
@@ -478,7 +483,7 @@ private data class CreateWorklogInputJira(
 
 object CreateWorklogInputSerializer : KSerializer<CreateWorklogInput> {
   override val descriptor: SerialDescriptor =
-    buildClassSerialDescriptor("CreateWorklogInput") {
+    buildClassSerialDescriptor("net.barrage.llmao.jirakira.CreateWorklogInput") {
       element<String>("issueId")
       element<String>("comment")
       element("started", OffsetDateTimeSerializer.descriptor)
@@ -565,7 +570,7 @@ private data class UpdateWorklogInputJira(
 
 object UpdateWorklogInputSerializer : KSerializer<UpdateWorklogInput> {
   override val descriptor: SerialDescriptor =
-    buildClassSerialDescriptor("UpdateWorklogInput") {
+    buildClassSerialDescriptor("net.barrage.llmao.jirakira.UpdateWorklogInput") {
       element<Int>("worklogEntryId")
       element("started", OffsetDateTimeSerializer.descriptor)
       element<Int?>("timeSpentSeconds")

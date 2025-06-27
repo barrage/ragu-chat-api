@@ -1,3 +1,5 @@
+package net.barrage.llmao.jirakira
+
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.delete
 import io.github.smiley4.ktoropenapi.get
