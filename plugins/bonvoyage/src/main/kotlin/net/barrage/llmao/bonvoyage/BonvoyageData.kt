@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.bonvoyage
+package net.barrage.llmao.bonvoyage
 
 import javax.activation.DataSource
 import javax.mail.util.ByteArrayDataSource

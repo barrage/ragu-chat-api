@@ -1,10 +1,16 @@
-package net.barrage.llmao.app.workflow.bonvoyage
+package net.barrage.llmao.bonvoyage
 
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
+import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_EXPENSES
+import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_MANAGERS
+import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS
+import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_REQUESTS
+import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRIPS
+import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRIP_WELCOME_MESSAGES
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.database.Atomic
@@ -18,12 +24,6 @@ import net.barrage.llmao.core.types.KLocalDate
 import net.barrage.llmao.core.types.KOffsetDateTime
 import net.barrage.llmao.core.types.KOffsetTime
 import net.barrage.llmao.core.types.KUUID
-import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_EXPENSES
-import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_MANAGERS
-import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_MANAGER_USER_MAPPINGS
-import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRAVEL_REQUESTS
-import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRIPS
-import net.barrage.llmao.bonvoyage.tables.references.BONVOYAGE_TRIP_WELCOME_MESSAGES
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.kotlin.coroutines.transactionCoroutine

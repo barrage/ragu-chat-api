@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.bonvoyage
+package net.barrage.llmao.bonvoyage
 
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.geom.PageSize
@@ -28,6 +28,7 @@ import net.barrage.llmao.core.blob.ATTACHMENTS_PATH
 import net.barrage.llmao.core.blob.BlobStorage
 import net.barrage.llmao.core.llm.ChatCompletionAgentParameters
 import net.barrage.llmao.core.llm.ChatMessageProcessor
+import net.barrage.llmao.core.logger
 import net.barrage.llmao.core.model.Image
 import net.barrage.llmao.core.model.IncomingMessageAttachment
 import net.barrage.llmao.core.model.MessageGroupAggregate
@@ -44,8 +45,7 @@ class BonvoyageAdminApi(
   private val settings: Settings,
   private val providers: ProviderState,
 ) {
-  private val log = KtorSimpleLogger("n.b.l.a.workflow.bonvoyage.BonvoyageAdminApi")
-
+  private val log = logger(BonvoyageAdminApi::class)
   private val emailScope = CoroutineScope(Dispatchers.IO)
   private val welcomeMessageScope = CoroutineScope(Dispatchers.Unconfined)
 

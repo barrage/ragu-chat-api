@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.bonvoyage.routes
+package net.barrage.llmao.bonvoyage.routes
 
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.delete
@@ -17,18 +17,18 @@ import io.ktor.server.routing.route
 import io.ktor.util.encodeBase64
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTravelExpense
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTravelExpenseUpdateProperties
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTravelManagerUserMappingAggregate
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTravelRequest
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTravelRequestStatus
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTrip
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTripFullAggregate
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageTripWelcomeMessage
-import net.barrage.llmao.app.workflow.bonvoyage.BonvoyageUserApi
-import net.barrage.llmao.app.workflow.bonvoyage.TravelRequestParameters
-import net.barrage.llmao.app.workflow.bonvoyage.TripPropertiesUpdate
-import net.barrage.llmao.app.workflow.bonvoyage.TripUpdateReminders
+import net.barrage.llmao.bonvoyage.BonvoyageTravelExpense
+import net.barrage.llmao.bonvoyage.BonvoyageTravelExpenseUpdateProperties
+import net.barrage.llmao.bonvoyage.BonvoyageTravelManagerUserMappingAggregate
+import net.barrage.llmao.bonvoyage.BonvoyageTravelRequest
+import net.barrage.llmao.bonvoyage.BonvoyageTravelRequestStatus
+import net.barrage.llmao.bonvoyage.BonvoyageTrip
+import net.barrage.llmao.bonvoyage.BonvoyageTripFullAggregate
+import net.barrage.llmao.bonvoyage.BonvoyageTripWelcomeMessage
+import net.barrage.llmao.bonvoyage.BonvoyageUserApi
+import net.barrage.llmao.bonvoyage.TravelRequestParameters
+import net.barrage.llmao.bonvoyage.TripPropertiesUpdate
+import net.barrage.llmao.bonvoyage.TripUpdateReminders
 import net.barrage.llmao.core.AppError
 import net.barrage.llmao.core.ErrorReason
 import net.barrage.llmao.core.http.pathUuid

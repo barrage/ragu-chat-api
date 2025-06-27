@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.bonvoyage
+package net.barrage.llmao.bonvoyage
 
 import com.itextpdf.io.image.ImageData
 import com.itextpdf.io.image.ImageDataFactory
@@ -8,13 +8,13 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
 import io.ktor.server.routing.Route
-import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
-import net.barrage.llmao.app.workflow.bonvoyage.routes.bonvoyageAdminRoutes
-import net.barrage.llmao.app.workflow.bonvoyage.routes.bonvoyageUserRoutes
+import net.barrage.llmao.bonvoyage.routes.bonvoyageAdminRoutes
+import net.barrage.llmao.bonvoyage.routes.bonvoyageUserRoutes
 import net.barrage.llmao.core.ApplicationState
 import net.barrage.llmao.core.Plugin
 import net.barrage.llmao.core.PluginConfiguration
+import net.barrage.llmao.core.logger
 import net.barrage.llmao.core.settings.ApplicationSettings
 import net.barrage.llmao.core.string
 import net.barrage.llmao.core.workflow.WorkflowFactoryManager
@@ -25,7 +25,7 @@ internal const val BONVOYAGE_WORKFLOW_ID = "BONVOYAGE"
 class BonvoyagePlugin() : Plugin {
   private lateinit var admin: BonvoyageAdminApi
   private lateinit var user: BonvoyageUserApi
-  private val log = KtorSimpleLogger("net.barrage.llmao.plugins.bonvoyage.BonvoyagePlugin")
+  private val log = logger(BonvoyagePlugin::class)
 
   override fun id(): String = BONVOYAGE_WORKFLOW_ID
 

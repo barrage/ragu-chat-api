@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.bonvoyage
+package net.barrage.llmao.bonvoyage
 
 import net.barrage.llmao.core.llm.ChatCompletionBaseParameters
 import net.barrage.llmao.core.llm.ChatHistory

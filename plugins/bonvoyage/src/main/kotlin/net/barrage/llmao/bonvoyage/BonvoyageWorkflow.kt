@@ -1,4 +1,4 @@
-package net.barrage.llmao.app.workflow.bonvoyage
+package net.barrage.llmao.bonvoyage
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
