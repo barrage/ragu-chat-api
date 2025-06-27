@@ -18,6 +18,10 @@ class RaguPlugin : Plugin<Project> {
     val ext = project.extensions.create<RaguPluginConfig>("ragu")
 
     project.afterEvaluate {
+      if (project.findProperty("env").toString() == "deployment") {
+        return@afterEvaluate
+      }
+
       project.dependencies.apply {
         add("implementation", "org.liquibase:liquibase-core:4.29.2")
         add("liquibaseRuntime", "org.liquibase:liquibase-core:4.29.2")

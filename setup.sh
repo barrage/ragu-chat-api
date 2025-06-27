@@ -14,9 +14,3 @@ if [ -e config/application.conf ]; then
 else
   cp ./config/application.example.conf ./config/application.conf
 fi
-
-./gradlew generateJooq
-
-psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/initial.sql
-
-exit 0

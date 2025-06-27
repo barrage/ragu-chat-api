@@ -4,6 +4,15 @@ version = "0.5.0"
 
 plugins { id("net.barrage.llmao.ragu-plugin") }
 
+sourceSets {
+  main {
+    java.srcDir("src/main/jooq")
+    kotlin.srcDir("src/main/jooq")
+  }
+
+  test { resources.srcDir("../config") }
+}
+
 ragu {
   jooqInclude =
     "agents | agent_configurations | agent_collections | agent_tools | agent_permissions | chats | whats_app_numbers"

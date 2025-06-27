@@ -4,6 +4,14 @@ version = "0.1.0"
 
 plugins { id("net.barrage.llmao.ragu-plugin") }
 
+sourceSets {
+  main {
+    java.srcDir("src/main/jooq")
+    kotlin.srcDir("src/main/jooq")
+  }
+  test { resources.srcDir("../config") }
+}
+
 ragu {
   jooqInclude = "jirakira_workflows | jira_worklog_attributes | jira_api_keys"
   jooqPackage = "net.barrage.llmao.jirakira"

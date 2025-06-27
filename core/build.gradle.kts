@@ -5,8 +5,12 @@ version = "0.5.0"
 plugins { id("net.barrage.llmao.ragu-plugin") }
 
 sourceSets {
-  main { resources { srcDir("../config") } }
-  test { resources { srcDir("../config") } }
+  main {
+    java.srcDir("src/main/jooq")
+    kotlin.srcDir("src/main/jooq")
+  }
+
+  test { resources.srcDir("../config") }
 }
 
 ragu {
@@ -23,6 +27,7 @@ dependencies {
   implementation(libs.bundles.postgres)
 
   // Auth
+  implementation(libs.liquibase.core)
   implementation(libs.ktor.server.auth.jwt)
   implementation(libs.java.jwt)
 

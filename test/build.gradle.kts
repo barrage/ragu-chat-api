@@ -4,6 +4,8 @@ version = "0.1.0"
 
 plugins { `java-library` }
 
+sourceSets { main { resources.srcDir("../config") } }
+
 dependencies {
   implementation(libs.ktor.server.core.jvm)
   implementation(libs.ktor.client.core.jvm)
