@@ -3,9 +3,7 @@
  */
 package net.barrage.llmao.chat
 
-
 import kotlin.collections.List
-
 import net.barrage.llmao.chat.tables.AgentCollections
 import net.barrage.llmao.chat.tables.AgentConfigurations
 import net.barrage.llmao.chat.tables.AgentPermissions
@@ -13,70 +11,63 @@ import net.barrage.llmao.chat.tables.AgentTools
 import net.barrage.llmao.chat.tables.Agents
 import net.barrage.llmao.chat.tables.Chats
 import net.barrage.llmao.chat.tables.WhatsAppNumbers
-
 import org.jooq.Catalog
 import org.jooq.Table
 import org.jooq.impl.DSL
 import org.jooq.impl.SchemaImpl
 
-
-/**
- * standard public schema
- */
+/** standard public schema */
 @Suppress("warnings")
-open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALOG, DSL.comment("standard public schema")) {
-    companion object {
+open class Public :
+  SchemaImpl(
+    DSL.name("public"),
+    DefaultCatalog.DEFAULT_CATALOG,
+    DSL.comment("standard public schema"),
+  ) {
+  companion object {
 
-        /**
-         * The reference instance of <code>public</code>
-         */
-        val PUBLIC: Public = Public()
-    }
+    /** The reference instance of <code>public</code> */
+    val PUBLIC: Public = Public()
+  }
 
-    /**
-     * The table <code>public.agent_collections</code>.
-     */
-    val AGENT_COLLECTIONS: AgentCollections get() = AgentCollections.AGENT_COLLECTIONS
+  /** The table <code>public.agent_collections</code>. */
+  val AGENT_COLLECTIONS: AgentCollections
+    get() = AgentCollections.AGENT_COLLECTIONS
 
-    /**
-     * The table <code>public.agent_configurations</code>.
-     */
-    val AGENT_CONFIGURATIONS: AgentConfigurations get() = AgentConfigurations.AGENT_CONFIGURATIONS
+  /** The table <code>public.agent_configurations</code>. */
+  val AGENT_CONFIGURATIONS: AgentConfigurations
+    get() = AgentConfigurations.AGENT_CONFIGURATIONS
 
-    /**
-     * The table <code>public.agent_permissions</code>.
-     */
-    val AGENT_PERMISSIONS: AgentPermissions get() = AgentPermissions.AGENT_PERMISSIONS
+  /** The table <code>public.agent_permissions</code>. */
+  val AGENT_PERMISSIONS: AgentPermissions
+    get() = AgentPermissions.AGENT_PERMISSIONS
 
-    /**
-     * The table <code>public.agent_tools</code>.
-     */
-    val AGENT_TOOLS: AgentTools get() = AgentTools.AGENT_TOOLS
+  /** The table <code>public.agent_tools</code>. */
+  val AGENT_TOOLS: AgentTools
+    get() = AgentTools.AGENT_TOOLS
 
-    /**
-     * The table <code>public.agents</code>.
-     */
-    val AGENTS: Agents get() = Agents.AGENTS
+  /** The table <code>public.agents</code>. */
+  val AGENTS: Agents
+    get() = Agents.AGENTS
 
-    /**
-     * The table <code>public.chats</code>.
-     */
-    val CHATS: Chats get() = Chats.CHATS
+  /** The table <code>public.chats</code>. */
+  val CHATS: Chats
+    get() = Chats.CHATS
 
-    /**
-     * The table <code>public.whats_app_numbers</code>.
-     */
-    val WHATS_APP_NUMBERS: WhatsAppNumbers get() = WhatsAppNumbers.WHATS_APP_NUMBERS
+  /** The table <code>public.whats_app_numbers</code>. */
+  val WHATS_APP_NUMBERS: WhatsAppNumbers
+    get() = WhatsAppNumbers.WHATS_APP_NUMBERS
 
-    override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
+  override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
 
-    override fun getTables(): List<Table<*>> = listOf(
-        AgentCollections.AGENT_COLLECTIONS,
-        AgentConfigurations.AGENT_CONFIGURATIONS,
-        AgentPermissions.AGENT_PERMISSIONS,
-        AgentTools.AGENT_TOOLS,
-        Agents.AGENTS,
-        Chats.CHATS,
-        WhatsAppNumbers.WHATS_APP_NUMBERS
+  override fun getTables(): List<Table<*>> =
+    listOf(
+      AgentCollections.AGENT_COLLECTIONS,
+      AgentConfigurations.AGENT_CONFIGURATIONS,
+      AgentPermissions.AGENT_PERMISSIONS,
+      AgentTools.AGENT_TOOLS,
+      Agents.AGENTS,
+      Chats.CHATS,
+      WhatsAppNumbers.WHATS_APP_NUMBERS,
     )
 }

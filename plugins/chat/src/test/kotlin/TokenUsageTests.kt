@@ -6,6 +6,10 @@ import io.ktor.http.HttpHeaders
 import kotlin.test.assertEquals
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import net.barrage.llmao.chat.CHAT_WORKFLOW_ID
+import net.barrage.llmao.chat.ChatPlugin
+import net.barrage.llmao.chat.model.Agent
+import net.barrage.llmao.chat.model.AgentConfiguration
 import net.barrage.llmao.core.token.TokenUsageAggregate
 import net.barrage.llmao.core.token.TokenUsageType
 import net.barrage.llmao.test.ADMIN_USER
