@@ -21,7 +21,7 @@ The following application settings must be set:
 
 ### Users
 
-Users must register their Jira API keys in Kappi. These can be generated on the `Profile` page of Jira. On the side will
+Users must register their Jira API keys in Ragu. These can be generated on the `Profile` page of Jira. On the side will
 be a tab called Personal Access Tokens. The token can then be set via the `POST /jirakira/key` endpoint and can also be
 deleted via the `DELETE /jirakira/key` endpoint.
 

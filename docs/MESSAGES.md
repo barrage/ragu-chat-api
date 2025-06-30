@@ -1,4 +1,4 @@
-# Kappi session messages
+# Ragu session messages
 
 Table of contents:
 

@@ -5,7 +5,7 @@ It allows Ragu administrators to create custom RAG powered LLM agents.
 
 ## Configuration
 
-It is the default plugin that all Kappi instances come with by default and cannot be disabled.
+It is the default plugin that all Ragu instances come with by default and cannot be disabled.
 
 It is automatically configured, but can be additionally configured with the following settings:
 

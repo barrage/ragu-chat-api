@@ -1,4 +1,4 @@
-# Bonvoyage Ragu Plugin
+# Bonvoyage
 
 The Bonvoyage plugin is a business trip management solution for streamlining the creation
 of travel orders and travel expense reports.

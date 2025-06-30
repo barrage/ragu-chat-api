@@ -1,43 +1,43 @@
-# Ragu Kotlin API (Kappi)
+# Ragu Chat API
 
 ## Table of contents
 
 - [Overview](#overview)
 - [Authorization](#authorization)
 - [Setup](#setup)
-  - [Migrations and seeders](#migrations-and-seeders)
-  - [Building and running](#building-and-running)
 - [WebSocket](#websocket)
 - [WhatsApp](#whatsapp)
-  - [Configuration](#configuration)
-  - [Infobip setup](#infobip-setup)
+    - [Configuration](#configuration)
+    - [Infobip setup](#infobip-setup)
 
 Documentation:
 
-- [Kappi plugins](docs/PLUGINS.md)
-- [Chat plugin](docs/CHAT.md)
-- [JiraKira plugin](docs/JIRAKIRA.md)
-- [Bonvoyage plugin](docs/BONVOYAGE.md)
+- [Ragu plugins](docs/PLUGINS.md)
+    - [Chat plugin](docs/CHAT.md)
+    - [JiraKira plugin](docs/JIRAKIRA.md)
+    - [Bonvoyage plugin](docs/BONVOYAGE.md)
 - [vLLM deployment](docs/VLLM.md)
 
 ## Overview
 
-Kappi is a plugin based application framework for quickly integrating with various AI models.
+The Ragu chat API (further referred to as Ragu for brevity) is a plugin based application framework for quickly
+integrating with various AI models.
+
 It is built on top of Ktor.
 
-Kappi consists of two main components;
+Ragu's 2 most important components are:
 
 - Core
   The library that provides a set of abstractions for LLM interaction and agent creation.
 - Server
   The runtime that serves as a host for plugins and is responsible for their execution.
 
-Kappi plugins are implementations of arbitrary features that are designed to run in the server runtime.
+Ragu plugins are implementations of arbitrary features that are designed to run in the server runtime.
 They can range from small applets to full blown applications.
 
 ## Authorization
 
-Kappi uses JWT access tokens for authorization. It can be configured to accept tokens from any OAuth 2.0 + OIDC
+Ragu uses JWT access tokens for authorization. It can be configured to accept tokens from any OAuth 2.0 + OIDC
 compatible authorization server.
 
 Specifically, the following fields are used to extract user info:
@@ -50,7 +50,7 @@ Specifically, the following fields are used to extract user info:
 }
 ```
 
-Kappi's users are grouped into two groups: `admin` and `user`. These groups (also known as entitlements) must be present
+Ragu's users are grouped into two groups: `admin` and `user`. These groups (also known as entitlements) must be present
 in the access token because they are used to reason about a user's permissions. Administrators have full access to the
 API, including the "backoffice", whereas users can only access the chat endpoints related to them.
 
@@ -64,55 +64,7 @@ The following is a list of all configurable parameters for JWT authorization:
 ## Setup
 
 To set up the project run `sh setup.sh` in the root directory.
-This will set docker containers, and initial application and gradle properties that you will
-need to configure manually.
-
-### Migrations and seeders
-
-Liquibase is responsible for migrating the database schema.
-It is embedded into the application and will run migrations on app startup.
-
-Migrations are located in the `src/main/resources/db/migrations` directory.
-Every migration folder should have a name in the format `{migration_number}_{migration_description}`, with `up.sql` and
-`down.sql` files that will handle migration and migration rollback.
-When creating new migrations to add to the database, make sure to insert incremented version tag in the `changelog.yaml`
-in `src/main/resources/db`.
-
-Updated `changelog.yaml` should look like this:
-
-```yaml
-- changeSet:
-  id: { migration_number }
-  author: barrage
-  changes:
-    - tagDatabase:
-        tag: { migration_tag }
-    - sqlFile:
-        encoding: utf8
-        path: migration/{ migration_number }_{ migration_name }/up.sql
-        relativeToChangelogFile: true
-        splitStatements: false
-  rollback:
-    - sqlFile:
-        encoding: utf8
-        path: migration/{ migration_number }_{ migration_name }/down.sql
-        relativeToChangelogFile: true
-        splitStatements: false
-```
-
-To rollback all migrations
-
-```bash
-./gradlew liquibaseRollback
-```
-
-To seed the database with the initial agent, run
-
-```bash
-psql postgresql://postgres:postgres@localhost:5454/kappi -f src/main/resources/db/seed/<FILE>.sql
-```
-
-### Building and running
+This will set docker containers, and initial application and gradle properties that you will need to configure manually.
 
 To build the application, run
 
@@ -133,7 +85,7 @@ in `config/application.example.conf`.
 
 ## WebSocket
 
-Kappi uses WebSockets for real-time communication between clients and LLM providers.
+Ragu uses WebSockets for real-time communication between clients and LLM providers.
 
 To open a WebSocket connection with the server, the client must first create a one-time token by sending a `GET` request
 to the `/ws` endpoint and pass it to the WebSocket connection as a `token={token}` query parameter. This token is used
@@ -145,7 +97,7 @@ For a full list of session messages and their formats, see [MESSAGES.md](docs/ME
 ## WhatsApp
 
 To use WhatsApp as a chat provider, set the `ktor.features.whatsApp` flag to `true`.
-This feature uses Infobip as the downstream service that forwards messages to Kappi.
+This feature uses Infobip as the downstream service that forwards messages to Ragu.
 
 ### Configuration
 
@@ -200,7 +152,7 @@ More info can be found [here](https://www.infobip.com/docs/numbers).
 You can configure the inbound configuration from the Infobip dashboard by navigating to your WhatsApp sender number:
 https://portal.infobip.com/channels-and-numbers/channels/whatsapp/senders. Click on the 3 dots at the right of your
 sender number and select "Edit configuration". Under "Inbound configuration" edit the "Default configuration". Set
-Forwarding action to "Forward to HTTP" and set URL to "https://your-kappi-url/chats/whatsapp".
+Forwarding action to "Forward to HTTP" and set URL to "https://your-ragu-url/chats/whatsapp".
 
 #### Template
 

@@ -86,7 +86,7 @@ class RaguPlugin : Plugin<Project> {
                 isRoutines = false
               }
               target.apply {
-                packageName = ext.jooqPackage.getOrElse(project.group.toString())
+                packageName = ext.jooqPackage.getOrElse("${project.group}/${project.name}")
                 directory = "${project.projectDir}/src/main/jooq"
               }
               strategy.name = "org.jooq.codegen.DefaultGeneratorStrategy"

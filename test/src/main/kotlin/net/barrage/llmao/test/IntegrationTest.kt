@@ -31,6 +31,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.wiremock.extension.jwt.JwtExtensionFactory
 
+/** Base class for integration tests that use test containers. */
 @TestInstance(
   TestInstance.Lifecycle.PER_CLASS // Needed to avoid static methods in companion object
 )
@@ -167,6 +168,16 @@ open class IntegrationTest(
       )
   }
 
+  /**
+   * Creates Wiremock server locally.
+   *
+   * The `resources/wiremock/mappings` directory contains the definition for responses we mock.
+   *
+   * Each response will have a `bodyFileName` in the response designating the body for it. When the
+   * server is started it will copy `resources/wiremock/__files` directory to the
+   * `/home/wiremock/__files` directory onto the server, matching the directory structure. The
+   * `bodyFileName` must be equal to the path from the `__files` directory.
+   */
   private fun loadWiremock() {
     if (wiremockUrlOverride != null) {
       cfg =
@@ -193,16 +204,6 @@ open class IntegrationTest(
       return
     }
 
-    /**
-     * Creates Wiremock server locally.
-     *
-     * The `resources/wiremock/mappings` directory contains the definition for responses we mock.
-     *
-     * Each response will have a `bodyFileName` in the response designating the body for it. When
-     * the server is started it will copy `resources/wiremock/__files` directory to the
-     * `/home/wiremock/__files` directory onto the server, matching the directory structure. The
-     * `bodyFileName` must be equal to the path from the `__files` directory.
-     */
     wiremock =
       WireMockServer(
         WireMockConfiguration.options()

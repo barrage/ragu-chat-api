@@ -1,15 +1,90 @@
 # Ragu API plugins
 
-The Ragu chat API consists of a core library and a server runtime. The server runtime is responsible for registering and hosting
-plugins. The default chat plugin can be used as a reference to see how plugins can be implemented.
+The Ragu chat API (further referred to as Ragu) consists of a core library and a server runtime. The server runtime is
+responsible for registering and hosting plugins. The default chat plugin can be used as a reference to see how plugins
+can be implemented.
 
-TODO: Currently the library and the server runtime are in the same module. This will change in the future.
-The ultimate goal is to have a module for the core, the runtime, and the annotation processor that registers
-plugins in the runtime.
+## Table of contents
 
-## Kappi core
+- [Creating a plugin](#creating-a-plugin)
+- [Testing plugins](#testing-plugins)
+- [Ragu core](#ragu-core)
 
-You can think of Kappi's core as being an extension of Ktor with additional abstractions for LLM interaction and
+## Creating a plugin
+
+Ragu plugins are Kotlin libraries that extend Ragu with additional functionality.
+
+A Ragu plugin is defined by 2 mandatory components;
+
+- a class that implements the `net.barrage.llmao.core.Plugin` interface
+- an arbitrarily named Kotlin file (usually `Module.kt`) serving as a Ktor module that registers the plugin to the
+  `Plugins` registry.
+
+The `Plugin` implementation will define how it behaves in the context of Ragu, you can read more about how to implement
+it by reading the `Plugin` interface documentation.
+
+The Ktor module function should be a file-level function that takes an `Application` instance as a parameter and calls
+`Plugins.register` with an instance of the `Plugin` implementation.
+
+For most plugins, the following will suffice
+
+```
+// Module.kt
+package my.plugin.namespace
+
+import io.ktor.server.application.Application
+import net.barrage.llmao.core.Plugins
+
+fun Application.plugin() = Plugins.register(YourPlugin())
+```
+
+By defining the plugin as a Ktor module, the main server binary's Ktor plugin will find it and load it automatically.
+
+For example, the configuration
+
+```
+# application.conf
+ktor {
+  application {
+    modules = [
+      "my.plugin.namespace.ModuleKt.plugin",
+      "net.barrage.llmao.app.ApplicationKt.module",
+    ]
+  }
+}
+```
+
+loads the plugin module and registers the plugin to the `Plugins` object.
+
+## Testing plugins
+
+Ragu plugins can be tested in isolation by using the `IntegrationTest` class found in the `net.barrage.llmao.test`
+module.
+
+By themselves, plugins are not executable; Plugins only _run_ when they are loaded into the main application and picked
+up by the `Plugins` registry. This means that when we are testing plugins, we need to load them into a test application
+context. This is done by the `IntegrationTest` class.
+
+Good tests don't mock application code - which is why Ragu's test suite is designed
+around [testcontainers](https://testcontainers.com/) and [wiremock](https://wiremock.org/).
+These testing powerhouses provide us with everything we need to run meaningful tests - meaningful here referring to
+testing the actual code that runs in production.
+
+When developing a test suite, all it takes is to extend the `IntegrationTest` class and set the `plugin`
+property with an instance of your plugin. `IntegrationTest` is configurable with various flags that can spin
+up containers that are needed for testing.
+
+When inheriting from `IntegrationTest`, you can use the `test` function to run tests. This function
+sets up the test application and provides you with a `Ktor` client that you can use to interact with the
+test server.
+
+You can also use the `wsTest` function to test Websocket endpoints and interactions.
+
+The chat plugin provides many examples of how to test plugins, including REST and Websockets.
+
+## Ragu core
+
+You can think of Ragu's core as being an extension of Ktor with additional abstractions for LLM interaction and
 book keeping (token usage, message groups, etc.). Here we will go through the most important entities in the core.
 
 - [Infrastructure](#infrastructure)
@@ -31,7 +106,7 @@ book keeping (token usage, message groups, etc.). Here we will go through the mo
 
 #### User
 
-The main entity which interacts with anything in Kappi. Users are obtained solely from JWTs, meaning Kappi does not
+The main entity which interacts with anything in Ragu. Users are obtained solely from JWTs, meaning this API does not
 handle user management. Instead, it delegates authorization to an external authorization server (using Ktor auth). This
 can be configured in the `application.conf` file.
 
@@ -49,14 +124,38 @@ Entitlements can also be used to restrict access to certain parts of the infrast
 
 #### Database
 
-Kappi uses Postgres and JOOQ with coroutines as its main data source. This cannot be changed.
+---
+
+*If your plugin does not interact with the database, then this section can be skipped and the `ragu-plugin` gradle
+plugin can be omitted.*
+
+---
+
+Ragu uses Postgres and [Jooq](https://www.jooq.org/) with coroutines as its main data source. This cannot be changed.
+The main interface for interacting with the DB is Jooq's `DSLContext` and a reference to it can be obtained via
+`ApplicationState`.
+
+Jooq classes are automatically generated based on the database schema present when calling `generateJooq`, and the regex
+you provide Jooq with. The `generateJooq` task is provided via the `jooq` gradle plugin. In order to streamline this
+process and reduce a ton of boilerplate, plugin developers can use the `ragu-plugin` gradle plugin. This plugin provides
+the tasks needed set up the necessary database components (table classes, migrations). You can read more about it in
+its [README](../ragu-plugin/README.md).
+
+---
+
+**For ease of use, plugins should always be shipped with the generated Jooq classes checked into version control.**
+
+---
+
+Other than plugin migrations, the `core` module comes with a set of migrations that set up the tables it needs to
+function. Core migrations are always executed, regardless of plugin configuration.
 
 #### BLOBs
 
 BLOB storage is used to store user message attachments.
 
 A single BLOB storage provider is used per app instance and interfacing with it is done via the `BlobStorage` interface.
-Currently the only implemented blob storage is for images.
+Currently the only implemented blob storage is for images, and the only concrete implementation is Minio.
 
 #### Vector database provider
 
@@ -140,7 +239,7 @@ write usage to storage.
 
 #### Workflow
 
-Workflows are the main form of interaction between a user and an agent. They are introduced to Kappi via plugins.
+Workflows are the main form of interaction between a user and an agent. They are introduced to Ragu via plugins.
 
 For real time workflows, implement `WorkflowRealTime`. This manages the workflow coroutines and makes its handler
 cancellable.
