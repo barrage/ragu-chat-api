@@ -55,7 +55,7 @@ private const val SIZE = 1536
 private var json = Json { ignoreUnknownKeys = true }
 
 class WebsocketChatWorkflowTests :
-  IntegrationTest(useWeaviate = true, useWiremock = true, plugin = ChatPlugin()) {
+  IntegrationTest(useWeaviate = true,  plugin = ChatPlugin()) {
   @BeforeAll
   fun setup() {
     runBlocking { weaviate!!.insertTestCollection(TEST_COLLECTION, SIZE) }

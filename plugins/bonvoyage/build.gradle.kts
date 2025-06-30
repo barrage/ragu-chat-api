@@ -1,4 +1,4 @@
-group = "net.barrage.llmao.plugins.bonvoyage"
+group = "net.barrage.llmao"
 
 version = "0.1.0"
 

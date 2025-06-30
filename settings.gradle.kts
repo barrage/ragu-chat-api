@@ -9,7 +9,6 @@ include(
   ":plugins:jirakira",
   ":plugins:hgk",
   ":test",
-  // ":ragu-plugin",
 )
 
 includeBuild("ragu-plugin")

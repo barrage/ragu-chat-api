@@ -27,13 +27,13 @@ class JiraKiraPlugin : Plugin {
 
     if (settings.getOptional(JiraKiraLlmProvider.KEY) == null) {
       log.warn(
-        "No net.barrage.llmao.jirakira.JiraKira LLM provider configured. net.barrage.llmao.jirakira.JiraKira is disabled. Set `${JiraKiraLlmProvider.KEY}` in the application settings to enable."
+        "No JiraKira LLM provider configured. JiraKira is disabled. Set `${JiraKiraLlmProvider.KEY}` in the application settings to enable."
       )
     }
 
     if (settings.getOptional(JiraKiraModel.KEY) == null) {
       log.warn(
-        "No net.barrage.llmao.jirakira.JiraKira model configured. net.barrage.llmao.jirakira.JiraKira is disabled. Set `${JiraKiraModel.KEY}` in the application settings to enable. The model must be supported by the provider."
+        "No JiraKira model configured. JiraKira is disabled. Set `${JiraKiraModel.KEY}` in the application settings to enable. The model must be supported by the provider."
       )
     }
   }

@@ -1,6 +1,6 @@
-# Kappi plugins
+# Ragu API plugins
 
-Kappi consists of a core library and a server runtime. The server runtime is responsible for registering and hosting
+The Ragu chat API consists of a core library and a server runtime. The server runtime is responsible for registering and hosting
 plugins. The default chat plugin can be used as a reference to see how plugins can be implemented.
 
 TODO: Currently the library and the server runtime are in the same module. This will change in the future.

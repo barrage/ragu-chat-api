@@ -51,7 +51,7 @@ object JiraKiraWorkflowFactory : WorkflowFactory {
     if (!providers.llm[jiraKiraLlmProvider].supportsModel(jiraKiraModel)) {
       throw AppError.api(
         ErrorReason.InvalidOperation,
-        "net.barrage.llmao.jirakira.JiraKira LLM provider does not support the configured net.barrage.llmao.jirakira.JiraKira model",
+        "JiraKira LLM provider does not support the configured JiraKira model",
       )
     }
     val jiraApi = JiraApi(endpoint = endpoint, apiKey = userJiraApiKey, client = httpClient())

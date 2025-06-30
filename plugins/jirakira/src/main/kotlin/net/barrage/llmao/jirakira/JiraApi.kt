@@ -182,7 +182,7 @@ class JiraApi(
     // The actual JSON will be wrapped like: `__fn__({...})`
     val body =
       runWithHandler<String>(
-        "$endpoint/rest/tempo-rest/1.0/accounts/net.barrage.llmao.jirakira.json/billingKeyList/$issueKey?callback=__fn__"
+        "$endpoint/rest/tempo-rest/1.0/accounts/json/billingKeyList/$issueKey?callback=__fn__"
       ) {
         header("Accept", "application/x-javascript;charset=UTF-8")
       }
@@ -261,7 +261,7 @@ data class JiraError(val errorMessages: List<String>, val errors: Map<String, St
 /** Customer account attribute. */
 @Serializable data class TimeSlotAttribute(val key: String, val value: String)
 
-/** Original Jira user model. Also used in net.barrage.llmao.jirakira.JiraKira sessions. */
+/** Original Jira user model. Also used in JiraKira sessions. */
 @Serializable
 data class JiraUser(
   val self: String,
@@ -425,7 +425,7 @@ data class Issue(
 @Serializable data class EpicIssue(val issueType: String, val summary: String)
 
 /**
- * Obtained when instantiating net.barrage.llmao.jirakira.JiraKira. These attributes represent
+ * Obtained when instantiating JiraKira. These attributes represent
  * custom attributes that can be used in worklog entries.
  */
 @Serializable

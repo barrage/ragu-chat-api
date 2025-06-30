@@ -40,7 +40,7 @@ dependencies {
 tasks.test {
   useJUnitPlatform()
   testLogging {
-    showStandardStreams = true
+    showStandardStreams = project.findProperty("env") != "deployment"
     events("passed", "skipped", "failed")
     exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
   }

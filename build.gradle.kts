@@ -19,8 +19,12 @@ subprojects {
   apply(plugin = "com.ncorti.ktfmt.gradle")
 
   repositories { mavenCentral() }
+
   kotlin { jvmToolchain(21) }
+
   ktfmt { googleStyle() }
+
+  tasks.withType<com.ncorti.ktfmt.gradle.tasks.KtfmtFormatTask> { exclude("**/src/main/jooq/**") }
 
   tasks.withType<KtfmtCheckTask> { enabled = false }
 }

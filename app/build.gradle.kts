@@ -10,6 +10,8 @@ application {
   applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
+sourceSets { main { resources.srcDir("../config") } }
+
 ktor { fatJar { archiveFileName.set("llmao.jar") } }
 
 dependencies {
