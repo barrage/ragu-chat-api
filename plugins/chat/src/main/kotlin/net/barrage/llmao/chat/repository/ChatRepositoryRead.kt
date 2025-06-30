@@ -423,7 +423,11 @@ class ChatRepositoryRead(override val dsl: DSLContext, private val type: String)
       .collect { record ->
         val message = record.into(MESSAGES).toMessage()
         val group = record.into(MESSAGE_GROUPS).toMessageGroup()
-        val evaluation = record.into(MESSAGE_GROUP_EVALUATIONS).toMessageGroupEvaluation()
+        val evaluation =
+          if (record.get(MESSAGE_GROUP_EVALUATIONS.ID) != null)
+            record.into(MESSAGE_GROUP_EVALUATIONS).toMessageGroupEvaluation()
+          else null
+
         messageGroups
           .computeIfAbsent(group.id) { _ ->
             MessageGroupAggregate(group, mutableListOf(), evaluation)
